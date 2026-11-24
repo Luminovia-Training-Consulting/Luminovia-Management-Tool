@@ -1,6 +1,6 @@
 /** Exercise the Edge reader with in-memory streams and fictional JSON. */
 import assert from "node:assert/strict";
-import { boundedBytes, boundedJson, RequestBodyTooLarge } from "./bounded-body.ts";
+import { boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge } from "./bounded-body.ts";
 
 const url = "https://edge.example.invalid/";
 const encode = (value: string) => new TextEncoder().encode(value);
@@ -68,4 +68,59 @@ Deno.test("bounded binary reads keep their bytes and reject a large declared len
   });
   await assert.rejects(boundedBytes(oversized, bytes.length), RequestBodyTooLarge);
   assert.equal(oversized.bodyUsed, false);
+});
+
+
+Deno.test("bounded multipart preserves a Unicode filename and binary file bytes at the exact limit", async () => {
+  const bytes = new Uint8Array([0xff, 0xfe, 0x00, 0x1f]);
+  const fields = new FormData();
+  fields.set("title", "März");
+  fields.set("file", new File([bytes], "Übung.pdf", { type: "application/pdf" }));
+  const encoded = new Request(url, { method: "POST", body: fields });
+  const body = new Uint8Array(await encoded.arrayBuffer());
+  const parsed = await boundedFormData(new Request(url, {
+    method: "POST",
+    headers: encoded.headers,
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let offset = 0; offset < body.length; offset += 11) {
+          controller.enqueue(body.subarray(offset, offset + 11));
+        }
+        controller.close();
+      },
+    }),
+  }), body.length);
+  assert.equal(parsed.get("title"), "März");
+  const file = parsed.get("file");
+  assert.ok(file instanceof File);
+  assert.equal(file.name, "Übung.pdf");
+  assert.equal(file.type, "application/pdf");
+  assert.deepEqual(new Uint8Array(await file.arrayBuffer()), bytes);
+});
+
+Deno.test("bounded multipart rejects declared and streamed overflow with the same size error", async () => {
+  const contentType = "multipart/form-data; boundary=fixture";
+  const declared = new Request(url, {
+    method: "POST",
+    headers: { "content-type": contentType, "content-length": "2" },
+    body: "12",
+  });
+  await assert.rejects(boundedFormData(declared, 1), RequestBodyTooLarge);
+  assert.equal(declared.bodyUsed, false);
+
+  const cancelled = Promise.withResolvers<void>();
+  const streamed = new Request(url, {
+    method: "POST",
+    headers: { "content-type": contentType, "content-length": "1" },
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encode("12"));
+      },
+      cancel() {
+        cancelled.resolve();
+      },
+    }),
+  });
+  await assert.rejects(boundedFormData(streamed, 1), RequestBodyTooLarge);
+  await cancelled.promise;
 });

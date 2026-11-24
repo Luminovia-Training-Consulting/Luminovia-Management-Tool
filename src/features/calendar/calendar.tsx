@@ -12,7 +12,7 @@ import {
   defaultCalendarColors,
 } from "./calendar-color-api";
 import { orgQuery, runsQuery, templatesQuery } from "../operations/data";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -557,11 +557,37 @@ export function CalendarPage() {
   const assignment = calendarParams.get("assignment");
   if (viewAnchor && viewAnchor.assignment !== assignment)
     setViewAnchor(undefined);
-  const assignmentStart = claims.data
-    ?.find((claim) => claim.job_id === assignment)
-    ?.assignment_sessions.map((session) => session.starts_at)
-    .filter((value) => Number.isFinite(Date.parse(value)))
-    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+  const assignmentStart = useMemo(() => {
+    const sessions = claims.data?.find(
+      (claim) => claim.job_id === assignment,
+    )?.assignment_sessions;
+    let first: string | undefined;
+    let firstTime = Infinity;
+    for (const session of sessions ?? []) {
+      const time = Date.parse(session.starts_at);
+      if (time < firstTime) {
+        first = session.starts_at;
+        firstTime = time;
+      }
+    }
+    return first;
+  }, [assignment, claims.data]);
+  const jobsById = useMemo(
+    () => new Map(jobs.data?.map((job) => [job.id, job])),
+    [jobs.data],
+  );
+  const templatesById = useMemo(
+    () => new Map(templates.data?.map((template) => [template.id, template])),
+    [templates.data],
+  );
+  const organisationsById = useMemo(
+    () => new Map(organisations.data?.map((org) => [org.id, org.name])),
+    [organisations.data],
+  );
+  const topicsById = useMemo(
+    () => new Map(topics.data?.map((topic) => [topic.id, topic])),
+    [topics.data],
+  );
   if (
     claims.isPending ||
     personal.isPending ||
@@ -603,16 +629,6 @@ export function CalendarPage() {
     topics: [] as { id: string; label_de: string; label_en: string }[],
   };
   const colors = calendarColors.data ?? defaultCalendarColors;
-  const assignmentMetadata = (id: string) => {
-    const job = jobs.data?.find((value) => value.id === id);
-    return {
-      customerKey:
-        job?.organisation_id ??
-        (job?.organisation_name ? `name:${job.organisation_name}` : ""),
-      customerName: job?.organisation_name ?? "",
-      topics: job?.topics ?? [],
-    };
-  };
   const events = global
     ? [
         ...globalRows.map((e) => ({
@@ -630,55 +646,47 @@ export function CalendarPage() {
           : (publicRuns.data ?? [])
         )
           .filter((run) => run.published && !run.archived_at)
-          .flatMap((run) =>
-            run.course_sessions.map((s) => {
-              const customerCreated = Boolean(run.organisation_id);
-              return {
-                id: `course-${s.id}`,
-                title:
-                  templates.data?.find((t) => t.id === run.template_id)
-                    ?.title ?? t("courses"),
-                start: s.starts_at,
-                end: s.ends_at,
-                display: "block",
-                color: customerCreated
-                  ? colors.customer_event_color
-                  : "#326c58",
-                textColor: customerCreated ? "#17283a" : "#ffffff",
-                url: `/courses?run=${run.id}`,
-                extendedProps: {
-                  kind: "course",
-                  customerCreated,
-                  customerKey: run.organisation_id ?? "",
-                  customerName: organisations.isError
-                    ? ""
-                    : (organisations.data?.find(
-                        (org) => org.id === run.organisation_id,
-                      )?.name ?? ""),
-                  topics: topics.isError
-                    ? []
-                    : (
-                        templates.data?.find(
-                          (template) => template.id === run.template_id,
-                        )?.course_template_topics ?? []
-                      ).flatMap(({ topic_id }) => {
-                        const topic = topics.data?.find(
-                          (value) => value.id === topic_id,
-                        );
-                        return topic
-                          ? [
-                              {
-                                id: topic.id,
-                                label_de: topic.label_de,
-                                label_en: topic.label_en,
-                              },
-                            ]
-                          : [];
-                      }),
-                },
-              };
-            }),
-          ),
+          .flatMap((run) => {
+            const template = templatesById.get(run.template_id);
+            const customerCreated = Boolean(run.organisation_id);
+            const customerName =
+              !organisations.isError && run.organisation_id
+                ? (organisationsById.get(run.organisation_id) ?? "")
+                : "";
+            const courseTopics = topics.isError
+              ? []
+              : (template?.course_template_topics ?? []).flatMap(
+                  ({ topic_id }) => {
+                    const topic = topicsById.get(topic_id);
+                    return topic
+                      ? [
+                          {
+                            id: topic.id,
+                            label_de: topic.label_de,
+                            label_en: topic.label_en,
+                          },
+                        ]
+                      : [];
+                  },
+                );
+            return run.course_sessions.map((s) => ({
+              id: `course-${s.id}`,
+              title: template?.title ?? t("courses"),
+              start: s.starts_at,
+              end: s.ends_at,
+              display: "block",
+              color: customerCreated ? colors.customer_event_color : "#326c58",
+              textColor: customerCreated ? "#17283a" : "#ffffff",
+              url: `/courses?run=${run.id}`,
+              extendedProps: {
+                kind: "course",
+                customerCreated,
+                customerKey: run.organisation_id ?? "",
+                customerName,
+                topics: courseTopics,
+              },
+            }));
+          }),
       ]
     : [
         ...personal.data.map((e) => ({
@@ -691,31 +699,32 @@ export function CalendarPage() {
           textColor: "#17283a",
           extendedProps: { kind: "private", ...emptyMetadata },
         })),
-        ...claims.data.flatMap((c) =>
-          c.assignment_sessions.map((s) => {
-            const metadata = assignmentMetadata(c.job_id),
-              customerCreated = Boolean(metadata.customerKey);
-            return {
-              id: s.id,
-              title:
-                jobs.data?.find((j) => j.id === c.job_id)?.title ??
-                t("assignment"),
-              start: s.starts_at,
-              end: s.ends_at,
-              display: "block",
-              color: customerCreated
-                ? colors.customer_event_color
-                : colors.assignment_event_color,
-              textColor: "#17283a",
-              url: `/jobs/${c.job_id}`,
-              extendedProps: {
-                kind: "assignment",
-                customerCreated,
-                ...metadata,
-              },
-            };
-          }),
-        ),
+        ...claims.data.flatMap((claim) => {
+          const job = jobsById.get(claim.job_id);
+          const customerKey =
+            job?.organisation_id ??
+            (job?.organisation_name ? `name:${job.organisation_name}` : "");
+          const customerCreated = Boolean(customerKey);
+          return claim.assignment_sessions.map((session) => ({
+            id: session.id,
+            title: job?.title ?? t("assignment"),
+            start: session.starts_at,
+            end: session.ends_at,
+            display: "block",
+            color: customerCreated
+              ? colors.customer_event_color
+              : colors.assignment_event_color,
+            textColor: "#17283a",
+            url: `/jobs/${claim.job_id}`,
+            extendedProps: {
+              kind: "assignment",
+              customerCreated,
+              customerKey,
+              customerName: job?.organisation_name ?? "",
+              topics: job?.topics ?? [],
+            },
+          }));
+        }),
       ];
   // FullCalendar's grid stores civil times internally. Use the exact source
   // instants to label events in a repeated hour with their separate UTC offsets.
@@ -742,6 +751,8 @@ export function CalendarPage() {
       i18n.language,
     ),
   );
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const selectedTopics = new Set(topicIds);
   const weekView = calendarView === "timeGridWeek";
   const scopeAllowsSelection = !global || canManageGlobal;
   const gridSelectionEnabled =
@@ -840,7 +851,7 @@ export function CalendarPage() {
           >
             <option value="">{filterText("addTopic")}</option>
             {topicOptions
-              .filter((topic) => !topicIds.includes(topic.id))
+              .filter((topic) => !selectedTopics.has(topic.id))
               .map((topic) => (
                 <option key={topic.id} value={topic.id}>
                   {i18n.language.startsWith("de")
@@ -1001,11 +1012,9 @@ export function CalendarPage() {
                 (!customer || event.extendedProps.customerKey === customer) &&
                 (!topicIds.length ||
                   event.extendedProps.topics.some((topic) =>
-                    topicIds.includes(topic.id),
+                    selectedTopics.has(topic.id),
                   )) &&
-                event.title
-                  .toLocaleLowerCase()
-                  .includes(search.trim().toLocaleLowerCase()),
+                event.title.toLocaleLowerCase().includes(searchTerm),
             )}
             height="auto"
             eventContent={({ event }) => {

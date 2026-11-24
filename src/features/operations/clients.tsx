@@ -299,7 +299,6 @@ function ClientWorkspace({
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ["operations"] });
   const orgs = useQuery(orgQuery(actor));
-  const notes = useQuery(notesQuery(actor));
   const premiums = useQuery(companyPremiumSettingsQuery(actor));
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string>();
@@ -315,21 +314,18 @@ function ClientWorkspace({
   );
   const organisation = visible.find((org) => org.id === selected) ?? visible[0];
   const contacts = useQuery(contactsQuery(actor, organisation?.id));
-  if (orgs.isPending || notes.isPending || premiums.isPending)
-    return <Loading />;
-  if (orgs.isError || notes.isError || premiums.isError)
+  const notes = useQuery(notesQuery(actor, organisation?.id));
+  const editNotes = useQuery(notesQuery(actor, orgEdit?.id));
+  if (orgs.isPending || premiums.isPending) return <Loading />;
+  if (orgs.isError || premiums.isError)
     return (
       <ErrorState
         retry={() => {
           void orgs.refetch();
-          void notes.refetch();
           void premiums.refetch();
         }}
       />
     );
-  const detail =
-    notes.data.find((note) => note.organisation_id === organisation?.id)
-      ?.private_notes ?? "";
   const premiumSetting = organisation
     ? (premiums.data.find(
         (setting) => setting.organisation_id === organisation.id,
@@ -501,7 +497,13 @@ function ClientWorkspace({
               )}
             </div>
             <h3>{t("notes")}</h3>
-            <p className="preserve-text">{detail || "—"}</p>
+            {notes.isPending ? (
+              <Loading />
+            ) : notes.isError ? (
+              <ErrorState retry={() => void notes.refetch()} />
+            ) : (
+              <p className="preserve-text">{notes.data || "—"}</p>
+            )}
             <small className="muted">{t("privateHint")}</small>
             <div className="section-heading">
               <h3>{t("contacts")}</h3>
@@ -608,22 +610,23 @@ function ClientWorkspace({
         title={t(orgEdit ? "editClient" : "newClient")}
         description={t("privateHint")}
       >
-        <OrganisationForm
-          key={orgEdit?.id ?? "new"}
-          original={orgEdit ?? undefined}
-          canEnablePremium={isAdmin}
-          notes={
-            orgEdit
-              ? (notes.data.find((note) => note.organisation_id === orgEdit.id)
-                  ?.private_notes ?? "")
-              : ""
-          }
-          onDone={(id) => {
-            setOrgEdit(undefined);
-            setSelected(id);
-            setSaved(true);
-          }}
-        />
+        {orgEdit && editNotes.isPending ? (
+          <Loading />
+        ) : orgEdit && editNotes.isError ? (
+          <ErrorState retry={() => void editNotes.refetch()} />
+        ) : (
+          <OrganisationForm
+            key={orgEdit?.id ?? "new"}
+            original={orgEdit ?? undefined}
+            canEnablePremium={isAdmin}
+            notes={orgEdit ? (editNotes.data ?? "") : ""}
+            onDone={(id) => {
+              setOrgEdit(undefined);
+              setSelected(id);
+              setSaved(true);
+            }}
+          />
+        )}
         {orgEdit && (
           <PermanentDeleteAction
             kind="organisation"

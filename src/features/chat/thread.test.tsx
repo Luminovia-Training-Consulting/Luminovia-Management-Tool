@@ -190,6 +190,55 @@ it("keeps a failed read receipt retryable without a rerender request loop", asyn
   expect(rpc).toHaveBeenCalledTimes(2);
   client.clear();
 });
+it("retries the failed receipt without marking a newer unseen message", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  rpc
+    .mockResolvedValueOnce({
+      data: null,
+      error: { message: "Uncertain network result" },
+    })
+    .mockResolvedValue({ data: null, error: null });
+  const { client } = populatedThread();
+  await screen.findByRole("alert");
+  const pane = document.querySelector<HTMLElement>(".chat-message-scroll")!;
+  Object.defineProperties(pane, {
+    scrollHeight: { value: 900 },
+    clientHeight: { value: 300 },
+  });
+  fireEvent.scroll(pane);
+  const key = ["chat-messages", "actor", "room", ""];
+  const data = client.getQueryData<{
+    pages: ChatMessage[][];
+    pageParams: unknown[];
+  }>(key)!;
+  await act(async () => {
+    client.setQueryData(key, {
+      pages: [
+        [
+          {
+            ...data.pages[0]![0]!,
+            id: "new",
+            created_at: "2026-01-01T08:01:00Z",
+          },
+          ...data.pages[0]!,
+        ],
+      ],
+      pageParams: [null],
+    });
+  });
+  await screen.findByRole("button", { name: "Zu neuen Nachrichten" });
+  await userEvent.click(
+    screen.getByRole("button", { name: "Erneut versuchen" }),
+  );
+  await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
+  expect(rpc).toHaveBeenLastCalledWith("mark_chat_read", {
+    p_room_id: "room",
+    p_message_id: "latest",
+    p_muted: null,
+  });
+  client.clear();
+});
+
 it("retries the same failed latest read receipt after reconnecting", async () => {
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
   let online = true;

@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { db } from "../../lib/supabase";
+import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
@@ -191,11 +192,7 @@ export function MessageBubble({
     },
     onSuccess: invalidate,
   });
-  const time = new Intl.DateTimeFormat(i18n.language, {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: zone,
-  }).format(new Date(message.created_at));
+  const time = dateTime(message.created_at, i18n.language, zone, "short");
   return (
     <li
       className={`chat-message ${own ? "chat-message-own" : ""}`}

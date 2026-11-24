@@ -92,7 +92,7 @@ describe("private client directory capability boundary", () => {
         }),
       ),
     );
-    client.setQueryData(["operations", "notes", "actor"], []);
+    client.setQueryData(["operations", "notes", "actor", "organisation-a"], "");
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
@@ -124,7 +124,7 @@ describe("private client directory capability boundary", () => {
     client.clear();
   });
 
-  it("replaces the Premium and integrations panels when an admin switches organisations", async () => {
+  it("replaces organisation panels and requests notes only for the selected company", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
@@ -150,7 +150,23 @@ describe("private client directory capability boundary", () => {
     );
     for (const id of [first, second])
       client.setQueryData(["operations", "contacts", "actor", id], []);
-    client.setQueryData(["operations", "notes", "actor"], []);
+    const requestNotes = vi.fn(async (id: string) =>
+      id === first
+        ? { data: { private_notes: "Private first-company note" }, error: null }
+        : { data: null, error: { code: "42501" } },
+    );
+    const select = vi.fn(() => ({
+      eq: (column: string, id: string) => {
+        expect(column).toBe("organisation_id");
+        return {
+          abortSignal: () => ({ maybeSingle: () => requestNotes(id) }),
+        };
+      },
+    }));
+    from.mockImplementation((table) => {
+      expect(table).toBe("organisation_private_details");
+      return { select };
+    });
     client.setQueryData(
       ["operations", "company-premium", "actor"],
       [
@@ -171,11 +187,27 @@ describe("private client directory capability boundary", () => {
       </QueryClientProvider>,
     );
     const user = userEvent.setup();
+    expect(await screen.findByText("Private first-company note")).toBeVisible();
+    expect(select).toHaveBeenCalledWith("private_notes");
+    expect(requestNotes.mock.calls).toEqual([[first]]);
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
     await user.click(
       screen.getByRole("button", { name: organisations[1].name }),
     );
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    expect(requestNotes.mock.calls).toEqual([[first], [second]]);
+    expect(
+      screen.queryByText("Private first-company note"),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Organisation bearbeiten" }),
+    );
+    const editor = screen.getByRole("dialog", {
+      name: "Organisation bearbeiten",
+    });
+    expect(editor.querySelector("textarea")).toBeNull();
+    expect(editor.querySelector('[role="alert"]')).not.toBeNull();
+    await user.keyboard("{Escape}");
     expect(
       screen.getAllByRole("button", { name: "Beibehaltene Kursdaten ansehen" }),
     ).toHaveLength(1);
@@ -183,6 +215,7 @@ describe("private client directory capability boundary", () => {
       screen.getByRole("button", { name: organisations[0].name }),
     );
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText("Private first-company note")).toBeVisible();
     const search = screen.getByRole("searchbox", { name: "Suchen" });
     await user.type(search, "second");
     expect(

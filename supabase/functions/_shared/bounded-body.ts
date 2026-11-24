@@ -7,14 +7,18 @@ export class RequestBodyTooLarge extends Error {
   }
 }
 
+function checkDeclaredLength(request: Request, limit: number) {
+  if (Number(request.headers.get("content-length") ?? 0) > limit) {
+    throw new RequestBodyTooLarge();
+  }
+}
+
 /** Read at most the supplied byte limit, checking both the header and actual stream. */
 export async function boundedBytes(
   request: Request,
   limit: number,
 ): Promise<Uint8Array<ArrayBuffer>> {
-  if (Number(request.headers.get("content-length") ?? 0) > limit) {
-    throw new RequestBodyTooLarge();
-  }
+  checkDeclaredLength(request, limit);
   const reader = request.body?.getReader();
   if (!reader) return new Uint8Array();
 
@@ -43,6 +47,23 @@ export async function boundedBytes(
     offset += chunk.byteLength;
   }
   return bytes;
+}
+
+/** Bound multipart bytes as they reach the native parser without copying the full upload. */
+export async function boundedFormData(request: Request, limit: number): Promise<FormData> {
+  checkDeclaredLength(request, limit);
+  let size = 0;
+  const body = request.body?.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      size += chunk.byteLength;
+      if (size > limit) throw new RequestBodyTooLarge();
+      controller.enqueue(chunk);
+    },
+  }));
+  const contentType = request.headers.get("content-type");
+  return await new Response(body, {
+    headers: contentType ? { "Content-Type": contentType } : undefined,
+  }).formData();
 }
 
 /** Parse JSON strictly as UTF-8. Callers validate the endpoint-specific shape. */

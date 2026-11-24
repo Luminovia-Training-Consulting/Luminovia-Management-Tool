@@ -2,12 +2,13 @@
  * Regressions for Berlin/Brisbane zones, DST gaps and ambiguous local times. Pure date tests do
  * not establish database scheduling behavior.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   dateTime,
   formatUtcDate,
   money,
   resolveScheduleWindow,
+  validZone,
   zonedInstant,
   zonedInstantForEdit,
   zonedInstantForScheduleEdit,
@@ -112,4 +113,52 @@ it("requires a positive published window with valid endpoints", () => {
   expect(
     resolveScheduleWindow({ ...window, ends_at: window.starts_at }),
   ).toBeNull();
+});
+
+it("reuses the exact display formatter across long lists and varies it by language, zone and style", () => {
+  const constructor = vi.spyOn(Intl, "DateTimeFormat");
+  try {
+    const fixtures = [
+      ["en-NZ", "Pacific/Auckland", "short"],
+      ["en-NZ", "Pacific/Auckland", "medium"],
+      ["en-NZ", "America/Sao_Paulo", "short"],
+      ["fr", "Pacific/Auckland", "short"],
+    ] as const;
+    const instant = "2027-01-18T20:00:00Z";
+    const result = fixtures.map(([language, zone, style]) =>
+      dateTime(instant, language, zone, style),
+    );
+    expect(new Set(result).size).toBe(fixtures.length);
+    for (let index = 0; index < 400; index++)
+      expect(
+        fixtures.map(([language, zone, style]) =>
+          dateTime(instant, language, zone, style),
+        ),
+      ).toEqual(result);
+    expect(constructor).toHaveBeenCalledTimes(fixtures.length);
+  } finally {
+    constructor.mockRestore();
+  }
+});
+
+it("bounds the formatter cache as the display locale changes", () => {
+  const instant = "2027-01-18T20:00:00Z";
+  const oldest = "en-x-test-oldest";
+  const format = (locale: string) => dateTime(instant, locale, "UTC");
+  const original = format(oldest);
+  for (let index = 0; index < 32; index++) format(`en-x-test-${index}`);
+  const constructor = vi.spyOn(Intl, "DateTimeFormat");
+  try {
+    expect(format(oldest)).toBe(original);
+    expect(constructor).toHaveBeenCalledTimes(1);
+    expect(format(oldest)).toBe(original);
+    expect(constructor).toHaveBeenCalledTimes(1);
+  } finally {
+    constructor.mockRestore();
+  }
+});
+
+it("accepts an IANA display zone and rejects an invalid zone", () => {
+  expect(validZone("Europe/Berlin")).toBe(true);
+  expect(validZone("Invalid/Zone")).toBe(false);
 });

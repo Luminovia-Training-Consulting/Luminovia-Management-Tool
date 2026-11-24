@@ -35,7 +35,11 @@ function containsMacroProject(bytes: Uint8Array): boolean {
 
 // Strip path components/control characters and bound the normalized display name.
 export function safeName(name: string) {
-    return name.normalize('NFC').split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 200);
+    const limit = 200;
+    const base = name.normalize('NFC').split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g, '').trim().toWellFormed();
+    if (base.length <= limit) return base;
+    const suffix = /\.[A-Za-z0-9]{1,8}$/.exec(base)?.[0] ?? '';
+    return base.slice(0, limit - suffix.length).toWellFormed() + suffix;
 }
 
 // Compare magic bytes, extension and declared MIME; reject known VBA project markers.

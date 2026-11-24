@@ -37,13 +37,15 @@ export const chatRoomsQuery = (actor: string) =>
       if (rooms.error) throw rooms.error;
       if (pins.error) throw pins.error;
       if (archives.error) throw archives.error;
-      const pinned = (pins.data ?? []) as string[];
+      const pinOrder = new Map(
+        ((pins.data ?? []) as string[]).map((id, order) => [id, order]),
+      );
       const archived = new Set((archives.data ?? []) as string[]);
       return ((rooms.data ?? []) as ChatRoom[]).map((room) => ({
         ...room,
         personal_archived: archived.has(room.id),
-        pinned: pinned.includes(room.id),
-        pinOrder: pinned.indexOf(room.id),
+        pinned: pinOrder.has(room.id),
+        pinOrder: pinOrder.get(room.id) ?? -1,
       }));
     },
     refetchInterval: 3000,

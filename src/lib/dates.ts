@@ -70,13 +70,30 @@ export function resolveScheduleWindow(
     : null;
 }
 
+// Reuse ICU formatters in large lists while bounding the number of retained zones.
+const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+const maxDateTimeFormatters = 32;
+
 /** Format an instant in the requested language and explicit display zone. */
-export function dateTime(iso: string, language: string, zone: string) {
-  return new Intl.DateTimeFormat(language, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: zone,
-  }).format(new Date(iso));
+export function dateTime(
+  iso: string,
+  language: string,
+  zone: string,
+  dateStyle: "medium" | "short" = "medium",
+) {
+  const key = JSON.stringify([language, zone, dateStyle]);
+  let formatter = dateTimeFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(language, {
+      dateStyle,
+      timeStyle: "short",
+      timeZone: zone,
+    });
+    if (dateTimeFormatters.size >= maxDateTimeFormatters)
+      dateTimeFormatters.delete(dateTimeFormatters.keys().next().value!);
+    dateTimeFormatters.set(key, formatter);
+  }
+  return formatter.format(new Date(iso));
 }
 
 /** Format the supplied amount in its original currency without exchange-rate conversion. */

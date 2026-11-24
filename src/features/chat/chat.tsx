@@ -126,7 +126,7 @@ function ChatDirectory({ actor }: { actor: string }) {
     null,
   );
   const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
-  const previousRooms = useRef<string[]>([]);
+  const previousRooms = useRef(new Set<string>());
   const previousDeleted = useRef(new Set<string>());
   const selected = rooms.data?.find((room) => room.id === selectedId);
   const canManageCourses =
@@ -169,10 +169,9 @@ function ChatDirectory({ actor }: { actor: string }) {
   }, [contact, online, openContactDm]);
   useEffect(() => {
     if (!rooms.data) return;
-    const current = rooms.data.map((room) => room.id);
-    for (const id of previousRooms.current.filter(
-      (id) => !current.includes(id),
-    )) {
+    const current = new Set(rooms.data.map((room) => room.id));
+    for (const id of previousRooms.current) {
+      if (current.has(id)) continue;
       client.removeQueries({ queryKey: chatKeys.messages(actor, id) });
       client.removeQueries({ queryKey: chatKeys.members(actor, id) });
       client.removeQueries({ queryKey: chatKeys.draft(actor, id) });

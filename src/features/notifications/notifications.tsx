@@ -2,7 +2,7 @@
  * Bell menu, complete inbox and personal notification preferences. Preview/history share
  * appropriate caches while confirmed read state and version conflicts remain visible.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   useInfiniteQuery,
@@ -96,18 +96,34 @@ export function NotificationsPage({
     online && !inboxFailed && !awaitingAcademy
       ? query.data?.pages[0]
       : undefined;
-  const loadedItems = mergeNotificationPages(query.data?.pages);
-  const items = online
-    ? loadedItems
-    : loadedItems.filter(
-        (item) =>
-          !item.kind.startsWith("course_") && item.kind !== "chat_message",
-      );
-  const filteredUnread = items
-    .filter(
-      (item) => !item.read_at && notificationCategory(item.kind) === category,
-    )
-    .map((item) => item.id);
+  const loadedItems = useMemo(
+    () => mergeNotificationPages(query.data?.pages),
+    [query.data?.pages],
+  );
+  const items = useMemo(
+    () =>
+      online
+        ? loadedItems
+        : loadedItems.filter(
+            (item) =>
+              !item.kind.startsWith("course_") && item.kind !== "chat_message",
+          ),
+    [loadedItems, online],
+  );
+  const visibleItems = useMemo(
+    () =>
+      category === "all"
+        ? items
+        : items.filter((item) => notificationCategory(item.kind) === category),
+    [items, category],
+  );
+  const canMark =
+    category === "all"
+      ? Boolean(first?.unread_count)
+      : visibleItems.some((item) => !item.read_at);
+  const zone = academy
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : (profile.data?.time_zone ?? "Europe/Berlin");
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
@@ -133,14 +149,18 @@ export function NotificationsPage({
         {!readOnly && (
           <Button
             variant="secondary"
-            disabled={
-              !online || mark.isPending || !first?.unread_count || inboxFailed
-            }
+            disabled={!first || !canMark || mark.isPending}
             onClick={() =>
               mark.mutate(
                 category === "all"
                   ? { ids: null, before: first!.as_of, read: true }
-                  : { ids: filteredUnread, before: null, read: true },
+                  : {
+                      ids: visibleItems
+                        .filter((item) => !item.read_at)
+                        .map((item) => item.id),
+                      before: null,
+                      read: true,
+                    },
               )
             }
           >
@@ -176,34 +196,20 @@ export function NotificationsPage({
         <div className="empty-state">{t("empty")}</div>
       ) : (
         <section className="panel">
-          {!items.some(
-            (item) =>
-              category === "all" ||
-              notificationCategory(item.kind) === category,
-          ) && <p>{t("categoryEmpty")}</p>}
+          {visibleItems.length === 0 && <p>{t("categoryEmpty")}</p>}
           <ul className="inbox-list">
-            {items
-              .filter(
-                (item) =>
-                  category === "all" ||
-                  notificationCategory(item.kind) === category,
-              )
-              .map((item) => (
-                <NotificationRow
-                  key={item.id}
-                  item={item}
-                  zone={
-                    academy
-                      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-                      : (profile.data?.time_zone ?? "Europe/Berlin")
-                  }
-                  disabled={!online || mark.isPending}
-                  readOnly={readOnly}
-                  mark={(id, read) =>
-                    mark.mutate({ ids: [id], before: null, read })
-                  }
-                />
-              ))}
+            {visibleItems.map((item) => (
+              <NotificationRow
+                key={item.id}
+                item={item}
+                zone={zone}
+                disabled={!online || mark.isPending}
+                readOnly={readOnly}
+                mark={(id, read) =>
+                  mark.mutate({ ids: [id], before: null, read })
+                }
+              />
+            ))}
           </ul>
           {retryNext ? (
             <NextPageError

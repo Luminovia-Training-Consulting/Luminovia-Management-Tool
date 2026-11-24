@@ -89,6 +89,18 @@ Deno.test('normalizes names without paths, controls or unsafe download headers',
     assert(!/[\r\n]/.test(header));
     assert(header.startsWith("attachment; filename*=UTF-8''"))
 });
+Deno.test('long Unicode filenames preserve their format and yield a valid download header', async () => {
+    const long = 'a'.repeat(195) + '📚.txt';
+    const name = safeName(long);
+    assert(name.length <= 200 && name.isWellFormed());
+    assert(name.endsWith('.txt'));
+    assert(await validateFile(new TextEncoder().encode('Fictional lesson'), name, 'text/plain') === 'text/plain');
+    assert(decodeURIComponent(downloadDisposition(long).split("''")[1]) === name);
+
+    const short = 'Lernmaterial 📚.txt';
+    assert(decodeURIComponent(downloadDisposition(short).split("''")[1]) === short);
+});
+
 Deno.test('valid text works but forged extension, HTML and MIME disagreement are rejected', async () => {
     assert(await validateFile(new TextEncoder().encode('Fictional lesson'), 'lesson.txt', 'text/plain') === 'text/plain');
     for (const [name, mime] of [['lesson.pdf', 'application/pdf'], ['lesson.html', 'text/html'], ['lesson.txt', 'application/pdf']]) {

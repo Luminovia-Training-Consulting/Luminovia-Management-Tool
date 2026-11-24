@@ -287,6 +287,35 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
         },
     );
     await check(
+        "Half-open calendar ranges allow adjacent events and non-blocking availability",
+        async () => {
+            const id = "d7000000-0000-4000-8000-000000000001";
+            const filters = {topic_ids: [topic], available_only: true};
+            const beforeEvent = randomUUID(), afterEvent = randomUUID(),
+                beforeBlock = randomUUID(), afterBlock = randomUUID(),
+                available = randomUUID();
+            await sql(
+                `insert into public.personal_events(id,user_id,title,starts_at,ends_at) values
+                   ('${beforeEvent}','${teacher}','Fictional adjacent event before','2060-01-01T22:30:00Z','2060-01-01T23:30:00Z'),
+                   ('${afterEvent}','${teacher}','Fictional adjacent event after','2060-01-02T01:30:00Z','2060-01-02T02:30:00Z');
+                 insert into public.lecturer_availability(id,user_id,kind,starts_at,ends_at) values
+                   ('${beforeBlock}','${teacher}','unavailable','2060-01-01T22:30:00Z','2060-01-01T23:30:00Z'),
+                   ('${afterBlock}','${teacher}','unavailable','2060-01-02T01:30:00Z','2060-01-02T02:30:00Z'),
+                   ('${available}','${teacher}','available','2060-01-01T23:30:00Z','2060-01-02T01:30:00Z')`,
+            );
+            assert.deepEqual((await rpc(teacher, filters)).items.map((job) => job.id), [id]);
+            await sql(
+                `update public.lecturer_availability set starts_at='2060-01-02T01:29:59Z'
+                 where id='${afterBlock}'`,
+            );
+            assert.deepEqual((await rpc(teacher, filters)).items, []);
+            await sql(
+                `delete from public.lecturer_availability where id in ('${beforeBlock}','${afterBlock}','${available}');
+                 delete from public.personal_events where id in ('${beforeEvent}','${afterEvent}')`,
+            );
+        },
+    );
+    await check(
         "Saved views are private, canonical, retry safe and compare-and-swap concurrent changes",
         async () => {
             const id = randomUUID(),

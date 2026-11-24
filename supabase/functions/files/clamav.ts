@@ -15,8 +15,11 @@ export interface HttpsScannerConfig {
 
 // Injection is for isolated protocol/deadline tests, never browser input.
 // Replaceable transport/deadline boundary for isolated protocol tests.
+type ScannerConnection = Pick<Deno.Conn, "read" | "write" | "close">;
+
 interface ScannerDependencies {
     fetcher?: typeof fetch;
+    connect?: (options: Deno.ConnectOptions) => Promise<ScannerConnection>;
     timeoutMs?: number;
 }
 
@@ -160,7 +163,7 @@ async function scanHttps(
 }
 
 // Write the complete protocol block even when TCP writes accept only part of it.
-async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
+async function writeAll(conn: ScannerConnection, bytes: Uint8Array) {
     let at = 0;
     while (at < bytes.length) {
         const n = await conn.write(bytes.subarray(at));
@@ -169,37 +172,65 @@ async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
     }
 }
 
-// Read only the bounded clamd response through its protocol terminator.
-async function readResult(conn: Deno.Conn) {
-    let result = "";
-    const buffer = new Uint8Array(4096);
-    while (result.length < 4096) {
-        const n = await conn.read(buffer);
-        if (n === null) break;
-        result += new TextDecoder().decode(buffer.subarray(0, n));
-        if (result.includes("\0") || result.includes("\n")) break;
+// z-prefixed commands require a complete NUL-terminated reply.
+async function readResult(conn: ScannerConnection) {
+    const buffer = new Uint8Array(MAX_RESPONSE_BYTES);
+    let length = 0;
+    while (length < buffer.length) {
+        const count = await conn.read(buffer.subarray(length));
+        if (count === null) break;
+        const terminator = buffer.subarray(length, length + count).indexOf(0);
+        if (terminator !== -1) {
+            if (terminator + 1 !== count) throw new Error("scanner_protocol");
+            return new TextDecoder("utf-8", {fatal: true})
+                .decode(buffer.subarray(0, length + terminator));
+        }
+        length += count;
     }
-    return result.trim().replace(/\0/g, "");
+    throw new Error("scanner_protocol");
 }
 
-// Query clamd's current signature version through a separate bounded connection.
-async function scannerVersion(host: string, port: number) {
-    const conn = await Deno.connect({hostname: host, port});
-    const timeout = setTimeout(() => {
-        try {
-            conn.close();
-        } catch { /* closed */
-        }
-    }, 3000);
+function closeConnection(conn?: ScannerConnection) {
     try {
-        await writeAll(conn, encoder.encode("zVERSION\0"));
-        return validateClamAvVersion(await readResult(conn));
-    } finally {
-        clearTimeout(timeout);
-        try {
-            conn.close();
-        } catch { /* closed */
+        conn?.close();
+    } catch { /* closed */ }
+}
+
+async function withScannerConnection<T>(
+    hostname: string,
+    port: number,
+    timeoutMs: number,
+    dependencies: ScannerDependencies,
+    exchange: (conn: ScannerConnection) => Promise<T>,
+): Promise<T> {
+    const controller = new AbortController();
+    let conn: ScannerConnection | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+            reject(new Error("scanner_timeout"));
+            controller.abort();
+        }, timeoutMs);
+    });
+    const operation = async () => {
+        const socket = await (dependencies.connect ?? Deno.connect)({
+            hostname,
+            port,
+            signal: controller.signal,
+        });
+        // Retire late connections even when a runtime cannot cancel Deno.connect.
+        if (controller.signal.aborted) {
+            closeConnection(socket);
+            throw new Error("scanner_timeout");
         }
+        conn = socket;
+        return await exchange(conn);
+    };
+    try {
+        return await Promise.race([deadline, operation()]);
+    } finally {
+        clearTimeout(timer);
+        closeConnection(conn);
     }
 }
 
@@ -219,15 +250,15 @@ export async function scan(
         throw new Error("scanner_size");
     }
     if (!host) throw new Error("scanner_not_configured");
-    const version = await scannerVersion(host, port);
-    const conn = await Deno.connect({hostname: host, port});
-    const timeout = setTimeout(() => {
-        try {
-            conn.close();
-        } catch { /* closed */
-        }
-    }, 30000);
-    try {
+    const timeoutMs = dependencies.timeoutMs ?? 30000;
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 30000) {
+        throw new Error("scanner_configuration");
+    }
+    const version = await withScannerConnection(host, port, Math.min(timeoutMs, 3000), dependencies, async (conn) => {
+        await writeAll(conn, encoder.encode("zVERSION\0"));
+        return validateClamAvVersion(await readResult(conn));
+    });
+    return await withScannerConnection(host, port, timeoutMs, dependencies, async (conn) => {
         await writeAll(conn, encoder.encode("zINSTREAM\0"));
         for (let at = 0; at < bytes.length; at += 65536) {
             const chunk = bytes.subarray(at, at + 65536);
@@ -239,16 +270,10 @@ export async function scan(
         await writeAll(conn, new Uint8Array(4));
         const result = await readResult(conn);
         if (!result.startsWith("stream: ")) throw new Error("scanner_protocol");
-        if (result.includes(" FOUND")) return {clean: false, version};
+        if (result.endsWith(" FOUND")) return {clean: false, version};
         if (result !== "stream: OK") {
             throw new Error("scanner_unavailable_or_limit");
         }
         return {clean: true, version};
-    } finally {
-        clearTimeout(timeout);
-        try {
-            conn.close();
-        } catch { /* closed */
-        }
-    }
+    });
 }

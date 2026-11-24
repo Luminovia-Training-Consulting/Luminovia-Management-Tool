@@ -1,4 +1,4 @@
-import { boundedBytes, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
+import { boundedFormData, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 import { academyAssetVersion } from "./academy-logo.ts";
 import { validateAvatar } from "./avatar.ts";
 
@@ -62,9 +62,7 @@ export async function uploadAcademyPwaIcon(
 
   let form: FormData;
   try {
-    const raw = await boundedBytes(request, bodyLimit);
-    form = await new Response(raw, { headers: { "Content-Type": contentType } })
-      .formData();
+    form = await boundedFormData(request, bodyLimit);
   } catch (error) {
     return error instanceof RequestBodyTooLarge
       ? json(413, { error: "file_size" })

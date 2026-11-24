@@ -5,7 +5,14 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { canRetryNextPage } from "../../lib/paged-read";
 import { orderedCursorRows } from "../../lib/cursor-rows";
-import { Fragment, useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -99,7 +106,28 @@ export function ChatThread({
   });
   const retryOlder = canRetryNextPage(messages);
   const historyUnavailable = messages.isError && !retryOlder;
-  const ordered = orderedCursorRows(messages.data?.pages, "ascending");
+  const ordered = useMemo(
+    () => orderedCursorRows(messages.data?.pages, "ascending"),
+    [messages.data?.pages],
+  );
+  const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  const messageRows = useMemo(() => {
+    const rows: {
+      message: (typeof ordered)[number];
+      day: string;
+      dayLabel?: string;
+    }[] = [];
+    for (const message of ordered) {
+      const day = messageDay(message.created_at, zone);
+      const dayLabel =
+        day !== rows.at(-1)?.day
+          ? messageDayLabel(message.created_at, zone, language)
+          : undefined;
+      rows.push({ message, day, dayLabel });
+    }
+    return rows;
+  }, [ordered, language, zone]);
   const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
   const latest = ordered[ordered.length - 1];
   // Jump only to history that has just been fetched through the existing ACL-checked RPC.
@@ -152,7 +180,6 @@ export function ChatThread({
     const request = setTimeout(() => openLinkedMessage(messageId), 0);
     return () => clearTimeout(request);
   }, [messageId, messages.isSuccess, online, revoked]);
-  const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
   // Room management is not a blanket administrator read bypass for private DMs.
@@ -453,60 +480,48 @@ export function ChatThread({
               </div>
             ) : (
               <ol className="chat-message-list" aria-label={t("title")}>
-                {ordered.map((message, index) => {
-                  const day = messageDay(message.created_at, zone);
-                  const previous = ordered[index - 1];
-                  const showDay =
-                    !previous || messageDay(previous.created_at, zone) !== day;
-                  return (
-                    <Fragment key={message.id}>
-                      {showDay && (
-                        <li className="chat-date-separator">
-                          <time dateTime={day}>
-                            {messageDayLabel(
-                              message.created_at,
-                              zone,
-                              i18n.resolvedLanguage ?? i18n.language,
-                            )}
-                          </time>
-                        </li>
-                      )}
-                      <MessageBubble
-                        message={message}
-                        highlighted={message.id === linkedTarget}
-                        onReply={(target) => setReplyId(target.id)}
-                        topicPin={
-                          room.kind === "topic" &&
-                          message.can_moderate &&
-                          topicPins.query.isSuccess &&
-                          !topicPins.query.isFetching &&
-                          online &&
-                          status === "connected"
-                            ? {
-                                pinned: pinnedIds.has(message.id),
-                                disabled: topicPins.toggle.isPending,
-                                toggle: () =>
-                                  topicPins.toggle.mutate({
-                                    id: message.id,
-                                    pinned: !pinnedIds.has(message.id),
-                                  }),
-                              }
-                            : undefined
-                        }
-                        actor={actor}
-                        now={now}
-                        zone={zone}
-                        attachment={
-                          message.document_id && !message.deleted_at ? (
-                            <DocumentAttachment
-                              documentId={message.document_id}
-                            />
-                          ) : undefined
-                        }
-                      />
-                    </Fragment>
-                  );
-                })}
+                {messageRows.map(({ message, day, dayLabel }) => (
+                  <Fragment key={message.id}>
+                    {dayLabel && (
+                      <li className="chat-date-separator">
+                        <time dateTime={day}>{dayLabel}</time>
+                      </li>
+                    )}
+                    <MessageBubble
+                      message={message}
+                      highlighted={message.id === linkedTarget}
+                      onReply={(target) => setReplyId(target.id)}
+                      topicPin={
+                        room.kind === "topic" &&
+                        message.can_moderate &&
+                        topicPins.query.isSuccess &&
+                        !topicPins.query.isFetching &&
+                        online &&
+                        status === "connected"
+                          ? {
+                              pinned: pinnedIds.has(message.id),
+                              disabled: topicPins.toggle.isPending,
+                              toggle: () =>
+                                topicPins.toggle.mutate({
+                                  id: message.id,
+                                  pinned: !pinnedIds.has(message.id),
+                                }),
+                            }
+                          : undefined
+                      }
+                      actor={actor}
+                      now={now}
+                      zone={zone}
+                      attachment={
+                        message.document_id && !message.deleted_at ? (
+                          <DocumentAttachment
+                            documentId={message.document_id}
+                          />
+                        ) : undefined
+                      }
+                    />
+                  </Fragment>
+                ))}
               </ol>
             )}
             <div ref={end} />
@@ -543,10 +558,12 @@ export function ChatThread({
       {read.isError && (
         <ErrorState
           retry={
-            online && (latest || (messages.isSuccess && room.manual_unread))
+            online && !historyUnavailable
               ? () => {
-                  marked.current = latest?.id ?? "empty";
-                  mark(latest?.id ?? null);
+                  const failed = read.variables;
+                  if (failed === undefined) return;
+                  marked.current = failed ?? "empty";
+                  mark(failed);
                 }
               : undefined
           }

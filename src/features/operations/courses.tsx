@@ -6,7 +6,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
@@ -1242,6 +1242,8 @@ export function CoursesPage() {
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
+  const [pages, setPages] = useState({ runs: 0, templates: 0 });
+  const resetPages = () => setPages({ runs: 0, templates: 0 });
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [showArchivedRuns, setShowArchivedRuns] = useState(false);
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
@@ -1259,6 +1261,27 @@ export function CoursesPage() {
   };
   const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
   const canCreateTemplate = manage || companyOrganisations.length > 0;
+  const templatesById = useMemo(
+    () => new Map(templates.data?.map((item) => [item.id, item])),
+    [templates.data],
+  );
+  const organisationsById = useMemo(
+    () => new Map(orgs.data?.map((item) => [item.id, item])),
+    [orgs.data],
+  );
+  const companyOrganisationsById = useMemo(
+    () => new Map(ownCompanies.data?.map((item) => [item.id, item])),
+    [ownCompanies.data],
+  );
+  const topicsById = useMemo(
+    () => new Map(topics.data?.map((item) => [item.id, item])),
+    [topics.data],
+  );
+  const organisationName = (id: string | null | undefined) =>
+    id
+      ? (organisationsById.get(id)?.name ??
+        (companyViewer ? companyOrganisationsById.get(id)?.name : undefined))
+      : undefined;
   const canManageTemplate = (template: Template) =>
     manage ||
     companyOrganisations.some(
@@ -1276,9 +1299,7 @@ export function CoursesPage() {
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
     enabled: Boolean(detail && !detail.archived_at),
   });
-  const templateDetail = templates.data?.find(
-    (template) => template.id === params.get("template"),
-  );
+  const templateDetail = templatesById.get(params.get("template") ?? "");
   const editRun = (
     run: CourseRun | null,
     target?: "schedule" | "organisation",
@@ -1373,24 +1394,31 @@ export function CoursesPage() {
         }}
       />
     );
-  const findTemplate = (run: CourseRun) =>
-    templates.data.find((template) => template.id === run.template_id);
-  const filteredRuns = runs.data.filter(
-    (run) =>
-      (!run.archived_at || (manage && showArchivedRuns)) &&
-      (phase === "all" ||
-        scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) ===
-          phase) &&
-      [
-        findTemplate(run)?.title,
-        findTemplate(run)?.description,
-        orgs.data.find((org) => org.id === run.organisation_id)?.name,
-        run.venue,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
+  const needle = search.toLowerCase();
+  const filteredRuns =
+    tab === "runs"
+      ? runs.data.filter((run) => {
+          if (
+            (run.archived_at && !(manage && showArchivedRuns)) ||
+            (phase !== "all" &&
+              scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) !==
+                phase)
+          )
+            return false;
+          if (!needle) return true;
+          const template = findTemplate(run);
+          return [
+            template?.title,
+            template?.description,
+            organisationName(run.organisation_id),
+            run.venue,
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle);
+        })
+      : [];
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
   const offerStatus = (run: CourseRun) => {
@@ -1433,10 +1461,9 @@ export function CoursesPage() {
     if (run.archived_at) return null;
     if (!canPrepareOffer)
       return <p className="muted">{t("offerPermissionRequired")}</p>;
-    const hasCompany = orgs.data.some(
-      (org) => org.id === run.organisation_id && !org.archived_at,
-    );
-    if (hasCompany) return <CourseRunOfferLink runId={run.id} />;
+    const company = organisationsById.get(run.organisation_id ?? "");
+    if (company && !company.archived_at)
+      return <CourseRunOfferLink runId={run.id} />;
     if (!orgs.data.some((org) => !org.archived_at)) {
       return (
         <>
@@ -1471,17 +1498,27 @@ export function CoursesPage() {
   const blockCodes = new Map(
     blocks.data?.map((block) => [block.id, block.code]),
   );
-  const filteredTemplates = visibleTemplates.filter((template) =>
-    [
-      template.title,
-      template.description,
-      template.syllabus,
-      blockCodes.get(template.building_block_id ?? ""),
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
+  const filteredTemplates =
+    tab === "templates" && needle
+      ? visibleTemplates.filter((template) =>
+          [
+            template.title,
+            template.description,
+            template.syllabus,
+            blockCodes.get(template.building_block_id ?? ""),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle),
+        )
+      : visibleTemplates;
+  const pageSize = 24;
+  const total = tab === "runs" ? filteredRuns.length : filteredTemplates.length;
+  const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+  const page = Math.min(pages[tab], lastPage);
+  const start = page * pageSize;
+  const end = Math.min(start + pageSize, total);
+  const goToPage = (next: number) => setPages({ ...pages, [tab]: next });
   return (
     <>
       <PageHeading
@@ -1633,14 +1670,20 @@ export function CoursesPage() {
             id="course-search"
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              resetPages();
+            }}
           />
         </Field>
         {tab === "runs" && (
           <CoursePhaseFilter
             id="catalogue-course-phase"
             value={phase}
-            onChange={setPhase}
+            onChange={(next) => {
+              setPhase(next);
+              setPages({ ...pages, runs: 0 });
+            }}
           />
         )}
         {manage && tab === "runs" && (
@@ -1648,7 +1691,10 @@ export function CoursesPage() {
             <input
               type="checkbox"
               checked={showArchivedRuns}
-              onChange={(event) => setShowArchivedRuns(event.target.checked)}
+              onChange={(event) => {
+                setShowArchivedRuns(event.target.checked);
+                setPages({ ...pages, runs: 0 });
+              }}
             />
             {t("showArchivedRuns")}
           </label>
@@ -1697,6 +1743,27 @@ export function CoursesPage() {
           {t(archiveRun.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
+      {lastPage > 0 && (
+        <nav className="page-actions" aria-label={t("courseListPages")}>
+          <p role="status">
+            {t("courseListRange", { from: start + 1, to: end, total })}
+          </p>
+          <Button
+            variant="secondary"
+            disabled={page === 0}
+            onClick={() => goToPage(page - 1)}
+          >
+            {t("courseListPrevious")}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={page === lastPage}
+            onClick={() => goToPage(page + 1)}
+          >
+            {t("courseListNext")}
+          </Button>
+        </nav>
+      )}
       {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
@@ -1707,7 +1774,7 @@ export function CoursesPage() {
         </div>
       ) : tab === "runs" ? (
         <div className="operations-courses-grid">
-          {filteredRuns.map((run) => {
+          {filteredRuns.slice(start, end).map((run) => {
             const template = findTemplate(run);
             const { liveOffers, closedReason } = courseOfferState(
               run,
@@ -1746,20 +1813,13 @@ export function CoursesPage() {
                   </div>
                 )}
                 <p className="muted">
-                  {orgs.data.find((org) => org.id === run.organisation_id)
-                    ?.name ??
-                    companyOrganisations.find(
-                      (org) => org.id === run.organisation_id,
-                    )?.name ??
-                    t("noCustomer")}{" "}
-                  · {t(run.delivery_type)}
+                  {organisationName(run.organisation_id) ?? t("noCustomer")} ·{" "}
+                  {t(run.delivery_type)}
                 </p>
                 <p>{template?.description}</p>
                 <div className="tags">
                   {template?.course_template_topics.map((item) => {
-                    const topic = topics.data.find(
-                      (topic) => topic.id === item.topic_id,
-                    );
+                    const topic = topicsById.get(item.topic_id);
                     return topic ? (
                       <span className="badge" key={topic.id}>
                         {i18n.language.startsWith("de")
@@ -1828,12 +1888,6 @@ export function CoursesPage() {
               </article>
             );
           })}
-          {!filteredRuns.length && (
-            <div className="panel empty-state">
-              <BookOpen />
-              <p>{t("empty")}</p>
-            </div>
-          )}
         </div>
       ) : companyViewer && ownCompanies.isPending ? (
         <Loading />
@@ -1843,7 +1897,7 @@ export function CoursesPage() {
         <div className="empty-state">{t("noCourseTemplates")}</div>
       ) : (
         <div className="operations-courses-grid">
-          {filteredTemplates.map((template) => (
+          {filteredTemplates.slice(start, end).map((template) => (
             <article className="panel operations-course" key={template.id}>
               <h2>{template.title}</h2>
               {template.building_block_id &&
@@ -1856,12 +1910,7 @@ export function CoursesPage() {
                 <span className="badge">{t("archive")}</span>
               )}
               <p className="muted">
-                {orgs.data.find(
-                  (org) => org.id === template.owner_organisation_id,
-                )?.name ??
-                  ownCompanies.data?.find(
-                    (org) => org.id === template.owner_organisation_id,
-                  )?.name ??
+                {organisationName(template.owner_organisation_id) ??
                   (template.owner_organisation_id
                     ? t("templateOwner")
                     : t("internalTemplate"))}
@@ -1974,6 +2023,7 @@ export function CoursesPage() {
             if (initialTemplateId && !runEdit) {
               setSearch("");
               setPhase("all");
+              resetPages();
               setMessage(t("courseDraftCreated"));
             } else {
               setMessage(t("saved"));

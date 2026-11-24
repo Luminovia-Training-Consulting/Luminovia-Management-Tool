@@ -4,7 +4,7 @@
  * resource access around Storage reads; qualification evidence has its own
  * exact-version authorization context.
  */
-import {boundedBytes, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
+import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
@@ -148,8 +148,7 @@ Deno.serve(async (request: Request) => {
         };
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
-            const raw = await boundedBytes(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
-            const form = await new Response(new Uint8Array(raw), {headers: {'Content-Type': request.headers.get('content-type')!}}).formData();
+            const form = await boundedFormData(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
             const attendanceSession = academyAttendanceSession(form, academyAttendance);
@@ -159,8 +158,8 @@ Deno.serve(async (request: Request) => {
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
+            if (file.size > (protectedUpload ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
             const bytes = new Uint8Array(await file.arrayBuffer());
-            if (protectedUpload && bytes.length > academyMaterialMaxBytes) return json(413, {error: 'file_size'});
             const mime = await validateFile(bytes, name, file.type);
             if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');

@@ -1672,3 +1672,55 @@ it("loads a course beyond the first thousand results within the actor scope", as
   expect(result.at(-1)?.id).toBe("1000");
   expect(state.from).toHaveBeenCalledTimes(5);
 });
+
+it("limits large course lists to one page while search still reaches the last course", async () => {
+  const templates = Array.from({ length: 1001 }, (_, index) => ({
+    ...template,
+    id: `template-${index}`,
+    title: `Catalogue course ${index + 1}`,
+  }));
+  const runs = templates.map(({ id }, index) => ({
+    ...run,
+    id: `run-${index}`,
+    template_id: id,
+  }));
+  renderCourses({ runs, templates });
+
+  expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
+  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "Catalogue course 25" }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Nächste Seite" }));
+  expect(
+    screen.getByRole("heading", { name: "Catalogue course 25" }),
+  ).toBeVisible();
+  expect(screen.getByText("25–48 von 1001 Einträgen")).toBeVisible();
+
+  fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
+    target: { value: "Catalogue course 1001" },
+  });
+  expect(
+    screen.getByRole("heading", { name: "Catalogue course 1001" }),
+  ).toBeVisible();
+  expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(1);
+
+  fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
+    target: { value: "" },
+  });
+  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Vorlagen" }));
+  expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
+  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+});
+
+it("still opens a course detail from a bookmark outside the first page", async () => {
+  const runs = Array.from({ length: 25 }, (_, index) => ({
+    ...run,
+    id: `run-${index}`,
+  }));
+  renderCourses({ runs, path: "/courses?run=run-24" });
+  expect(
+    await screen.findByRole("dialog", { name: template.title }),
+  ).toBeVisible();
+});

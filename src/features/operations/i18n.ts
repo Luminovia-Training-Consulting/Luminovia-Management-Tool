@@ -5,6 +5,13 @@
 import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  courseListPages: ["Kursliste blättern", "Course list pages"],
+  courseListRange: [
+    "{{from}}–{{to}} von {{total}} Einträgen",
+    "{{from}}–{{to}} of {{total}} entries",
+  ],
+  courseListPrevious: ["Vorherige Seite", "Previous page"],
+  courseListNext: ["Nächste Seite", "Next page"],
   companyLecturers: ["Eigene Dozierende", "Company lecturers"],
   companyLecturerChoose: ["Dozent:in auswählen", "Choose lecturer"],
   companyLecturerAdd: ["Dozent:in zuordnen", "Assign lecturer"],

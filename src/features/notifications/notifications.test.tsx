@@ -944,3 +944,38 @@ it("marks only displayed unread IDs while a category is selected", async () => {
     }),
   );
 });
+
+it("disables the category action when only other categories have unread notifications", async () => {
+  const chat = {
+    ...notice,
+    id: "9c05dfad-a359-49be-b391-7837bb03de53",
+    kind: "chat_message",
+    title: "Fictional read message",
+    read_at: "2026-11-15T11:00:00Z",
+  };
+  const original = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name, ...args) => {
+    if (name !== "notification_inbox") return original(name, ...args);
+    const response = Promise.resolve({
+      data: {
+        items: [notice, chat],
+        unread_count: 1,
+        as_of: "2026-11-15T11:00:00Z",
+      },
+      error: null,
+    });
+    return Object.assign(response, { abortSignal: () => response });
+  });
+  view(<NotificationsPage />);
+  await screen.findByText(chat.title);
+  await userEvent.click(screen.getByRole("button", { name: /^Nachrichten$/ }));
+  const markCategory = screen.getByRole("button", {
+    name: "Angezeigte Meldungen dieser Kategorie als gelesen markieren",
+  });
+  expect(markCategory).toBeDisabled();
+  await userEvent.click(markCategory);
+  expect(
+    state.rpc.mock.calls.some(([name]) => name === "mark_notifications"),
+  ).toBe(false);
+  expect(screen.getByText(chat.title)).toBeVisible();
+});

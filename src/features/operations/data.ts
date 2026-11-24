@@ -200,24 +200,21 @@ export const contactsQuery = (
           .abortSignal(signal),
       ),
   });
-/**
- * Read organisation_private_details through the native client, propagate access/read failures
- * and scope cached data to the actor and requested resource.
- */
-export const notesQuery = (actor: string) =>
+/** Fetch only the selected organisation's private notes under the existing RLS policy. */
+export const notesQuery = (actor: string, organisation: string | undefined) =>
   queryOptions({
-    queryKey: ["operations", "notes", actor],
-    queryFn: ({ signal }) =>
-      readDirectoryPages<{ organisation_id: string; private_notes: string }>(
-        (from, to) =>
-          db()
-            .from("organisation_private_details")
-            .select("*")
-
-            .order("organisation_id")
-            .range(from, to)
-            .abortSignal(signal),
-      ),
+    queryKey: ["operations", "notes", actor, organisation],
+    enabled: Boolean(organisation),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("organisation_private_details")
+        .select("private_notes")
+        .eq("organisation_id", organisation!)
+        .abortSignal(signal)
+        .maybeSingle<{ private_notes: string }>();
+      if (error) throw error;
+      return data?.private_notes ?? "";
+    },
   });
 /** Read course_templates through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const templatesQuery = (actor: string) =>

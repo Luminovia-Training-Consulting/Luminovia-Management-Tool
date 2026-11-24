@@ -73,6 +73,32 @@ await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
     console.log(
         "PASS inactive/invalid batches denied and a failed import rolls back every event",
     );
+    const batch = Array.from({length: 500}, (_, index) => ({
+        ...appointment,
+        uid: `fictional-batch-${index}`,
+        time_zone: index % 2 ? "Etc/UTC" : "Australia/Brisbane",
+    }));
+    batch[499] = {...batch[0], title: "Fictional later duplicate"};
+    assert.deepEqual(JSON.parse(await call(owner, batch)), {created: 499, skipped: 1});
+    assert.deepEqual(JSON.parse(await call(owner, batch)), {created: 0, skipped: 500});
+    assert.equal(await sql("select count(*) from public.personal_events where title='Fictional later duplicate'"), "0");
+    await assert.rejects(call(owner, [{...batch[0], time_zone: "Unknown/Zone"}]), /22023/);
+    await assert.rejects(call(owner, [
+        {...batch[0], uid: "valid-first-event"},
+        {...batch[1], uid: "invalid-time-zone", time_zone: "Unknown/Zone"},
+    ]), /22023/);
+    assert.equal(await sql("select count(*) from public.personal_events"), "501");
+    console.log("PASS maximum batch keeps first duplicate and validates all IANA zones before writing");
+
+    await assert.rejects(actor(owner, `insert into public.personal_events(title,starts_at,ends_at,time_zone) values
+      ('Fictional direct first','2042-01-01 09:00Z','2042-01-01 10:00Z','Etc/UTC'),
+      ('Fictional direct second','2042-01-01 10:00Z','2042-01-01 11:00Z','Unknown/Zone')`), /22023/);
+    assert.equal(await sql("select count(*) from public.personal_events"), "501");
+    await actor(owner, "update public.personal_events set time_zone='Etc/UTC' where time_zone='Europe/Berlin'");
+    await assert.rejects(actor(owner, "update public.personal_events set time_zone='Unknown/Zone'"), /22023/);
+    assert.equal(await sql("select count(*) from public.personal_events where time_zone='Unknown/Zone'"), "0");
+    console.log("PASS ordinary calendar INSERT and UPDATE retain atomic IANA validation");
+
     const job = randomUUID(),
         claim = randomUUID();
     await sql(
