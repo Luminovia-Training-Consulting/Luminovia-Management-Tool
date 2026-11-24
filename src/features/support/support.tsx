@@ -740,37 +740,38 @@ function TicketDetail({
             <dt>{t("priority")}</dt>
             <dd>{t(row.priority)}</dd>
           </dl>
-        </div>
-      </section>
-      {(row.can_manage || row.can_reopen) && (
-        <div className="support-actions">
-          {row.can_manage &&
-            (["status", "assign", "priority", "links"] as const)
-              .filter(
-                (action) =>
-                  action !== "status" || supportNextStatuses(row.status).length,
-              )
-              .map((action) => (
+          {(row.can_manage || row.can_reopen) && (
+            <div className="support-actions">
+              {row.can_manage &&
+                (["status", "assign", "priority", "links"] as const)
+                  .filter(
+                    (action) =>
+                      action !== "status" ||
+                      supportNextStatuses(row.status).length,
+                  )
+                  .map((action) => (
+                    <Button
+                      key={action}
+                      variant="secondary"
+                      disabled={!online}
+                      onClick={() => setEditing({ action, ticket: row })}
+                    >
+                      {t(title(action))}
+                    </Button>
+                  ))}
+              {row.can_reopen && (
                 <Button
-                  key={action}
                   variant="secondary"
                   disabled={!online}
-                  onClick={() => setEditing({ action, ticket: row })}
+                  onClick={() => setEditing({ action: "reopen", ticket: row })}
                 >
-                  {t(title(action))}
+                  {t("reopen")}
                 </Button>
-              ))}
-          {row.can_reopen && (
-            <Button
-              variant="secondary"
-              disabled={!online}
-              onClick={() => setEditing({ action: "reopen", ticket: row })}
-            >
-              {t("reopen")}
-            </Button>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </section>
       <section className="panel">
         <div className="section-heading">
           <h2>{t("conversation")}</h2>

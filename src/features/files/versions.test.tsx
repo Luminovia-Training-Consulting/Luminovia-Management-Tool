@@ -87,6 +87,22 @@ it("invalidates existing version history after a confirmed replacement instead o
     client.getQueryState(["document-versions", "file"])?.isInvalidated,
   ).toBe(true);
 });
+it("clears the previous selection when a newly selected file is rejected", async () => {
+  const user = userEvent.setup();
+  setup(<FileUpload context={{ scope: "personal" }} />);
+  const input = screen.getByLabelText("Datei auswählen");
+  const upload = screen.getByRole("button", { name: "Datei hochladen" });
+
+  await user.upload(input, new File(["x"], "valid.png", { type: "image/png" }));
+  expect(upload).toBeEnabled();
+
+  await user.upload(input, new File([], "empty.png", { type: "image/png" }));
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(screen.queryByText(/valid\.png/)).not.toBeInTheDocument();
+  expect(upload).toBeDisabled();
+  await user.click(upload);
+  expect(state.uploadDocument).not.toHaveBeenCalled();
+});
 it("refreshes a file list whose first read predates a confirmed upload", async () => {
   const user = userEvent.setup();
   let release!: (files: PortalDocument[]) => void;

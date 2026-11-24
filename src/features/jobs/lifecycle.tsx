@@ -5,7 +5,13 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
  * reviewed version/request ID; background changes must not silently authorize an action.
  */
-import { lazy, Suspense, type FormEvent, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  type FormEvent,
+  type MouseEvent,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -96,6 +102,9 @@ export function JobLifecyclePanel({
   }>({ value: "", instant: null });
   const [copyTitle, setCopyTitle] = useState(job.title);
   const [editing, setEditing] = useState(false);
+  const [editReturnTarget, setEditReturnTarget] = useState<HTMLElement | null>(
+    null,
+  );
   const [newCapacity, setNewCapacity] = useState<number | null>(null);
   const request = useRequestKey();
   const change = useMutation({
@@ -253,12 +262,25 @@ export function JobLifecyclePanel({
       disabled={!online || change.isPending}
       onClick={() => {
         change.reset();
+        setEditReturnTarget(null);
         setEditing(!editing);
       }}
     >
       {label}
     </Button>
   );
+  const openRelatedSection = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (change.isPending) {
+      event.preventDefault();
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
+    setEditReturnTarget(
+      document.getElementById(event.currentTarget.hash.slice(1)),
+    );
+    setEditing(false);
+  };
   const changeError = change.isError && (
     <Notice kind="error">
       {typeof change.error === "object" &&
@@ -271,6 +293,7 @@ export function JobLifecyclePanel({
   return (
     <section
       id="job-allocation"
+      tabIndex={-1}
       className="panel job-lifecycle"
       aria-label={t("heading")}
     >
@@ -285,17 +308,19 @@ export function JobLifecyclePanel({
           }}
           title={t("editAssignment")}
           description={t("editAssignmentHelp")}
-          returnFocusTo={editButtonTarget.querySelector("button")}
+          returnFocusTo={
+            editReturnTarget ?? editButtonTarget.querySelector("button")
+          }
           closeDisabled={change.isPending}
         >
-          <div className="page-actions">
+          <div className="page-actions job-editor-actions">
             <Button asChild variant="secondary">
-              <a href="#job-briefing" onClick={() => setEditing(false)}>
+              <a href="#job-briefing" onClick={openRelatedSection}>
                 {t("editReference")}
               </a>
             </Button>
             <Button asChild variant="secondary">
-              <a href="#job-allocation" onClick={() => setEditing(false)}>
+              <a href="#job-allocation" onClick={openRelatedSection}>
                 {t("manageAllocation")}
               </a>
             </Button>
@@ -304,7 +329,7 @@ export function JobLifecyclePanel({
               (pricing.data.can_manage_gross ||
                 pricing.data.can_manage_own_course_pricing) && (
                 <Button asChild variant="secondary">
-                  <a href="#job-pricing" onClick={() => setEditing(false)}>
+                  <a href="#job-pricing" onClick={openRelatedSection}>
                     {t("editPricing")}
                   </a>
                 </Button>
