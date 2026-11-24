@@ -98,7 +98,8 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
             has: page.getByRole("heading", {name: title, exact: true}),
         });
         await expect(card).toHaveCount(1);
-        await card.getByRole("button", {name: "Bearbeiten", exact: true}).click();
+        await card.getByRole("button", {name: "Kurs ansehen", exact: true}).click();
+        await page.getByRole("dialog").getByRole("button", {name: "Bearbeiten", exact: true}).click();
         const dialog = page.getByRole("dialog", {
             name: "Bearbeiten",
             exact: true,

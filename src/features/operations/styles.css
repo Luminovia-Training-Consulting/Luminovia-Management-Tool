@@ -137,6 +137,12 @@
   font-size: 11px;
 }
 
+.operations-course .course-run-job-link {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+
 .operations-session-summary {
   display: flex;
   gap: 8px;

@@ -214,7 +214,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
         .locator(".operations-course")
         .filter({has: page.getByRole("heading", {name: title, exact: true})});
     await expect(card).toHaveCount(1);
-    const viewAction = card.getByRole("button", {name: "Ansehen", exact: true});
+    const viewAction = card.getByRole("button", {name: "Kurs ansehen", exact: true});
     await assertPointerReady(viewAction, "saved course view");
     await viewAction.click();
     dialog = page.getByRole("dialog");
@@ -277,7 +277,8 @@ test("course editor publishes and withdraws the linked marketplace offer", async
             has: page.getByRole("heading", {name: title, exact: true}),
         });
         await expect(card.getByText(status, {exact: true})).toBeVisible();
-        await card.getByRole("button", {name: "Bearbeiten", exact: true}).click();
+        await card.getByRole("button", {name: "Kurs ansehen", exact: true}).click();
+        await page.getByRole("dialog").getByRole("button", {name: "Bearbeiten", exact: true}).click();
         return page.getByRole("dialog", {name: "Bearbeiten"});
     };
     let editor = await openEditor("Entwurf");

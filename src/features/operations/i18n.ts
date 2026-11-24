@@ -792,7 +792,9 @@ const pairs: Record<string, [string, string]> = {
     "Offer saved as a draft",
   ],
   marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
-  viewCourseJob: ["Auftrag anzeigen: {{title}}", "View assignment: {{title}}"],
+  viewCourseRun: ["Kurs ansehen", "View course"],
+  viewCourseAssignment: ["Auftrag ansehen", "View assignment"],
+  viewCourseJob: ["Auftrag ansehen: {{title}}", "View assignment: {{title}}"],
   courseLecturerFilter: ["Dozent:in", "Lecturer"],
   allCourseLecturers: ["Alle Dozent:innen", "All lecturers"],
   marketplaceAssignedWithLecturers: [

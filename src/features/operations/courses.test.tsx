@@ -97,6 +97,14 @@ const run: CourseRun = {
     },
   ],
 };
+async function openRunEditor() {
+  await userEvent.click(screen.getByRole("button", { name: "Kurs ansehen" }));
+  const details = await screen.findByRole("dialog");
+  await userEvent.click(
+    within(details).getByRole("button", { name: "Bearbeiten" }),
+  );
+}
+
 const clients: QueryClient[] = [];
 
 function LocationProbe() {
@@ -545,9 +553,10 @@ it("links a saved offer draft from the course card without marking it as listed"
   expect(
     await screen.findByText("Auftrag als Entwurf gespeichert"),
   ).toBeVisible();
-  expect(
-    screen.getByRole("link", { name: `Entwurf öffnen: ${job.title}` }),
-  ).toHaveAttribute("href", `/jobs/${job.id}`);
+  expect(screen.getByRole("link", { name: "Auftrag ansehen" })).toHaveAttribute(
+    "href",
+    `/jobs/${job.id}`,
+  );
   expect(
     screen.queryByRole("link", {
       name: "Auftrag für die Stellenbörse erstellen",
@@ -591,7 +600,7 @@ it.each([
       lifecycle: { ...protectedLifecycle, confirmed_count: 0 },
     });
     expect(await screen.findByText(badge, { exact: true })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const editor = screen.getByRole("dialog", { name: "Bearbeiten" });
     const dialog = within(editor);
     const change = dialog.getByRole("button", { name: label });
@@ -628,7 +637,7 @@ it("keeps a partially filled listing under the protected job workflow", async ()
     runs: [{ ...run, jobs: [job] }],
     lifecycle: { ...protectedLifecycle, confirmed_count: 1 },
   });
-  await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+  await openRunEditor();
   const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
   expect(
     dialog.queryByRole("button", { name: "Veröffentlichung zurücknehmen" }),
@@ -986,7 +995,7 @@ describe("course form failure and confirmation boundaries", () => {
         },
       });
       renderCourses({ runs: [run] });
-      await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+      await openRunEditor();
       const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
       fireEvent.change(within(dialog).getByLabelText("Ort / Zugangslink"), {
         target: { value: "Edited fictional classroom" },
@@ -1009,7 +1018,9 @@ describe("course form failure and confirmation boundaries", () => {
         screen.queryByText("Gespeichert.", { exact: true }),
       ).not.toBeInTheDocument();
       expect(state.from).not.toHaveBeenCalled();
-      const rejected = structuredClone(state.rpc.mock.calls[0]);
+      const rejected = structuredClone(
+        state.rpc.mock.calls.find(([name]) => name === "save_course_run"),
+      );
       state.rpc.mockImplementation((name: string) => {
         if (name === "job_lifecycle")
           return {
@@ -1028,7 +1039,9 @@ describe("course form failure and confirmation boundaries", () => {
         }),
       );
       await screen.findByText("Gespeichert.", { exact: true });
-      expect(state.rpc.mock.calls[1]).toEqual(rejected);
+      expect(
+        state.rpc.mock.calls.filter(([name]) => name === "save_course_run"),
+      ).toEqual([rejected, rejected]);
       expect(rejected).toEqual([
         "save_course_run",
         expect.objectContaining({ p_id: runId }),
@@ -1167,13 +1180,13 @@ describe("course form failure and confirmation boundaries", () => {
     renderCourses({ runs: [{ ...run, jobs: [job] }] });
     expect(
       await screen.findByRole("link", {
-        name: "Ausschreibung öffnen: Fictional active order",
+        name: "Auftrag ansehen",
       }),
     ).toBeVisible();
     expect(
       screen.queryByText("Entwurf", { exact: true }),
     ).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
     expect(
       dialog.getByRole("link", { name: "Auftrag öffnen: " + job.title }),
@@ -1232,7 +1245,7 @@ describe("course form failure and confirmation boundaries", () => {
       runs: [{ ...run, jobs: [{ ...job, status: "filled" }] }],
       changeCandidates: [candidate],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = within(screen.getByRole("dialog", { name: "Bearbeiten" }));
     expect(
       dialog.getByRole("link", { name: "Terminänderung vorschlagen" }),
@@ -1259,7 +1272,7 @@ describe("course form failure and confirmation boundaries", () => {
         can_reassign_company: true,
       },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const editor = screen.getByRole("dialog", { name: "Bearbeiten" });
     const dialog = within(editor);
     await userEvent.selectOptions(
@@ -1310,7 +1323,7 @@ describe("course form failure and confirmation boundaries", () => {
       ],
     };
     renderCourses({ runs: [preciseRun] });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     fireEvent.change(within(dialog).getByLabelText("Ort / Zugangslink"), {
       target: { value: "Another fictional venue" },
@@ -1365,7 +1378,7 @@ describe("course form failure and confirmation boundaries", () => {
           },
         ],
       });
-      await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+      await openRunEditor();
       const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
       fireEvent.change(within(dialog).getByLabelText(label, { exact: true }), {
         target: { value: input },
@@ -1394,7 +1407,7 @@ describe("course form failure and confirmation boundaries", () => {
     renderCourses({
       runs: [{ ...run, course_sessions: [run.course_sessions[0], retained] }],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Entfernen 1" }),
@@ -1428,7 +1441,7 @@ describe("course form failure and confirmation boundaries", () => {
       ends_at: "2030-04-01T08:00:42.654321Z",
     };
     renderCourses({ runs: [{ ...run, course_sessions: [original] }] });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Termin ergänzen" }),
@@ -1461,7 +1474,7 @@ describe("course form failure and confirmation boundaries", () => {
       ends_at: "2030-10-27T01:30:42.654321Z",
     };
     renderCourses({ runs: [{ ...run, course_sessions: [original] }] });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     expect(
       within(dialog).getByLabelText("Beginn 1", { exact: true }),
@@ -1503,7 +1516,7 @@ describe("course form failure and confirmation boundaries", () => {
         },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     fireEvent.change(within(dialog).getByLabelText("Zeitzone"), {
       target: { value: "Europe/Paris" },
@@ -1543,7 +1556,7 @@ describe("course form failure and confirmation boundaries", () => {
         },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     fireEvent.change(within(dialog).getByLabelText("Ende 1", { exact: true }), {
       target: { value: "2030-04-01T10:15" },
@@ -1582,7 +1595,7 @@ describe("course form failure and confirmation boundaries", () => {
         },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     fireEvent.change(
       within(dialog).getByLabelText("Beginn 1", { exact: true }),
@@ -1633,7 +1646,7 @@ describe("course form failure and confirmation boundaries", () => {
           },
         ],
       });
-      await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+      await openRunEditor();
       const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
       fireEvent.change(within(dialog).getByLabelText(field, { exact: true }), {
         target: { value: "2030-04-01T09:00" },
@@ -1646,7 +1659,10 @@ describe("course form failure and confirmation boundaries", () => {
       expect(await within(dialog).findByRole("alert")).toHaveTextContent(
         "Beginn und Ende müssen eindeutig sein.",
       );
-      expect(state.rpc).not.toHaveBeenCalled();
+      expect(state.rpc).not.toHaveBeenCalledWith(
+        "save_course_run",
+        expect.anything(),
+      );
       expect(
         screen.queryByText("Gespeichert.", { exact: true }),
       ).not.toBeInTheDocument();
@@ -1688,7 +1704,7 @@ describe("course form failure and confirmation boundaries", () => {
         },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await openRunEditor();
     const dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
     fireEvent.change(within(dialog).getByLabelText("Erster Unterrichtstag"), {
       target: { value: "2030-04-01" },
@@ -1749,7 +1765,9 @@ it("limits large course lists to one page while search still reaches the last co
   }));
   renderCourses({ runs, templates });
 
-  expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
+  expect(screen.getAllByRole("button", { name: "Kurs ansehen" })).toHaveLength(
+    24,
+  );
   expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
   expect(
     screen.queryByRole("heading", { name: "Catalogue course 25" }),
@@ -1766,7 +1784,9 @@ it("limits large course lists to one page while search still reaches the last co
   expect(
     screen.getByRole("heading", { name: "Catalogue course 1001" }),
   ).toBeVisible();
-  expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Kurs ansehen" })).toHaveLength(
+    1,
+  );
 
   fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
     target: { value: "" },
@@ -1797,10 +1817,12 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
   renderCourses({
     permissions: ["courses.manage", "jobs.manage"],
     templates: [template, openTemplate],
+    organisations: [organisation],
     runs: [
       {
         ...run,
         published: true,
+        organisation_id: companyId,
         jobs: [
           {
             ...job,
@@ -1825,11 +1847,6 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
     ],
   });
 
-  expect(
-    screen.getByRole("link", {
-      name: "Fictional active order · 1 von 1 besetzt",
-    }),
-  ).toHaveAttribute("href", `/jobs/${jobId}`);
   const staffedCourse = screen
     .getByRole("heading", { name: template.title })
     .closest("article")!;
@@ -1842,11 +1859,21 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
   expect(
     within(staffedCourse).queryByText("Besetzt", { exact: true }),
   ).not.toBeInTheDocument();
+  const actions = within(staffedCourse.querySelector(".operations-actions")!);
+  expect(actions.getByRole("button", { name: "Kurs ansehen" })).toBeVisible();
   expect(
-    screen.getByRole("link", {
-      name: "Auftrag anzeigen: Fictional active order",
-    }),
+    actions.getByRole("link", { name: "Auftrag ansehen" }),
   ).toHaveAttribute("href", `/jobs/${jobId}`);
+  expect(
+    actions.getByRole("link", { name: "Weiteren Auftrag erstellen" }),
+  ).toHaveAttribute("href", `/courses?offer=${runId}`);
+  expect(
+    actions.getByRole("button", { name: "Sicher kopieren" }),
+  ).toBeVisible();
+  expect(
+    actions.queryByRole("button", { name: "Bearbeiten" }),
+  ).not.toBeInTheDocument();
+  expect(staffedCourse.querySelector(".course-marketplace-state")).toBeNull();
   expect(screen.queryByText(/Former lecturer/)).not.toBeInTheDocument();
   expect(
     screen.getByRole("heading", { name: openTemplate.title }),
@@ -1925,7 +1952,7 @@ it("opens company-scoped planning and keeps drafts with no published offer visib
   expect(
     screen.queryByRole("heading", { name: liveTemplate.title }),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Ansehen" }));
+  await userEvent.click(screen.getByRole("button", { name: "Kurs ansehen" }));
   expect(screen.getByTestId("course-route")).toHaveTextContent(
     `company=${companyId}`,
   );

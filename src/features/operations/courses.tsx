@@ -1524,7 +1524,7 @@ export function CoursesPage() {
       : [];
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
-  const offerStatus = (run: CourseRun) => {
+  const offerStatus = (run: CourseRun, compact = false) => {
     const { liveOffers, closedReason } = courseOfferState(
       run,
       runs.dataUpdatedAt,
@@ -1539,6 +1539,20 @@ export function CoursesPage() {
         ).join(", ")
       : "";
     const filled = closedReason === "marketplaceAssigned";
+    const status =
+      filled && lecturerNames
+        ? t("marketplaceAssignedWithLecturers", { names: lecturerNames })
+        : t(closedReason);
+    const staffing =
+      !filled && lecturerNames
+        ? t("confirmedCourseLecturers", { names: lecturerNames })
+        : null;
+    if (compact) {
+      const summary = [filled || !liveOffers.length ? status : null, staffing]
+        .filter(Boolean)
+        .join(" · ");
+      return summary ? <p className="muted">{summary}</p> : null;
+    }
     return (
       <>
         <strong>{t("marketplaceStatus")}</strong>
@@ -1552,16 +1566,8 @@ export function CoursesPage() {
             )}
           </Link>
         ))}
-        {(filled || !liveOffers.length) && (
-          <span>
-            {filled && lecturerNames
-              ? t("marketplaceAssignedWithLecturers", { names: lecturerNames })
-              : t(closedReason)}
-          </span>
-        )}
-        {!filled && lecturerNames && (
-          <span>{t("confirmedCourseLecturers", { names: lecturerNames })}</span>
-        )}
+        {(filled || !liveOffers.length) && <span>{status}</span>}
+        {staffing && <span>{staffing}</span>}
         {run.jobs
           ?.filter(
             ({ id, status }) =>
@@ -1578,29 +1584,34 @@ export function CoursesPage() {
       </>
     );
   };
-  const marketplaceAction = (run: CourseRun) => {
+  const marketplaceAction = (run: CourseRun, compact = false) => {
     if (!manage) return null;
     const draft = run.jobs?.find(({ status }) => status === "draft");
     if (draft)
       return (
-        <div className="operations-actions">
-          <Link to={`/jobs/${draft.id}`}>
-            {t("openMarketplaceDraft", { title: draft.title })}
-          </Link>
+        <>
+          {!compact && (
+            <Link to={`/jobs/${draft.id}`}>
+              {t("openMarketplaceDraft", { title: draft.title })}
+            </Link>
+          )}
           {canPrepareOffer && !run.archived_at && (
             <PublishOfferDraft jobId={draft.id} />
           )}
-        </div>
+        </>
       );
     if (run.archived_at) return null;
     if (!canPrepareOffer)
-      return <p className="muted">{t("offerPermissionRequired")}</p>;
+      return compact ? null : (
+        <p className="muted">{t("offerPermissionRequired")}</p>
+      );
     const company = organisationsById.get(run.organisation_id ?? "");
     if (company && !company.archived_at)
       return (
         <CourseRunOfferLink
           runId={run.id}
           additional={Boolean(run.jobs?.length)}
+          compact={compact}
         />
       );
     if (!orgs.data.some((org) => !org.archived_at)) {
@@ -1616,19 +1627,17 @@ export function CoursesPage() {
       );
     }
     return (
-      <div className="operations-actions">
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!online}
-          onClick={() => {
-            if (detail) setCourseView({}, true);
-            editRun(run, "organisation");
-          }}
-        >
-          {t("assignOrganisationForOffer")}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant={compact ? "ghost" : "secondary"}
+        disabled={!online}
+        onClick={() => {
+          if (detail) setCourseView({}, true);
+          editRun(run, "organisation");
+        }}
+      >
+        {t("assignOrganisationForOffer")}
+      </Button>
     );
   };
   const templateBlock = blocks.data?.find(
@@ -1971,6 +1980,7 @@ export function CoursesPage() {
         <div className="operations-courses-grid">
           {filteredRuns.slice(start, end).map((run) => {
             const template = findTemplate(run);
+            const jobs = run.jobs ?? [];
             const { liveOffers, closedReason } = courseOfferState(
               run,
               runs.dataUpdatedAt,
@@ -2029,21 +2039,19 @@ export function CoursesPage() {
                   </div>
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
-                {manage && (
-                  <div className="course-marketplace-state">
-                    {offerStatus(run)}
-                    {marketplaceAction(run)}
-                  </div>
-                )}
+                {manage && offerStatus(run, true)}
                 {canPrepareOffer &&
-                  assignmentsByRun.get(run.id)?.map((assignment) => (
-                    <p key={assignment.id}>
-                      <Link to={`/jobs/${assignment.id}`}>
+                  assignmentsByRun
+                    .get(run.id)
+                    ?.filter(
+                      ({ count, capacity }) => capacity > 1 || count < capacity,
+                    )
+                    .map((assignment) => (
+                      <p key={assignment.id} className="muted">
                         {assignment.title} ·{" "}
                         {t("assignmentCoverage", assignment)}
-                      </Link>
-                    </p>
-                  ))}
+                      </p>
+                    ))}
                 <p className="muted">
                   {!manage && `${customer} · `}
                   {t(run.delivery_type)}
@@ -2065,58 +2073,68 @@ export function CoursesPage() {
                   <CalendarDays size={17} />
                   {run.course_sessions.length} · {run.time_zone}
                 </p>
-                <Button
-                  variant="secondary"
-                  onClick={() => setCourseView({ run: run.id })}
-                >
-                  {t("view")}
-                </Button>
-                {manage && (
-                  <div className="operations-actions">
-                    <Button
-                      variant="ghost"
-                      disabled={!online}
-                      onClick={() => editRun(run)}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      disabled={!online || archiveRun.isPending}
-                      onClick={() =>
-                        archiveRun.mutate({
-                          run,
-                          archived: !run.archived_at,
-                        })
-                      }
-                    >
-                      {t(run.archived_at ? "restore" : "archiveAction")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      disabled={!online}
-                      onClick={() => {
-                        duplicate.reset();
-                        setCopy({
-                          type: "run",
-                          id: run.id,
-                          title: template?.title ?? "",
-                        });
-                      }}
-                    >
-                      <Copy size={15} />
-                      {t("duplicate")}
-                    </Button>
-                    <PermanentDeleteAction
-                      shortLabel
-                      kind="course_run"
-                      id={run.id}
-                      label={template?.title ?? t("courses")}
-                      linkedJobs={run.jobs}
-                      onReviewSessions={() => reviewSchedule(run)}
-                    />
-                  </div>
-                )}
+                <div className="operations-actions">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCourseView({ run: run.id })}
+                  >
+                    {t("viewCourseRun")}
+                  </Button>
+                  {manage && (
+                    <>
+                      {jobs.map((job) => (
+                        <Button
+                          key={job.id}
+                          asChild
+                          variant="ghost"
+                          className="course-run-job-link"
+                        >
+                          <Link to={`/jobs/${job.id}`}>
+                            {jobs.length === 1
+                              ? t("viewCourseAssignment")
+                              : t("viewCourseJob", { title: job.title })}
+                          </Link>
+                        </Button>
+                      ))}
+                      {marketplaceAction(run, true)}
+                      <Button
+                        variant="ghost"
+                        disabled={!online || archiveRun.isPending}
+                        onClick={() =>
+                          archiveRun.mutate({
+                            run,
+                            archived: !run.archived_at,
+                          })
+                        }
+                      >
+                        {t(run.archived_at ? "restore" : "archiveAction")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled={!online}
+                        onClick={() => {
+                          duplicate.reset();
+                          setCopy({
+                            type: "run",
+                            id: run.id,
+                            title: template?.title ?? "",
+                          });
+                        }}
+                      >
+                        <Copy size={15} />
+                        {t("duplicate")}
+                      </Button>
+                      <PermanentDeleteAction
+                        shortLabel
+                        kind="course_run"
+                        id={run.id}
+                        label={template?.title ?? t("courses")}
+                        linkedJobs={run.jobs}
+                        onReviewSessions={() => reviewSchedule(run)}
+                      />
+                    </>
+                  )}
+                </div>
               </article>
             );
           })}
