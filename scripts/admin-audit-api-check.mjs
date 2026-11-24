@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
 import {withApiFixture} from "./testing/api.mjs";
+import {rpcResponse} from "./testing/openapi-contract.mjs";
+
+const auditPage = rpcResponse("admin_audit_events");
+const clearedActivity = rpcResponse("clear_administration_activity");
 
 await withApiFixture(
     async ({actor, passwordOnly, service, checked, suffix, url}) => {
@@ -13,24 +17,13 @@ await withApiFixture(
         await passwordOnly(administrator.client);
         await passwordOnly(owner.client);
         await passwordOnly(manager.client);
-        await checked(
-            administrator.client.rpc("admin_audit_events"),
-            "Password-only administrator audit access",
-        );
-        await checked(
-            owner.client.rpc("admin_audit_events"),
-            "Password-only owner audit access",
-        );
-        await checked(manager.client.rpc("admin_audit_events"), "Management audit access");
+        for (const [who, mayClear] of [[administrator, true], [owner, true], [manager, false]]) {
+            const result = await checked(who.client.rpc("admin_audit_events"), "Password-only activity access");
+            assert.equal(auditPage(JSON.stringify(result)).can_clear, mayClear);
+        }
         assert.equal((await teacher.client.rpc("admin_audit_events")).error?.code, "42501");
-        assert.equal(
-            (await manager.client.rpc("clear_administration_activity", {p_confirm: true})).error?.code,
-            "42501",
-        );
-        assert.equal(
-            (await administrator.client.rpc("clear_administration_activity", {p_confirm: false})).error?.code,
-            "22023",
-        );
+        for (const who of [manager, teacher])
+            assert.equal((await who.client.rpc("clear_administration_activity", {p_confirm: true})).error?.code, "42501");
         await checked(
             teacher.client.auth.updateUser({
                 data: {role: "admin", permissions: ["audit.read"]},
@@ -72,6 +65,7 @@ await withApiFixture(
                     "availability.created",
                     "chat.member_added",
                     "contract.executed_version_registered",
+                    "invoice.private_draft_saved",
                     "job.lifecycle.unknown",
                 ].map((action) => ({
                     actor_id: teacher.id,
@@ -85,6 +79,7 @@ await withApiFixture(
         // The allowed projection must restrict both returned fields and the set of permitted actions.
         const first = await checked(
             administrator.client.rpc("admin_audit_events", {
+                p_action: "taxonomy.created",
                 p_search: label,
                 p_limit: 20,
             }),
@@ -108,6 +103,7 @@ await withApiFixture(
                 owner.client.rpc("admin_audit_events", {
                     p_from: first.from,
                     p_to: first.to,
+                    p_action: "taxonomy.created",
                     p_search: label,
                     p_limit: 20,
                     p_before_at: page.next_cursor.at,
@@ -133,7 +129,7 @@ await withApiFixture(
         assert.equal(
             (
                 await administrator.client.rpc("admin_audit_events", {
-                    p_action: "contract.executed_version_registered",
+                    p_action: "invoice.private_draft_saved",
                 })
             ).error?.code,
             "22023",
@@ -153,6 +149,15 @@ await withApiFixture(
             .update({action: "taxonomy.archived"})
             .eq("id", ids[0]);
         assert.ok(rewritten.error);
+        assert.equal((await administrator.client.rpc("clear_administration_activity", {p_confirm: false})).error?.code, "22023");
+        const cleared = clearedActivity(JSON.stringify(await checked(
+            administrator.client.rpc("clear_administration_activity", {p_confirm: true}), "Confirmed activity clear",
+        )));
+        assert.ok(cleared.removed >= ids.length);
+        const empty = await checked(manager.client.rpc("admin_audit_events"), "Read cleared activity as management");
+        assert.deepEqual(empty.items, []);
+        const retained = await checked(service.from("audit_events").select("id").eq("id", ids[0]), "Read retained business receipt");
+        assert.deepEqual(retained, [{id: ids[0]}]);
         await checked(
             service.from("user_roles").delete().eq("user_id", owner.id),
             "Revoke only scoped owner role",
@@ -161,6 +166,7 @@ await withApiFixture(
             (await owner.client.rpc("admin_audit_events")).error?.code,
             "42501",
         );
+        assert.equal((await owner.client.rpc("clear_administration_activity", {p_confirm: true})).error?.code, "42501");
         await checked(
             service
                 .from("profiles")
@@ -172,14 +178,16 @@ await withApiFixture(
             (await administrator.client.rpc("admin_audit_events")).error?.code,
             "42501",
         );
+        assert.equal((await administrator.client.rpc("clear_administration_activity", {p_confirm: true})).error?.code, "42501");
         const anonymous = createClient(url, process.env.SUPABASE_ANON_KEY, {
             auth: {persistSession: false, autoRefreshToken: false},
         });
         const denied = await anonymous.rpc("admin_audit_events");
         assert.ok(denied.error);
         assert.equal(denied.data, null);
+        assert.ok((await anonymous.rpc("clear_administration_activity", {p_confirm: true})).error);
         console.log(
-            "PASS: actual Auth/password-only authentication/REST audit capability, role/metadata boundaries, safe exact allowlist, no private JSON, same-timestamp keyset pagination, bounded validation, no client writes and old-token revocation.",
+            "PASS: native Auth and REST activity reads, admin-only clearing, preserved business receipts, no private JSON, keyset pagination and old-token revocation.",
         );
     },
 );

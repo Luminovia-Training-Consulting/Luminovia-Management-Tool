@@ -27,7 +27,7 @@ const pairs: Record<string, [string, string]> = {
     "Problem verstehen und nächste Schritte finden",
     "Understand the problem and find next steps",
   ],
-  auditLog: ["Administrationsprotokoll", "Administration log"],
+  auditLog: ["Verwaltungsprotokoll", "Administration log"],
   availability: ["Verfügbarkeit", "Availability"],
   topics: ["Themen & Tools", "Topics & tools"],
   requestCourses: ["Kurse beauftragen", "Commission courses"],

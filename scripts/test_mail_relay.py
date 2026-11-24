@@ -112,12 +112,12 @@ class RelaySmtpTests(unittest.TestCase):
     def setUp(self):
         self.relay = relay_module.MailRelay(CONFIG)
 
-    def run_smtp_client(self, deliver, username=None, password=None, message=None):
+    def run_smtp_client(self, deliver, username=None, password=None, message=None, *, auth_listener=False):
         self.relay.deliver = deliver
 
         async def server_flow():
             server = await asyncio.start_server(
-                self.relay.handle_smtp,
+                lambda reader, writer: self.relay.handle_smtp(reader, writer, auth_listener=auth_listener),
                 host="127.0.0.1",
                 port=0,
                 limit=relay_module.MAX_COMMAND_BYTES + 2,
@@ -158,6 +158,22 @@ class RelaySmtpTests(unittest.TestCase):
         with self.assertRaises(smtplib.SMTPAuthenticationError):
             self.run_smtp_client(deliver, password="wrong-fictional-password")
         deliver.assert_not_called()
+
+    def test_auth_smtp_records_only_the_transport_outcome(self):
+        self.relay.rpc = Mock()
+        self.assertEqual(self.run_smtp_client(Mock(), auth_listener=True), {})
+        self.relay.rpc.assert_called_once_with("record_auth_mail_activity", {"p_outcome": "accepted"})
+        self.relay.rpc.reset_mock()
+        with self.assertRaises(smtplib.SMTPDataError) as failed:
+            self.run_smtp_client(Mock(side_effect=relay_module.RelayFailure("protocol_failed")), auth_listener=True)
+        self.assertEqual(failed.exception.smtp_code, 451)
+        self.relay.rpc.assert_called_once_with("record_auth_mail_activity", {"p_outcome": "failed"})
+
+    def test_audit_failure_does_not_change_a_confirmed_smtp_send(self):
+        self.relay.rpc = Mock(side_effect=relay_module.RelayFailure("configuration_unavailable"))
+        deliver = Mock()
+        self.assertEqual(self.run_smtp_client(deliver, auth_listener=True), {})
+        deliver.assert_called_once()
 
     def test_academy_listener_requires_current_single_use_ticket_before_provider_envelope(self):
         self.relay = relay_module.MailRelay(replace(CONFIG, academy_notifications=True))

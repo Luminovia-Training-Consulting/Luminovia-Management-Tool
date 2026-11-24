@@ -43,9 +43,9 @@ export function AdminNavigation() {
         {permissions.data?.includes("organisations.manage") && (
           <NavLink to="/admin/clients">{t("companies")}</NavLink>
         )}
-        {permissions.data?.includes("audit.read") && (
-          <NavLink to="/admin/audit">{t("auditLog")}</NavLink>
-        )}
+        {permissions.data?.some((permission) =>
+          ["audit.read", "audit.activity.read"].includes(permission),
+        ) && <NavLink to="/admin/audit">{t("auditLog")}</NavLink>}
         {permissions.data?.includes("mail.settings.manage") && (
           <NavLink to="/admin/mail">{t("mailSettings")}</NavLink>
         )}

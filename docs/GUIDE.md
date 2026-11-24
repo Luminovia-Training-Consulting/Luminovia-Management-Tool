@@ -2998,45 +2998,29 @@ acceptance. This is standards/transport-contract evidence, not a successful exte
 
 # Administrative audit log
 
-`/admin/audit` adds a readable, searchable interface to the existing server-side audit events. The new `audit.read` permission is assigned only to `owner` and `admin`. Every API request checks current database roles, account activation and verified MFA. Ordinary management, senior, lecturer, client, participant and guest roles have no access. An explicitly assigned additional permission is recognised; an assumed role hierarchy or editable Auth metadata cannot replace it.
+Open **Administration → Administration log** at `/admin/audit`. Dedicated Academy installations use `/administration/audit`. Current administrators and management can read the operational log. Management has a separate read permission and cannot clear the log. Administrators and owners can clear it after explicit confirmation. Dedicated editions require an active licence for the clear operation and allow reading during the grace period.
 
 <a id="section-admin-audit-deliberately-reduced-projection"></a>
 
-## Deliberately reduced projection
+## Captured activity and privacy
 
-The source remains `public.audit_events`; no second event copy or new write API is created. The interface is read-only. It returns the event identifier, the acting account's current display name, action identifier, optional resource UUID and timestamp. Display names are current profile names, not purported historical name snapshots. They are displayed as text even when the content resembles HTML.
+The log combines reviewed workflow events with committed changes to selected business tables. It covers accounts and invitations, roles, organisations and contacts, courses and schedules, assignments, learning activity, shared documents, invoices and payment activity, support, announcements, imports, and selected settings. Each event shows a timestamp, an action and an optional resource ID. A display name is the acting account's current display name. Automated events can have no named account.
 
-The exact allowlist `private.admin_audit_actions()` contains the existing actions for account roles/status, invitations, qualification verification, client associations/requests, organisations, course templates/runs/enrolment, job publication/lifecycle/capacity, cancellation and taxonomy management. New or similarly named actions remain invisible until their inclusion is explicitly reviewed. Event details are neither selected nor searched. In particular, private profile changes, calendars and
-availability, chats, documents, contracts, invoice events and personal reviews are excluded. Resource identifiers are not automatically resolved into links and cannot bypass resource permissions.
-
-This migration does not change existing table RLS or administrative table permissions. The reduced view does not replace an independent retention, compliant archival or tamper-protection solution for privileged database operators. Browser accounts cannot append, alter or delete history. Existing server-side writes and operational/test cleanup remain available.
+Mail events distinguish account-mail requests, notification queue outcomes and self-hosted Auth relay outcomes. An accepted SMTP submission means the next server accepted the message. An uncertain outcome is shown separately from a failure. The selected Auth log actions and relay reports carry no email addresses, SMTP content, passwords, token values or private IP details. The log also excludes private messages, personal calendar entries, file contents and protected document payloads. Amount and currency on payment receipts require the corresponding current finance permission.
 
 <a id="section-admin-audit-queries-and-interface"></a>
 
-## Queries and interface
+## Filters and retention
 
-`admin_audit_events(p_from, p_to, p_action, p_search, p_before_at, p_before_id, p_limit)` is a public invoker entry point into a restricted private definer function with an empty search path and explicit execution grants. Without time parameters, the API uses the last 30 days. Each request is limited to a finite window of at most 93 days plus two hours of DST allowance and 1–100 results. There is no unbounded total count or automatic historical fetch.
+The date, action and text filters keep their meaning across pages. Text search covers display names, action IDs and resource IDs. The API uses a timestamp and an ID cursor, with 40 results per page in the portal. Operational entries are hidden after 720 hours and removed by a scheduled database job every 15 minutes. The online API returns only entries in this window, even if physical cleanup is temporarily delayed.
 
-The interface uses 40 results per page, an explicit IANA time-zone field and inclusive local calendar days. Date inputs and the zone are validated before conversion to UTC; skipped local calendar days are rejected. Language changes preserve filter drafts. Search treats characters such as `%` and `_` literally and covers only display name, action identifier and resource identifier. The action filter receives the reviewed choices from the API.
-
-A composite index on `created_at DESC, id DESC` supports bounded time queries and stable keyset navigation. The cursor contains both values, so equal timestamps cause neither omissions nor duplicates. Subsequent pages retain the time bounds. Newer events may appear after returning to the first page or refreshing; no immutable database-wide snapshot across multiple HTTP requests is claimed. Failed current-access checks hide previously loaded rows. There is no persistent offline cache, background
-fetch of every page or complete CSV export.
+**Clear log** removes the entire operational history after confirmation, regardless of the filters. Committed actions continue to create new entries after a clear. The confirmed `clear_administration_activity(p_confirm: true)` call returns the number of removed entries. Durable business, accounting and deletion receipts remain available to the workflows that use them. Database backups have their own configured retention.
 
 <a id="section-admin-audit-verification"></a>
 
 ## Verification
 
-The additive migration, generated by the actually pinned Supabase CLI, is `20261115213550_admin_audit_viewer.sql`. Focused commands:
-
-```bash
-npx vitest run src/features/audit
-PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m6 node scripts/admin-audit-db-tests.mjs
-```
-
-The PostgreSQL check creates and removes only its own temporary database. It covers roles/MFA, the allowlist and detail protection, literal search, time/cursor bounds, actual concurrent events sharing a timestamp, write prohibitions, role revocation and account suspension with existing token identities. Native Auth/TOTP/REST checks are in `scripts/admin-audit-api-check.mjs`; desktop/mobile journeys, DE/EN, dark mode, offline operation, role revocation and axe checks are in
-`tests/e2e/admin-audit.spec.ts`.
-
-Authored API/browser checks do not constitute passed acceptance. The combined checks actually executed are documented in the relevant pull request checks. Operational monitoring, deletion/retention actions, email delivery and production deployment are not claimed here.
+Use `scripts/admin-audit-db-tests.mjs` in the owned SQL fixture for access, expiry, pagination, mail and metadata protection, and confirmed clears. `scripts/admin-audit-api-check.mjs` checks the native HTTP path. `tests/e2e/admin-audit.spec.ts` covers the role-aware portal view in Chromium.
 
 <a id="section-website-enquiries"></a>
 

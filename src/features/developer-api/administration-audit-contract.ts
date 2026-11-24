@@ -23,6 +23,7 @@ const auditPage = z.strictObject({
   from: instant,
   to: instant,
   actions: z.array(z.string()),
+  can_clear: z.boolean().optional(),
 });
 
 const query = z.strictObject({
@@ -42,7 +43,7 @@ export const administrationAuditPaths = {
       tags: ["Administrative audit"],
       summary: "Read the 30-day administration audit trail",
       description:
-        "Requires current audit.read authority. The requested half-open date range and cursor query only events retained within the last 30 days. Payments show amounts and currency only with the corresponding current finance authority. Use both fields of next_cursor.",
+        "Requires current administration or management audit authority. The requested half-open date range and cursor query only events retained within the last 30 days. Payments show amounts and currency only with the corresponding current finance authority. Use both fields of next_cursor.",
       requestBody: {
         required: false,
         content: { "application/json": { schema: z.toJSONSchema(query) } },
@@ -69,7 +70,7 @@ export const administrationAuditPaths = {
       tags: ["Administrative audit"],
       summary: "Clear the administration activity trail",
       description:
-        "Permanently clears the 30-day operational trail after explicit confirmation by an active internal administrator or owner. The call preserves underlying business receipts.",
+        "Permanently clears the 30-day operational trail after explicit confirmation by an active administrator or owner with an active licence where applicable. The call preserves underlying business receipts.",
       requestBody: {
         required: true,
         content: {

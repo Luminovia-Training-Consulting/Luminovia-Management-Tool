@@ -1,10 +1,12 @@
-/** Real isolated PostgreSQL checks for the reduced, read-only audit projection. */
+/** Real isolated PostgreSQL checks for the reduced operational activity projection. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
+import {setTimeout as delay} from "node:timers/promises";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 import {rpcResponse} from "./testing/openapi-contract.mjs";
 
 const auditPage = rpcResponse("admin_audit_events");
+const clearedActivity = rpcResponse("clear_administration_activity");
 
 await withTestDatabase("admin_audit", async ({sql, actor}) => {
     const roles = [
@@ -37,10 +39,11 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
     const read = async (who = users.admin, args = "", aal = "aal1") =>
         auditPage(await actor(who, `select public.admin_audit_events(${args})`, aal));
     await check(
-        "Administration and management can read with current password-only permissions",
+        "Current admin, owner and management can read in AAL1; other roles and anonymous access are denied",
         async () => {
-            for (const role of ["admin", "owner", "management"])
-                assert.deepEqual((await read(users[role])).items, []);
+            for (const role of ["admin", "owner"])
+                assert.equal((await read(users[role])).can_clear, true);
+            assert.equal((await read(users.management)).can_clear, false);
             for (const role of roles.slice(3))
                 await assert.rejects(read(users[role]), /42501/);
             assert.equal(
@@ -57,6 +60,8 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
             );
         },
     );
+    // The fixture's account and role creation can now generate activity itself.
+    await sql("delete from private.administration_activity");
     const safe = randomUUID(),
         resource = randomUUID(),
         secret = "PRIVATE-CALENDAR-DM-CONTRACT-INVOICE-PAYLOAD-DO-NOT-EXPOSE";
@@ -72,7 +77,7 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
                 }))}::jsonb);
                 insert into public.audit_events(actor_id, action, resource_id, details)
                 select ${q(users.lecturer)}, action, gen_random_uuid(), ${q(JSON.stringify({body: secret}))}::jsonb
-                from unnest(array['availability.created', 'profile.details.saved', 'profile.avatar_selected', 'chat.member_added', 'document.quarantined', 'contract.executed_version_registered', 'course.review.saved', 'calendar.created', 'job.lifecycle.private_future_action']) action`,
+                from unnest(array['availability.created', 'profile.details.saved', 'profile.avatar_selected', 'chat.member_added', 'document.quarantined', 'contract.executed_version_registered', 'invoice.private_draft_saved', 'course.review.saved', 'calendar.created', 'job.lifecycle.private_future_action']) action`,
             );
             const result = await read();
             assert.equal(result.items.length, 1);
@@ -91,7 +96,7 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
             );
             assert.ok(!JSON.stringify(result).includes(secret));
             assert.ok(!JSON.stringify(result).includes("user_metadata"));
-            assert.equal(result.actions.includes("contract.executed_version_registered"), false);
+            assert.equal(result.actions.includes("invoice.private_draft_saved"), false);
             assert.equal(
                 result.actions.includes("job.lifecycle.private_future_action"),
                 false,
@@ -128,7 +133,7 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
                 [],
             );
             await assert.rejects(
-                read(users.admin, "null,null,'contract.executed_version_registered'"),
+                read(users.admin, "null,null,'invoice.private_draft_saved'"),
                 /22023/,
             );
             await assert.rejects(
@@ -252,9 +257,10 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
         },
     );
     await check(
-        "Client writes cannot append, rewrite or delete historical audit events",
+        "The raw audit receipt table is outside browser access and remains immutable to users",
         async () => {
             for (const statement of [
+                `select details from public.audit_events where id=${q(safe)}`,
                 `insert into public.audit_events(actor_id, action)
                  values (${q(users.admin)}, 'taxonomy.created')`,
                 `update public.audit_events
@@ -280,6 +286,142 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
                 ),
                 "f",
             );
+        },
+    );
+    await check(
+        "Committed customer and course writes appear for management without copying customer values",
+        async () => {
+            const payload = {name: "Fictional audit organisation", private_notes: secret};
+            const organisation = await actor(users.admin,
+                `select public.save_organisation(null,${q(JSON.stringify(payload))}::jsonb)`);
+            await actor(users.admin,
+                `select public.save_organisation(${q(organisation)},${q(JSON.stringify({...payload, city: "Fictional city"}))}::jsonb)`);
+            await sql(`update public.organisations set city=city where id=${q(organisation)}`);
+            const template = await actor(users.admin,
+                `select public.save_course_template(null,${q(JSON.stringify({title: "Fictional audit course", description: secret}))}::jsonb)`);
+            const run = await actor(users.admin,
+                `select public.save_course_run(null,${q(JSON.stringify({
+                    template_id: template,
+                    organisation_id: organisation,
+                    venue: secret,
+                    sessions: [{starts_at: "2030-09-02T09:00:00Z", ends_at: "2030-09-02T10:00:00Z"}],
+                }))}::jsonb)`);
+            for (const [action, id] of [
+                ["activity.organisations.created", organisation],
+                ["activity.organisations.updated", organisation],
+                ["activity.course_runs.created", run],
+            ]) {
+                const result = await read(users.management, `null,null,${q(action)},${q(id)}`);
+                assert.equal(result.items.length, 1, action);
+                assert.equal(result.items[0].resource_id, id);
+                assert.ok(!JSON.stringify(result).includes(secret));
+            }
+            const rolledBack = randomUUID();
+            await sql(`begin;
+                insert into public.organisations(id,name) values (${q(rolledBack)},'Fictional rollback');
+                rollback;`);
+            assert.deepEqual((await read(users.management,
+                `null,null,'activity.organisations.created',${q(rolledBack)}`)).items, []);
+            const removed = randomUUID();
+            await sql(`
+                insert into public.organisations(id,name) values (${q(removed)},'Fictional removed');
+                delete from public.organisations where id=${q(removed)};
+            `);
+            const result = await read(users.management, `null,null,'activity.organisations.deleted',${q(removed)}`);
+            assert.equal(result.items.length, 1);
+            assert.equal(result.items[0].resource_id, removed);
+        },
+    );
+    await check(
+        "Native Auth receipts retain status and safe account attribution without sensitive payloads",
+        async () => {
+            await sql(`insert into auth.audit_log_entries(id,payload,created_at,ip_address)
+                select gen_random_uuid(), json_build_object('action', event, 'actor_id', ${q(users.lecturer)},
+                    'actor_username', 'audit-lecturer@example.invalid', 'traits', json_build_object('secret',${q(secret)})),
+                    now(),'192.0.2.10'
+                from unnest(array['user_recovery_requested','user_updated_password','login']) event;`);
+            const recovery = (await read(users.management, "null,null,'mail.auth.recovery_requested'")).items;
+            const password = (await read(users.management, "null,null,'account.auth.password_updated'")).items;
+            assert.equal(recovery.length, 1);
+            assert.equal(recovery[0].actor_name, "");
+            assert.equal(password.length, 1);
+            assert.match(password[0].actor_name, /Fictional audit actor/);
+            for (const value of [secret, "192.0.2.10", "audit-lecturer@example.invalid"])
+                assert.ok(!JSON.stringify([...recovery, ...password]).includes(value));
+            assert.equal(await sql("select count(*) from private.administration_activity where action in ('account.auth.login','login')"), "0");
+        },
+    );
+    await check(
+        "Invoice submissions are visible as workflow metadata without copying their values",
+        async () => {
+            const invoiceId = randomUUID();
+            await sql(`insert into public.audit_events(actor_id,action,resource_id,details)
+                values (${q(users.admin)}, 'invoice.submitted', ${q(invoiceId)},
+                jsonb_build_object('gross_amount',9001,'note',${q(secret)}));`);
+            const {items} = await read(users.management, `null,null,'invoice.submitted',${q(invoiceId)}`);
+            assert.equal(items.length, 1);
+            assert.equal(items[0].resource_id, invoiceId);
+            assert.equal(Object.hasOwn(items[0], "payment"), false);
+            assert.ok(!JSON.stringify(items).includes(secret));
+            assert.ok(!JSON.stringify(items).includes("gross_amount"));
+        },
+    );
+    await check(
+        "Terminal mail states are recorded once without exposing recipients or diagnostic values",
+        async () => {
+            const notification = randomUUID();
+            const outbox = randomUUID();
+            await sql(`
+                insert into public.notifications(id,user_id,kind)
+                values (${q(notification)},${q(users.lecturer)},'claim_confirmed');
+                insert into private.notification_email_outbox(id,notification_id,occurrence_at)
+                values (${q(outbox)},${q(notification)},clock_timestamp());
+                update private.notification_email_outbox set state='sending' where id=${q(outbox)};
+                update private.notification_email_outbox set state='accepted',last_outcome=${q(secret)},finished_at=clock_timestamp() where id=${q(outbox)};
+                update private.notification_email_outbox set state='accepted' where id=${q(outbox)};
+            `);
+            const accepted = await read(users.management, `null,null,'mail.delivery_accepted',${q(outbox)}`);
+            assert.equal(accepted.items.length, 1);
+            assert.equal(accepted.items[0].resource_id, outbox);
+            assert.ok(!JSON.stringify(accepted).includes(secret));
+            assert.ok(!JSON.stringify(accepted).includes("example.invalid"));
+            const all = (await read(users.management, `null,null,'',${q(outbox)}`)).items;
+            assert.deepEqual(all.map(({action}) => action), ["mail.delivery_accepted"]);
+        },
+    );
+    await check(
+        "A permission withdrawn while an administrator waits to clear leaves existing activity intact",
+        async () => {
+            const holder = `activity_gate_${randomUUID().slice(0,8)}`;
+            const waiter = `activity_clear_${randomUUID().slice(0,8)}`;
+            const before = await sql("select count(*) from private.administration_activity");
+            const observe = async (name, query) => {
+                const deadline = Date.now() + 2500;
+                while (Date.now() < deadline) {
+                    if (await sql(`select exists(select 1 from pg_stat_activity
+                        where application_name=${q(name)} and ${query})`) === "t") return;
+                    await delay(20);
+                }
+                assert.fail(`PostgreSQL did not reach the expected ${name} wait`);
+            };
+            const revoke = sql(`begin; set local application_name=${q(holder)};
+                lock table private.administration_activity in share row exclusive mode;
+                select pg_sleep(3);
+                delete from public.role_permissions where role='admin' and permission='audit.clear';
+                commit;`);
+            let denied;
+            try {
+                await observe(holder, "wait_event = 'PgSleep'");
+                denied = assert.rejects(actor(users.admin, `set local application_name=${q(waiter)};
+                    select public.clear_administration_activity(true)`), /42501/);
+                void denied.catch(() => {});
+                await observe(waiter, "wait_event_type = 'Lock'");
+                await Promise.all([revoke, denied]);
+                assert.equal(await sql("select count(*) from private.administration_activity"), before);
+            } finally {
+                await Promise.allSettled([revoke, denied]);
+                await sql("insert into public.role_permissions(role, permission) values ('admin','audit.clear') on conflict do nothing");
+            }
         },
     );
     await check("Additional course, financial and failed-account events retain safe operational metadata", async () => {
@@ -364,27 +506,33 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
         assert.equal(await sql(`select count(*) from private.administration_activity
             where resource_id in (${ids.push},${ids.delivery})`), "2");
     });
-    await check("Only a current administrator can explicitly clear operational rows", async () => {
-        const clear = (who, confirm) => actor(who, `select public.clear_administration_activity(${confirm})`);
-        for (const who of [users.management, users.lecturer])
-            await assert.rejects(clear(who, true), /42501/);
-        await assert.rejects(clear(users.admin, false), /22023/);
-        assert.equal(await sql("select has_function_privilege('anon','public.clear_administration_activity(boolean)','execute')"), "f");
-        const removed = Number(await sql("select count(*) from private.administration_activity"));
-        const source = await sql("select count(*) from public.audit_events");
-        assert.ok(removed > 0);
-        assert.deepEqual(JSON.parse(await clear(users.admin, true)), { removed });
-        assert.deepEqual((await read(users.management)).items, []);
-        assert.equal(await sql("select count(*) from public.audit_events"), source);
-        await sql(`insert into public.audit_events(actor_id,action) values (${q(users.admin)}, 'organisation.saved')`);
-        assert.equal((await read(users.management)).items[0]?.action, "organisation.saved");
-    });
     await check(
-        "Explicit current permission grants work without role hierarchy and revoke against an existing token",
+        "Only an active administrator or owner can clear the activity journal; business receipts survive",
+        async () => {
+            const clear = async (who) => clearedActivity(await actor(who,
+                "select public.clear_administration_activity(true)"));
+            assert.equal(await sql("select has_function_privilege('anon','public.clear_administration_activity(boolean)','execute')"), "f");
+            for (const who of [users.management, users.lecturer, users.participant])
+                await assert.rejects(clear(who), /42501/);
+            await assert.rejects(actor(users.admin,"select public.clear_administration_activity(false)"), /22023/);
+            const expected = Number(await sql("select count(*) from private.administration_activity"));
+            assert.ok(expected > 0);
+            const attempts = await Promise.all([clear(users.admin), clear(users.owner)]);
+            assert.deepEqual(attempts.map(({removed}) => removed).sort((a,b) => a-b), [0, expected]);
+            assert.deepEqual((await read(users.management)).items, []);
+            assert.equal(await sql(`select count(*) from public.audit_events where id=${q(safe)}`), "1");
+            assert.deepEqual(await clear(users.owner), {removed: 0});
+            await sql(`insert into public.audit_events(actor_id, action)
+                values (${q(users.admin)}, 'taxonomy.created')`);
+            assert.equal((await read(users.management)).items[0].action, "taxonomy.created");
+        },
+    );
+    await check(
+        "Revoking current permissions and suspending an account blocks existing sessions",
         async () => {
             assert.ok((await read(users.management)).items.length > 0);
             await sql(
-                "delete from public.role_permissions where role='management' and permission='audit.read'",
+                "delete from public.role_permissions where role='management' and permission='audit.activity.read'",
             );
             await assert.rejects(read(users.management), /42501/);
             await sql(
@@ -393,12 +541,14 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
                  where user_id = ${q(users.owner)}`,
             );
             await assert.rejects(read(users.owner), /42501/);
+            await assert.rejects(actor(users.owner, "select public.clear_administration_activity(true)"), /42501/);
             await sql(
                 `update public.profiles
                  set active= false
                  where id = ${q(users.admin)}`,
             );
             await assert.rejects(read(users.admin), /42501/);
+            await assert.rejects(actor(users.admin, "select public.clear_administration_activity(true)"), /42501/);
         },
     );
     console.log(`${checks} admin audit PostgreSQL checks passed.`);

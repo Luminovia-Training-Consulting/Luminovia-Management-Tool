@@ -32,6 +32,11 @@ export function permittedTourModules(
         permissions.includes("users.manage") &&
         permissions.includes("qualifications.verify")
       );
+    if (module.path === "/admin/audit")
+      return (
+        permissions.includes("audit.read") ||
+        permissions.includes("audit.activity.read")
+      );
     return (
       (!module.roles || module.roles.some((role) => roles.includes(role))) &&
       (!module.permission || permissions.includes(module.permission))
