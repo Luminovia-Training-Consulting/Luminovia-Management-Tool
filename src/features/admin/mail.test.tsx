@@ -330,7 +330,12 @@ it("saves the selected SMTP port and matching TLS mode before sending a test to 
   await screen.findByText("Ausgehender SMTP-Transport");
   const user = userEvent.setup();
   await user.click(screen.getAllByLabelText("Aktiviert")[0]!);
-  await user.selectOptions(screen.getAllByLabelText("Port")[0]!, "587");
+  await user.click(
+    screen.getByRole("button", { name: "Hostinger · STARTTLS (587)" }),
+  );
+  const port = screen.getAllByLabelText("Port")[0]!;
+  await user.clear(port);
+  await user.type(port, "2525");
   expect(screen.getAllByLabelText("TLS-Verfahren")[0]).toHaveValue("starttls");
   await user.type(
     screen.getByLabelText("Absender-E-Mail"),
@@ -353,7 +358,7 @@ it("saves the selected SMTP port and matching TLS mode before sending a test to 
   expect(fake.invoke).toHaveBeenCalledWith("mail-admin", {
     body: { protocol: "smtp", send_to_self: true },
   });
-  expect(screen.getAllByLabelText("Port")[0]).toHaveValue("587");
+  expect(screen.getAllByLabelText("Port")[0]).toHaveValue(2525);
   expect(screen.getAllByLabelText("TLS-Verfahren")[0]).toHaveValue("starttls");
   expect(screen.getByLabelText("Absender-E-Mail")).toHaveValue(
     "sender@example.invalid",

@@ -99,6 +99,11 @@
   margin-top: 0;
 }
 
+.support-overview .support-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .support-thread > li,
 .support-history > li {
   padding: 18px 0;

@@ -11,13 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
-import {
-  CheckCircle2,
-  Download,
-  FileSignature,
-  Plus,
-  Search,
-} from "lucide-react";
+import { CheckCircle2, Download, FileSignature, Plus } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { saveDownload } from "../files/api";
 import { db } from "../../lib/supabase";
@@ -542,81 +536,80 @@ export function ContractsPage() {
           )
         }
       />
-      {selectedUser ? (
-        <div className="page-actions">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setAll(true);
-              setParams((current) => {
-                current.delete("user");
-                return current;
-              });
-            }}
-          >
-            {t("allPeople")}
-          </Button>
-        </div>
-      ) : (
-        manager && (
-          <label className="checkbox-label">
+      <div className="section-stack">
+        <div className="panel contract-toolbar">
+          <Field id="contract-search" label={t("contracts")}>
             <input
-              type="checkbox"
-              checked={all}
-              onChange={(event) => setAll(event.target.checked)}
+              id="contract-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
             />
-            {t("allPeople")}
-          </label>
-        )
-      )}
-      {!selectedUser && (
-        <section className="panel">
-          <p>{t("ownContractUploadHint")}</p>
-          <CommercialPdfUpload
-            kind="contract"
-            ownerId={actor}
-            label={t("contractPdf")}
+          </Field>
+          {selectedUser ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setAll(true);
+                setParams((current) => {
+                  current.delete("user");
+                  return current;
+                });
+              }}
+            >
+              {t("allPeople")}
+            </Button>
+          ) : (
+            manager && (
+              <label className="checkbox-label contract-scope">
+                <input
+                  type="checkbox"
+                  checked={all}
+                  onChange={(event) => setAll(event.target.checked)}
+                />
+                {t("allPeople")}
+              </label>
+            )
+          )}
+        </div>
+        {!selectedUser && (
+          <section className="panel">
+            <p>{t("ownContractUploadHint")}</p>
+            <CommercialPdfUpload
+              kind="contract"
+              ownerId={actor}
+              label={t("contractPdf")}
+            />
+          </section>
+        )}
+        {access.isPending || records.isPending ? (
+          <Loading />
+        ) : access.isError || records.isError ? (
+          <ErrorState
+            retry={() => {
+              void access.refetch();
+              void records.refetch();
+            }}
           />
-        </section>
-      )}
-      <div className="commercial-search panel">
-        <Search size={18} />
-        <Field id="contract-search" label={t("contracts")}>
-          <input
-            id="contract-search"
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </Field>
+        ) : filtered.length ? (
+          <div className="commercial-contract-grid">
+            {filtered.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                actor={actor}
+                contract={contract}
+                zone={profile.data?.time_zone ?? "Europe/Berlin"}
+                manager={effectiveAll}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="panel commercial-empty">
+            <FileSignature size={35} />
+            <p>{t("noContracts")}</p>
+          </div>
+        )}
       </div>
-      {access.isPending || records.isPending ? (
-        <Loading />
-      ) : access.isError || records.isError ? (
-        <ErrorState
-          retry={() => {
-            void access.refetch();
-            void records.refetch();
-          }}
-        />
-      ) : filtered.length ? (
-        <div className="commercial-contract-grid">
-          {filtered.map((contract) => (
-            <ContractCard
-              key={contract.id}
-              actor={actor}
-              contract={contract}
-              zone={profile.data?.time_zone ?? "Europe/Berlin"}
-              manager={effectiveAll}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="panel commercial-empty">
-          <FileSignature size={35} />
-          <p>{t("noContracts")}</p>
-        </div>
-      )}
       <Dialog
         open={registering}
         onOpenChange={setRegistering}

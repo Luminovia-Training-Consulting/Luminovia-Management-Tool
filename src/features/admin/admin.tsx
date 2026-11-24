@@ -987,23 +987,25 @@ export function AdminPage() {
         }
       />
       {creating ? (
-        <>
-          <Button asChild variant="ghost">
-            <Link to="/admin">
-              {de
-                ? "Zur Verwaltungsübersicht"
-                : "Back to administration overview"}
-            </Link>
-          </Button>
+        <div className="section-stack">
+          <div className="page-actions">
+            <Button asChild variant="ghost">
+              <Link to="/admin">
+                {de
+                  ? "Zur Verwaltungsübersicht"
+                  : "Back to administration overview"}
+              </Link>
+            </Button>
+          </div>
           {runId ? (
             <CourseOfferForm runId={runId} />
           ) : (
             <JobForm key="standalone" />
           )}
-        </>
+        </div>
       ) : params.get("view") === "jobs" ? (
-        <>
-          <div className="form-actions">
+        <div className="section-stack">
+          <div className="page-actions">
             <Button asChild variant="ghost">
               <Link to="/admin">
                 {de
@@ -1018,7 +1020,7 @@ export function AdminPage() {
             </Button>
           </div>
           <OfferBoard />
-        </>
+        </div>
       ) : (
         <div className="section-stack">
           <section className="panel">

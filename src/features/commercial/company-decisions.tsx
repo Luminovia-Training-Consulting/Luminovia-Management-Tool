@@ -130,7 +130,7 @@ export function CompanyDecisions({
           </div>
         </div>
       ))}
-      {decide.isError && (
+      {decide.isError && !rejected && (
         <Notice kind="error">{t("companyDecisionFailed")}</Notice>
       )}
       <Dialog
@@ -140,8 +140,12 @@ export function CompanyDecisions({
         }}
         title={t("companyDecisionReject")}
         description={t("companyDecisionRejectHint")}
+        closeDisabled={decide.isPending}
       >
         <p>{rejected?.lecturer_name}</p>
+        {decide.isError && (
+          <Notice kind="error">{t("companyDecisionFailed")}</Notice>
+        )}
         <div className="form-actions">
           <Button
             variant="secondary"

@@ -70,6 +70,8 @@ Use `./portal check` for fast local source/coverage/build validation and `./port
 
 At sign-in choose **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour**. [Usage and verification](GUIDE.md#section-tour-and-help).
 
+In a long form dialog, scroll the fields below the heading. The heading and close button stay visible. During saves that disable the close button, the dialog stays open until the request returns.
+
 <a id="section-user-guide-sign-in-and-account-security"></a>
 
 ## Sign in and account security

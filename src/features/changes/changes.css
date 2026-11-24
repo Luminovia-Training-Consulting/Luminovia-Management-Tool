@@ -21,14 +21,6 @@
   text-decoration: none;
   color: var(--ink);
 }
-.changes-summary,
-.changes-decisions,
-.changes-history {
-  margin: 1rem 0;
-}
-.changes-summary .text-link {
-  margin-right: 1rem;
-}
 .changes-authored {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
