@@ -294,6 +294,88 @@ class MigrationTests(unittest.TestCase):
 
 # GitHub fixtures prove exact current main and immutable release identity; CI status is deliberately not consulted.
 class ReleaseTests(unittest.TestCase):
+    def test_release_redirects_reject_downgrades_and_untrusted_hosts(self):
+        # Exercise the redirect policy directly without making external requests.
+        handler = u.SafeRedirect()
+        request = u.urllib.request.Request(
+            "https://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive"
+        )
+        for target in (
+            "http://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive",
+            "https://attacker.example.invalid/releases/download/fixture/archive",
+        ):
+            with self.subTest(target=target), self.assertRaisesRegex(
+                u.UpdateError, "unsafe_release_redirect"
+            ):
+                handler.redirect_request(request, None, 302, "Found", {}, target)
+
+    def test_release_redirects_allow_the_https_asset_cdn(self):
+        # A real GitHub download may leave github.com for its approved asset CDN.
+        handler = u.SafeRedirect()
+        target = "https://release-assets.githubusercontent.com/fixture/archive"
+        request = u.urllib.request.Request(
+            "https://github.com/" + u.REPOSITORY + "/releases/download/fixture/archive"
+        )
+
+        redirected = handler.redirect_request(
+            request, None, 302, "Found", {}, target
+        )
+
+        self.assertEqual(redirected.full_url, target)
+
+    def test_release_asset_urls_reject_http_and_cross_host_variants(self):
+        # The candidate must use the exact HTTPS repository/tag/asset URL before download.
+        with tempfile.TemporaryDirectory() as directory:
+            updater = u.Updater(instance(directory))
+            tag = "cms-dev-" + COMMIT
+            expected = (
+                "https://github.com/"
+                + u.REPOSITORY
+                + "/releases/download/"
+                + tag
+                + "/cms-release.tar.gz"
+            )
+            release = {
+                "tag_name": tag,
+                "immutable": True,
+                "assets": [
+                    {
+                        "name": name,
+                        "state": "uploaded",
+                        "browser_download_url": (
+                            "https://github.com/"
+                            + u.REPOSITORY
+                            + "/releases/download/"
+                            + tag
+                            + "/"
+                            + name
+                        ),
+                    }
+                    for name in ("cms-release.tar.gz", "cms-release.json")
+                ],
+            }
+
+            def api(path, *, missing_ok=False):
+                if path == "/branches/main":
+                    return {"commit": {"sha": COMMIT}}
+                if path == "/releases/tags/" + tag:
+                    return release
+                if path == "/git/ref/tags/" + tag:
+                    return {"object": {"type": "commit", "sha": COMMIT}}
+                raise AssertionError("Unexpected GitHub API path: " + path)
+
+            updater.api = api
+            for unsafe in (
+                expected.replace("https://", "http://", 1),
+                expected.replace("github.com", "attacker.example.invalid", 1),
+            ):
+                with self.subTest(asset_url=unsafe):
+                    release["assets"][0]["browser_download_url"] = unsafe
+                    with self.assertRaisesRegex(
+                        u.UpdateError, "missing_or_unsafe_release_asset"
+                    ):
+                        updater.candidate()
+
     def test_immutable_current_main_release_is_eligible_without_ci_results(self):
         with tempfile.TemporaryDirectory() as directory:
             updater = u.Updater(instance(directory))
