@@ -443,6 +443,21 @@ await withTestDatabase("admin_audit", async ({sql, actor}) => {
         await sql(`insert into private.account_creation_requests
           (id,actor_id,request_id,email,display_name,requested_role,status,auth_user_id)
           values (${q(receipt)},${q(users.admin)},gen_random_uuid(),'test@example.invalid','Test','lecturer','created',${q(users.lecturer)})`);
+        const mailFunctions = JSON.parse(await sql(`
+          select json_agg(
+            json_build_object('schema', n.nspname, 'definer', p.prosecdef,
+              'returns_void', p.prorettype = 'void'::regtype,
+              'service', has_function_privilege('service_role', p.oid, 'execute'),
+              'authenticated', has_function_privilege('authenticated', p.oid, 'execute'),
+              'anonymous', has_function_privilege('anon', p.oid, 'execute'))
+            order by n.nspname)
+          from pg_proc p join pg_namespace n on p.pronamespace = n.oid
+          where p.oid in (to_regprocedure('private._record_account_access_mail(uuid,boolean)'),
+                         to_regprocedure('public._record_account_access_mail(uuid,boolean)'))`));
+        assert.deepEqual(mailFunctions, [
+            {schema: "private", definer: true, returns_void: true, service: true, authenticated: false, anonymous: false},
+            {schema: "public", definer: false, returns_void: true, service: true, authenticated: false, anonymous: false},
+        ]);
         await assert.rejects(actor(users.admin, `select public._record_account_access_mail(${q(receipt)}, true)`), /42501/);
         await sql(`begin;set local role service_role;
           set local request.jwt.claims='{"role":"service_role"}';
