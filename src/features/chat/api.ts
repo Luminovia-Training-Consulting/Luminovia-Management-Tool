@@ -158,5 +158,8 @@ export const chatMessagesQuery = (
         : undefined;
     },
     staleTime: 1000,
-    refetchInterval: 10000,
+    // An infinite-query refresh fetches every loaded page, including reply
+    // previews. Back off periodic requests after loading older history.
+    refetchInterval: (query) =>
+      Math.min(30_000, 10_000 * (query.state.data?.pages.length || 1)),
   });
