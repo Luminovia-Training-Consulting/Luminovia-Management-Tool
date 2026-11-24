@@ -147,28 +147,29 @@ function SubmitInvoice({
   });
   const issued = useWatch({ control: form.control, name: "issued" });
   const defaultDue = resolveInvoiceDueDate(issued, "");
-  const ownCandidates =
-    earnings.data?.filter(
-      (row) =>
-        !row.invoice_id &&
-        row.lecturer_id === actor &&
-        !seriesClaims.has(row.claim_id),
-    ) ?? [];
   const now = DateTime.now().toMillis();
-  const eligible = ownCandidates.filter((row) => invoiceReady(row, now));
-  const reviewRequired = ownCandidates.filter(
-    (row) => row.invoice_review_required,
-  );
-  const notReady = ownCandidates.filter(
-    (row) => !row.invoice_review_required && !eligible.includes(row),
-  );
+  const eligible: EarningRecord[] = [];
+  const reviewRequired: EarningRecord[] = [];
+  const notReady: EarningRecord[] = [];
+  for (const row of earnings.data ?? []) {
+    if (
+      row.invoice_id ||
+      row.lecturer_id !== actor ||
+      seriesClaims.has(row.claim_id)
+    )
+      continue;
+    if (row.invoice_review_required) reviewRequired.push(row);
+    else if (invoiceReady(row, now)) eligible.push(row);
+    else notReady.push(row);
+  }
   // A deep link is a suggestion. Only preselect it once it is an eligible option.
   const selected =
     selection ??
     (initialClaimId && eligible.some((row) => row.claim_id === initialClaimId)
       ? [initialClaimId]
       : []);
-  const rows = eligible.filter((row) => selected.includes(row.claim_id));
+  const selectedIds = new Set(selected);
+  const rows = eligible.filter((row) => selectedIds.has(row.claim_id));
   const selectionChanged = rows.length !== selected.length;
   const currency = exception?.currency ?? rows[0]?.currency;
   const total =
@@ -295,10 +296,10 @@ function SubmitInvoice({
               <label className="commercial-claim" key={row.claim_id}>
                 <input
                   type="checkbox"
-                  checked={selected.includes(row.claim_id)}
+                  checked={selectedIds.has(row.claim_id)}
                   disabled={
                     submit.isPending ||
-                    (!selected.includes(row.claim_id) &&
+                    (!selectedIds.has(row.claim_id) &&
                       ((Boolean(currency) && row.currency !== currency) ||
                         selected.length >= 50))
                   }
@@ -1137,39 +1138,40 @@ export function FinancePage({
   const [invoiceCurrency, setInvoiceCurrency] = useState("");
   const [invoiceLabel, setInvoiceLabel] = useState("");
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
-  const today = DateTime.now().setZone(zone).toISODate()!;
-  const orderedInvoices = useMemo(
-    () => invoicesDueFirst(invoices.data ?? [], today),
-    [invoices.data, today],
-  );
+  const now = DateTime.now();
+  const today = now.setZone(zone).toISODate()!;
   const language = i18n.language;
-  const invoiceLabels = useMemo(
-    () =>
-      [
-        ...new Set((invoices.data ?? []).flatMap((row) => row.labels ?? [])),
-      ].sort((a, b) => a.localeCompare(b, language)),
-    [invoices.data, language],
-  );
-  const needle = useDeferredValue(invoiceSearch).toLocaleLowerCase(language);
+  const normalizedSearch = invoiceSearch.toLocaleLowerCase(language);
+  const needle = useDeferredValue(normalizedSearch);
+  const invoiceLabels = useMemo(() => {
+    const labels = new Set<string>();
+    for (const row of invoices.data ?? [])
+      for (const label of row.labels ?? []) labels.add(label);
+    return [...labels].sort((a, b) => a.localeCompare(b, language));
+  }, [invoices.data, language]);
   const visibleInvoices = useMemo(
     () =>
-      orderedInvoices.filter(
-        (row) =>
-          (!invoiceStatus || row.status === invoiceStatus) &&
-          (!invoiceLabel || (row.labels ?? []).includes(invoiceLabel)) &&
-          (!invoiceCurrency || row.currency === invoiceCurrency) &&
-          (!needle ||
-            `${row.number} ${row.user_name} ${row.note ?? ""}`
-              .toLocaleLowerCase(language)
-              .includes(needle)),
+      invoicesDueFirst(
+        (invoices.data ?? []).filter(
+          (row) =>
+            (!invoiceStatus || row.status === invoiceStatus) &&
+            (!invoiceLabel || (row.labels ?? []).includes(invoiceLabel)) &&
+            (!invoiceCurrency || row.currency === invoiceCurrency) &&
+            (!needle ||
+              `${row.number} ${row.user_name} ${row.note ?? ""}`
+                .toLocaleLowerCase(language)
+                .includes(needle)),
+        ),
+        today,
       ),
     [
-      orderedInvoices,
+      invoices.data,
       invoiceStatus,
       invoiceLabel,
       invoiceCurrency,
-      needle,
       language,
+      needle,
+      today,
     ],
   );
   const summaries = useMemo(
@@ -1211,8 +1213,8 @@ export function FinancePage({
         {scope === "staff" && <RevenuePanel />}
         {mayRead && trendQuery.isSuccess && (
           <FinanceTrendChart
-            earnings={earnings.data ?? []}
-            invoices={invoices.data ?? []}
+            earnings={earnings.data}
+            invoices={invoices.data}
             source={trendSource}
             zone={zone}
           />
@@ -1356,7 +1358,7 @@ export function FinancePage({
                         row.lecturer_id === actor &&
                         !row.invoice_id &&
                         !seriesClaims.has(row.claim_id) &&
-                        invoiceReady(row, DateTime.now().toMillis()) ? (
+                        invoiceReady(row, now.toMillis()) ? (
                           <Button
                             size="sm"
                             variant="secondary"
@@ -1387,8 +1389,7 @@ export function FinancePage({
               <Button
                 variant="ghost"
                 disabled={
-                  !visibleInvoices.length ||
-                  invoiceSearch.toLocaleLowerCase(language) !== needle
+                  !visibleInvoices.length || normalizedSearch !== needle
                 }
                 onClick={() =>
                   downloadCsv("luminovia-invoices.csv", [

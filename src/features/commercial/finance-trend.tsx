@@ -1,18 +1,27 @@
 /** Responsive, accessible monthly trend from the current actor-scoped original-currency projections. */
 import { currencyCodes, type CurrencyCode } from "../../lib/currencies.ts";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { money } from "../../lib/dates";
-import { monthlyEarningsTrend, monthlyInvoiceTrend } from "./api";
+import {
+  monthlyEarningsTrend,
+  monthlyInvoiceTrend,
+  type MonthlyEarningsTrend,
+  type MonthlyInvoiceTrend,
+} from "./api";
 import type { EarningRecord, InvoiceRecord } from "./types";
 import "./i18n";
 
-type TrendPoint = {
-  currency: CurrencyCode;
-  month: string;
-  amount: number;
-  details: string;
-};
+type TrendMonth = MonthlyEarningsTrend | MonthlyInvoiceTrend;
+
+const earningStages = [
+  ["expected", "expected"],
+  ["invoiceReviewStage", "review"],
+  ["completed", "completed"],
+  ["invoiced", "invoiced"],
+  ["paid", "paid"],
+] as const;
 
 /** Group visible values without querying other companies or converting currencies. */
 export function FinanceTrendChart({
@@ -21,42 +30,27 @@ export function FinanceTrendChart({
   source,
   zone,
 }: {
-  earnings: EarningRecord[];
-  invoices: InvoiceRecord[];
+  earnings?: EarningRecord[];
+  invoices?: InvoiceRecord[];
   source: "earnings" | "invoices";
   zone: string;
 }) {
   const { t, i18n } = useTranslation("commercial");
-  const points: TrendPoint[] =
-    source === "earnings"
-      ? monthlyEarningsTrend(earnings, zone).map((month) => {
-          const states = [
-            ["expected", month.expected],
-            ["invoiceReviewStage", month.review],
-            ["completed", month.completed],
-            ["invoiced", month.invoiced],
-            ["paid", month.paid],
-          ] as const;
-          return {
-            currency: month.currency,
-            month: month.month,
-            amount: states.reduce((sum, [, value]) => sum + value, 0),
-            details: states
-              .filter(([, value]) => value !== 0)
-              .map(
-                ([label, value]) =>
-                  `${t(label)}: ${money(value, month.currency, i18n.language)}`,
-              )
-              .join(" · "),
-          };
-        })
-      : monthlyInvoiceTrend(invoices).map((month) => ({
-          currency: month.currency,
-          month: month.month,
-          amount: month.invoiced,
-          details: `${t("invoicePaidTrend")}: ${money(month.paid, month.currency, i18n.language)} · ${t("invoiceOutstandingTrend")}: ${money(month.outstanding, month.currency, i18n.language)}`,
-        }));
-  if (!points.length) return null;
+  const shownEarnings = source === "earnings" ? earnings : undefined;
+  const shownInvoices = source === "invoices" ? invoices : undefined;
+  const byCurrency = useMemo(() => {
+    const months = shownEarnings
+      ? monthlyEarningsTrend(shownEarnings, zone)
+      : monthlyInvoiceTrend(shownInvoices ?? []);
+    const groups = new Map<CurrencyCode, TrendMonth[]>();
+    for (const month of months) {
+      const group = groups.get(month.currency);
+      if (group) group.push(month);
+      else groups.set(month.currency, [month]);
+    }
+    return groups;
+  }, [shownEarnings, shownInvoices, zone]);
+  if (!byCurrency.size) return null;
   const sourceLabel =
     source === "earnings" ? t("earningsTrendSource") : t("invoiceTrendSource");
   return (
@@ -72,24 +66,37 @@ export function FinanceTrendChart({
       </div>
       <div className="finance-trend-currencies">
         {currencyCodes.map((currency) => {
-          const months = points
-            .filter((point) => point.currency === currency)
-            .slice(-12);
-          if (!months.length) return null;
-          const max = Math.max(...months.map((point) => point.amount), 0.01);
+          const months = byCurrency.get(currency);
+          if (!months?.length) return null;
+          const visible = months.slice(-12).map((point) => {
+            if ("outstanding" in point)
+              return {
+                month: point.month,
+                amount: point.invoiced,
+                details: `${t("invoicePaidTrend")}: ${money(point.paid, currency, i18n.language)} · ${t("invoiceOutstandingTrend")}: ${money(point.outstanding, currency, i18n.language)}`,
+              };
+            let amount = 0;
+            const details: string[] = [];
+            for (const [label, key] of earningStages) {
+              const value = point[key];
+              amount += value;
+              if (value !== 0)
+                details.push(
+                  `${t(label)}: ${money(value, currency, i18n.language)}`,
+                );
+            }
+            return { month: point.month, amount, details: details.join(" · ") };
+          });
+          const max = Math.max(...visible.map((point) => point.amount), 0.01);
           return (
             <section className="finance-trend-currency" key={currency}>
               <h3>{currency}</h3>
               <ol aria-label={t("financeTrends")}>
-                {months.map((point) => {
+                {visible.map((point) => {
                   const date = DateTime.fromISO(`${point.month}-01`, { zone })
                     .setLocale(i18n.language)
                     .toLocaleString({ month: "short", year: "numeric" });
-                  const amount = money(
-                    point.amount,
-                    point.currency,
-                    i18n.language,
-                  );
+                  const amount = money(point.amount, currency, i18n.language);
                   return (
                     <li className="finance-trend-row" key={point.month}>
                       <time dateTime={`${point.month}-01`}>{date}</time>

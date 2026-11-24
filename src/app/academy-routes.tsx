@@ -11,7 +11,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
 import { Preferences } from "../components/preferences";
@@ -31,9 +31,7 @@ import { PasswordRecovery } from "../features/auth/password";
 import { SignOutButton } from "../features/auth/sign-out-button";
 import { HelpCenter } from "../features/help/help";
 import { AcademyAdministrationPage } from "../features/learning/academy-administration";
-import { AcademyTimetable } from "../features/learning/academy-timetable";
 import { LearningHubPage } from "../features/learning/course-hub";
-import { CourseWorkspacePage } from "../features/learning/learning";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
 import { AcademyBrandLinksFooter } from "../features/branding/academy-brand-links-panel";
@@ -47,7 +45,19 @@ import {
   learningAnalyticsAccessQuery,
 } from "../features/analytics/learning-api";
 import "../features/analytics/learning-i18n";
+import "../features/learning/academy-timetable-i18n";
 import "./academy-routes.css";
+
+const AcademyTimetable = lazy(() =>
+  import("../features/learning/academy-timetable").then((module) => ({
+    default: module.AcademyTimetable,
+  })),
+);
+const CourseWorkspacePage = lazy(() =>
+  import("../features/learning/learning").then((module) => ({
+    default: module.CourseWorkspacePage,
+  })),
+);
 
 const StandaloneSwagger = lazy(() =>
   import("../features/developer-api/standalone-swagger").then((module) => ({
@@ -210,7 +220,9 @@ function AcademyWorkspaceFrame({
               : "Course workspaces are read-only during the licence grace period."}
           </Notice>
         )}
-        <Outlet context={access} />
+        <Suspense fallback={<Loading />}>
+          <Outlet context={access} />
+        </Suspense>
       </main>
     </>
   );

@@ -159,38 +159,43 @@ export const paymentsQuery = (actor: string, invoice: string) =>
 
 export { csvCell, csvText, downloadCsv } from "../../lib/csv";
 
+type EarningAmounts = Record<EarningRecord["stage"], number>;
+
+const emptyEarningAmounts: EarningAmounts = {
+  expected: 0,
+  review: 0,
+  completed: 0,
+  invoiced: 0,
+  paid: 0,
+};
+
+function earningAmountsFromCents({
+  expected,
+  review,
+  completed,
+  invoiced,
+  paid,
+}: EarningAmounts): EarningAmounts {
+  return {
+    expected: expected / 100,
+    review: review / 100,
+    completed: completed / 100,
+    invoiced: invoiced / 100,
+    paid: paid / 100,
+  };
+}
+
 /** Sum fee states in integer cents per original currency, without mixing currencies. */
 export function groupedEarnings(rows: EarningRecord[]) {
-  const groups = new Map<
-    string,
-    {
-      currency: CurrencyCode;
-      expected: number;
-      review: number;
-      completed: number;
-      invoiced: number;
-      paid: number;
-    }
-  >();
+  const groups = new Map<CurrencyCode, EarningAmounts>();
   for (const row of rows) {
-    const group = groups.get(row.currency) ?? {
-      currency: row.currency,
-      expected: 0,
-      review: 0,
-      completed: 0,
-      invoiced: 0,
-      paid: 0,
-    };
+    const group = groups.get(row.currency) ?? { ...emptyEarningAmounts };
     group[row.stage] += Math.round(Number(row.total_amount) * 100);
     groups.set(row.currency, group);
   }
-  return [...groups.values()].map((group) => ({
-    currency: group.currency,
-    expected: group.expected / 100,
-    review: group.review / 100,
-    completed: group.completed / 100,
-    invoiced: group.invoiced / 100,
-    paid: group.paid / 100,
+  return [...groups].map(([currency, group]) => ({
+    currency,
+    ...earningAmountsFromCents(group),
   }));
 }
 
@@ -261,14 +266,9 @@ export function invoicesDueFirst(rows: InvoiceRecord[], today: string) {
     .map(({ invoice }) => invoice);
 }
 
-export type MonthlyEarningsTrend = {
+export type MonthlyEarningsTrend = EarningAmounts & {
   currency: CurrencyCode;
   month: string;
-  expected: number;
-  review: number;
-  completed: number;
-  invoiced: number;
-  paid: number;
 };
 
 /** Aggregate the authorized earnings projection into IANA-zone month buckets without combining currencies. */
@@ -294,11 +294,7 @@ export function monthlyEarningsTrend(
     const group = groups.get(key) ?? {
       currency: row.currency,
       month: monthKey,
-      expected: 0,
-      review: 0,
-      completed: 0,
-      invoiced: 0,
-      paid: 0,
+      ...emptyEarningAmounts,
     };
     group[row.stage] += Math.round(Number(row.total_amount) * 100);
     groups.set(key, group);
@@ -309,13 +305,10 @@ export function monthlyEarningsTrend(
         left.currency.localeCompare(right.currency) ||
         left.month.localeCompare(right.month),
     )
-    .map((group) => ({
-      ...group,
-      expected: group.expected / 100,
-      review: group.review / 100,
-      completed: group.completed / 100,
-      invoiced: group.invoiced / 100,
-      paid: group.paid / 100,
+    .map(({ currency, month, ...group }) => ({
+      currency,
+      month,
+      ...earningAmountsFromCents(group),
     }));
 }
 
@@ -352,18 +345,26 @@ export function monthlyInvoiceTrend(
         Math.round((Number(row.total_amount) || 0) * 100),
       ),
       active = row.status !== "rejected" && row.status !== "cancelled";
-    group.paid += paidCents / 100;
+    group.paid += paidCents;
     if (active) {
-      group.invoiced += totalCents / 100;
-      group.outstanding += Math.max(0, totalCents - paidCents) / 100;
+      group.invoiced += totalCents;
+      group.outstanding += Math.max(0, totalCents - paidCents);
     }
     groups.set(key, group);
   }
-  return [...groups.values()].sort(
-    (left, right) =>
-      left.currency.localeCompare(right.currency) ||
-      left.month.localeCompare(right.month),
-  );
+  return [...groups.values()]
+    .sort(
+      (left, right) =>
+        left.currency.localeCompare(right.currency) ||
+        left.month.localeCompare(right.month),
+    )
+    .map(({ currency, month, invoiced, paid, outstanding }) => ({
+      currency,
+      month,
+      invoiced: invoiced / 100,
+      paid: paid / 100,
+      outstanding: outstanding / 100,
+    }));
 }
 
 /** Normalize unique comma-separated labels; reject oversized or control-character input. */

@@ -2,7 +2,7 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   matchPath,
@@ -148,13 +148,6 @@ export function Shell() {
       alive = false;
       window.removeEventListener(uiLocalChangeEvent, changed);
     };
-  }, [actor]);
-  const [search, setSearch] = useState("");
-  const previousActor = useRef(actor);
-  useEffect(() => {
-    if (previousActor.current === actor) return;
-    previousActor.current = actor;
-    setSearch("");
   }, [actor]);
   const {
     signOut: logout,
@@ -447,11 +440,15 @@ export function Shell() {
         <header className="topbar" aria-label={t("workspace")}>
           {!limitedAccount && (
             <form
-              className="global-search header-global-search"
+              key={actor}
+              className="header-global-search"
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
-                navigate(`/search?q=${encodeURIComponent(search)}`);
+                const query = new FormData(event.currentTarget).get("q");
+                navigate(
+                  `/search?q=${encodeURIComponent(String(query ?? ""))}`,
+                );
               }}
             >
               <Search size={20} aria-hidden="true" />
@@ -460,8 +457,8 @@ export function Shell() {
               </label>
               <input
                 id="portal-global-search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                name="q"
+                maxLength={100}
                 placeholder={t("portalSearch")}
               />
             </form>

@@ -23,6 +23,9 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { FinancePage } from "./finance";
+import { FinanceTrendChart } from "./finance-trend";
+import * as commercialApi from "./api";
+import * as dateFormatting from "../../lib/dates";
 import { commercialKeys, earningsQuery } from "./api";
 import type { CommercialAccess, EarningRecord, InvoiceRecord } from "./types";
 import type { InvoiceException } from "./invoice-exception-schema";
@@ -226,6 +229,38 @@ it("pages accepted earnings within their own region", async () => {
   expect(
     list.queryByRole("button", { name: "Weitere Einträge laden" }),
   ).not.toBeInTheDocument();
+});
+
+it("formats only the latest twelve months per currency and reuses the history calculation", () => {
+  const history = [
+    ...Array.from({ length: 18 }, (_, index) => {
+      const starts_at = new Date(Date.UTC(2030, index, 15)).toISOString();
+      return { ...earning(`month-${index}`), starts_at, ends_at: starts_at };
+    }),
+    earning("aud-month", "AUD"),
+  ];
+  const grouped = vi.spyOn(commercialApi, "monthlyEarningsTrend");
+  const format = vi.spyOn(dateFormatting, "money");
+  const { rerender } = render(
+    <FinanceTrendChart
+      earnings={history}
+      source="earnings"
+      zone="Europe/Berlin"
+    />,
+  );
+  expect(screen.getAllByRole("progressbar")).toHaveLength(13);
+  expect(document.querySelector("time[datetime='2030-06-01']")).toBeNull();
+  expect(document.querySelector("time[datetime='2030-07-01']")).not.toBeNull();
+  expect(format).toHaveBeenCalledTimes(26);
+  rerender(
+    <FinanceTrendChart
+      earnings={history}
+      invoices={[invoice()]}
+      source="earnings"
+      zone="Europe/Berlin"
+    />,
+  );
+  expect(grouped).toHaveBeenCalledOnce();
 });
 
 it("hides cached monthly earnings when the server no longer permits the read", async () => {

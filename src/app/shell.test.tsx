@@ -30,29 +30,36 @@ import {
 import { Shell } from "./shell";
 import i18n from "../lib/i18n";
 
-const { signOut, access, refetchPermissions, refetchRoles, loadUi, saveUi } =
-  vi.hoisted(() => ({
-    signOut: vi.fn(),
-    access: {
-      failed: false,
-      permissionsLoading: false,
-      roles: [] as string[],
-      permissions: [] as string[],
-    },
-    refetchPermissions: vi.fn(),
-    refetchRoles: vi.fn(),
-    loadUi: vi
-      .fn()
-      .mockRejectedValue(new Error("No saved preferences fixture")),
-    saveUi: vi.fn().mockResolvedValue(null),
-  }));
+const {
+  signOut,
+  access,
+  refetchPermissions,
+  refetchRoles,
+  loadUi,
+  saveUi,
+  observeQuery,
+} = vi.hoisted(() => ({
+  signOut: vi.fn(),
+  observeQuery: vi.fn(),
+  access: {
+    failed: false,
+    permissionsLoading: false,
+    actor: "actor",
+    roles: [] as string[],
+    permissions: [] as string[],
+  },
+  refetchPermissions: vi.fn(),
+  refetchRoles: vi.fn(),
+  loadUi: vi.fn().mockRejectedValue(new Error("No saved preferences fixture")),
+  saveUi: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("../lib/ui-preferences-api", () => ({
   loadUiPreferences: loadUi,
   saveUiPreferences: saveUi,
 }));
 vi.mock("../features/auth/auth-context", () => ({
   useAuth: () => ({
-    session: { user: { id: "actor", email: "fictional@example.invalid" } },
+    session: { user: { id: access.actor, email: "fictional@example.invalid" } },
   }),
 }));
 vi.mock("../features/profile/avatar", () => ({ Avatar: () => <span>A</span> }));
@@ -61,40 +68,43 @@ vi.mock("@tanstack/react-query", async (original) => {
   const actual = await original<typeof import("@tanstack/react-query")>();
   return {
     ...actual,
-    useQuery: (options: { queryKey: string[] }) => ({
-      data:
-        options.queryKey[0] === "profile"
-          ? {
-              active: true,
-              display_name: "Fictional User",
-              time_zone: "Europe/Berlin",
-            }
-          : options.queryKey[0] === "user-roles"
-            ? access.roles
-            : options.queryKey[0] === "permissions"
-              ? access.permissions
-              : options.queryKey[0] === "notifications" &&
-                  options.queryKey[2] === "preview"
-                ? ({
-                    items: [],
-                    unread_count: 0,
-                    as_of: "2026-11-15T12:00:00Z",
-                  } satisfies InboxPage)
-                : [],
-      isPending:
-        options.queryKey[0] === "permissions" && access.permissionsLoading,
-      isSuccess:
-        !access.failed &&
-        !(options.queryKey[0] === "permissions" && access.permissionsLoading),
-      isError:
-        access.failed &&
-        ["permissions", "user-roles"].includes(options.queryKey[0]),
-      isFetching: false,
-      refetch:
-        options.queryKey[0] === "permissions"
-          ? refetchPermissions
-          : refetchRoles,
-    }),
+    useQuery: (options: { queryKey: string[] }) => {
+      observeQuery(options.queryKey);
+      return {
+        data:
+          options.queryKey[0] === "profile"
+            ? {
+                active: true,
+                display_name: "Fictional User",
+                time_zone: "Europe/Berlin",
+              }
+            : options.queryKey[0] === "user-roles"
+              ? access.roles
+              : options.queryKey[0] === "permissions"
+                ? access.permissions
+                : options.queryKey[0] === "notifications" &&
+                    options.queryKey[2] === "preview"
+                  ? ({
+                      items: [],
+                      unread_count: 0,
+                      as_of: "2026-11-15T12:00:00Z",
+                    } satisfies InboxPage)
+                  : [],
+        isPending:
+          options.queryKey[0] === "permissions" && access.permissionsLoading,
+        isSuccess:
+          !access.failed &&
+          !(options.queryKey[0] === "permissions" && access.permissionsLoading),
+        isError:
+          access.failed &&
+          ["permissions", "user-roles"].includes(options.queryKey[0]),
+        isFetching: false,
+        refetch:
+          options.queryKey[0] === "permissions"
+            ? refetchPermissions
+            : refetchRoles,
+      };
+    },
   };
 });
 afterEach(() => {
@@ -102,6 +112,7 @@ afterEach(() => {
   localStorage.removeItem("luminovia.sidebar-collapsed");
   sessionStorage.removeItem("luminovia.tour.v1.actor");
   access.failed = false;
+  access.actor = "actor";
   access.permissionsLoading = false;
   access.roles = [];
   access.permissions = [];
@@ -549,6 +560,21 @@ describe("native mobile More navigation", () => {
     expect(
       screen.getByRole("banner").querySelector(".mobile-signout"),
     ).toBeInTheDocument();
+  });
+
+  it("does not rerender the shell while typing and clears the search when the account changes", async () => {
+    const { user, rerender } = setup();
+    const search = screen.getByLabelText("Im Portal suchen");
+
+    await user.click(search);
+    observeQuery.mockClear();
+    await user.keyboard("Fictional search");
+    expect(search).toHaveValue("Fictional search");
+    expect(observeQuery).not.toHaveBeenCalled();
+
+    access.actor = "second-actor";
+    rerender();
+    expect(screen.getByLabelText("Im Portal suchen")).toHaveValue("");
   });
 
   it("keeps one header search and preserves its focus while searching", async () => {

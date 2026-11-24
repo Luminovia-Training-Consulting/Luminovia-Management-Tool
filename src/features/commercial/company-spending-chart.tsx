@@ -1,5 +1,5 @@
 /** Company-only accepted gross fee history, grouped by the server's company-local months. */
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { Notice } from "../../components/common";
@@ -121,11 +121,23 @@ export function CompanySpendingChart({
   exportScope?: SpendingScope;
 }) {
   const { t, i18n } = useTranslation("platform");
-  const groups = new Map<string, CompanyMonthlySpending[]>();
-  for (const row of rows) {
-    const key = `${row.organisation_id}:${row.currency}`;
-    groups.set(key, [...(groups.get(key) ?? []), row]);
-  }
+  const groups = useMemo(() => {
+    const indexed = new Map<
+      string,
+      {
+        first: CompanyMonthlySpending;
+        byMonth: Map<string, CompanyMonthlySpending>;
+      }
+    >();
+    for (const row of rows) {
+      const key = `${row.organisation_id}:${row.currency}`;
+      const group = indexed.get(key) ?? { first: row, byMonth: new Map() };
+      group.byMonth.set(row.month_start.slice(0, 7), row);
+      indexed.set(key, group);
+    }
+    return indexed;
+  }, [rows]);
+  const now = DateTime.now();
   return (
     <section
       className="panel finance-trends"
@@ -147,14 +159,8 @@ export function CompanySpendingChart({
       </div>
       {!groups.size && <p>{t("noAcceptedSpending")}</p>}
       <div className="finance-trend-currencies">
-        {[...groups].map(([key, group]) => {
-          const first = group[0];
-          const current = DateTime.now()
-            .setZone(first.time_zone)
-            .startOf("month");
-          const byMonth = new Map(
-            group.map((row) => [row.month_start.slice(0, 7), row]),
-          );
+        {[...groups].map(([key, { first, byMonth }]) => {
+          const current = now.setZone(first.time_zone).startOf("month");
           const points = Array.from({ length: 12 }, (_, index) => {
             const month = current.minus({ months: 11 - index });
             return { month, entry: byMonth.get(month.toFormat("yyyy-MM")) };

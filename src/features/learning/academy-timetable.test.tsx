@@ -148,6 +148,32 @@ it("loads a second reviewed cursor page using the dates of the existing timetabl
   });
 });
 
+it("formats a full timetable once per zone and skips repainting while dates are edited", async () => {
+  const rows = Array.from({ length: 40 }, (_, index) => ({
+    ...session,
+    session_id: `c23c5015-398f-4d6a-9dd2-${index.toString(16).padStart(12, "0")}`,
+    course_title: `Fictional session ${index}`,
+  }));
+  rpc.mockImplementation(() => result({ rows, next: null }));
+  const dateTimeFormat = vi.spyOn(Intl, "DateTimeFormat");
+  try {
+    view();
+    await screen.findByRole("link", { name: "Fictional session 39" });
+    const timeFormatCalls = () =>
+      dateTimeFormat.mock.calls.filter(
+        ([, options]) => options?.timeZoneName === "shortOffset",
+      );
+    expect(timeFormatCalls()).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText("Through"), {
+      target: { value: "2030-11-03" },
+    });
+    expect(timeFormatCalls()).toHaveLength(1);
+    expect(rpc).toHaveBeenCalledTimes(1);
+  } finally {
+    dateTimeFormat.mockRestore();
+  }
+});
+
 it("accepts 31 days and closes both the row shape and cursor pair", () => {
   const request = { p_from: "2030-10-01", p_until: "2030-10-31" };
   expect(academyTimetableRequestSchema.safeParse(request).success).toBe(true);

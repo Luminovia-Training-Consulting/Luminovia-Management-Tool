@@ -207,6 +207,17 @@ describe("scoped commercial exports and totals", () => {
       },
     ]);
   });
+  it("sums invoice trend amounts in cents before converting to currency units", () => {
+    expect(
+      monthlyInvoiceTrend([
+        invoice("first", { total_amount: 0.2, paid_amount: 0.1 }),
+        invoice("second", { total_amount: 0.4, paid_amount: 0.2 }),
+      ]),
+    ).toEqual([
+      expect.objectContaining({ invoiced: 0.6, paid: 0.3, outstanding: 0.3 }),
+    ]);
+  });
+
   it("groups company invoice, received and outstanding totals by original currency", () => {
     const trend = monthlyInvoiceTrend([
       invoice("company-a", {

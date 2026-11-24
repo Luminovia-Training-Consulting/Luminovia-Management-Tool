@@ -94,26 +94,24 @@ test("the scratch database retains memory defaults and emits the PostgreSQL sign
     assert.equal(candidateDatabaseCommand(other), other);
 });
 
-test("hosted CI gives the disposable database headroom without lowering larger limits", () => {
+test("the disposable database has headroom without lowering larger limits", () => {
     const database = Object.freeze({mem_limit: 384 * 1024 ** 2, command: [
         "postgres", "-c", "shared_buffers=128MB", "-c", "work_mem=4MB",
     ]});
-    assert.deepEqual(candidateDatabaseOptions(database, false), database);
-    assert.deepEqual(candidateDatabaseOptions(database, true), {
+    assert.deepEqual(candidateDatabaseOptions(database), {
         ...database,
         mem_limit: 1024 * 1024 ** 2,
     });
     const composeJson = {...database, mem_limit: String(database.mem_limit)};
-    assert.deepEqual(candidateDatabaseOptions(composeJson, false), composeJson);
-    assert.equal(candidateDatabaseOptions(composeJson, true).mem_limit, 1024 * 1024 ** 2);
+    assert.equal(candidateDatabaseOptions(composeJson).mem_limit, 1024 * 1024 ** 2);
     const previousCiBudget = {...database, mem_limit: 640 * 1024 ** 2};
-    assert.equal(candidateDatabaseOptions(previousCiBudget, true).mem_limit, 1024 * 1024 ** 2);
+    assert.equal(candidateDatabaseOptions(previousCiBudget).mem_limit, 1024 * 1024 ** 2);
     const larger = {...database, mem_limit: 1536 * 1024 ** 2};
-    assert.deepEqual(candidateDatabaseOptions(larger, true), larger);
+    assert.deepEqual(candidateDatabaseOptions(larger), larger);
     const normalizedLarger = {...larger, mem_limit: String(larger.mem_limit)};
-    assert.deepEqual(candidateDatabaseOptions(normalizedLarger, true), normalizedLarger);
-    assert.equal(candidateDatabaseOptions({...database, mem_limit: "0"}, true).mem_limit, "0");
-    assert.deepEqual(candidateDatabaseOptions({command: database.command}, true), {
+    assert.deepEqual(candidateDatabaseOptions(normalizedLarger), normalizedLarger);
+    assert.equal(candidateDatabaseOptions({...database, mem_limit: "0"}).mem_limit, "0");
+    assert.deepEqual(candidateDatabaseOptions({command: database.command}), {
         command: database.command,
     });
 });

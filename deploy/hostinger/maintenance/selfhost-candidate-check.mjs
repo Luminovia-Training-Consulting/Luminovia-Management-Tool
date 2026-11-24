@@ -86,8 +86,8 @@ export function candidateDatabaseCommand(command) {
     );
 }
 
-/** Leave room for concurrent Auth, claims and retained-data probes on hosted CI. */
-export function candidateDatabaseOptions(database, hostedCi) {
+/** Leave room for concurrent Auth, claims and retained-data probes in the disposable stack. */
+export function candidateDatabaseOptions(database) {
     const options = {...database, command: candidateDatabaseCommand(database.command)};
     // Compose's JSON config may encode the normalized byte count as a string.
     const configured = database.mem_limit;
@@ -96,9 +96,9 @@ export function candidateDatabaseOptions(database, hostedCi) {
         : configured;
     // The full native matrix reached the previous 640 MiB cgroup cap
     // while Auth, REST and cleanup still had simultaneous connections.
-    const ciMinimum = 1024 * 1024 ** 2;
-    if (hostedCi && Number.isSafeInteger(bytes) && bytes > 0 && bytes < ciMinimum)
-        options.mem_limit = ciMinimum;
+    const candidateMinimum = 1024 ** 3;
+    if (Number.isSafeInteger(bytes) && bytes > 0 && bytes < candidateMinimum)
+        options.mem_limit = candidateMinimum;
     return options;
 }
 
@@ -596,7 +596,7 @@ export async function checkCandidate({
     }
     assert(
         totalmem() >= 6 * 1024 ** 3,
-        "Candidate checks require a separate runner with at least6GiB RAM.",
+        "Candidate checks require a separate runner with at least 6 GiB of RAM.",
     );
     const dockerHost = await assertLocalDocker();
     const project = "luminovia-portal-test-" + randomBytes(12).toString("hex");
@@ -846,7 +846,7 @@ export async function checkCandidate({
                 service.ports = [];
             }
             configuration.services.db = {
-                ...candidateDatabaseOptions(configuration.services.db, process.env.GITHUB_ACTIONS === "true"),
+                ...candidateDatabaseOptions(configuration.services.db),
                 container_name: "supabase_db_" + project,
             };
             configuration.services.clamav.container_name =

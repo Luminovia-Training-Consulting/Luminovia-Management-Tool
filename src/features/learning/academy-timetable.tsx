@@ -1,7 +1,7 @@
 /** A date-bounded timetable for the verified standalone academy course profile. */
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
@@ -24,6 +24,8 @@ import {
 import "./academy-timetable-i18n";
 import "./academy-timetable.css";
 
+type AcademyTimetablePage = ReturnType<typeof academyTimetableSchema.parse>;
+
 type DateWindow = Pick<AcademyTimetableRequest, "p_from" | "p_until">;
 
 function shiftWindow(window: DateWindow, direction: -1 | 1): DateWindow {
@@ -36,30 +38,34 @@ function shiftWindow(window: DateWindow, direction: -1 | 1): DateWindow {
   };
 }
 
-function groupByLocalDay(sessions: AcademyTimetableSession[]) {
+function groupByLocalDay(pages: AcademyTimetablePage[]) {
   const days = new Map<string, AcademyTimetableSession[]>();
   const seen = new Set<string>();
-  for (const session of sessions) {
-    if (seen.has(session.session_id)) continue;
-    seen.add(session.session_id);
-    const entries = days.get(session.local_day) ?? [];
-    entries.push(session);
-    days.set(session.local_day, entries);
+  for (const { rows } of pages) {
+    for (const session of rows) {
+      if (seen.has(session.session_id)) continue;
+      seen.add(session.session_id);
+      const entries = days.get(session.local_day);
+      if (entries) entries.push(session);
+      else days.set(session.local_day, [session]);
+    }
   }
-  return [...days].sort(([left], [right]) => left.localeCompare(right));
+  return {
+    days: [...days].sort(([left], [right]) => left.localeCompare(right)),
+    count: seen.size,
+  };
 }
 
-function Session({ session }: { session: AcademyTimetableSession }) {
-  const { t, i18n } = useTranslation("academyTimetable");
-  const displayZone = validZone(session.time_zone) ? session.time_zone : "UTC";
-  const dateFormat = new Intl.DateTimeFormat(i18n.language, {
-    timeZone: displayZone,
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "shortOffset",
-  });
+function Session({
+  session,
+  displayZone,
+  dateFormat,
+}: {
+  session: AcademyTimetableSession;
+  displayZone: string;
+  dateFormat: Intl.DateTimeFormat;
+}) {
+  const { t } = useTranslation("academyTimetable");
   return (
     <li className="panel academy-timetable-session">
       <h3>
@@ -98,9 +104,71 @@ function Session({ session }: { session: AcademyTimetableSession }) {
   );
 }
 
+// The date draft and pagination controls can update without repainting a confirmed schedule.
+const TimetableSessions = memo(function TimetableSessions({
+  pages,
+}: {
+  pages: AcademyTimetablePage[];
+}) {
+  const { t, i18n } = useTranslation("academyTimetable");
+  const { days, count } = useMemo(() => groupByLocalDay(pages), [pages]);
+  if (!count) return <Notice>{t("empty")}</Notice>;
+  const dayFormat = new Intl.DateTimeFormat(i18n.language, {
+    dateStyle: "full",
+    timeZone: "UTC",
+  });
+  const formats = new Map<
+    string,
+    { displayZone: string; dateFormat: Intl.DateTimeFormat }
+  >();
+  return (
+    <>
+      <p role="status" className="muted">
+        {t("count", { count })}
+      </p>
+      {days.map(([day, entries]) => (
+        <section key={day} aria-labelledby={`timetable-day-${day}`}>
+          <h2 id={`timetable-day-${day}`}>
+            <time dateTime={day}>{dayFormat.format(new Date(day))}</time>
+          </h2>
+          <ul className="academy-timetable-sessions">
+            {entries.map((session) => {
+              let format = formats.get(session.time_zone);
+              if (!format) {
+                const displayZone = validZone(session.time_zone)
+                  ? session.time_zone
+                  : "UTC";
+                format = {
+                  displayZone,
+                  dateFormat: new Intl.DateTimeFormat(i18n.language, {
+                    timeZone: displayZone,
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZoneName: "shortOffset",
+                  }),
+                };
+                formats.set(session.time_zone, format);
+              }
+              return (
+                <Session
+                  key={session.session_id}
+                  session={session}
+                  {...format}
+                />
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </>
+  );
+});
+
 /** Course scope and lease are rechecked by the RPC on every page. */
 export function AcademyTimetable({ actor }: { actor: string }) {
-  const { t, i18n } = useTranslation("academyTimetable");
+  const { t } = useTranslation("academyTimetable");
   const [window, setWindow] = useState<DateWindow>(() => {
     const today = DateTime.local().startOf("day");
     return {
@@ -133,19 +201,16 @@ export function AcademyTimetable({ actor }: { actor: string }) {
     gcTime: 0,
     refetchInterval: 30_000,
   });
-  const days = groupByLocalDay(
-    query.data?.pages.flatMap(({ rows }) => rows) ?? [],
-  );
-  const sessionCount = days.reduce(
-    (count, [, entries]) => count + entries.length,
-    0,
-  );
-  const dayFormat = new Intl.DateTimeFormat(i18n.language, {
-    dateStyle: "full",
-    timeZone: "UTC",
-  });
-  const previous = shiftWindow(window, -1);
-  const next = shiftWindow(window, 1);
+  const navigation = useMemo(() => {
+    const previous = shiftWindow(window, -1);
+    const next = shiftWindow(window, 1);
+    return {
+      previous,
+      next,
+      previousValid: academyTimetableRequestSchema.safeParse(previous).success,
+      nextValid: academyTimetableRequestSchema.safeParse(next).success,
+    };
+  }, [window]);
 
   function showDates(value: DateWindow) {
     const valid = academyTimetableRequestSchema.safeParse(value).success;
@@ -206,16 +271,16 @@ export function AcademyTimetable({ actor }: { actor: string }) {
         <Button
           type="button"
           variant="secondary"
-          onClick={() => showDates(previous)}
-          disabled={!academyTimetableRequestSchema.safeParse(previous).success}
+          onClick={() => showDates(navigation.previous)}
+          disabled={!navigation.previousValid}
         >
           {t("previous")}
         </Button>
         <Button
           type="button"
           variant="secondary"
-          onClick={() => showDates(next)}
-          disabled={!academyTimetableRequestSchema.safeParse(next).success}
+          onClick={() => showDates(navigation.next)}
+          disabled={!navigation.nextValid}
         >
           {t("next")}
         </Button>
@@ -224,31 +289,13 @@ export function AcademyTimetable({ actor }: { actor: string }) {
       {query.isError && <ErrorState retry={() => void query.refetch()} />}
       {query.isSuccess && (
         <>
-          {sessionCount === 0 ? (
-            <Notice>{t("empty")}</Notice>
-          ) : (
-            <p role="status" className="muted">
-              {t("count", { count: sessionCount })}
-            </p>
-          )}
-          {days.map(([day, entries]) => (
-            <section key={day} aria-labelledby={`timetable-day-${day}`}>
-              <h2 id={`timetable-day-${day}`}>
-                <time dateTime={day}>{dayFormat.format(new Date(day))}</time>
-              </h2>
-              <ul className="academy-timetable-sessions">
-                {entries.map((session) => (
-                  <Session key={session.session_id} session={session} />
-                ))}
-              </ul>
-            </section>
-          ))}
+          <TimetableSessions pages={query.data.pages} />
           {query.hasNextPage && (
             <Button
               type="button"
               variant="secondary"
               disabled={query.isFetching}
-              onClick={() => void query.fetchNextPage()}
+              onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
             >
               {t("more")}
             </Button>

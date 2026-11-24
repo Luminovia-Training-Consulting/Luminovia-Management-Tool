@@ -1,5 +1,5 @@
 /** Unified discovery renders only server-authorised pages for the current actor. */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -85,14 +85,20 @@ export function PortalSearch() {
     enabled: online && q.length >= 2,
   });
   const retryNext = canRetryNextPage(query);
-  const rows = new Map<
-    string,
-    NonNullable<typeof query.data>["pages"][number]["items"][number]
-  >();
-  for (const page of query.data?.pages ?? [])
-    for (const row of page.items)
-      if (!rows.has(`${row.kind}:${row.id}`))
-        rows.set(`${row.kind}:${row.id}`, row);
+  const pages = query.data?.pages;
+  const rows = useMemo(() => {
+    const unique = new Map<
+      string,
+      NonNullable<typeof pages>[number]["items"][number]
+    >();
+    for (const page of pages ?? []) {
+      for (const row of page.items) {
+        const key = `${row.kind}:${row.id}`;
+        if (!unique.has(key)) unique.set(key, row);
+      }
+    }
+    return Array.from(unique.values());
+  }, [pages]);
   return (
     <>
       <PageHeading title={t("title")} description={t("hint")} />
@@ -111,10 +117,10 @@ export function PortalSearch() {
           <Loading />
         ) : query.isError && !retryNext ? (
           <ErrorState retry={() => void query.refetch()} />
-        ) : rows.size ? (
+        ) : rows.length ? (
           <>
             <ul className="portal-search-results">
-              {[...rows.values()].map((row) => (
+              {rows.map((row) => (
                 <li key={`${row.kind}:${row.id}`}>
                   <Link
                     to={
