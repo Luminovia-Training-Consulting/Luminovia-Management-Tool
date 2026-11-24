@@ -1,11 +1,10 @@
 /**
- * Shared profile, current-capability, expertise, allocation and private-event
- * queries. Feature-specific job discovery, exact details and pickers live in
+ * Shared profile, current-capability, expertise and allocation queries. Feature-specific job discovery, exact details and pickers live in
  * features/jobs; actor keys and current database permissions remain authoritative.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
-import type { Claim, Expertise, PersonalEvent, Profile, Topic } from "./types";
+import type { Claim, Expertise, Profile, Topic } from "./types";
 
 /** Read the requested profile under native RLS and key its cached result by identity. */
 export const profileQuery = (id: string) =>
@@ -73,21 +72,6 @@ export const claimsQuery = (id: string) =>
       return data as Claim[];
     },
   });
-/** Read personal_events through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
-export const eventsQuery = (id: string) =>
-  queryOptions({
-    queryKey: ["events", id],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("personal_events")
-        .select("*")
-        .eq("user_id", id)
-        .order("starts_at");
-      if (error) throw error;
-      return data as PersonalEvent[];
-    },
-  });
-
 /** Read user_roles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const userRolesQuery = (id: string) =>
   queryOptions({

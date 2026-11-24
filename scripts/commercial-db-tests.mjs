@@ -584,6 +584,45 @@ try {
         },
     );
     await check(
+        "Invoice pages preserve stable order and scopes beyond the REST cap",
+        async () => {
+            const pdf = await file(b, "invoice");
+            await sql(
+                `insert into public.invoices(user_id,number,issued_on,due_on,currency,total_amount,document_version_id,client_id,created_at)
+                 select '${b}', 'FICT-PAGED-'||seq, '2026-11-01', '2026-12-01', 'EUR', 100, '${pdf.version}',
+                   gen_random_uuid(), '2026-11-15T14:30:00.123456Z'
+                 from generate_series(1,1001) seq;`,
+            );
+            const legacy = await rows(b, "invoice_records");
+            assert.equal(legacy.length, 1001);
+            const received = [];
+            let cursor = null;
+            for (let page = 0; page < 5; page++) {
+                const batch = await rows(b, "invoice_records", [false, 250, cursor?.created_at ?? null, cursor?.id ?? null]);
+                assert.equal(batch.length, page === 4 ? 1 : 250);
+                received.push(...batch);
+                cursor = batch.at(-1);
+            }
+            assert.deepEqual(received, legacy);
+            assert.deepEqual(
+                await rows(b, "invoice_records", [false, 250, cursor.created_at, cursor.id]),
+                [],
+            );
+            assert.equal((await rows(a, "invoice_records", [false, 250])).length, 1);
+            assert.equal((await rows(admin, "invoice_records", [true, 250])).length, 250);
+            await assert.rejects(rows(b, "invoice_records", [true, 250]), /required/i);
+            for (const args of [
+                [false, null],
+                [false, 0],
+                [false, 251],
+                [false, 10, cursor.created_at, null],
+                [false, 10, null, cursor.id],
+            ]) {
+                await assert.rejects(rows(b, "invoice_records", args), /Invalid invoice page/);
+            }
+        },
+    );
+    await check(
         "Commercial file references retain the exact original version while replacements remain independent",
         async () => {
             await assert.rejects(

@@ -19,10 +19,13 @@ import { Button } from "../../components/ui/button";
 import { TextLink } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { permissionsQuery } from "../../lib/queries";
-import { contractsQuery } from "../commercial/api";
 import { chatUnreadCountQuery } from "../chat/api";
 import { notificationPreviewQuery } from "../notifications/api";
-import { nextPersonalEventsQuery, recentDocumentsQuery } from "./api";
+import {
+  nextPersonalEventsQuery,
+  pendingContractPreviewQuery,
+  recentDocumentsQuery,
+} from "./api";
 import { PersonalizedWidgets, TeachingDayWidget } from "./personal";
 import "./i18n";
 import "./widgets.css";
@@ -224,19 +227,8 @@ function Activity({ actor, zone }: { actor: string; zone: string }) {
 /** Show only the actor's currently relevant contract acknowledgements, not another person's contract state. */
 function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
-  const contracts = useQuery(contractsQuery(actor, false));
-  const [openedAt] = useState(() => Date.now());
-  const now = Math.max(openedAt, contracts.dataUpdatedAt);
-  const pending =
-    contracts.data?.filter(
-      (contract) =>
-        contract.status === "active" &&
-        !contract.acknowledged_at &&
-        contract.document_version_id &&
-        contract.sha256 &&
-        Date.parse(contract.effective_from) <= now &&
-        (!contract.expires_at || Date.parse(contract.expires_at) > now),
-    ) ?? [];
+  const contracts = useQuery(pendingContractPreviewQuery(actor));
+  const pending = contracts.data ?? [];
   return (
     <section
       className="panel dashboard-widget dashboard-contracts"
@@ -250,7 +242,7 @@ function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
       <WidgetState state={contracts}>
         {pending.length ? (
           <ul className="dashboard-preview-list">
-            {pending.slice(0, 3).map((contract) => (
+            {pending.map((contract) => (
               <li key={contract.id}>
                 <Link to="/contracts">{contract.title}</Link>
                 {contract.expires_at && (

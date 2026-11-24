@@ -29,6 +29,7 @@ const fake = vi.hoisted(() => ({
   roles: ["lecturer"],
   tables: {} as Record<string, unknown>,
   rpcData: {} as Record<string, unknown>,
+  expertiseCount: 0,
   rpcDelays: {} as Record<string, Promise<void>>,
   errors: {} as Record<string, unknown>,
   calls: [] as { method: string; table: string; args: unknown[] }[],
@@ -87,6 +88,7 @@ beforeEach(async () => {
   fake.calls = [];
   fake.errors = {};
   fake.rpcDelays = {};
+  fake.expertiseCount = 0;
   fake.tables = {
     profiles: {
       id: fake.actor,
@@ -95,7 +97,13 @@ beforeEach(async () => {
     },
     jobs: [],
     job_claims: [],
-    lecturer_topics: [],
+    contracts: [
+      {
+        id: "pending",
+        title: "Personal receipt pending",
+        expires_at: ahead(4),
+      },
+    ],
     personal_events: [
       {
         id: "own-event",
@@ -144,38 +152,6 @@ beforeEach(async () => {
     chat_rooms_with_manual_unread: [
       { id: "room-a", title: "Fictional room", unread_count: 3 },
     ],
-    contract_records: [
-      {
-        id: "pending",
-        title: "Personal receipt pending",
-        status: "active",
-        effective_from: ahead(-4),
-        expires_at: ahead(4),
-        document_version_id: "version-a",
-        sha256: "a".repeat(64),
-        acknowledged_at: null,
-      },
-      {
-        id: "read",
-        title: "Already acknowledged",
-        status: "active",
-        effective_from: ahead(-4),
-        expires_at: null,
-        document_version_id: "version-b",
-        sha256: "b".repeat(64),
-        acknowledged_at: ahead(-1),
-      },
-      {
-        id: "expired",
-        title: "Expired contract",
-        status: "expired",
-        effective_from: ahead(-4),
-        expires_at: ahead(-1),
-        document_version_id: "version-c",
-        sha256: "c".repeat(64),
-        acknowledged_at: null,
-      },
-    ],
   };
   fake.rpc.mockReset().mockImplementation((name: string, args?: unknown) => {
     fake.calls.push({ method: "rpc", table: name, args: [args] });
@@ -202,6 +178,9 @@ beforeEach(async () => {
       "is",
       "gt",
       "lt",
+      "lte",
+      "not",
+      "or",
       "order",
       "limit",
       "abortSignal",
@@ -217,6 +196,7 @@ beforeEach(async () => {
           table === "user_roles"
             ? fake.roles.map((role) => ({ role }))
             : fake.tables[table],
+        count: table === "lecturer_topics" ? fake.expertiseCount : null,
         error: fake.errors[table] ?? null,
       }).then(resolve);
     return builder;
@@ -368,14 +348,30 @@ describe("role-aware dashboard previews", () => {
       "/files?q=Fictional%20handout.txt",
     );
     expect(await screen.findByText("Personal receipt pending")).toBeVisible();
-    expect(screen.queryByText("Already acknowledged")).not.toBeInTheDocument();
-    expect(screen.queryByText("Expired contract")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Foreign private appointment"),
     ).not.toBeInTheDocument();
     expect(await screen.findByText("2 ungelesene Meldungen")).toBeVisible();
     expect(await screen.findByText("3 ungelesene Nachrichten")).toBeVisible();
-    expect(rpcCalls("contract_records")[0].args).toEqual([{ p_all: false }]);
+    expect(rpcCalls("contract_records")).toHaveLength(0);
+    expect(fake.calls).toContainEqual({
+      method: "select",
+      table: "contracts",
+      args: ["id,title,expires_at,contract_acceptances()"],
+    });
+    for (const [method, ...args] of [
+      ["eq", "user_id", fake.actor],
+      ["eq", "status", "active"],
+      ["not", "document_version_id", "is", null],
+      ["not", "document_sha256", "is", null],
+      ["lte", "effective_from", expect.any(String)],
+      ["or", expect.stringMatching(/^expires_at\.is\.null,expires_at\.gt\./)],
+      ["eq", "contract_acceptances.user_id", fake.actor],
+      ["is", "contract_acceptances", null],
+      ["limit", 3],
+    ]) {
+      expect(fake.calls).toContainEqual({ method, table: "contracts", args });
+    }
     expect(fake.calls).toContainEqual({
       method: "eq",
       table: "personal_events",
@@ -433,7 +429,9 @@ describe("role-aware dashboard previews", () => {
         fake.calls.some(
           (call) =>
             call.method === "from" &&
-            ["jobs", "job_claims", "lecturer_topics"].includes(call.table),
+            ["jobs", "job_claims", "lecturer_topics", "contracts"].includes(
+              call.table,
+            ),
         ),
       ).toBe(false);
       expect(rpcCalls("contract_records")).toHaveLength(0);
@@ -473,11 +471,41 @@ describe("role-aware dashboard previews", () => {
     expect(
       within(followups).getByRole("link", { name: "Aufträge verwalten" }),
     ).toHaveAttribute("href", "/admin/assignments");
+    expect(rpcCalls("contract_records")).toHaveLength(0);
+  });
+  it("uses the exact expertise count without transferring any expertise records", async () => {
+    fake.expertiseCount = 1057;
+    setup();
+
+    const expertise = await screen.findByRole("link", {
+      name: new RegExp(i18n.t("expertise"), "i"),
+    });
+    expect(within(expertise).getByText("1057", { exact: true })).toBeVisible();
+    expect(fake.calls).toContainEqual({
+      method: "select",
+      table: "lecturer_topics",
+      args: ["topic_id", { count: "exact", head: true }],
+    });
+  });
+  it("refreshes an acknowledged contract preview using the existing contract invalidation key", async () => {
+    const { client } = setup(true);
+    expect(await screen.findByText("Personal receipt pending")).toBeVisible();
+
+    fake.tables.contracts = [];
+    await act(() =>
+      client.invalidateQueries({ queryKey: ["contracts", fake.actor] }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Personal receipt pending"),
+      ).not.toBeInTheDocument(),
+    );
     expect(
-      rpcCalls("contract_records").every(
-        (call) => JSON.stringify(call.args) === '[{"p_all":false}]',
+      fake.calls.filter(
+        ({ method, table }) => method === "from" && table === "contracts",
       ),
-    ).toBe(true);
+    ).toHaveLength(2);
   });
   it("renders authoritative matching suggestions without loading the full catalogue", async () => {
     fake.rpcData.job_dashboard = {

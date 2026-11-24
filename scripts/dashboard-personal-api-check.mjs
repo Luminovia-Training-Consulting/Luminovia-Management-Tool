@@ -36,6 +36,83 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
       delete from public.document_versions where document_id=${q(doc)};
       delete from public.documents where id=${q(doc)};`);
     });
+    const contractDoc = randomUUID(), contractVersion = randomUUID();
+    const receiptLabel = `Fictional dashboard receipt ${contractDoc}`;
+    const topicLabel = `Fictional dashboard expertise ${contractDoc}`;
+    const checksum = "b".repeat(64);
+    const pendingIds = Array.from({length: 4}, () => randomUUID());
+    defer(async () => {
+        await sql(`
+          delete from public.contract_acceptances where user_id = ${q(owner.id)};
+          delete from public.contracts where user_id in (${q(owner.id)}, ${q(peer.id)});
+          delete from public.document_versions where id = ${q(contractVersion)};
+          delete from public.documents where id = ${q(contractDoc)};
+          delete from public.lecturer_topics where user_id = ${q(owner.id)};
+          delete from public.topics where label_de like ${q(topicLabel + "%")};
+        `);
+    });
+    const contractTable = "public.contracts(id,user_id,status,effective_from,expires_at,version,title,document_version_id,document_sha256,created_at)";
+    await sql(`
+        insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+        values(${q(contractDoc)},${q(owner.id)},${q(owner.id)},'personal','contract','Fictional agreement.pdf','application/pdf',10,'clean',${q(randomUUID())});
+        insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+        values(${q(contractVersion)},${q(contractDoc)},${q(owner.id)},${q(randomUUID())},1,${q("fictional/" + contractVersion)},'Fictional agreement.pdf','application/pdf',10,'clean',${q(checksum)});
+        insert into ${contractTable}
+        select gen_random_uuid(),${q(owner.id)},'expired',now()-interval '10 days',now()-interval '1 day',
+          n+10,${q(receiptLabel)} || ' expired',${q(contractVersion)},${q(checksum)},now()
+        from generate_series(1,1001) n;
+        insert into ${contractTable} values
+          ${pendingIds.map((id, index) => `(${q(id)},${q(owner.id)},'active',now()-interval '10 days',null,
+            ${index + 1},${q(receiptLabel + " " + (index + 1))},${q(contractVersion)},${q(checksum)},now()-interval '1 day')`).join(",")},
+          (gen_random_uuid(),${q(owner.id)},'active',now()+interval '1 day',null,5,${q(receiptLabel + " future")},${q(contractVersion)},${q(checksum)},now()),
+          (gen_random_uuid(),${q(owner.id)},'active',now()-interval '10 days',now()-interval '1 day',6,${q(receiptLabel + " elapsed")},${q(contractVersion)},${q(checksum)},now()),
+          (gen_random_uuid(),${q(owner.id)},'active',now()-interval '10 days',null,7,${q(receiptLabel + " legacy")},null,null,now());
+        with topics as (
+          insert into public.topics(label_de,label_en,kind)
+          select ${q(topicLabel)} || ' ' || n,${q(topicLabel)} || ' ' || n,'topic' from generate_series(1,1057) n
+          returning id
+        )
+        insert into public.lecturer_topics(user_id,topic_id)
+        select ${q(owner.id)},id from topics;
+    `);
+    const oldContracts = await checked(owner.client.rpc("contract_records", {p_all: false}));
+    assert.equal(oldContracts.length, 1000, "Unfiltered history reaches the REST cap");
+    assert.ok(oldContracts.every((row) => !pendingIds.includes(row.id)),
+        "The old client would miss every pending contract");
+    const before = new Date().toISOString();
+    const preview = (viewer, ownerId = viewer.id) =>
+        viewer.client.from("contracts")
+            .select("id,title,expires_at,contract_acceptances()")
+            .eq("user_id", ownerId)
+            .eq("status", "active")
+            .not("document_version_id", "is", null)
+            .not("document_sha256", "is", null)
+            .lte("effective_from", before)
+            .or(`expires_at.is.null,expires_at.gt.${before}`)
+            .eq("contract_acceptances.user_id", ownerId)
+            .is("contract_acceptances", null)
+            .order("created_at", {ascending: false})
+            .order("version", {ascending: false})
+            .order("id", {ascending: false})
+            .limit(3);
+    const pending = await checked(preview(owner), "Read bounded private dashboard receipts");
+    assert.deepEqual(pending.map((row) => row.id), [pendingIds[3], pendingIds[2], pendingIds[1]]);
+    assert.ok(pending.every((row) => Object.keys(row).sort().join(",") === "expires_at,id,title"));
+    assert.deepEqual(await checked(preview(peer, owner.id)), []);
+    await checked(owner.client.rpc("acknowledge_contract", {
+        p_contract_id: pendingIds[3],
+        p_sha256: checksum,
+        p_client_id: randomUUID(),
+    }));
+    assert.deepEqual((await checked(preview(owner))).map((row) => row.id), [pendingIds[2], pendingIds[1], pendingIds[0]]);
+    const oldExpertise = await checked(owner.client.from("lecturer_topics").select("*").eq("user_id", owner.id));
+    assert.equal(oldExpertise.length, 1000);
+    const count = await owner.client.from("lecturer_topics")
+        .select("topic_id", {count: "exact", head: true}).eq("user_id", owner.id);
+    assert.equal(count.error, null);
+    assert.equal(count.count, 1057);
+    assert.equal(count.data, null);
+    console.log(`PASS: dashboard contract filters precede the REST limit (1000 rows / ${Buffer.byteLength(JSON.stringify(oldContracts))} bytes to ${pending.length} rows / ${Buffer.byteLength(JSON.stringify(pending))} bytes); exact headline expertise count (1057) transfers no row body.`);
     const defaultLayout = await checked(
         owner.client.rpc("dashboard_preferences"),
     );
@@ -167,6 +244,7 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
         "42501",
     );
     assert.equal((await owner.client.rpc("teaching_day")).error?.code, "42501");
+    assert.equal((await preview(owner)).error?.code, "42501");
     console.log(
         "PASS: actual Auth/REST private dashboard saved order, concurrent CAS, forged identity denial, own teaching day/readiness, peer/admin isolation, current profile zone, cancellation and inactive-token denial.",
     );

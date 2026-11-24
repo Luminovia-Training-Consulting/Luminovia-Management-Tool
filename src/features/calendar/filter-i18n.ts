@@ -75,8 +75,8 @@ const values = {
   global: ["Globale Termine", "Global events"],
   course: ["Kurstermine", "Course sessions"],
   scope: [
-    "Unternehmen und Themen filtern die geladenen Kurstermine. Mehrere Themen gelten alternativ. Die Suche filtert Titel; globale Termine umfassen nur geladene Seiten des sichtbaren Zeitraums.",
-    "Company and topic filters apply to loaded course sessions. Multiple topics match any selected topic. Search filters titles; global events cover only loaded pages in the visible range.",
+    "Unternehmen und Themen filtern die geladenen Kurstermine. Mehrere Themen gelten alternativ. Die Titelsuche erfasst geladene Termine im sichtbaren Zeitraum.",
+    "Company and topic filters apply to loaded course sessions. Multiple topics match any selected topic. Title search covers loaded events in the visible range.",
   ],
 } as const;
 for (const [language, index] of [

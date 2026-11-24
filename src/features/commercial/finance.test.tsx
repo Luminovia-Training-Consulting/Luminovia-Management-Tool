@@ -165,8 +165,25 @@ beforeEach(async () => {
       name === "finance_pending_invoice_exceptions"
     )
       return Promise.resolve({ data: [], error: null });
-    if (name === "invoice_records")
-      return Promise.resolve({ data: invoices, error: null });
+    if (name === "invoice_records") {
+      const cursor = payload as {
+        p_page_limit: number;
+        p_before_at: string | null;
+        p_before_id: string | null;
+      };
+      const start = cursor.p_before_id
+        ? invoices.findIndex(
+            ({ id, created_at }) =>
+              id === cursor.p_before_id && created_at === cursor.p_before_at,
+          ) + 1
+        : 0;
+      return {
+        abortSignal: async () => ({
+          data: invoices.slice(start, start + cursor.p_page_limit),
+          error: null,
+        }),
+      };
+    }
     if (name === "invoice_series_records")
       return Promise.resolve({ data: seriesEntries, error: null });
     if (name === "invoice_series_corrections")
@@ -269,28 +286,28 @@ it("formats only the latest twelve months per currency and reuses the history ca
   expect(grouped).toHaveBeenCalledOnce();
 });
 
-it("limits mounted invoices while searches and exports include unmounted records", async () => {
+it("limits mounted invoices while searches and exports span the REST response cap", async () => {
   const template = invoice();
-  invoices = Array.from({ length: 25 }, (_, index) => ({
+  invoices = Array.from({ length: 1_001 }, (_, index) => ({
     ...template,
     id: `batch-invoice-${index + 1}`,
-    number: `FICT-INVOICE-${String(index + 1).padStart(2, "0")}`,
+    number: `FICT-INVOICE-${String(index + 1).padStart(4, "0")}`,
   }));
   view();
   const region = () =>
     within(screen.getByRole("region", { name: "Rechnungen" }));
-  await screen.findByRole("heading", { name: "FICT-INVOICE-01" });
+  await screen.findByRole("heading", { name: "FICT-INVOICE-0001" });
   expect(screen.getAllByRole("article")).toHaveLength(12);
-  expect(region().queryByText("FICT-INVOICE-25")).not.toBeInTheDocument();
+  expect(region().queryByText("FICT-INVOICE-1001")).not.toBeInTheDocument();
   const exportButton = screen.getByRole("button", {
     name: "Rechnungen als CSV",
   });
   await userEvent.click(exportButton);
   expect(state.exportCsv).toHaveBeenCalledWith(
     "luminovia-invoices.csv",
-    expect.arrayContaining([expect.arrayContaining(["FICT-INVOICE-25"])]),
+    expect.arrayContaining([expect.arrayContaining(["FICT-INVOICE-1001"])]),
   );
-  expect(state.exportCsv.mock.calls[0][1]).toHaveLength(26);
+  expect(state.exportCsv.mock.calls[0][1]).toHaveLength(1_002);
 
   await userEvent.click(
     region().getByRole("button", { name: "Weitere Einträge laden" }),
@@ -299,9 +316,9 @@ it("limits mounted invoices while searches and exports include unmounted records
   const search = screen.getByRole("searchbox", {
     name: "Rechnungen durchsuchen",
   });
-  await userEvent.type(search, "FICT-INVOICE-25");
+  await userEvent.type(search, "FICT-INVOICE-1001");
   expect(
-    await region().findByRole("heading", { name: "FICT-INVOICE-25" }),
+    await region().findByRole("heading", { name: "FICT-INVOICE-1001" }),
   ).toBeVisible();
   expect(region().getAllByRole("article")).toHaveLength(1);
   expect(exportButton).toBeEnabled();
@@ -311,7 +328,16 @@ it("limits mounted invoices while searches and exports include unmounted records
   await waitFor(() =>
     expect(region().getAllByRole("article")).toHaveLength(12),
   );
-  expect(calls("invoice_records")).toHaveLength(1);
+  expect(calls("invoice_records")).toHaveLength(5);
+  expect(calls("invoice_records").at(-1)).toEqual([
+    "invoice_records",
+    {
+      p_all: false,
+      p_page_limit: 250,
+      p_before_at: template.created_at,
+      p_before_id: "batch-invoice-1000",
+    },
+  ]);
 });
 
 it("hides cached monthly earnings when the server no longer permits the read", async () => {
@@ -865,7 +891,15 @@ describe("finance capability and connection boundaries", () => {
       ["finance_earnings", { p_all: false }],
     ]);
     expect(calls("invoice_records")).toEqual([
-      ["invoice_records", { p_all: false }],
+      [
+        "invoice_records",
+        {
+          p_all: false,
+          p_page_limit: 250,
+          p_before_at: null,
+          p_before_id: null,
+        },
+      ],
     ]);
   });
 
@@ -886,7 +920,15 @@ describe("finance capability and connection boundaries", () => {
       ["finance_earnings", { p_all: false }],
     ]);
     expect(calls("invoice_records")).toEqual([
-      ["invoice_records", { p_all: false }],
+      [
+        "invoice_records",
+        {
+          p_all: false,
+          p_page_limit: 250,
+          p_before_at: null,
+          p_before_id: null,
+        },
+      ],
     ]);
     expect(calls("commission_report")).toHaveLength(0);
   });

@@ -4,7 +4,9 @@ import { db } from "../../lib/supabase";
 import { throwPagedReadError } from "../../lib/paged-read";
 import { requireOnline } from "../../lib/online";
 import {
+  assignmentCalendarMetadataLimit,
   assignmentCalendarMetadataSchema,
+  type AssignmentCalendarMetadata,
   defaultJobFilters,
   discoveryPageSchema,
   jobDashboardSchema,
@@ -175,11 +177,23 @@ export const assignmentCalendarMetadataQuery = (
   return queryOptions({
     queryKey: ["jobs", "assignment-calendar-metadata", actor, identities],
     queryFn: async ({ signal }) => {
-      const { data, error } = await db()
-        .rpc("assignment_calendar_metadata", { p_job_ids: identities })
-        .abortSignal(signal);
-      if (error) throw error;
-      return assignmentCalendarMetadataSchema.parse(data);
+      const rows: AssignmentCalendarMetadata[] = [];
+      for (
+        let start = 0;
+        start < identities.length;
+        start += assignmentCalendarMetadataLimit
+      ) {
+        const p_job_ids = identities.slice(
+          start,
+          start + assignmentCalendarMetadataLimit,
+        );
+        const { data, error } = await db()
+          .rpc("assignment_calendar_metadata", { p_job_ids })
+          .abortSignal(signal);
+        if (error) throw error;
+        rows.push(...assignmentCalendarMetadataSchema.parse(data));
+      }
+      return rows;
     },
     enabled: identities.length > 0,
     retry: false,

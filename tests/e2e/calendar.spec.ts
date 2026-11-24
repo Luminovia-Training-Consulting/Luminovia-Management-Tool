@@ -647,3 +647,52 @@ test("selects an appointment directly on the calendar using mouse or touch and w
     expect(new Date(saved.ends_at).toISOString()).toBe(end.toUTC().toISO());
     expect(saved.time_zone).toBe("Australia/Brisbane");
 });
+
+test("private calendar loads current and overlapping appointments even with more than one thousand older entries", async ({page}) => {
+    const owner = await actor("Fictional private calendar range owner", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const client = await signedIn(owner);
+    const marker = randomUUID().slice(0, 8);
+    const row = (title: string, startsAt: DateTime, endsAt: DateTime) => ({
+        id: randomUUID(),
+        user_id: owner.id,
+        title,
+        starts_at: startsAt.toUTC().toISO(),
+        ends_at: endsAt.toUTC().toISO(),
+        time_zone: "Europe/Berlin",
+    });
+    const today = DateTime.now().setZone("Europe/Berlin").startOf("day");
+    const historical = Array.from({length: 1001}, (_, index) => {
+        const day = DateTime.utc(1990).plus({days: index});
+        return row(`Fictional calendar history ${marker} ${index}`, day, day.plus({hours: 1}));
+    });
+    const current = row(`Fictional current appointment ${marker}`, today.plus({hours: 12}), today.plus({hours: 13}));
+    const overlap = row(`Fictional overlapping appointment ${marker}`, today.minus({days: 70}), today.plus({hours: 2}));
+    const future = row(`Fictional distant appointment ${marker}`, today.plus({days: 180}), today.plus({days: 180, hours: 1}));
+    try {
+        await checked(service.from("personal_events").insert([...historical, current, overlap, future]));
+        const legacy = await checked(
+            client.from("personal_events").select("id").eq("user_id", owner.id).order("starts_at"),
+            {requireData: true},
+        );
+        expect(legacy).toHaveLength(1000);
+        expect(legacy.some((event) => event.id === current.id)).toBe(false);
+        await login(page, owner.email);
+        const bounded = page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return url.pathname.endsWith("/rest/v1/personal_events") &&
+                (url.searchParams.get("starts_at") ?? "").startsWith("lt.") &&
+                (url.searchParams.get("ends_at") ?? "").startsWith("gt.");
+        });
+        await page.goto("/calendar");
+        const response = await bounded;
+        expect(response.ok()).toBe(true);
+        const rows: {id: string}[] = await response.json();
+        expect(rows.map((event) => event.id).sort()).toEqual([current.id, overlap.id].sort());
+        await expect(page.locator(".fc-event").filter({hasText: current.title})).toBeVisible();
+        await expect(page.locator(".fc-event").filter({hasText: overlap.title}).first()).toBeVisible();
+    } finally {
+        await checked(service.from("personal_events").delete().eq("user_id", owner.id));
+        await checked(service.auth.admin.deleteUser(owner.id));
+    }
+});

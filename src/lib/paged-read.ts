@@ -1,3 +1,4 @@
+/** Shared bounded reads and retry classification for authenticated lists. */
 import { isDatabasePermissionDenied } from "./database-errors";
 
 class PageTemporarilyUnavailable extends Error {}
@@ -19,4 +20,25 @@ export function canRetryNextPage(query: {
     query.isFetchNextPageError &&
     query.error instanceof PageTemporarilyUnavailable
   );
+}
+
+/** Read past the configured REST response cap using a stable order and abortable pages. */
+export async function readDirectoryPages<T>(
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{
+    data: unknown[] | null;
+    error: unknown;
+  }>,
+): Promise<T[]> {
+  const size = 250;
+  const rows: T[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await page(from, from + size - 1);
+    if (error) throw error;
+    const received = data ?? [];
+    rows.push(...(received as T[]));
+    if (received.length < size) return rows;
+  }
 }

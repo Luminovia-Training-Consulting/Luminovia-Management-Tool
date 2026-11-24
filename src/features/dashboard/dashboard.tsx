@@ -19,11 +19,8 @@ import {
   hasJobStaffRole,
   hasTeachingRole,
 } from "../auth/internal-capabilities";
-import {
-  expertiseQuery,
-  profileQuery,
-  userRolesQuery,
-} from "../../lib/queries";
+import { profileQuery, userRolesQuery } from "../../lib/queries";
+import { dashboardExpertiseCountQuery } from "./api";
 import { JobCard } from "../jobs/card";
 import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
@@ -53,7 +50,7 @@ export function Dashboard() {
     enabled: roles.isSuccess && staff,
   });
   const expertise = useQuery({
-    ...expertiseQuery(session!.user.id),
+    ...dashboardExpertiseCountQuery(session!.user.id),
     enabled: roles.isSuccess && teaching,
   });
   if (roles.isPending) return <Loading />;
@@ -63,9 +60,7 @@ export function Dashboard() {
   const suggested = jobSummary?.suggestions ?? [];
   const matching = teaching && jobSummary?.matching;
   const next = jobSummary?.next_assignments ?? [];
-  const expertiseCount = expertise.isSuccess
-    ? expertise.data.length
-    : undefined;
+  const expertiseCount = expertise.isSuccess ? expertise.data : undefined;
   const zone =
     profile.data?.time_zone && validZone(profile.data.time_zone)
       ? profile.data.time_zone

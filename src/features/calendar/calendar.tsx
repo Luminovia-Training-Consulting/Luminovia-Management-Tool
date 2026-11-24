@@ -1,6 +1,6 @@
 /**
  * FullCalendar view of own events, confirmed assignments, published global events
- * and course sessions. Visible ranges bound global discovery; each source keeps
+ * and course sessions. The visible range bounds each read; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
 import { useBlocker, useSearchParams } from "react-router-dom";
@@ -59,14 +59,13 @@ import deLocale from "@fullcalendar/core/locales/de";
 import enLocale from "@fullcalendar/core/locales/en-gb";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import {
-  claimsQuery,
-  eventsQuery,
-  permissionsQuery,
-  profileQuery,
-  topicsQuery,
-} from "../../lib/queries";
+import { permissionsQuery, profileQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
+import {
+  calendarAssignmentsQuery,
+  calendarAssignmentStartQuery,
+  privateCalendarEventsQuery,
+} from "./calendar-window-api";
 import type { PersonalEvent } from "../../lib/types";
 import {
   dateTime,
@@ -616,18 +615,8 @@ export function CalendarPage() {
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const calendarColors = useQuery(calendarColorsQuery(session!.user.id));
-  const claims = useQuery(claimsQuery(session!.user.id));
-  const personal = useQuery(eventsQuery(session!.user.id));
   const actor = session!.user.id;
-  const jobOptions = useMemo(
-    () =>
-      assignmentCalendarMetadataQuery(
-        actor,
-        (claims.data ?? []).map((claim) => claim.job_id),
-      ),
-    [actor, claims.data],
-  );
-  const jobs = useQuery(jobOptions);
+  const assignment = calendarParams.get("assignment");
   const [global, setGlobal] = useState(false);
   const templates = useQuery({
     ...templatesQuery(session!.user.id),
@@ -643,6 +632,34 @@ export function CalendarPage() {
   const [range, setRange] = useState(() => {
     const start = DateTime.utc().startOf("month").minus({ days: 7 });
     return { from: start.toISO()!, to: start.plus({ days: 49 }).toISO()! };
+  });
+  const assignmentStartOptions = calendarAssignmentStartQuery(
+    actor,
+    assignment,
+  );
+  const assignmentStart = useQuery(assignmentStartOptions);
+  const waitingForAnchor =
+    assignmentStartOptions.enabled && assignmentStart.isPending;
+  const personal = useQuery({
+    ...privateCalendarEventsQuery(actor, range),
+    enabled: !global && !waitingForAnchor,
+  });
+  const assignments = useQuery({
+    ...calendarAssignmentsQuery(actor, range),
+    enabled: !global && !waitingForAnchor,
+  });
+  const assignmentRows = assignments.isError ? undefined : assignments.data;
+  const jobOptions = useMemo(
+    () =>
+      assignmentCalendarMetadataQuery(
+        actor,
+        (assignmentRows ?? []).map(({ job_claims }) => job_claims.job_id),
+      ),
+    [actor, assignmentRows],
+  );
+  const jobs = useQuery({
+    ...jobOptions,
+    enabled: !global && jobOptions.enabled,
   });
   const publicRuns = useQuery({
     ...calendarCourseRunsQuery(actor, range.from, range.to),
@@ -669,23 +686,29 @@ export function CalendarPage() {
     return Array.from(indexed.values());
   }, [calendarPages, globalsFailed]);
   const visibleRange = useRef(range);
-  const handleDatesSet = useCallback((info: DatesSetArg) => {
-    if (info.view?.title) setCalendarTitle(info.view.title);
-    if (calendarViews.includes(info.view?.type as CalendarView))
-      setCalendarView(info.view.type as CalendarView);
-    const next = { from: info.start.toISOString(), to: info.end.toISOString() };
-    // Locale/view options can rebuild FullCalendar's DateProfile without moving
-    // its instants. Preserve the captured detail and query key for those signals.
-    if (
-      visibleRange.current.from === next.from &&
-      visibleRange.current.to === next.to
-    )
-      return;
-    // Update synchronously: multiple navigation callbacks can precede a render.
-    visibleRange.current = next;
-    setRange(next);
-    setGlobalID(null);
-  }, []);
+  const handleDatesSet = useCallback(
+    (info: DatesSetArg) => {
+      if (info.view?.title) setCalendarTitle(info.view.title);
+      if (calendarViews.includes(info.view?.type as CalendarView))
+        setCalendarView(info.view.type as CalendarView);
+      const next = {
+        from: info.start.toISOString(),
+        to: info.end.toISOString(),
+      };
+      // Locale/view options can rebuild FullCalendar's DateProfile without moving
+      // its instants. Preserve the captured detail and query key for those signals.
+      if (
+        visibleRange.current.from === next.from &&
+        visibleRange.current.to === next.to
+      )
+        return;
+      // Update synchronously: multiple navigation callbacks can precede a render.
+      visibleRange.current = next;
+      setRange(next);
+      setGlobalID(null);
+    },
+    [setRange],
+  );
   const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
   const [eventBusy, setEventBusy] = useState(false);
@@ -778,27 +801,12 @@ export function CalendarPage() {
   const accountZone = profile.data?.time_zone ?? "";
   const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
   const zone = displayZone || profileZone;
-  const assignment = calendarParams.get("assignment");
   if (viewAnchor && viewAnchor.assignment !== assignment)
     setViewAnchor(undefined);
-  const assignmentStart = useMemo(() => {
-    const sessions = claims.data?.find(
-      (claim) => claim.job_id === assignment,
-    )?.assignment_sessions;
-    let first: string | undefined;
-    let firstTime = Infinity;
-    for (const session of sessions ?? []) {
-      const time = Date.parse(session.starts_at);
-      if (time < firstTime) {
-        first = session.starts_at;
-        firstTime = time;
-      }
-    }
-    return first;
-  }, [assignment, claims.data]);
+  const personalRows = personal.isError ? undefined : personal.data;
   const jobsById = useMemo(
-    () => new Map(jobs.data?.map((job) => [job.id, job])),
-    [jobs.data],
+    () => new Map(jobs.isError ? [] : jobs.data?.map((job) => [job.id, job])),
+    [jobs.data, jobs.isError],
   );
   const templatesById = useMemo(
     () => new Map(templates.data?.map((template) => [template.id, template])),
@@ -875,7 +883,7 @@ export function CalendarPage() {
             }),
           ]
         : [
-            ...(personal.data ?? []).map((e) => ({
+            ...(personalRows ?? []).map((e) => ({
               id: e.id,
               title: e.title,
               start: e.starts_at,
@@ -885,13 +893,14 @@ export function CalendarPage() {
               textColor: "#17283a",
               extendedProps: { kind: "private", ...emptyMetadata },
             })),
-            ...(claims.data ?? []).flatMap((claim) => {
-              const job = jobsById.get(claim.job_id);
+            ...(assignmentRows ?? []).map((session) => {
+              const jobId = session.job_claims.job_id;
+              const job = jobsById.get(jobId);
               const customerKey =
                 job?.organisation_id ??
                 (job?.organisation_name ? `name:${job.organisation_name}` : "");
               const customerCreated = Boolean(customerKey);
-              return claim.assignment_sessions.map((session) => ({
+              return {
                 id: session.id,
                 title: job?.title ?? t("assignment"),
                 start: session.starts_at,
@@ -901,7 +910,7 @@ export function CalendarPage() {
                   ? colors.customer_event_color
                   : colors.assignment_event_color,
                 textColor: "#17283a",
-                url: `/jobs/${claim.job_id}`,
+                url: `/jobs/${jobId}`,
                 extendedProps: {
                   kind: "assignment",
                   customerCreated,
@@ -909,7 +918,7 @@ export function CalendarPage() {
                   customerName: job?.organisation_name ?? "",
                   topics: job?.topics ?? [],
                 },
-              }));
+              };
             }),
           ],
     [
@@ -923,8 +932,8 @@ export function CalendarPage() {
       organisationsById,
       topics.isError,
       topicsById,
-      personal.data,
-      claims.data,
+      personalRows,
+      assignmentRows,
       jobsById,
       colors,
       t,
@@ -1015,11 +1024,11 @@ export function CalendarPage() {
         setGlobalID(info.event.id);
       }
       if (info.event.extendedProps.kind === "private") {
-        const next = personal.data?.find((event) => event.id === info.event.id);
+        const next = personalRows?.find((event) => event.id === info.event.id);
         if (next) openPersonalEditor({ event: next });
       }
     },
-    [openPersonalEditor, personal.data],
+    [openPersonalEditor, personalRows],
   );
   const showEventContent = useCallback(
     ({ event }: EventContentArg) => {
@@ -1036,41 +1045,6 @@ export function CalendarPage() {
     },
     [sourceEvents, zone, language],
   );
-  if (
-    claims.isPending ||
-    personal.isPending ||
-    (Boolean(claims.data?.length) && jobs.isPending)
-  )
-    return (
-      <>
-        <PageHeading title={t("calendar")} description={t("privateNote")} />
-        <CalendarTools actor={session!.user.id} zone={zone} showIcs={false} />
-        <Loading />
-      </>
-    );
-  if (
-    claims.isError ||
-    personal.isError ||
-    (Boolean(claims.data?.length) && jobs.isError)
-  )
-    return (
-      <>
-        <PageHeading title={t("calendar")} description={t("privateNote")} />
-        <CalendarTools actor={session!.user.id} zone={zone} showIcs={false} />
-        <ErrorState
-          retry={() => {
-            void claims.refetch();
-            void personal.refetch();
-            if (!claims.isError && jobOptions.enabled) void jobs.refetch();
-            if (global) {
-              void globals.refetch();
-              void publicRuns.refetch();
-              void templates.refetch();
-            }
-          }}
-        />
-      </>
-    );
   return (
     <>
       <PageHeading
@@ -1281,6 +1255,27 @@ export function CalendarPage() {
             {filterText("scrollWeek")}
           </p>
         )}
+        {!global && (
+          <div aria-live="polite">
+            {(waitingForAnchor ||
+              personal.isPending ||
+              assignments.isPending ||
+              (jobOptions.enabled && jobs.isPending)) && <Loading />}
+            {(personal.isError ||
+              assignments.isError ||
+              assignmentStart.isError ||
+              (jobOptions.enabled && jobs.isError)) && (
+              <ErrorState
+                retry={() => {
+                  if (personal.isError) void personal.refetch();
+                  if (assignments.isError) void assignments.refetch();
+                  if (assignmentStart.isError) void assignmentStart.refetch();
+                  if (jobOptions.enabled && jobs.isError) void jobs.refetch();
+                }}
+              />
+            )}
+          </div>
+        )}
         <div
           className={weekView ? "calendar-week-grid" : undefined}
           role={weekView ? "region" : undefined}
@@ -1290,35 +1285,39 @@ export function CalendarPage() {
         >
           {/* A live timezone change can collapse distinct UTC instants in a DST
             fold. Build a new date environment from the source events instead. */}
-          <CalendarGrid
-            key={`${zone}/${assignment ?? ""}`}
-            plugins={calendarPlugins}
-            locale={german ? deLocale : enLocale}
-            timeZone={zone}
-            ref={calendarRef}
-            initialView={calendarView}
-            initialDate={
-              (viewAnchor?.assignment === assignment
-                ? viewAnchor.date
-                : undefined) ?? assignmentStart
-            }
-            headerToolbar={false}
-            datesSet={handleDatesSet}
-            events={visibleEvents}
-            height="auto"
-            eventContent={showEventContent}
-            dayCellDidMount={adjustDayCell}
-            eventInteractive
-            eventDidMount={adjustCalendarEvent}
-            selectable={gridSelectionEnabled}
-            selectMinDistance={6}
-            selectLongPressDelay={400}
-            select={handleSelect}
-            dateClick={handleDateClick}
-            nowIndicator
-            dayMaxEvents={3}
-            eventClick={handleEventClick}
-          />
+          {!waitingForAnchor && (
+            <CalendarGrid
+              key={`${zone}/${assignment ?? ""}`}
+              plugins={calendarPlugins}
+              locale={german ? deLocale : enLocale}
+              timeZone={zone}
+              ref={calendarRef}
+              initialView={calendarView}
+              initialDate={
+                (viewAnchor?.assignment === assignment
+                  ? viewAnchor.date
+                  : undefined) ??
+                assignmentStart.data ??
+                undefined
+              }
+              headerToolbar={false}
+              datesSet={handleDatesSet}
+              events={visibleEvents}
+              height="auto"
+              eventContent={showEventContent}
+              dayCellDidMount={adjustDayCell}
+              eventInteractive
+              eventDidMount={adjustCalendarEvent}
+              selectable={gridSelectionEnabled}
+              selectMinDistance={6}
+              selectLongPressDelay={400}
+              select={handleSelect}
+              dateClick={handleDateClick}
+              nowIndicator
+              dayMaxEvents={3}
+              eventClick={handleEventClick}
+            />
+          )}
         </div>
       </div>
       {global && (

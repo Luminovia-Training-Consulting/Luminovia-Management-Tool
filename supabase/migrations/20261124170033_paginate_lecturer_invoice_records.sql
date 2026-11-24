@@ -1,0 +1,102 @@
+begin;
+
+-- The owner index also serves existing owner and creation-date queries.
+create index invoice_owner_created_id
+  on public.invoices(user_id, created_at desc, id);
+drop index public.invoice_owner_created;
+create index invoice_created_id
+  on public.invoices(created_at desc, id);
+
+-- Limit the invoices before reading their payments, documents and assignments.
+-- The original one-argument operation uses the same projection without a cursor.
+create function private.invoice_records(
+  p_all boolean, p_page_limit integer, p_before_at timestamptz, p_before_id uuid
+)
+returns table(
+  id uuid, user_id uuid, user_name text, number text, issued_on date,
+  due_on date, currency text, total_amount numeric, paid_amount numeric,
+  status text, document_id uuid, document_version_id uuid, claim_ids uuid[],
+  created_at timestamptz, note text, paid_at timestamptz, labels text[]
+)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not private.actor_active() or (p_all and not private.has_permission('finance.manage')) then
+    raise exception 'Own invoices or finance management and MFA required' using errcode = '42501';
+  end if;
+
+  if p_page_limit not between 1 and 250
+     or (p_before_at is null) <> (p_before_id is null) then
+    raise exception 'Invalid invoice page size or cursor' using errcode = '22023';
+  end if;
+
+  return query
+  with selected as materialized (
+    select i.id, i.user_id, i.number, i.issued_on, i.due_on, i.currency,
+      i.total_amount, i.status, i.document_version_id, i.created_at, i.note, i.labels
+    from public.invoices i
+    where (p_all or i.user_id = auth.uid())
+      and (p_before_at is null or (
+        i.created_at <= p_before_at
+        and (i.created_at < p_before_at or i.id > p_before_id)
+      ))
+    order by i.created_at desc, i.id
+    limit p_page_limit
+  )
+  select i.id, i.user_id, p.display_name, i.number, i.issued_on, i.due_on,
+    i.currency, i.total_amount, coalesce(payment.total, 0), i.status,
+    v.document_id, i.document_version_id,
+    coalesce((
+      select array_agg(item.claim_id order by item.claim_id)
+      from public.invoice_items item
+      where item.invoice_id = i.id
+    ), '{}'::uuid[]),
+    i.created_at, i.note, payment.last_paid_at, i.labels
+  from selected i
+  join public.profiles p on p.id = i.user_id
+  join public.document_versions v on v.id = i.document_version_id
+  cross join lateral (
+    select sum(r.amount) as total, max(r.paid_at) as last_paid_at
+    from public.payment_records r
+    where r.invoice_id = i.id and r.voided_at is null
+  ) payment
+  order by i.created_at desc, i.id;
+end;
+$$;
+
+create or replace function private.invoice_records(p_all boolean default false)
+returns table(
+  id uuid, user_id uuid, user_name text, number text, issued_on date,
+  due_on date, currency text, total_amount numeric, paid_amount numeric,
+  status text, document_id uuid, document_version_id uuid, claim_ids uuid[],
+  created_at timestamptz, note text, paid_at timestamptz, labels text[]
+)
+language sql stable security definer set search_path = '' as $$
+  select * from private.invoice_records(p_all, null, null, null);
+$$;
+
+create function public.invoice_records(
+  p_all boolean, p_page_limit integer,
+  p_before_at timestamptz default null, p_before_id uuid default null
+)
+returns table(
+  id uuid, user_id uuid, user_name text, number text, issued_on date,
+  due_on date, currency text, total_amount numeric, paid_amount numeric,
+  status text, document_id uuid, document_version_id uuid, claim_ids uuid[],
+  created_at timestamptz, note text, paid_at timestamptz, labels text[]
+)
+language sql stable security invoker set search_path = '' as $$
+  select * from private.invoice_records(p_all, coalesce(p_page_limit, 0), p_before_at, p_before_id);
+$$;
+
+revoke all on function
+  private.invoice_records(boolean, integer, timestamptz, uuid),
+  public.invoice_records(boolean, integer, timestamptz, uuid)
+from public, anon, authenticated, service_role;
+grant execute on function
+  private.invoice_records(boolean, integer, timestamptz, uuid),
+  public.invoice_records(boolean, integer, timestamptz, uuid)
+to authenticated;
+
+notify pgrst, 'reload schema';
+
+commit;

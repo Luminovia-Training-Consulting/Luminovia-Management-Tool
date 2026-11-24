@@ -4,6 +4,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { readDirectoryPages } from "../../lib/paged-read";
 import { companyPremiumSettingsSchema } from "./company-premium-schema";
 
 /** Shared organization metadata from the permitted directory. */
@@ -95,27 +96,6 @@ export interface BuildingBlock {
   duration_hours: number;
   notes: string;
   building_block_sources: BuildingBlockSource[];
-}
-
-/** Read past the configured REST response cap using a stable order and abortable pages. */
-async function readDirectoryPages<T>(
-  page: (
-    from: number,
-    to: number,
-  ) => PromiseLike<{
-    data: unknown[] | null;
-    error: unknown;
-  }>,
-): Promise<T[]> {
-  const size = 250;
-  const rows: T[] = [];
-  for (let from = 0; ; from += size) {
-    const { data, error } = await page(from, from + size - 1);
-    if (error) throw error;
-    const received = data ?? [];
-    rows.push(...(received as T[]));
-    if (received.length < size) return rows;
-  }
 }
 
 /** Lightweight course codes and durations for template search and schedule planning. */

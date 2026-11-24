@@ -51,7 +51,11 @@ function MemoryRouter({
 }
 
 const state = vi.hoisted(() => ({
-  claims: [] as unknown[],
+  claims: [] as {
+    id: string;
+    job_id: string;
+    assignment_sessions: { id: string; starts_at: string; ends_at: string }[];
+  }[],
   permissions: [] as string[],
   events: [] as unknown[],
   loadEvents: vi.fn(),
@@ -118,14 +122,38 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["profile"],
     queryFn: async () => ({ time_zone: "Europe/Berlin" }),
   }),
-  claimsQuery: () => ({
-    queryKey: ["claims"],
-    queryFn: async () => state.claims,
-  }),
   topicsQuery: { queryKey: ["topics"], queryFn: async () => [] },
-  eventsQuery: () => ({
-    queryKey: ["events"],
-    queryFn: () => state.loadEvents(),
+}));
+vi.mock("./calendar-window-api", () => ({
+  calendarAssignmentsQuery: (
+    actor: string,
+    range: { from: string; to: string },
+  ) => ({
+    queryKey: ["claims", actor, "calendar", range.from, range.to],
+    queryFn: async () =>
+      state.claims.flatMap(({ job_id, assignment_sessions }) =>
+        assignment_sessions.map((slot) => ({
+          ...slot,
+          job_claims: { job_id },
+        })),
+      ),
+  }),
+  calendarAssignmentStartQuery: (actor: string, assignment: string | null) => ({
+    queryKey: ["claims", actor, "calendar-start", assignment],
+    enabled: Boolean(assignment),
+    queryFn: async () =>
+      state.claims
+        .filter((item) => item.job_id === assignment)
+        .flatMap((item) => item.assignment_sessions)
+        .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))[0]
+        ?.starts_at ?? null,
+  }),
+  privateCalendarEventsQuery: (
+    actor: string,
+    range: { from: string; to: string },
+  ) => ({
+    queryKey: ["events", actor, range.from, range.to],
+    queryFn: () => state.loadEvents(range),
   }),
 }));
 vi.mock("../operations/data", () => ({
@@ -347,7 +375,7 @@ it("keeps a populated grid stable when the search input changes without changing
     </QueryClientProvider>,
   );
   const grid = await screen.findByTestId("calendar-engine");
-  expect(within(grid).getAllByText(/^Planning /)).toHaveLength(200);
+  expect(await within(grid).findAllByText(/^Planning /)).toHaveLength(200);
   const renders = state.callbacks.length;
 
   const search = screen.getByRole("searchbox", {
@@ -463,7 +491,7 @@ it("filters loaded private, assignment, global and course titles without extra q
   );
   const user = userEvent.setup();
   await screen.findByText("Private planning");
-  expect(screen.getByText("Teaching assignment")).toBeInTheDocument();
+  expect(await screen.findByText("Teaching assignment")).toBeInTheDocument();
   const search = screen.getByLabelText("Kalendertermine suchen");
   await user.type(search, "PLANNING");
   expect(screen.getByText("Private planning")).toBeInTheDocument();
@@ -572,6 +600,37 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
   expect(state.rpc).toHaveBeenCalledWith("assignment_calendar_metadata", {
     p_job_ids: [jobID],
   });
+});
+
+it("keeps the calendar mounted while the private range changes", async () => {
+  let finishRange!: (rows: unknown[]) => void;
+  const nextRange = new Promise<unknown[]>((resolve) => {
+    finishRange = resolve;
+  });
+  state.loadEvents.mockResolvedValueOnce([]).mockReturnValueOnce(nextRange);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const grid = screen.getByTestId("calendar-engine");
+  await userEvent.click(
+    within(grid).getByRole("button", { name: "Change visible range" }),
+  );
+  expect(screen.getByTestId("calendar-engine")).toBe(grid);
+  expect(state.loadEvents).toHaveBeenLastCalledWith({
+    from: "2060-03-01T00:00:00.000Z",
+    to: "2060-04-10T00:00:00.000Z",
+  });
+  await act(async () => finishRange([]));
+  expect(screen.getByTestId("calendar-engine")).toBe(grid);
+  expect(state.loadEvents).toHaveBeenCalledTimes(2);
+  client.clear();
 });
 
 it("queries only the visible global range on navigation, without remounting or crawling other months", async () => {
@@ -1227,13 +1286,13 @@ it("centres a job deep link only on an own confirmed assignment session", async 
     .getAttribute("data-instance");
   const user = userEvent.setup();
   await user.click(screen.getByRole("link", { name: "Another assignment" }));
-  expect(state.initialDate).toBe("2060-09-02T08:00:00Z");
+  await waitFor(() => expect(state.initialDate).toBe("2060-09-02T08:00:00Z"));
   expect(screen.getByTestId("calendar-engine")).not.toHaveAttribute(
     "data-instance",
     prior,
   );
   await user.click(screen.getByRole("link", { name: "Unknown assignment" }));
-  expect(state.initialDate).toBeUndefined();
+  await waitFor(() => expect(state.initialDate).toBeUndefined());
   client.clear();
 });
 

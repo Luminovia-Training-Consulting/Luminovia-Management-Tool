@@ -134,14 +134,29 @@ export const financePendingInvoiceExceptionsQuery = (actor: string) =>
     },
     retry: false,
   });
-/** Read the invoice_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
+/** Read all scoped invoices in stable pages before exposing them to search or export. */
 export const invoicesQuery = (actor: string, all: boolean) =>
   queryOptions({
     queryKey: [...commercialKeys.finance(actor), "invoices", all],
-    queryFn: async () => {
-      const { data, error } = await db().rpc("invoice_records", { p_all: all });
-      if (error) throw error;
-      return (data ?? []) as InvoiceRecord[];
+    queryFn: async ({ signal }) => {
+      const size = 250;
+      const invoices: InvoiceRecord[] = [];
+      let cursor: InvoiceRecord | undefined;
+      for (;;) {
+        const { data, error } = await db()
+          .rpc("invoice_records", {
+            p_all: all,
+            p_page_limit: size,
+            p_before_at: cursor?.created_at ?? null,
+            p_before_id: cursor?.id ?? null,
+          })
+          .abortSignal(signal);
+        if (error) throw error;
+        const page = (data ?? []) as InvoiceRecord[];
+        invoices.push(...page);
+        if (page.length < size) return invoices;
+        cursor = page.at(-1);
+      }
     },
   });
 /** Read the invoice_payments server projection, propagate RPC errors and scope cached data to the actor and requested resource. */

@@ -197,6 +197,8 @@ export const jobDashboardSchema = z.object({
 });
 
 /** Customer/topic descriptions for filtering only the actor's own confirmed calendar assignments. */
+export const assignmentCalendarMetadataLimit = 1000;
+
 export const assignmentCalendarMetadataSchema = z
   .array(
     z.object({
@@ -209,7 +211,7 @@ export const assignmentCalendarMetadataSchema = z
       ),
     }),
   )
-  .max(1000);
+  .max(assignmentCalendarMetadataLimit);
 export type AssignmentCalendarMetadata = z.infer<
   typeof assignmentCalendarMetadataSchema
 >[number];

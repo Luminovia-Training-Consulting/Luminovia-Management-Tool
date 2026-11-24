@@ -104,6 +104,43 @@ describe("restricted contract and finance record schemas", () => {
     ).toBe(false);
   });
 
+  it("preserves legacy invoice reads and describes complete page cursors", () => {
+    const { requestBody } = pub(true)["/rest/v1/rpc/invoice_records"].post as {
+      requestBody: {
+        required: boolean;
+        content: Record<
+          string,
+          { schema: Parameters<typeof z.fromJSONSchema>[0] }
+        >;
+      };
+    };
+    expect(requestBody.required).toBe(false);
+    const request = z.fromJSONSchema(
+      requestBody.content["application/json"].schema,
+    );
+    for (const payload of [
+      {},
+      { p_all: true },
+      { p_all: false, p_page_limit: 250 },
+      { p_all: true, p_page_limit: 1, p_before_at: null, p_before_id: null },
+      {
+        p_all: false,
+        p_page_limit: 250,
+        p_before_at: time,
+        p_before_id: example,
+      },
+    ])
+      expect(request.safeParse(payload).success).toBe(true);
+    for (const payload of [
+      { p_page_limit: 250 },
+      { p_all: false, p_page_limit: 251 },
+      { p_all: false, p_page_limit: 10, p_before_at: time },
+      { p_all: false, p_page_limit: 10, p_before_id: example },
+      { p_all: false, p_before_at: time, p_before_id: example },
+    ])
+      expect(request.safeParse(payload).success).toBe(false);
+  });
+
   it("keeps voided payments in the history and documents a bodyless reversal", () => {
     const row = {
       id: example,

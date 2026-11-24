@@ -1,5 +1,6 @@
 /** DTO and paging regressions ensure restricted/current quotes are not replaced by zero or another account context. */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import {
   assignmentCalendarMetadataQuery,
   assignmentCalendarMetadataSchema,
@@ -12,6 +13,9 @@ import {
   jobDiscoveryQuery,
   jobFiltersSchema,
 } from "./discovery-api";
+
+const rpc = vi.hoisted(() => vi.fn());
+vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 
 describe("discovery data contracts", () => {
   it("keeps accepted calendar metadata actor scoped and separate from legacy title reads", () => {
@@ -48,6 +52,37 @@ describe("discovery data contracts", () => {
         { ...metadata, topics: [{ id: second, label_de: "Thema" }] },
       ]).success,
     ).toBe(false);
+  });
+
+  it("retains metadata for more than one request's ID limit", async () => {
+    const ids = Array.from(
+      { length: 1001 },
+      (_, index) =>
+        `d7000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    );
+    rpc
+      .mockReset()
+      .mockImplementation((_name, { p_job_ids }: { p_job_ids: string[] }) => ({
+        abortSignal: async () => ({
+          data: p_job_ids.map((id) => ({
+            id,
+            title: "Confirmed teaching offer",
+            organisation_id: null,
+            organisation_name: "",
+            topics: [],
+          })),
+          error: null,
+        }),
+      }));
+    const client = new QueryClient();
+    const rows = await client.fetchQuery(
+      assignmentCalendarMetadataQuery("actor", [...ids, ids[0]]),
+    );
+    expect(rows.map(({ id }) => id)).toEqual(ids);
+    expect(rpc.mock.calls.map(([, input]) => input.p_job_ids.length)).toEqual([
+      1000, 1,
+    ]);
+    client.clear();
   });
 
   it("preserves a restricted null quote while rejecting coerced strings and resetting known role pages", () => {

@@ -238,6 +238,10 @@ const operationsPeriod = { p_from: date, p_until: date };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
 const course = { p_run_id: uuid };
+const invoiceRecordPage = {
+  p_all: { type: ["boolean", "null"] },
+  p_page_limit: { type: "integer", minimum: 1, maximum: 250 },
+};
 const nullableUuid = { type: ["string", "null"], format: "uuid" };
 const nullableDateTime = { type: ["string", "null"], format: "date-time" };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
@@ -1722,15 +1726,49 @@ const nativePaths = {
     z.toJSONSchema(contractRecordsSchema),
     ["p_all"],
   ),
-  "/rest/v1/rpc/invoice_records": rpc(
-    "listLecturerInvoiceRecords",
-    "Finance",
-    "Read invoice snapshots and their current tracked balance",
-    "Active callers receive their own invoices. Asking for all requires finance.manage. Original currency, PDF version, linked assignments and accepted totals come from the invoice. Paid amount sums only the non-voided ledger entries. Paid at is the latest recorded non-voided payment date, including partial payment.",
-    { p_all: { type: ["boolean", "null"], default: false } },
-    z.toJSONSchema(invoiceRecordsSchema),
-    ["p_all"],
-  ),
+  "/rest/v1/rpc/invoice_records": {
+    post: {
+      ...rpc(
+        "listLecturerInvoiceRecords",
+        "Finance",
+        "Read invoice snapshots and their current tracked balance",
+        "Active callers receive their own invoices. Asking for all requires finance.manage. Original currency, PDF version, linked assignments and accepted totals come from the invoice. Paid amount sums only the non-voided ledger entries. Paid at is the latest recorded non-voided payment date, including partial payment. For a complete history, set a page size and use the previous page’s last created_at and id as the paired cursor. A short or empty page ends the listing.",
+        {},
+        z.toJSONSchema(invoiceRecordsSchema),
+      ).post,
+      requestBody: {
+        required: false,
+        content: json({
+          oneOf: [
+            {
+              ...object({
+                p_all: { type: ["boolean", "null"], default: false },
+              }),
+              required: [],
+            },
+            {
+              ...object({
+                ...invoiceRecordPage,
+                p_before_at: { type: "null" },
+                p_before_id: { type: "null" },
+              }),
+              required: Object.keys(invoiceRecordPage),
+            },
+            object({
+              ...invoiceRecordPage,
+              p_before_at: {
+                anyOf: [
+                  { type: "string", format: "date-time" },
+                  { enum: ["infinity", "-infinity"] },
+                ],
+              },
+              p_before_id: uuid,
+            }),
+          ],
+        }),
+      },
+    },
+  },
   "/rest/v1/rpc/invoice_payments": rpc(
     "listLecturerInvoicePayments",
     "Finance",
