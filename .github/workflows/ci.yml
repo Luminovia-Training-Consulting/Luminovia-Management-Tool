@@ -178,7 +178,8 @@ jobs:
       fail-fast: false
       matrix:
         browser-project: [desktop-chromium, mobile-chromium]
-    runs-on: ubuntu-latest
+    # Match the verified WebKit host. Browser dependencies stalled on Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     # The serial application suite reached its 45-minute limit on hosted
     # desktop runners. Allow its full run plus both PWA and artifact stages.
     timeout-minutes: 90
