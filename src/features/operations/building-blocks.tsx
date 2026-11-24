@@ -195,13 +195,15 @@ export function BuildingBlockSources({
 export function CourseRunOfferLink({
   runId,
   additional = false,
+  compact = false,
 }: {
   runId: string;
   additional?: boolean;
+  compact?: boolean;
 }) {
   const { t } = useTranslation("operations");
   return (
-    <Button asChild variant="secondary">
+    <Button asChild variant={compact ? "ghost" : "secondary"}>
       <Link to={`/courses?offer=${runId}`}>
         {t(additional ? "createAdditionalRunOffer" : "createRunOffer")}
       </Link>

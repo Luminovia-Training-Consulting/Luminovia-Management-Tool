@@ -1376,7 +1376,7 @@ Public documentation, examples and screenshots must use neutral descriptions or 
 
 Open **Courses → Edit** to update venue and access link. Publish the linked teaching offer to list it for eligible lecturers. If a sole linked offer has an editable future schedule, saving dates updates the course and the offer together. Eligible linked drafts also offer selectors for template, organisation, time zone and delivery mode. Changing the display time zone preserves the scheduled instants. For confirmed work, **Propose schedule change** opens the amendment form for the selected assignment and uses the existing approval workflow.
 
-Use **Auftrag anzeigen / View assignment** on an existing course offer, including filled and closed offers. Course management can filter the list by confirmed lecturer and see the current names on the course card.
+Use **Auftrag ansehen / View assignment** in the course card’s action row to open an existing offer, including filled and closed offers. Open **Kurs ansehen / View course** to reach the course editor. Course management can filter by confirmed lecturer and see their names in the offer status.
 
 **Auftrag bearbeiten / Edit assignment** opens the listing editor for job managers. They can change the title and description of a filled listing and open its class, assignment, contact and reference controls. Eligible unaccepted offers support direct date and authorised price changes. For a confirmed assignment, open the proposal for its lecturer to change dates or rebalance the existing gross amount between lecturer and platform. The amended terms take effect through the consent workflow. Linked template, company, delivery mode and time-zone changes follow the existing linked-draft rules.
 
