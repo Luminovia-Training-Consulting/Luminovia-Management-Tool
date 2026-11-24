@@ -30,22 +30,36 @@ async function readChatRooms() {
   return (data ?? []) as ChatRoom[];
 }
 
-/** Pins and personal archives are only needed by the interactive room list. */
-export const chatRoomsQuery = (actor: string) =>
+/** Personal room preferences change less often than unread counts and messages. */
+const chatRoomPreferencesQuery = (actor: string) =>
   queryOptions({
-    queryKey: chatKeys.rooms(actor),
+    queryKey: [...chatKeys.rooms(actor), "preferences"],
+    staleTime: 30000,
     queryFn: async () => {
-      const [rooms, pins, archives] = await Promise.all([
-        readChatRooms(),
+      const [pins, archives] = await Promise.all([
         db().rpc("chat_pinned_rooms"),
         db().rpc("chat_personal_archives"),
       ]);
       if (pins.error) throw pins.error;
       if (archives.error) throw archives.error;
-      const pinOrder = new Map(
-        ((pins.data ?? []) as string[]).map((id, order) => [id, order]),
-      );
-      const archived = new Set((archives.data ?? []) as string[]);
+      return {
+        pinOrder: new Map(
+          ((pins.data ?? []) as string[]).map((id, order) => [id, order]),
+        ),
+        archived: new Set((archives.data ?? []) as string[]),
+      };
+    },
+  });
+
+/** Poll the room list while reusing fresh, actor-scoped personal preferences. */
+export const chatRoomsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: chatKeys.rooms(actor),
+    queryFn: async ({ client }) => {
+      const [rooms, { pinOrder, archived }] = await Promise.all([
+        readChatRooms(),
+        client.fetchQuery(chatRoomPreferencesQuery(actor)),
+      ]);
       return rooms.map((room) => ({
         ...room,
         personal_archived: archived.has(room.id),
