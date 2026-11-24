@@ -12,14 +12,14 @@ The current repository uses password-only authentication: no MFA enrollment or f
 
 # Developer guide
 
-This document explains the code that actually exists and its business boundaries. The full target scope is in the [roadmap](ROADMAP.md); executed checks are recorded in the relevant pull request checks. A feature marked as pending there is not an implicitly completed part of the application. The separately configured self-hosted CMS development instance and its release automation are documented in [HOSTINGER_DEVELOPMENT](OPERATIONS.md#section-hostinger-development)
-and [HOSTINGER_AUTOMATIC_UPDATES](OPERATIONS.md#section-hostinger-automatic-updates).
+This document explains the code that actually exists and its business boundaries. The full target scope is in the [roadmap](../ROADMAP.md); executed checks are recorded in the relevant pull request checks. A feature marked as pending there is not an implicitly completed part of the application. The separately configured self-hosted CMS development instance and its release automation are documented in [HOSTINGER_DEVELOPMENT](../OPERATIONS.md#section-hostinger-development)
+and [HOSTINGER_AUTOMATIC_UPDATES](../OPERATIONS.md#section-hostinger-automatic-updates).
 
 <a id="section-developer-guide-getting-started-and-working-locally"></a>
 
 ## Getting started and working locally
 
-Read [AGENTS](AGENTS.md), the [project guides](README.md#documentation), [roadmap](ROADMAP.md), [master specification](PRODUCT_BRIEF.txt), and the current Git status first. Consult QA evidence for results tied to a named source revision. Preserve working modules, normal database volumes and concurrent changes. Use your own `codex/` branch or a separate worktree when other work is present in the original directory.
+Read [AGENTS](../AGENTS.md), the [project guides](../README.md#documentation), [roadmap](../ROADMAP.md), [master specification](../PRODUCT_BRIEF.txt), and the current Git status first. Consult QA evidence for results tied to a named source revision. Preserve working modules, normal database volumes and concurrent changes. Use your own `codex/` branch or a separate worktree when other work is present in the original directory.
 
 ```bash
 ./portal start
@@ -29,7 +29,7 @@ Read [AGENTS](AGENTS.md), the [project guides](README.md#documentation), [roadma
 ./portal stop
 ```
 
-Use the Node version in [`.node-version`](.node-version) and install the exact lockfile with `npm ci`. `start` installs locked dependencies when needed, migrates without resetting data and starts Vite, PostgreSQL, Auth, Storage, Realtime, Edge, Mailpit and ClamAV. `test` uses its own sanitized copy and random project/volume identities. Details and ports: [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development). Two normal checkouts of the same project share default ports/volumes; stop the
+Use the Node version in [`.node-version`](../.node-version) and install the exact lockfile with `npm ci`. `start` installs locked dependencies when needed, migrates without resetting data and starts Vite, PostgreSQL, Auth, Storage, Realtime, Edge, Mailpit and ClamAV. `test` uses its own sanitized copy and random project/volume identities. Details and ports: [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development). Two normal checkouts of the same project share default ports/volumes; stop the
 previously managed stack in its original checkout before starting it from a new one. The port check never terminates unrelated processes.
 
 Develop and verify on the local PC by default. `./portal check` runs fast local
@@ -85,7 +85,7 @@ Roles are read from current database rows. Editable `user_metadata`, submitted a
 Admin/owner accounts can exercise permitted business roles. Financial, role, contract and moderation operations retain current capability and resource checks. Private DMs require actual membership; private calendars remain owner-only data. The separate account HTTP API performs data operations with the caller's JWT. Only invitation delivery/completion and account creation use narrowly scoped server-side Auth administration permissions. Both invitation entry points share the same durable
 reservation protocol.
 
-The [generated API reference](API_REFERENCE.md) lists actual parameters, return types and execution grants from a migrated temporary PostgreSQL database. `scripts/api-surface-db-tests.mjs` connects frontend calls to the migrated catalogue through compiler symbols. It checks named payload keys where the compiler resolves a single RPC and a finite argument shape. Dynamic dispatch and runtime values still require functional tests. The same suite checks public view invoker rights and effective anonymous relation and column grants. A documented API or migration can serve consumers outside the browser.
+The [generated API reference](../API_REFERENCE.md) lists actual parameters, return types and execution grants from a migrated temporary PostgreSQL database. `scripts/api-surface-db-tests.mjs` connects frontend calls to the migrated catalogue through compiler symbols. It checks named payload keys where the compiler resolves a single RPC and a finite argument shape. Dynamic dispatch and runtime values still require functional tests. The same suite checks public view invoker rights and effective anonymous relation and column grants. A documented API or migration can serve consumers outside the browser.
 
 <a id="section-developer-guide-feature-modules-and-their-connections"></a>
 
@@ -95,7 +95,7 @@ The [generated API reference](API_REFERENCE.md) lists actual parameters, return 
 |------------------------|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Profiles and expertise | `features/profile`, `features/people`, profile/expertise tables and safe person projections  | Own contact/evidence data are separate from intentionally shared profile information. [PROFILES_REVIEWS](GUIDE.md#section-profiles-reviews).                                                                 |
 | Profile pictures       | Avatar editor/API, `profile_avatars`, existing document versions and the files avatar action | Own clean image, exact version, authorized profile viewing and reauthorization before returning bytes. [PROFILE_AVATARS](GUIDE.md#section-profile-avatars).                                                  |
-| Customers and courses  | `features/operations`, organization/template/run/session model                               | Private contacts/notes remain protected; reusable content and an actual course run are separate entities. [OPERATIONS](OPERATIONS.md#section-operations).                                                    |
+| Customers and courses  | `features/operations`, organization/template/run/session model                               | Private contacts/notes remain protected; reusable content and an actual course run are separate entities. [OPERATIONS](../OPERATIONS.md#section-operations).                                                    |
 | Course building blocks | Provenance catalogue, `building_blocks`, source versions and referencing templates           | One canonical template per code, each original source with hash/pages/filename. No import of compensation, contacts or real participants. [COURSE_BUILDING_BLOCKS](GUIDE.md#section-course-building-blocks). |
 | Job offers             | `features/admin`, `features/jobs`, job/session/requirement tables                            | Template → run → referenced job, verified current source data and an immutable accepted snapshot.                                                                                                            |
 | Immediate allocation   | Claim RPC, lecturer/job locks, unique claims and interval exclusion                          | All sessions or none; one winner, idempotent retry, no drag/frontend shortcut.                                                                                                                               |
@@ -135,7 +135,7 @@ Keep components, DTOs and queries in the feature module that owns them. Share ac
 
 Comment on the reason for a lock, important ordering, the authorization contract, version/retry handling or memory cleanup directly beside the code. Types and clear names describe the data; security/architecture documents explain broader decisions. Update comments when behavior changes. Document known limits instead of returning success from unimplemented branches.
 
-Comprehensive English source commentary now covers maintained frontend modules, tests, Edge handlers, runtime tools and operating configuration. Keep file purposes, function/component/hook contracts and important control-flow explanations current; preserve useful existing comments and directives. The [agent guide](AGENTS.md) maps ownership, commands and invariants. Released migration bytes remain unchanged because preview/update checks bind their hashes;
+Comprehensive English source commentary now covers maintained frontend modules, tests, Edge handlers, runtime tools and operating configuration. Keep file purposes, function/component/hook contracts and important control-flow explanations current; preserve useful existing comments and directives. The [agent guide](../AGENTS.md) maps ownership, commands and invariants. Released migration bytes remain unchanged because preview/update checks bind their hashes;
 the [SQL migration guide](DEVELOPMENT.md#section-migration-guide) explains the historical files and additive follow-up migrations in order. JSON/lockfiles, generated data, binary assets and the vendored upstream snapshot retain their own formats and provenance.
 
 Create additive migrations with the actually installed CLI (`npx --no-install supabase migration new NAME`). Do not modify migrations that have already been delivered. Check new tables, indexes, constraints, RLS and grants together with their UI/API. Avoid a second source of truth for accepted compensation, confirmed sessions or author identities.
@@ -171,7 +171,7 @@ The complete command also includes offline update/release/proxy checks. These ad
 
 The complete command writes protected reports under `.local/tests/<run>/`. Inspect the first failing stage and its specific trace/error context first. Verify the necessary correction, then run complete acceptance again before delivery. Private traces, tokens, QR codes and credentials do not belong in Git or screenshots.
 
-Local Chromium emulation and automated axe checks do not replace actual mobile installation, other browsers, manual accessibility checks or subsequent host/SMTP/restore acceptance. Remaining release gates are in the plan and [deployment runbook](OPERATIONS.md#section-deployment-runbook).
+Local Chromium emulation and automated axe checks do not replace actual mobile installation, other browsers, manual accessibility checks or subsequent host/SMTP/restore acceptance. Remaining release gates are in the plan and [deployment runbook](../OPERATIONS.md#section-deployment-runbook).
 
 <a id="section-local-development"></a>
 
@@ -189,7 +189,7 @@ The supported entry point is the executable `./portal` in the repository root. I
 ./portal start
 ```
 
-Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js as pinned in [`.node-version`](.node-version) (the package minimum is 22.12), npm, Docker Engine 25 or later and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen` 1.x (tested 1.3.2) on PATH, or the explicit
+Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js as pinned in [`.node-version`](../.node-version) (the package minimum is 22.12), npm, Docker Engine 25 or later and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen` 1.x (tested 1.3.2) on PATH, or the explicit
 `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` fixture paths; missing tools fail before crypto tests can skip. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
 
 The pinned Deno package needs its reviewed postinstall script to copy the platform executable into place. `package.json` explicitly allows that exact version for npm versions that otherwise block dependency scripts. When updating Deno, review its installer and update the version-specific `allowScripts` entry together with the dependency and lockfile; do not enable all dependency scripts globally.
@@ -276,7 +276,7 @@ New test harnesses must honour `PORTAL_DB_CONTAINER`, `E2E_BASE_URL`, `E2E_MAILP
 
 ## Honest limits
 
-A complete local command does not mean every target-product module already exists. The full product scope and remaining work stay in [ROADMAP.md](ROADMAP.md). The local environment does not prove hosted SMTP deliverability, Hostinger headers, GDPR/legal acceptance, physical iOS/Safari PWA installation or a tested production disaster-recovery process.
+A complete local command does not mean every target-product module already exists. The full product scope and remaining work stay in [ROADMAP.md](../ROADMAP.md). The local environment does not prove hosted SMTP deliverability, Hostinger headers, GDPR/legal acceptance, physical iOS/Safari PWA installation or a tested production disaster-recovery process.
 
 <a id="section-local-development-historical-runtime-verification--15-november-2026"></a>
 
@@ -474,7 +474,7 @@ This command stops the separate preview while preserving its local data. `node p
 
 ## GitHub deployments and permissions
 
-The [pr-previews.yml](.github/workflows/pr-previews.yml) workflow is **manual-only** and accepts dispatches on `main`. It has no automatic
+The [pr-previews.yml](../.github/workflows/pr-previews.yml) workflow is **manual-only** and accepts dispatches on `main`. It has no automatic
 `workflow_run`, PR or scheduled deployment trigger. In GitHub Actions, choose
 `PR preview deployments` → `Run workflow` on `main`, then select:
 
@@ -519,12 +519,12 @@ References: [GitHub deployment API](https://docs.github.com/en/rest/deployments/
 
 ## Current system
 
-The application is a static React/TypeScript/Vite PWA backed by Supabase PostgreSQL, Auth, Data API, Realtime, private Storage and bounded Edge Functions. There is no additional business application server. Accepted main `4f7f6c0` contains 69 released SQL files, including the merged smart-operations, PR24 operational modules and PR25 private enquiry intake. [API_REFERENCE](API_REFERENCE.md) is regenerated from that complete migration replay; [ERD](DEVELOPMENT.md#section-erd) maps the physical
+The application is a static React/TypeScript/Vite PWA backed by Supabase PostgreSQL, Auth, Data API, Realtime, private Storage and bounded Edge Functions. There is no additional business application server. Accepted main `4f7f6c0` contains 69 released SQL files, including the merged smart-operations, PR24 operational modules and PR25 private enquiry intake. [API_REFERENCE](../API_REFERENCE.md) is regenerated from that complete migration replay; [ERD](DEVELOPMENT.md#section-erd) maps the physical
 domain relations and [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide) explains source order.
 
 Browser components validate input and call identity-scoped query/mutation APIs. PostgreSQL checks the current actor, active status/capability, resource membership, expected version and transaction invariants before committing. Realtime and notifications refresh authorised projections after the commit. Edge gateways hold server credentials only for narrowly checked invitation, private-byte and rendering operations; browser roles never receive them.
 
-The original master specification and later accepted extensions remain the full target. [PRODUCT_SPEC](PRODUCT.md#section-product-spec) and [ROADMAP](ROADMAP.md) separate delivered source from remaining work. Exact executed results belong in the relevant pull request checks; merging documentation or source proves no hosted installation, provider delivery, physical PWA acceptance or production release. The ADRs below preserve decisions and explicitly labelled historical checkpoints.
+The original master specification and later accepted extensions remain the full target. [PRODUCT_SPEC](PRODUCT.md#section-product-spec) and [ROADMAP](../ROADMAP.md) separate delivered source from remaining work. Exact executed results belong in the relevant pull request checks; merging documentation or source proves no hosted installation, provider delivery, physical PWA acceptance or production release. The ADRs below preserve decisions and explicitly labelled historical checkpoints.
 
 Course readiness is a live resource-scoped SQL projection; no authoritative percentage is writable. Private per-run settings, tasks and instruction receipts bind current schedules/assignments and actual accessible clean material. Teaching delivery uses editable unsubmitted drafts and immutable submitted revisions/review history, leaving accepted prices/invoices unchanged. A replacement calls the existing claim implementation within a rollback-safe handover transaction and preserves the original
 until success. Support uses ticket ownership or explicit support capability, with separate filtered internal messages and dedicated frozen attachments. No capability grants unrelated private calendar/chat/contract file contents. Contract owners upload their own scanned PDFs; contract managers with MFA receive only the bounded filename/version candidate projection needed to register an executed agreement. Legacy files remain readable only by their owner, including files formerly uploaded by
@@ -533,7 +533,7 @@ management. New wrappers remain invoker functions; private tables retain RLS and
 Dedicated support evidence also checks optional course-resource history. Incoming dedication and a reverse registry trigger serialize on the document row; neither ownership nor removed course history can override that exclusivity. A feature introducing that registry later must install the reverse guard and preserve private selectors/downloads. Contract and actual checks.
 
 The smart-operations model complements these workflows. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. The current combined source requires fresh and retained-data replay plus the complete application/native acceptance; previous source-bound results remain in the relevant pull request
-checks. [ERD](DEVELOPMENT.md#section-erd) maps physical relations, [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT.md#section-product-spec) and the authoritative [master prompt](PRODUCT_BRIEF.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
+checks. [ERD](DEVELOPMENT.md#section-erd) maps physical relations, [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide) explains source order and [API_REFERENCE](../API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT.md#section-product-spec) and the authoritative [master prompt](../PRODUCT_BRIEF.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
 
 The [website enquiry gateway](GUIDE.md#section-website-enquiries) is a bounded integration-only Edge entry point, disabled by default. It adds a private server credential above the existing gateway boundary, stores original consent-versioned submissions in private ledgers and exposes management decisions through current capability-checked invoker RPCs. Conversion creates an unpublished course plan atomically; it neither creates a quote nor activates a public Website transport.
 
@@ -551,7 +551,7 @@ late promotion. Private body ACLs remain authoritative; protected accepted finan
 Use the existing `Luminovia-Training-Consulting/Luminovia-Management-Tool` repository. The public `Website` is solely a brand reference. React/TypeScript/Vite supplies the static SPA; no independent Node/Express application service is required. The original 15 November hosting decision used managed Supabase and reserved Docker/Supabase CLI for development. That hosting decision is historical: the user subsequently authorised the official Supabase Docker distribution on the Hostinger VPS as
 described in ADR-012.
 
-**Hosting superseded on 16 November:** the user explicitly chose complete Supabase self-hosting at Hostinger. ADR-012 and [HOSTINGER_DEVELOPMENT](OPERATIONS.md#section-hostinger-development) own the actual deployment; the security and static-frontend decisions remain applicable.
+**Hosting superseded on 16 November:** the user explicitly chose complete Supabase self-hosting at Hostinger. ADR-012 and [HOSTINGER_DEVELOPMENT](../OPERATIONS.md#section-hostinger-development) own the actual deployment; the security and static-frontend decisions remain applicable.
 
 <a id="section-architecture-adr-002--source-of-truth-and-feature-boundaries"></a>
 
@@ -603,7 +603,7 @@ ADR-023; the original one-position milestone did not implement it.
 
 A second migration adds `invitation_requests` (23 exposed RLS-enabled tables in total) and scoped invitation reservation/completion RPCs. The browser-facing `invite-lecturer` Edge Function requires current Auth, `users.manage`, AAL2 and an approved exact origin. A durable database reservation precedes the external Auth email send; one email address is reserved across administrators, idempotency prevents repeat sends and each inviter is limited to five new reservations per fifteen minutes. The
 browser cannot choose a privileged role: completed invitations grant only `lecturer`. Completion is server-only. A send timeout/failure is held for manual reconciliation rather than automatically retried into duplicate emails. Actual local Edge/Auth/Mailpit delivery and idempotency have been verified separately from handler unit tests. The custom token-hash invitation callback, password setup, sign-out/new-password login and PKCE recovery were subsequently verified in actual local browser tests.
-The actual self-hosted CMS later passed captured invitation/password setup and PKCE recovery through private Mailpit. That milestone did not test external SMTP deliverability. Current provider proofs and activation state belong in [NOTIFICATION_MAIL_OPERATIONS](OPERATIONS.md#section-notification-mail-operations) and the relevant pull request checks.
+The actual self-hosted CMS later passed captured invitation/password setup and PKCE recovery through private Mailpit. That milestone did not test external SMTP deliverability. Current provider proofs and activation state belong in [NOTIFICATION_MAIL_OPERATIONS](../OPERATIONS.md#section-notification-mail-operations) and the relevant pull request checks.
 
 A third migration adds `verify_lecturer_topic(p_user_id, p_topic_id, p_verified, p_valid_until)` and `set_user_active(p_user_id, p_active)` without adding an exposed table. Verification requires `qualifications.verify` plus AAL2, an active lecturer target and an existing self-selected topic; false clears expiry. It records a management attestation, not an uploaded-certificate assertion. Activation requires `users.manage` plus AAL2, protects self-deactivation/last active admin and serializes
 concurrent changes. Audit details retain the target, topic where relevant, old/new values and attestation basis. Browser table-column grants remain restricted; no direct verified/active writes are introduced.
@@ -631,7 +631,7 @@ Money uses exact numeric amounts and original ISO currency, with an enumerated f
 
 Service-worker precache is limited to the public app shell and public brand assets. No runtime cache of authenticated API responses, contracts, messages, invoices or private files; online writes require server acknowledgement. Update handling must avoid losing unsaved forms and indicate when a new app version is available. Production requires HTTPS, correct manifest/icons and supported-platform install testing.
 
-GitHub CI validates source and migrations; it does not automatically publish to production. Separate staging/production credentials, approved migrations/hosting changes, actual DB+storage backups, restore drill and rollback gate production. Deployment instructions are in [DEPLOYMENT_RUNBOOK.md](OPERATIONS.md#section-deployment-runbook).
+GitHub CI validates source and migrations; it does not automatically publish to production. Separate staging/production credentials, approved migrations/hosting changes, actual DB+storage backups, restore drill and rollback gate production. Deployment instructions are in [DEPLOYMENT_RUNBOOK.md](../OPERATIONS.md#section-deployment-runbook).
 
 <a id="section-architecture-external-configuration-and-present-limits"></a>
 
@@ -661,12 +661,12 @@ The authorised environment is development on purchased KVM 1, with fictional acc
 capabilities/AAL2, immutable snapshots, atomic online claims, private messages and private calendar/file boundaries remain authoritative in the database.
 
 The active database image is `supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de`, measured as PostgreSQL 17.12 after a controlled same-major patch. The original vendor bundle and 17.6 pin remain historical provenance. A real off-site database/object backup passed original-image and 17.12-candidate restores with exact roles/grantors/options, RLS/counts/quotas and private object hashes; the candidate additionally matched all eleven stored
-migration SQL sources to repository files. Actual post-patch CMS Auth/MFA/PKCE/file/50-way-claim and WSS delivery/revocation checks passed separately. Stored and actual database ICU versions match 153.121; no collation rebuild was required. [Patch provenance](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) records the exact scope and limits.
+migration SQL sources to repository files. Actual post-patch CMS Auth/MFA/PKCE/file/50-way-claim and WSS delivery/revocation checks passed separately. Stored and actual database ICU versions match 153.121; no collation rebuild was required. [Patch provenance](../deploy/hostinger/selfhost/postgres-upgrade-provenance.json) records the exact scope and limits.
 
 The web service bind-mounts the stable `/opt/luminovia-portal/www` parent. Caddy reads the SPA shell from `/srv/current`, a symlink into `www/releases`, and immutable assets from shared `/srv/assets`; changing the release pointer preserves access for already loaded older clients. Private runtime configuration and PostgreSQL/Storage/Mailpit data are outside the web directory. `www/maintenance.enabled` reversibly makes the public API return 503; it is an operational control, not proof that
 internal writers are quiescent.
 
-Use the official production self-hosted bundle, never the CLI development stack, for this hosted instance. Separate private server configuration from public frontend build settings, preserve keys during endpoint changes, keep backend ports unpublished and back up the database plus actual object files. Source/image provenance, concrete commands, executed acceptance and operational limits are maintained in [HOSTINGER_DEVELOPMENT](OPERATIONS.md#section-hostinger-development).
+Use the official production self-hosted bundle, never the CLI development stack, for this hosted instance. Separate private server configuration from public frontend build settings, preserve keys during endpoint changes, keep backend ports unpublished and back up the database plus actual object files. Source/image provenance, concrete commands, executed acceptance and operational limits are maintained in [HOSTINGER_DEVELOPMENT](../OPERATIONS.md#section-hostinger-development).
 
 <a id="section-architecture-adr-009--collaboration-and-rich-content-boundaries"></a>
 
@@ -691,7 +691,7 @@ Lecturer receipt is an immutable acknowledgement, never asserted to be a legal s
 ## ADR-011 — account API, client tenancy and private commission
 
 Individual identities use native Supabase Auth and current database roles. The versioned Account Edge façade validates real bearer identities and delegates business mutations to the caller-authenticated SQL API. Invitations alone use a server credential for Auth delivery/completion; the original lecturer endpoint delegates to the same durable reservation ledger. Administrative role/status mutations share one lock to protect the last active administrator. The
-generated [API reference](API_REFERENCE.md) is taken from actual migrated PostgreSQL metadata, and an automated surface check binds delivered frontend RPC names to executable SQL functions.
+generated [API reference](../API_REFERENCE.md) is taken from actual migrated PostgreSQL metadata, and an automated surface check binds delivered frontend RPC names to executable SQL functions.
 
 Client membership is explicit per active organisation and rechecked on every scoped request/report. Customer gross quotes, configurable platform percentages and immutable accepted gross/platform/net snapshots remain in the unexposed private schema. Lecturer-facing job, claim and invoice amounts remain lecturer compensation. Accepted historical net-only deals retain unknown gross, rather than guessed commission. Admin/owner receives full financial reporting with MFA; management retains its
 explicit net invoice/payment capabilities. See commission boundaries.
@@ -707,7 +707,7 @@ The source retains immutable, content-hashed development releases and the existi
 main, complete CI, release content and migration safety. An unsafe migration or failed health check stops installation; a successful source check is not proof of installation.
 
 An installation pauses backend writers for a backup, preserves historical migration source and private configuration, applies eligible incremental SQL, and promotes a static release through the stable mounted parent. PostgreSQL major changes and unsafe/out-of-order migrations require operator review. OS security updates share a lock with application deployments. This source/automation boundary is not production approval or proof of an actual server installation.
-See [automatic update policy](OPERATIONS.md#section-hostinger-automatic-updates), [local-first publication](DEVELOPMENT.md#section-github-workflow) and ADR-032 for reviewed migration plans.
+See [automatic update policy](../OPERATIONS.md#section-hostinger-automatic-updates), [local-first publication](DEVELOPMENT.md#section-github-workflow) and ADR-032 for reviewed migration plans.
 
 <a id="section-architecture-adr-014--reusable-course-provenance-teaching-discussions-and-scoped-avatars"></a>
 
@@ -1043,7 +1043,7 @@ The inbox remains the committed-event source. Private email and Web Push outboxe
 waitlists/substitution, tasks, timesheets and due reminders use scoped targets rather than leaking private content into generic messages. In-app quiet attention does not erase committed operational receipts.
 
 Email is an explicit per-account opt-in. SMTP credentials remain private operating configuration; verified TLS465 or mandatory STARTTLS587, retry bounds and uncertain acceptance handling belong to the worker/runbook. Push additionally requires explicit browser permission and an active device subscription; endpoint/key validation, provider bounds and private VAPID material remain server-side. Notifications contain generic text and require fresh authorisation after opening the destination. Local
-cryptographic/provider fixtures and headless browser permission results are not real-device delivery acceptance. Source/systemd templates do not prove a live timer, provider activation or delivery. See [NOTIFICATION_MAIL_OPERATIONS](OPERATIONS.md#section-notification-mail-operations) and [WEB_PUSH](GUIDE.md#section-web-push).
+cryptographic/provider fixtures and headless browser permission results are not real-device delivery acceptance. Source/systemd templates do not prove a live timer, provider activation or delivery. See [NOTIFICATION_MAIL_OPERATIONS](../OPERATIONS.md#section-notification-mail-operations) and [WEB_PUSH](GUIDE.md#section-web-push).
 
 <a id="section-architecture-adr-030--protected-printable-facts-use-the-existing-edge-tier"></a>
 
@@ -1066,7 +1066,7 @@ An active lecturer can explicitly export their own selected expertise. The API h
 ## ADR-032 — explicit reviewed migration release
 
 Unattended updates retain the existing strict classifier. An explicit root-private, expiring one-shot plan binds the exact immutable green current-main release, full installed history and pending source hashes. The reviewed path shares the host lock, requires a fresh encrypted backup and uses existing stopped-writer backup/physical-checkpoint/install/private-health/rollback. It repeats identity/history checks and expiry before durable consumption; failure requires a fresh review. No automatic
-plan discovery, history rewrite or rewind after admitting public writes is added. See [REVIEWED_MIGRATION_PLANS](OPERATIONS.md#section-reviewed-migration-plans).
+plan discovery, history rewrite or rewind after admitting public writes is added. See [REVIEWED_MIGRATION_PLANS](../OPERATIONS.md#section-reviewed-migration-plans).
 
 <a id="section-architecture-reasoned-short-notice-withdrawal-decisions"></a>
 
@@ -1110,7 +1110,7 @@ Readiness settings/tasks/instruction receipts/events reference course_runs and c
 course/claim/organisation and support assignee; separate messages/events/attachments enforce hidden internal entries. All new persistent operational tables are private, RLS-enabled and accessed by reviewed invoker RPCs over scoped implementations. Schema/workflow guides and additive migration source own exact columns and acceptance.
 
 The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **71 SQL sources** including the proposed withdrawal migration on top of accepted main `85b02b8`, with `PRIVATE_*` aliases mapped to unexposed private relations. PR17, PR24 and PR25 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in
-source order. [ARCHITECTURE](DEVELOPMENT.md#section-architecture), [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see the relevant pull request checks.
+source order. [ARCHITECTURE](DEVELOPMENT.md#section-architecture), [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide) and [API_REFERENCE](../API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see the relevant pull request checks.
 
 The enquiry cohort adds private original-submission, history and retry records, with links to authorised management, directory organisations/contacts and an explicitly converted course run. These selected diagrams do not enumerate the complete enquiry schema. [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and its owning migration describe exact columns and grants; directory linkage does not create customer-account membership.
 
@@ -1298,7 +1298,7 @@ erDiagram
 immutable row per accepted claim, and sums current accepted position revenue without counting that course several times. Invoice labels change metadata only; PDF versions, accepted compensation and payment history keep their original invariants.
 
 `profile_details` separates the new authored country/languages/experience/labels from private contacts/evidence. `course_enrolments` keeps current membership/completion/removal, while `course_reviews` carries course/actual lecturer/author, versioned text/rating and moderation/withdrawal state. Direct review table reads are denied; identity-safe RPCs project each reader's authorised view. Existing `invitation_requests` now binds the requested role/organisation/display name; both invitation
-handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](API_REFERENCE.md) and the three additive M3 migrations.
+handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](../API_REFERENCE.md) and the three additive M3 migrations.
 
 <a id="section-erd-implemented-private-policy-and-welcome-progress"></a>
 
@@ -1806,7 +1806,7 @@ Additional operational boundaries:
 | Calendar capability / offline schedule   | Explicit owner opt-in; expiry/revocation and identity clearing  | No administrator calendar bypass; no general private-response cache                 |
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
-See CHAT_SECURITY, KNOWLEDGE_SECURITY, COMMERCIAL_SECURITY, [OPERATIONS](OPERATIONS.md#section-operations) and BACKEND_SECURITY_REVIEW for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA results; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+See CHAT_SECURITY, KNOWLEDGE_SECURITY, COMMERCIAL_SECURITY, [OPERATIONS](../OPERATIONS.md#section-operations) and BACKEND_SECURITY_REVIEW for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA results; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
 
 <a id="section-erd-assignment-withdrawal-applications"></a>
 
@@ -1834,12 +1834,12 @@ retain their identities and accepted snapshots. See
 
 # Reading and safely extending SQL migrations
 
-The generated [API reference](API_REFERENCE.md) lists the current migration inventory with ordered versions and byte hashes. The notes below describe historical milestones, including PR17's operational cohort, PR24's six additional files and PR25's enquiry intake. Candidate and pending descriptions refer to their recorded checkpoints.
+The generated [API reference](../API_REFERENCE.md) lists the current migration inventory with ordered versions and byte hashes. The notes below describe historical milestones, including PR17's operational cohort, PR24's six additional files and PR25's enquiry intake. Candidate and pending descriptions refer to their recorded checkpoints.
 
 Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read the relevant pull request checks for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](DEVELOPMENT.md#section-functional-acceptance) for the current acceptance contract. A split CI phase alone is not complete application acceptance;
 publication remains a separate authorised manual operation.
 
-The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API
+The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](../API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API
 inventory. [ERD](DEVELOPMENT.md#section-erd), [DEVELOPER_GUIDE](DEVELOPMENT.md#section-developer-guide) and the relevant feature guides explain how the parts connect.
 
 <a id="section-migration-guide-permanent-deletion-extension"></a>
@@ -1862,247 +1862,247 @@ The test files below are existing feature entry points. Listing them does not cl
 
 ### 01. Foundation schema and atomic immediate assignment
 
-Source: [20261115111133_portal_foundation.sql](supabase/migrations/20261115111133_portal_foundation.sql).
+Source: [20261115111133_portal_foundation.sql](../supabase/migrations/20261115111133_portal_foundation.sql).
 
 Profiles, roles/capabilities, courses, jobs, claims, calendar snapshots and private events. The initial claim contract serializes access to the lecturer and offer; interval and uniqueness rules protect complete reservation. RLS and column grants limit direct writes. Later migrations replace individual functions, so this first version alone does not describe the current contract.
 
-Test entry point: [db-rpc-tests.mjs](scripts/db-rpc-tests.mjs).
+Test entry point: [db-rpc-tests.mjs](../scripts/db-rpc-tests.mjs).
 
 <a id="section-migration-guide-02-durable-invitation-reservations"></a>
 
 ### 02. Durable invitation reservations
 
-Source: [20261115112053_lecturer_invitations.sql](supabase/migrations/20261115112053_lecturer_invitations.sql).
+Source: [20261115112053_lecturer_invitations.sql](../supabase/migrations/20261115112053_lecturer_invitations.sql).
 
 `reserve_invitation` and `complete_invitation` separate an authorized reservation from external Auth delivery. Invitation status comes from the durable server ledger. The accounts extension below unifies both entry paths.
 
-Test entry point: [accounts-db-tests.mjs](scripts/accounts-db-tests.mjs).
+Test entry point: [accounts-db-tests.mjs](../scripts/accounts-db-tests.mjs).
 
 <a id="section-migration-guide-03-verification-and-activation"></a>
 
 ### 03. Verification and activation
 
-Source: [20261115113559_lecturer_verification_and_suspension.sql](supabase/migrations/20261115113559_lecturer_verification_and_suspension.sql).
+Source: [20261115113559_lecturer_verification_and_suspension.sql](../supabase/migrations/20261115113559_lecturer_verification_and_suspension.sql).
 
 Management verifies an already declared qualification with an expiry date and can deactivate/reactivate specific accounts. This confirmation does not replace certificate review. Current roles/capabilities and privileged MFA remain required.
 
-Test entry point: [db-rpc-tests.mjs](scripts/db-rpc-tests.mjs).
+Test entry point: [db-rpc-tests.mjs](../scripts/db-rpc-tests.mjs).
 
 <a id="section-migration-guide-04-private-document-metadata-and-versions"></a>
 
 ### 04. Private document metadata and versions
 
-Source: [20261115121732_private_documents.sql](supabase/migrations/20261115121732_private_documents.sql).
+Source: [20261115121732_private_documents.sql](../supabase/migrations/20261115121732_private_documents.sql).
 
 `documents` and `document_versions` store ownership, context and scan status. `reserve_document` reserves a version; `can_access_document` checks current resource rights. Storage objects are not directly available to browser roles. The Edge gateway serves the bytes actually authorized for the caller.
 
-Test entry point: [documents-db-tests.mjs](scripts/documents-db-tests.mjs).
+Test entry point: [documents-db-tests.mjs](../scripts/documents-db-tests.mjs).
 
 <a id="section-migration-guide-05-chat-access-through-membership"></a>
 
 ### 05. Chat access through membership
 
-Source: [20261115121922_secure_chat_collaboration.sql](supabase/migrations/20261115121922_secure_chat_collaboration.sql).
+Source: [20261115121922_secure_chat_collaboration.sql](../supabase/migrations/20261115121922_secure_chat_collaboration.sql).
 
 Rooms, members, messages, reactions and their revision history share an access boundary. DMs have no blanket administrator access. Course teaching-team and participant chats remain separate. Reads, writes, reactions and read state go through checked routines.
 
-Test entry point: [chat-db-tests.mjs](scripts/chat-db-tests.mjs).
+Test entry point: [chat-db-tests.mjs](../scripts/chat-db-tests.mjs).
 
 <a id="section-migration-guide-06-chat-attachments-with-document-authorization"></a>
 
 ### 06. Chat attachments with document authorization
 
-Source: [20261115123659_document_chat_attachment_authorization.sql](supabase/migrations/20261115123659_document_chat_attachment_authorization.sql).
+Source: [20261115123659_document_chat_attachment_authorization.sql](../supabase/migrations/20261115123659_document_chat_attachment_authorization.sql).
 
 Replaces the initially denying adapter with a check of the clean document and its specific room. A valid document identifier or former room membership alone is insufficient.
 
-Test entry point: [chat-db-tests.mjs](scripts/chat-db-tests.mjs).
+Test entry point: [chat-db-tests.mjs](../scripts/chat-db-tests.mjs).
 
 <a id="section-migration-guide-07-versioned-knowledge-and-a-moderated-forum"></a>
 
 ### 07. Versioned knowledge and a moderated forum
 
-Source: [20261115123853_wiki_forum_knowledge.sql](supabase/migrations/20261115123853_wiki_forum_knowledge.sql).
+Source: [20261115123853_wiki_forum_knowledge.sql](../supabase/migrations/20261115123853_wiki_forum_knowledge.sql).
 
 A restricted Tiptap JSON structure replaces arbitrary HTML. The server validates nodes and derives search text. Wiki drafts, published revisions and revision history remain separate. Forum replies, reports, moderation and subscriptions have distinct permissions; this historical version is staff-only.
 
-Test entry point: [knowledge-db-tests.mjs](scripts/knowledge-db-tests.mjs).
+Test entry point: [knowledge-db-tests.mjs](../scripts/knowledge-db-tests.mjs).
 
 <a id="section-migration-guide-08-organizations-templates-and-course-runs"></a>
 
 ### 08. Organizations, templates and course runs
 
-Source: [20261115125144_customer_course_operations.sql](supabase/migrations/20261115125144_customer_course_operations.sql).
+Source: [20261115125144_customer_course_operations.sql](../supabase/migrations/20261115125144_customer_course_operations.sql).
 
 Private contacts and notes are stored separately. Reusable templates and actual course runs/sessions are different resources. Read rights follow publication/assignment; copying does not carry over unwanted personal data.
 
-Test entry point: [operations-api-check.mjs](scripts/operations-api-check.mjs).
+Test entry point: [operations-api-check.mjs](../scripts/operations-api-check.mjs).
 
 <a id="section-migration-guide-09-executed-contracts-invoices-and-payments"></a>
 
 ### 09. Executed contracts, invoices and payments
 
-Source: [20261115125912_contracts_finance_tracking.sql](supabase/migrations/20261115125912_contracts_finance_tracking.sql).
+Source: [20261115125912_contracts_finance_tracking.sql](../supabase/migrations/20261115125912_contracts_finance_tracking.sql).
 
 Contract and invoice records bind an exact clean PDF version. Acknowledgment records receipt, not an electronic signature. Claims select the valid contract version; invoice items and payments retain immutable snapshots and projections scoped by role.
 
-Test entry point: [commercial-db-tests.mjs](scripts/commercial-db-tests.mjs).
+Test entry point: [commercial-db-tests.mjs](../scripts/commercial-db-tests.mjs).
 
 <a id="section-migration-guide-10-retry-identity-and-owner-quotas"></a>
 
 ### 10. Retry identity and owner quotas
 
-Source: [20261115132410_document_reservation_retry_quota.sql](supabase/migrations/20261115132410_document_reservation_retry_quota.sql).
+Source: [20261115132410_document_reservation_retry_quota.sql](../supabase/migrations/20261115132410_document_reservation_retry_quota.sql).
 
 Replaces only the private reservation implementation while preserving the public signature. The same client operation cannot be reinterpreted as another person's reservation; quotas are charged to the actual document owner.
 
-Test entry point: [documents-db-tests.mjs](scripts/documents-db-tests.mjs).
+Test entry point: [documents-db-tests.mjs](../scripts/documents-db-tests.mjs).
 
 <a id="section-migration-guide-11-client-accounts-and-confidential-fee-allocation"></a>
 
 ### 11. Client accounts and confidential fee allocation
 
-Source: [20261115141620_client_commission_revenue.sql](supabase/migrations/20261115141620_client_commission_revenue.sql).
+Source: [20261115141620_client_commission_revenue.sql](../supabase/migrations/20261115141620_client_commission_revenue.sql).
 
 Private client requests, offer allocations and the accepted revenue ledger separate the total client price, platform share and lecturer fee. Acceptance copies the valid state into an immutable snapshot. Functional admin/owner roles do not grant access to other people's private resources. Unknown historical total prices remain unknown.
 
-Test entry point: [commission-db-tests.mjs](scripts/commission-db-tests.mjs).
+Test entry point: [commission-db-tests.mjs](../scripts/commission-db-tests.mjs).
 
 <a id="section-migration-guide-12-profile-details-enrolments-and-reviews"></a>
 
 ### 12. Profile details, enrolments and reviews
 
-Source: [20261115141740_profiles_labels_reviews_enrolment.sql](supabase/migrations/20261115141740_profiles_labels_reviews_enrolment.sql).
+Source: [20261115141740_profiles_labels_reviews_enrolment.sql](../supabase/migrations/20261115141740_profiles_labels_reviews_enrolment.sql).
 
 Extends personal profiles, safe people projections and optional managed enrolments. Reviews require actual eligibility for completed courses; other reviewers' identities are not generally disclosed. Participant read rights are explicitly integrated into existing course permissions.
 
-Test entry point: [profiles-db-tests.mjs](scripts/profiles-db-tests.mjs).
+Test entry point: [profiles-db-tests.mjs](../scripts/profiles-db-tests.mjs).
 
 <a id="section-migration-guide-13-versioned-account-and-role-management"></a>
 
 ### 13. Versioned account and role management
 
-Source: [20261115141856_account_roles_and_api.sql](supabase/migrations/20261115141856_account_roles_and_api.sql).
+Source: [20261115141856_account_roles_and_api.sql](../supabase/migrations/20261115141856_account_roles_and_api.sql).
 
 The account projection, role changes, activation and both invitation entry points use current database permissions. A shared activation lock prevents concurrent removal of the last active administrator. Browser metadata is not a source of roles.
 
-Test entry point: [accounts-db-tests.mjs](scripts/accounts-db-tests.mjs).
+Test entry point: [accounts-db-tests.mjs](../scripts/accounts-db-tests.mjs).
 
 <a id="section-migration-guide-14-shared-and-individual-storage-quotas"></a>
 
 ### 14. Shared and individual storage quotas
 
-Source: [20261115142130_document_storage_capacity.sql](supabase/migrations/20261115142130_document_storage_capacity.sql).
+Source: [20261115142130_document_storage_capacity.sql](../supabase/migrations/20261115142130_document_storage_capacity.sql).
 
 Server-internal limits and bounded reservation protect total and per-owner capacity. Browser roles cannot change these limits. The 100 MiB file limit is also aligned with the private buckets; it is not a promise of future total capacity.
 
-Test entry point: [documents-db-tests.mjs](scripts/documents-db-tests.mjs).
+Test entry point: [documents-db-tests.mjs](../scripts/documents-db-tests.mjs).
 
 <a id="section-migration-guide-15-narrowly-scoped-avatar-selection"></a>
 
 ### 15. Narrowly scoped avatar selection
 
-Source: [20261115154942_profile_avatar_selection.sql](supabase/migrations/20261115154942_profile_avatar_selection.sql).
+Source: [20261115154942_profile_avatar_selection.sql](../supabase/migrations/20261115154942_profile_avatar_selection.sql).
 
 An avatar references a specific clean image version owned by that user. Selection and removal are separate operations. The profile projection does not grant general access to the personal document, other versions or Storage URLs.
 
-Test entry point: [avatars-db-tests.mjs](scripts/avatars-db-tests.mjs).
+Test entry point: [avatars-db-tests.mjs](../scripts/avatars-db-tests.mjs).
 
 <a id="section-migration-guide-16-resource-specific-teaching-team-comments"></a>
 
 ### 16. Resource-specific teaching-team comments
 
-Source: [20261115155038_resource_comments.sql](supabase/migrations/20261115155038_resource_comments.sql).
+Source: [20261115155038_resource_comments.sql](../supabase/migrations/20261115155038_resource_comments.sql).
 
 `private.can_read_job` is shared between job RLS and discussions. Comment and revision data remain private; writing, editing, withdrawal and reasoned MFA moderation are versioned operations. Course participation or client access alone does not grant access to teaching-team discussions.
 
-Test entry point: [comments-db-tests.mjs](scripts/comments-db-tests.mjs).
+Test entry point: [comments-db-tests.mjs](../scripts/comments-db-tests.mjs).
 
 <a id="section-migration-guide-17-source-linked-course-templates-and-teaching-offers"></a>
 
 ### 17. Source-linked course templates and teaching offers
 
-Source version: `20261115155208` in [the immutable migration directory](supabase/migrations). Its historical filename and bytes remain unchanged; public guidance uses the version identifier.
+Source version: `20261115155208` in [the immutable migration directory](../supabase/migrations). Its historical filename and bytes remain unchanged; public guidance uses the version identifier.
 
 The building block and exact source revision remain separate from editable templates. Hashes, filenames and page references record provenance without shipping the original PDFs. `course_run_job_defaults` and `create_course_run_job` bind the current source revision, actual session IDs and idempotent financial inputs.
 
-Test entry point: [course-building-blocks-db-tests.mjs](scripts/course-building-blocks-db-tests.mjs).
+Test entry point: [course-building-blocks-db-tests.mjs](../scripts/course-building-blocks-db-tests.mjs).
 
 <a id="section-migration-guide-18-finite-schedule-intervals"></a>
 
 ### 18. Finite schedule intervals
 
-Source: [20261115180559_finite_schedule_intervals.sql](supabase/migrations/20261115180559_finite_schedule_intervals.sql).
+Source: [20261115180559_finite_schedule_intervals.sql](../supabase/migrations/20261115180559_finite_schedule_intervals.sql).
 
 Additional CHECK constraints reject PostgreSQL +/-infinity at storage boundaries. They validate existing records atomically and stop on invalid history rather than silently changing accepted work. An absent deadline remains NULL.
 
-Test entry point: [schedule-db-tests.mjs](scripts/schedule-db-tests.mjs).
+Test entry point: [schedule-db-tests.mjs](../scripts/schedule-db-tests.mjs).
 
 <a id="section-migration-guide-19-hierarchical-germanenglish-topic-catalogue"></a>
 
 ### 19. Hierarchical German/English topic catalogue
 
-Source: [20261115203718_taxonomy_catalogue_management.sql](supabase/migrations/20261115203718_taxonomy_catalogue_management.sql).
+Source: [20261115203718_taxonomy_catalogue_management.sql](../supabase/migrations/20261115203718_taxonomy_catalogue_management.sql).
 
 Existing topic IDs remain historical references. Acquiring the catalogue lock before row locks prevents cycles formed by concurrent moves. CRUD and archiving are versioned; internal trigger helpers have no direct browser execution rights.
 
-Test entry point: [taxonomy-db-tests.mjs](scripts/taxonomy-db-tests.mjs).
+Test entry point: [taxonomy-db-tests.mjs](../scripts/taxonomy-db-tests.mjs).
 
 <a id="section-migration-guide-20-versioned-offers-cancellation-and-reopening"></a>
 
 ### 20. Versioned offers, cancellation and reopening
 
-Source: [20261115203956_job_lifecycle_audit.sql](supabase/migrations/20261115203956_job_lifecycle_audit.sql).
+Source: [20261115203956_job_lifecycle_audit.sql](../supabase/migrations/20261115203956_job_lifecycle_audit.sql).
 
 Dedicated operation IDs and expected versions protect retries and stale drafts. Eligible future assignments are released in full without deleting accepted price, schedule or revenue history. Explicit audited reopening is required before replacement claims.
 
-Test entry point: [jobs-lifecycle-db-tests.mjs](scripts/jobs-lifecycle-db-tests.mjs).
+Test entry point: [jobs-lifecycle-db-tests.mjs](../scripts/jobs-lifecycle-db-tests.mjs).
 
 <a id="section-migration-guide-21-personal-inbox-and-preferences"></a>
 
 ### 21. Personal inbox and preferences
 
-Source: [20261115204354_notification_inbox_and_preferences.sql](supabase/migrations/20261115204354_notification_inbox_and_preferences.sql).
+Source: [20261115204354_notification_inbox_and_preferences.sql](../supabase/migrations/20261115204354_notification_inbox_and_preferences.sql).
 
 Preferences control future optional notifications; accepted work retains its receipts. Destinations are resolved against current permissions on every read. Deferred job notifications see the transaction's final set of requirements. Reminders are generated on an explicit refresh, not by an assumed scheduler.
 
-Test entry point: [notifications-db-tests.mjs](scripts/notifications-db-tests.mjs).
+Test entry point: [notifications-db-tests.mjs](../scripts/notifications-db-tests.mjs).
 
 <a id="section-migration-guide-22-private-availability-windows"></a>
 
 ### 22. Private availability windows
 
-Source: [20261115210134_lecturer_availability.sql](supabase/migrations/20261115210134_lecturer_availability.sql).
+Source: [20261115210134_lecturer_availability.sql](../supabase/migrations/20261115210134_lecturer_availability.sql).
 
 Personal available/blocked windows are separate from private appointments. Sharing is opt-in and gives management only a reduced view. Locks and triggers serialize conflict checks with actual assignments; internal range/trigger helpers are not public RPCs.
 
-Test entry point: [availability-db-tests.mjs](scripts/availability-db-tests.mjs).
+Test entry point: [availability-db-tests.mjs](../scripts/availability-db-tests.mjs).
 
 <a id="section-migration-guide-23-explicit-multi-position-offers-and-management-kanban"></a>
 
 ### 23. Explicit multi-position offers and management Kanban
 
-Source: [20261115210814_job_capacity_and_board.sql](supabase/migrations/20261115210814_job_capacity_and_board.sql).
+Source: [20261115210814_job_capacity_and_board.sql](../supabase/migrations/20261115210814_job_capacity_and_board.sql).
 
 Only new offers explicitly priced per position receive 1–20 positions. Legacy, client and course-originated offers retain their single-position meaning. `claim_job` locks the person and offer, checks available positions and reserves every session atomically. Lifecycle, cancellation, invoice review and client/revenue projections account for active positions while preserving history.
 
-Test entry point: [jobs-capacity-db-tests.mjs](scripts/jobs-capacity-db-tests.mjs).
+Test entry point: [jobs-capacity-db-tests.mjs](../scripts/jobs-capacity-db-tests.mjs).
 
 <a id="section-migration-guide-24-bounded-administrative-audit-projection"></a>
 
 ### 24. Bounded administrative audit projection
 
-Source: [20261115213550_admin_audit_viewer.sql](supabase/migrations/20261115213550_admin_audit_viewer.sql).
+Source: [20261115213550_admin_audit_viewer.sql](../supabase/migrations/20261115213550_admin_audit_viewer.sql).
 
 Requires the current `audit.read` capability and MFA; only explicitly reviewed action names are allowed. Private action families and `details` JSON are neither returned nor searched. Finite time windows and a timestamp/ID cursor bound the query without broadening the original table RLS.
 
-Test entry point: [admin-audit-db-tests.mjs](scripts/admin-audit-db-tests.mjs).
+Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs).
 
 <a id="section-migration-guide-25-subordinate-roles-and-private-role-specific-compensation"></a>
 
 ### 25. Subordinate roles and private role-specific compensation
 
-Source: [20261116020953_delegated_roles_and_private_role_pricing.sql](supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql).
+Source: [20261116020953_delegated_roles_and_private_role_pricing.sql](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql).
 
 Current database authority controls the assignable role catalogue, account lifecycle and invitation completion. Management can assign subordinate roles; self, equal and higher targets remain protected. Guest provides no business capability. Company budget memberships stay administrative, and incompatible staff/company combinations cannot combine private gross and net access.
 
@@ -2114,23 +2114,23 @@ from public columns. Frontend consent captures the exact displayed values and qu
 The later `private.job_lifecycle` definition also returns an authorised `max_net_budget`; an explicit protected `null` must not be replaced by the viewer's personal quote times capacity. These policy, claim and budget functions remain owned by migration 25. Migration 30 introduces the discovery interfaces, and migration 36 supplies their current private quote projection and cursor replacements without changing this released
 source. [Current source map](GUIDE.md#section-delegated-roles-pricing-current-source-ownership) explains the connected SQL/DTO/UI ownership and shared quote, null and consent boundaries.
 
-Test entry points: [delegated-pricing-db-tests.mjs](scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](GUIDE.md#section-delegated-roles-pricing).
+Test entry points: [delegated-pricing-db-tests.mjs](../scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](../scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](../tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](GUIDE.md#section-delegated-roles-pricing).
 
 <a id="section-migration-guide-26-personal-welcome-progress"></a>
 
 ### 26. Personal welcome progress
 
-Source: [20261116021008_welcome_guide_progress.sql](supabase/migrations/20261116021008_welcome_guide_progress.sql).
+Source: [20261116021008_welcome_guide_progress.sql](../supabase/migrations/20261116021008_welcome_guide_progress.sql).
 
 Own-account invoker RPCs read and version personal step/status state in the unexposed private schema. There is no target-user parameter or administrative bypass. Advancing, pausing or skipping the guide grants no role, MFA level or completed business action. The new source includes an outer BEGIN/COMMIT transaction so retained-data replay records the exact SQL and its history entry atomically; the native migration inventory regression checks this contract for every file.
 
-Test entry points: [welcome-db-tests.mjs](scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](GUIDE.md#section-welcome-guide).
+Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](GUIDE.md#section-welcome-guide).
 
 <a id="section-migration-guide-27-customer-neutral-catalogue-labels-and-reusable-templates"></a>
 
 ### 27. Customer-neutral catalogue labels and reusable templates
 
-Source: [20261116032005_customer_neutral_course_catalogue.sql](supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql).
+Source: [20261116032005_customer_neutral_course_catalogue.sql](../supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql).
 
 The catalogue namespace describes curriculum, independently of the customer organisation selected for each actual run. The forward transaction replaces the original single-provider CHECK with a trimmed namespace of 1–80 characters; provider/code uniqueness and the existing read/write permissions remain unchanged.
 
@@ -2141,65 +2141,65 @@ All 22 canonical block identities and 24 exact source revisions remain intact. O
 
 The constraint replacement and bounded data changes retain the hosted operator-review gate. Installation requires the existing reviewed maintenance/writer-stop and verified backup/recovery procedure; neither this guide, generated SQL nor a local test result applies the migration or approves production. Do not edit earlier migration sources or bypass the ordinary update classifier.
 
-Test entry points: [upgrade/preservation rehearsal](scripts/course-catalogue-preservation-db-tests.mjs), [building-block SQL groups](scripts/course-building-blocks-db-tests.mjs) and [catalogue/reproducibility regressions](scripts/runtime-course-catalogue.test.mjs). These fixtures distinguish fresh catalogue state from two independent customers sharing a template, edited/used templates and an accepted pre-upgrade agreement; actual full application/hosted outcomes remain separately recorded.
+Test entry points: [upgrade/preservation rehearsal](../scripts/course-catalogue-preservation-db-tests.mjs), [building-block SQL groups](../scripts/course-building-blocks-db-tests.mjs) and [catalogue/reproducibility regressions](../scripts/runtime-course-catalogue.test.mjs). These fixtures distinguish fresh catalogue state from two independent customers sharing a template, edited/used templates and an accepted pre-upgrade agreement; actual full application/hosted outcomes remain separately recorded.
 
 <a id="section-migration-guide-28-versioned-structured-chat-mentions"></a>
 
 ### 28. Versioned structured chat mentions
 
-Source: [20261116080730_chat_structured_mentions.sql](supabase/migrations/20261116080730_chat_structured_mentions.sql).
+Source: [20261116080730_chat_structured_mentions.sql](../supabase/migrations/20261116080730_chat_structured_mentions.sql).
 
 Adds message content versions, version-bound mention targets and actor/request retry records without removing the earlier message APIs. A mention is an explicit selection of at most 20 distinct current, active, role-eligible room members; text resembling `@name` is not authorization. Message send/edit and the selected mentions commit together. Edits use the expected content version, the existing sender/edit-window rules and a payload-bound retry identity. Profile/role, room and member locks
 protect the membership checks against concurrent revocation. Reads and history retain current room access; first explicit mentions can renew a notice or override a room mute, while the global notification category and attention rules still apply.
 
 Private version/request tables have RLS and no browser table grants; internal trigger/helpers are not public APIs. See [CHAT](GUIDE.md#section-chat) for message/history contracts and [NOTIFICATIONS](GUIDE.md#section-notifications) for notice filtering.
 
-Test entry point: [chat-mentions-db-tests.mjs](scripts/chat-mentions-db-tests.mjs).
+Test entry point: [chat-mentions-db-tests.mjs](../scripts/chat-mentions-db-tests.mjs).
 
 <a id="section-migration-guide-29-server-paged-files-and-private-personal-organisation"></a>
 
 ### 29. Server-paged files and private personal organisation
 
-Source: [20261116080732_file_discovery_personal_organisation.sql](supabase/migrations/20261116080732_file_discovery_personal_organisation.sql).
+Source: [20261116080732_file_discovery_personal_organisation.sql](../supabase/migrations/20261116080732_file_discovery_personal_organisation.sql).
 
 `document_discovery` applies literal filename search, owner/kind/job filters and own tag/folder filters before paging by descending `(created_at,id)`. Each page contains at most 100 rows and rechecks `can_access_document`; paging does not raise the Data API row cap or provide an enduring download grant. The separate `document_organisation` rows belong to an account/document pair, with their own RLS and no direct authenticated table grants. Tags and virtual folders are personal annotations, not
 shared document metadata or Storage paths.
 
 Saving annotations locks the active profile, then the document, then the account/document writer and annotation row. The expected version starts at 0 for an absent row; stale writes fail with `40001`. This serializes ordinary concurrent saves and document archiving/replacement while preserving the existing upload, quarantine, exact-version and authenticated byte-download checks. See [FILES](GUIDE.md#section-files).
 
-Test entry point: [files-discovery-db-tests.mjs](scripts/files-discovery-db-tests.mjs).
+Test entry point: [files-discovery-db-tests.mjs](../scripts/files-discovery-db-tests.mjs).
 
 <a id="section-migration-guide-30-bounded-job-discovery-summaries-and-own-saved-views"></a>
 
 ### 30. Bounded job discovery, summaries and own saved views
 
-Source: [20261116080735_job_discovery_and_saved_views.sql](supabase/migrations/20261116080735_job_discovery_and_saved_views.sql).
+Source: [20261116080735_job_discovery_and_saved_views.sql](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql).
 
 Adds server-side literal discovery, validated criteria/sorts, exact job resolution, scoped assignment titles and dashboard summaries. The discovery cursor binds its sort position to the normalized filter fingerprint; pages permit 1–100 offers and recheck the current lecturer or `jobs.manage` capability/MFA boundary. Commercial projections retain their existing net/gross permissions. Search, summaries and a selected job do not confirm claim eligibility or reserve any session.
 
 Saved views contain only the current account's normalized criteria, with RLS, private table access, a 20-view bound, unique personal names and expected versions. Both save/remove enter as volatile mutations, lock the acting profile before a separate current role/permission check and then lock the target state; saves additionally serialize the account's view writers. An identical initial-create retry can return the same view, while changed/stale versions and foreign IDs fail.
 See [JOB_DISCOVERY](GUIDE.md#section-job-discovery); the original all-session `claim_job` transaction remains authoritative.
 
-Test entry point: [job-discovery-db-tests.mjs](scripts/job-discovery-db-tests.mjs).
+Test entry point: [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs).
 
 <a id="section-migration-guide-31-own-in-app-attention-preferences"></a>
 
 ### 31. Own in-app attention preferences
 
-Source: [20261116080737_notification_attention_preferences.sql](supabase/migrations/20261116080737_notification_attention_preferences.sql).
+Source: [20261116080737_notification_attention_preferences.sql](../supabase/migrations/20261116080737_notification_attention_preferences.sql).
 
 Adds a separate private daily quiet-period preference using explicit IANA time zones and local minute boundaries, including overnight/DST behavior. It leaves the existing four category switches independent. `notification_inbox` retains its prior arguments and adds the server-calculated `quiet_active` and, only while quiet, `attention_count`. Quiet hours change the bell's attention count, not the retained unread events or explicit read state. Binding claim/cancellation/contract notices remain
 counted; the announcement migration below adds currently readable important announcements.
 
 Own preference writes lock the active profile, serialize first saves through an account-bound transaction lock and use the preference row/CAS version, initially 0 without a stored row. Forged actor fields, equal endpoints and invalid times/zones are rejected. Direct table access and anonymous helper/API execution remain closed. This migration supplies no SMTP, push or delivery scheduler. See [NOTIFICATIONS](GUIDE.md#section-notifications).
 
-Test entry point: [attention-db-tests.mjs](scripts/attention-db-tests.mjs).
+Test entry point: [attention-db-tests.mjs](../scripts/attention-db-tests.mjs).
 
 <a id="section-migration-guide-32-immutable-announcement-drafts-publication-and-acknowledgements"></a>
 
 ### 32. Immutable announcement drafts, publication and acknowledgements
 
-Source: [20261116080739_portal_announcements.sql](supabase/migrations/20261116080739_portal_announcements.sql).
+Source: [20261116080739_portal_announcements.sql](../supabase/migrations/20261116080739_portal_announcements.sql).
 
 Adds `announcements.manage` to the existing owner/admin/management roles and private, RLS-protected announcement, revision, publication, acknowledgement and retry records. Draft revisions and publication records are immutable. Saving a bilingual draft preserves the separately published text, role audience and finite display window. Active readers must satisfy the current publication, archive, audience and time checks; management uses the current capability and MFA rather than a client-supplied
 role.
@@ -2207,39 +2207,39 @@ role.
 Management locks the acting profile/roles, rechecks permission, then applies request-payload idempotency and the announcement row's expected version. Publication is explicit; future-start drafts require a later manual publication, not an assumed scheduler. Important published revisions create deduplicated inbox notices. Acknowledgements are own, current-revision operations with idempotent timestamps; archive/recover retains the publication and acknowledgement identity. The migration extends the
 notice destination/quiet-attention helpers and safe administrative action allowlist while preserving the earlier families. See [ANNOUNCEMENTS](GUIDE.md#section-announcements) and [NOTIFICATIONS](GUIDE.md#section-notifications).
 
-Test entry point: [announcements-db-tests.mjs](scripts/announcements-db-tests.mjs).
+Test entry point: [announcements-db-tests.mjs](../scripts/announcements-db-tests.mjs).
 
 <a id="section-migration-guide-33-purpose-bound-administrative-job-and-course-pickers"></a>
 
 ### 33. Purpose-bound administrative job and course pickers
 
-Source: [20261116080741_scoped_administrative_job_pickers.sql](supabase/migrations/20261116080741_scoped_administrative_job_pickers.sql).
+Source: [20261116080741_scoped_administrative_job_pickers.sql](../supabase/migrations/20261116080741_scoped_administrative_job_pickers.sql).
 
 `job_picker` returns bounded metadata for two closed purposes: `job_attachment` requires current `jobs.manage`/MFA; `participant_course` requires current `courses.manage`/MFA. These match the existing file-registration and channel-management actions. The course projection contains template/organisation/schedule metadata and one representative real job binding per course run, without exposing that job's hidden commercial text. The helper does not silently apply lecturer marketplace, contract or
 claim-qualification gates to administrative choices.
 
 Literal search and cursor fingerprints bind purpose/search to stable job/run ordering; each page permits 1–100 choices and rechecks current rights. The optional exact selected item is resolved under the same purpose independently of the visible page. Public wrappers retain invoker security; the internal candidate helper explicitly revokes browser execution. No new reservation, file grant or chat membership is created by selecting metadata. See [JOB_PICKERS](GUIDE.md#section-job-pickers).
 
-Test entry point: [job-picker-db-tests.mjs](scripts/job-picker-db-tests.mjs).
+Test entry point: [job-picker-db-tests.mjs](../scripts/job-picker-db-tests.mjs).
 
 <a id="section-migration-guide-34-published-global-calendar-management"></a>
 
 ### 34. Published global-calendar management
 
-Source: [20261116080743_global_calendar_publications.sql](supabase/migrations/20261116080743_global_calendar_publications.sql).
+Source: [20261116080743_global_calendar_publications.sql](../supabase/migrations/20261116080743_global_calendar_publications.sql).
 
 Extends the existing global-event rows with versions, archive state and a private request ledger. The global read policy permits ordinary active accounts only explicitly published, nonarchived events; `courses.manage`/MFA permits management of drafts. The range API enforces finite intervals of at most 93 days, bounded literal search, stable cursors and pages of 1–100 events. Descriptions remain authored plain text; optional HTTPS links and instants/IANA zones are validated before saving or
 publishing.
 
 The volatile mutation locks the actor profile before its current permission check, then uses an actor/request transaction lock, exact payload retry binding and event-row/CAS locking. Editing returns an existing event to draft; publish/unpublish/archive/recover are explicit versioned actions. The audit allowlist adds five reduced calendar actions without returning descriptions or links. None of these grants reveal another person's private calendar. See [CALENDAR](GUIDE.md#section-calendar).
 
-Test entry point: [calendar-global-db-tests.mjs](scripts/calendar-global-db-tests.mjs).
+Test entry point: [calendar-global-db-tests.mjs](../scripts/calendar-global-db-tests.mjs).
 
 <a id="section-migration-guide-35-explicit-qualification-evidence-and-attestation-history"></a>
 
 ### 35. Explicit qualification evidence and attestation history
 
-Source: [20261116080746_qualification_evidence_and_attestation_history.sql](supabase/migrations/20261116080746_qualification_evidence_and_attestation_history.sql).
+Source: [20261116080746_qualification_evidence_and_attestation_history.sql](../supabase/migrations/20261116080746_qualification_evidence_and_attestation_history.sql).
 
 Adds private RLS-protected topic state, evidence bindings, decision/history events and request records. A lecturer explicitly shares an own clean personal certificate version for a selected topic; the sharing grant identifies that exact version rather than whichever replacement is newest. Current `qualifications.verify`/MFA authorizes targeted review and download, replacing blanket foreign-certificate access. The existing separate `users.manage`/MFA CV exception and contract/finance scopes
 remain intact. Upload registration also stops another account's certificate upload. Existing manual `verify_lecturer_topic` delegates to the same attestation/history core.
@@ -2247,13 +2247,13 @@ remain intact. Upload registration also stops another account's certificate uplo
 Mutations lock the active actor profile before fresh role/permission checks, then serialize request and selected-topic/state/evidence locks with CAS. Exact retries return currently sanitized state, not old private metadata. Withdrawal, topic removal or file archiving ends the prior download grant; re-adding a topic does not restore it. History grants no historical byte access, and old verifications receive no invented retrospective events. The Edge gateway rechecks the narrow evidence binding
 around Storage retrieval. Evidence sharing/upload does not itself verify a qualification or change accepted claim snapshots. See [QUALIFICATIONS](GUIDE.md#section-qualifications) and [FILES](GUIDE.md#section-files).
 
-Test entry point: [qualifications-db-tests.mjs](scripts/qualifications-db-tests.mjs).
+Test entry point: [qualifications-db-tests.mjs](../scripts/qualifications-db-tests.mjs).
 
 <a id="section-migration-guide-36-role-aware-prospective-job-discovery"></a>
 
 ### 36. Role-aware prospective job discovery
 
-Source: [20261116080748_role_aware_job_discovery.sql](supabase/migrations/20261116080748_role_aware_job_discovery.sql).
+Source: [20261116080748_role_aware_job_discovery.sql](../supabase/migrations/20261116080748_role_aware_job_discovery.sql).
 
 Adds private quote/context helpers and replaces only the latest discovery candidate, item and page implementations. Role-priced offers derive the current lecturer's prospective amount and consent version from each offer's captured private policy. Actors without lecturer eligibility receive no alternative prospective quote. Legacy net-only offers retain their original amounts, and accepted claims/revenue are not rewritten. The internal helpers have explicit execution revokes and current
 active-actor/read checks.
@@ -2266,347 +2266,347 @@ Price bounds and sorting use those authorized amounts instead of the raw public 
 The cursor fingerprint binds canonical filters to the current actor, lecturer eligibility/tier marker and global policy version. A cursor from a different such context is rejected; other permission changes are enforced by current read checks rather than by hashing every permission. A newer global policy does not rewrite an existing offer's captured quote. Observed role changes also reset the client's infinite-page query key; unobserved changes remain subject to server cursor validation. The
 TypeScript DTO preserves null without coercion, cards/detail render restricted prices honestly, and the detail checkbox captures all displayed quote fields before submitting the quoted terms version to the original claim transaction. Management `max_net_budget` remains the separate migration-25 projection. Paging remains bounded and provides neither a frozen cross-request snapshot nor confirmed eligibility/reservation.
 
-Test entry points: [role-aware-job-discovery-db-tests.mjs](scripts/role-aware-job-discovery.archived.mjs), [role-aware-job-discovery-api-check.mjs](scripts/role-aware-job-discovery-api-check.mjs) and [job-discovery-db-tests.mjs](scripts/job-discovery-db-tests.mjs). Their presence is not a claim that the final integrated native checks have passed. See [JOB_DISCOVERY](GUIDE.md#section-job-discovery) and [DELEGATED_ROLES_PRICING](GUIDE.md#section-delegated-roles-pricing).
+Test entry points: [role-aware-job-discovery-db-tests.mjs](../scripts/role-aware-job-discovery.archived.mjs), [role-aware-job-discovery-api-check.mjs](../scripts/role-aware-job-discovery-api-check.mjs) and [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs). Their presence is not a claim that the final integrated native checks have passed. See [JOB_DISCOVERY](GUIDE.md#section-job-discovery) and [DELEGATED_ROLES_PRICING](GUIDE.md#section-delegated-roles-pricing).
 
 <a id="section-migration-guide-37-private-email-preferences-and-committed-event-outbox"></a>
 
 ### 37. Private email preferences and committed-event outbox
 
-Source: [20261116091007_notification_email_outbox.sql](supabase/migrations/20261116091007_notification_email_outbox.sql).
+Source: [20261116091007_notification_email_outbox.sql](../supabase/migrations/20261116091007_notification_email_outbox.sql).
 
 Own email/quiet-hour/zone preferences are versioned and disabled by default. Notification occurrences enter a private deduplicated outbox; service-only lease/prepare/finish routines separate current eligibility from provider submission. Accepted, suppressed, failed and uncertain outcomes do not imply inbox deletion or an automatic retry after ambiguous SMTP acceptance. Credentials do not belong in these tables.
 
-Test entry point: [notification-delivery-db-tests.mjs](scripts/notification-delivery-db-tests.mjs).
+Test entry point: [notification-delivery-db-tests.mjs](../scripts/notification-delivery-db-tests.mjs).
 
 <a id="section-migration-guide-38-private-dashboard-layout-and-teaching-day-preparation"></a>
 
 ### 38. Private dashboard layout and teaching-day preparation
 
-Source: [20261116091009_personal_dashboard_and_teaching_day.sql](supabase/migrations/20261116091009_personal_dashboard_and_teaching_day.sql).
+Source: [20261116091009_personal_dashboard_and_teaching_day.sql](../supabase/migrations/20261116091009_personal_dashboard_and_teaching_day.sql).
 
 Own allowed widget order/visibility uses CAS. Teaching-day data derives current confirmed, unreleased allocations in the profile zone; an own claim-bound preparation checklist is separate from shared customer progress. Neither preferences nor admin status expose another person's private checklist or files.
 
-Test entry point: [dashboard-personal-db-tests.mjs](scripts/dashboard-personal-db-tests.mjs).
+Test entry point: [dashboard-personal-db-tests.mjs](../scripts/dashboard-personal-db-tests.mjs).
 
 <a id="section-migration-guide-39-bounded-own-calendar-file-projection"></a>
 
 ### 39. Bounded own calendar-file projection
 
-Source: [20261116091010_calendar_file_export.sql](supabase/migrations/20261116091010_calendar_file_export.sql).
+Source: [20261116091010_calendar_file_export.sql](../supabase/migrations/20261116091010_calendar_file_export.sql).
 
 The security-invoker export reads only current-owner confirmed/unreleased allocations and explicitly included own private events. It accepts finite windows and fails beyond 500 events. IANA identity/instants remain explicit; the browser produces ICS from fresh checked data. No calendar copy table is added.
 
-Test entry point: [calendar-export-db-tests.mjs](scripts/calendar-export-db-tests.mjs).
+Test entry point: [calendar-export-db-tests.mjs](../scripts/calendar-export-db-tests.mjs).
 
 <a id="section-migration-guide-40-explicit-staff-directory-contact-visibility"></a>
 
 ### 40. Explicit staff-directory contact visibility
 
-Source: [20261116091011_staff_contact_visibility.sql](supabase/migrations/20261116091011_staff_contact_visibility.sql).
+Source: [20261116091011_staff_contact_visibility.sql](../supabase/migrations/20261116091011_staff_contact_visibility.sql).
 
 Own email/phone consent defaults off and uses current identity/CAS. The separate contact projection admits active staff to opted-in current Auth email/profile phone; clients/participants and administrative consent overrides are excluded. Existing people/profile projections stay narrow.
 
-Test entry point: [staff-contact-db-tests.mjs](scripts/staff-contact-db-tests.mjs).
+Test entry point: [staff-contact-db-tests.mjs](../scripts/staff-contact-db-tests.mjs).
 
 <a id="section-migration-guide-41-waitlist-interest-and-atomic-explicit-substitution"></a>
 
 ### 41. Waitlist interest and atomic explicit substitution
 
-Source: [20261116091012_assignment_waitlist_and_substitution.sql](supabase/migrations/20261116091012_assignment_waitlist_and_substitution.sql).
+Source: [20261116091012_assignment_waitlist_and_substitution.sql](../supabase/migrations/20261116091012_assignment_waitlist_and_substitution.sql).
 
 Private waitlist rows record interest without reserving capacity. Substitution proposals fix the original claim, target, quote/hash, expiry and retry identity. Explicit target acceptance serializes both lecturer schedules, rechecks current eligibility and atomically releases/recreates the complete block while retaining original accepted history.
 
-Test entry point: [assignment-handover-db-tests.mjs](scripts/assignment-handover-db-tests.mjs).
+Test entry point: [assignment-handover-db-tests.mjs](../scripts/assignment-handover-db-tests.mjs).
 
 <a id="section-migration-guide-42-device-opt-in-and-committed-web-push-delivery"></a>
 
 ### 42. Device opt-in and committed Web Push delivery
 
-Source: [20261116091013_web_push_notifications.sql](supabase/migrations/20261116091013_web_push_notifications.sql).
+Source: [20261116091013_web_push_notifications.sql](../supabase/migrations/20261116091013_web_push_notifications.sql).
 
 A private configuration singleton, owner-bound provider subscriptions and occurrence/device outbox separate browser consent from external delivery. Endpoint/encryption validation, active-device expiry, service-only worker leases and recipient eligibility fail closed. VAPID private material is operating configuration; source does not establish actual device permission or delivery.
 
-Test entry point: [web-push-db-tests.mjs](scripts/web-push-db-tests.mjs).
+Test entry point: [web-push-db-tests.mjs](../scripts/web-push-db-tests.mjs).
 
 <a id="section-migration-guide-43-shared-course-and-participant-learning-workspace"></a>
 
 ### 43. Shared course and participant learning workspace
 
-Source: [20261116091015_course_learning_workspace.sql](supabase/migrations/20261116091015_course_learning_workspace.sql).
+Source: [20261116091015_course_learning_workspace.sql](../supabase/migrations/20261116091015_course_learning_workspace.sql).
 
 Adds scoped preparation/contact settings, exact material/report resources and receipts, audited attendance, staff/learner Q&A, private notebooks, identity-protected feedback aggregates, immutable quiz versions/eligible attempts and frozen completion facts. The workspace derives current manager/assignment/enrolment/client scope. Repeat booking creates a fresh future request; later brief integration copies requirements without private learner data.
 
-Test entry point: [course-workspace-db-tests.mjs](scripts/course-workspace-db-tests.mjs).
+Test entry point: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs).
 
 <a id="section-migration-guide-44-private-favourites-versioned-tasks-and-reusable-workflows"></a>
 
 ### 44. Private favourites, versioned tasks and reusable workflows
 
-Source: [20261116091016_personal_workbench_and_tasks.sql](supabase/migrations/20261116091016_personal_workbench_and_tasks.sql).
+Source: [20261116091016_personal_workbench_and_tasks.sql](../supabase/migrations/20261116091016_personal_workbench_and_tasks.sql).
 
 Private/operations tasks retain CAS history, exact creation retries and bounded all-or-none bulk changes. Templates/applications bind a selected revision and retry key. Message-derived tasks require continuing current source-room access; neither manager access nor a copied description bypasses private scope. Favourites/recommendations re-resolve current resource/eligibility rights.
 
-Test entry point: [workbench-db-tests.mjs](scripts/workbench-db-tests.mjs).
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
 
 <a id="section-migration-guide-45-audited-teaching-time-printable-finance-facts-and-control-center"></a>
 
 ### 45. Audited teaching time, printable finance facts and Control Center
 
-Source: [20261116091017_timesheets_finance_and_control_center.sql](supabase/migrations/20261116091017_timesheets_finance_and_control_center.sql).
+Source: [20261116091017_timesheets_finance_and_control_center.sql](../supabase/migrations/20261116091017_timesheets_finance_and_control_center.sql).
 
 Timesheets bind actual assignment sessions, bounded intervals/breaks, nonoverlap and audited review/retry state. Accepted compensation remains unchanged. Current capability/MFA gates own/all printable stable-hash facts, original-currency forecasts and date-bounded operational exceptions; customer gross requires its separate capability. No accounting, bank, payroll or legal-signature integration is implied.
 
-Test entry point: [timesheets-finance-db-tests.mjs](scripts/timesheets-finance-db-tests.mjs).
+Test entry point: [timesheets-finance-db-tests.mjs](../scripts/timesheets-finance-db-tests.mjs).
 
 <a id="section-migration-guide-46-revocable-private-calendar-capabilities"></a>
 
 ### 46. Revocable private calendar capabilities
 
-Source: [20261116091018_private_calendar_subscriptions.sql](supabase/migrations/20261116091018_private_calendar_subscriptions.sql).
+Source: [20261116091018_private_calendar_subscriptions.sql](../supabase/migrations/20261116091018_private_calendar_subscriptions.sql).
 
 Own creation/rotation/revocation binds CAS/retry keys and stores only a token hash plus explicit private-event inclusion and expiry. Service-only snapshot/recheck routines validate current active owner and the capability before/after rendering. The exact GET calendar-feed endpoint is the reviewed JWT exception; all other function authentication remains unchanged.
 
-Test entry point: [calendar-subscriptions-db-tests.mjs](scripts/calendar-subscriptions-db-tests.mjs).
+Test entry point: [calendar-subscriptions-db-tests.mjs](../scripts/calendar-subscriptions-db-tests.mjs).
 
 <a id="section-migration-guide-47-current-permission-unified-search"></a>
 
 ### 47. Current-permission unified search
 
-Source: [20261116091019_permission_aware_unified_search.sql](supabase/migrations/20261116091019_permission_aware_unified_search.sql).
+Source: [20261116091019_permission_aware_unified_search.sql](../supabase/migrations/20261116091019_permission_aware_unified_search.sql).
 
 Adds a checked paginated union across the actual authorized modules, with kind/title/UUID cursor and bounded input/page size. Selected wiki revisions, current chat/task access and commercial capability checks prevent a search index from becoming a new read grant. No global materialized search table or all-pages browser download is added.
 
-Test entry point: [unified-search-db-tests.mjs](scripts/unified-search-db-tests.mjs).
+Test entry point: [unified-search-db-tests.mjs](../scripts/unified-search-db-tests.mjs).
 
 <a id="section-migration-guide-48-cross-feature-notification-targets-and-delivery-rechecks"></a>
 
 ### 48. Cross-feature notification targets and delivery rechecks
 
-Source: [20261116091020_smart_operations_notifications.sql](supabase/migrations/20261116091020_smart_operations_notifications.sql).
+Source: [20261116091020_smart_operations_notifications.sql](../supabase/migrations/20261116091020_smart_operations_notifications.sql).
 
 Replaces earlier target/category/prepare/reminder/attention definitions with the combined course, task, waitlist/substitution, timesheet and existing notification model. Committed changes emit scoped generic notifications; current recipient, channel, quiet-window and resource rights are checked again at delivery. Read this latest definition after the initial inbox/email/Push migrations.
 
-Test entry point: [smart-notifications-db-tests.mjs](scripts/smart-notifications-db-tests.mjs).
+Test entry point: [smart-notifications-db-tests.mjs](../scripts/smart-notifications-db-tests.mjs).
 
 <a id="section-migration-guide-49-direct-current-authorisation-task-lookup"></a>
 
 ### 49. Direct current-authorisation task lookup
 
-Source: [20261116091022_workbench_direct_task_lookup.sql](supabase/migrations/20261116091022_workbench_direct_task_lookup.sql).
+Source: [20261116091022_workbench_direct_task_lookup.sql](../supabase/migrations/20261116091022_workbench_direct_task_lookup.sql).
 
 Resolves an explicit task deep link through the same current task/source-message helper used by paged tasks. Finding a private task by UUID never widens its visibility and avoids fetching every history page in the browser. No new table is created.
 
-Test entry point: [workbench-db-tests.mjs](scripts/workbench-db-tests.mjs).
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
 
 <a id="section-migration-guide-50-versioned-customer-teaching-briefs-and-immutable-request-snapshots"></a>
 
 ### 50. Versioned customer teaching briefs and immutable request snapshots
 
-Source: [20261116091023_client_request_brief_and_history.sql](supabase/migrations/20261116091023_client_request_brief_and_history.sql).
+Source: [20261116091023_client_request_brief_and_history.sql](../supabase/migrations/20261116091023_client_request_brief_and_history.sql).
 
 Adds explicit whole teaching units of 45/60 minutes, required-document descriptions and exact scanned material/report attachments without changing original prices. Required minutes must fit planned sessions. Atomic creation retries compare the immutable first brief; edits share the publication row lock and CAS boundary before publication. Current organisation history uses stable pages, while repeat booking copies requirements/time but no attachments or learner records.
 
-Test entry point: [client-request-brief-db-tests.mjs](scripts/client-request-brief-db-tests.mjs).
+Test entry point: [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
 
 <a id="section-migration-guide-51-own-qualification-passport-facts"></a>
 
 ### 51. Own qualification passport facts
 
-Source: [20261116091024_own_qualification_passport.sql](supabase/migrations/20261116091024_own_qualification_passport.sql).
+Source: [20261116091024_own_qualification_passport.sql](../supabase/migrations/20261116091024_own_qualification_passport.sql).
 
 The invoker API accepts locale and a bounded current snapshot instant, derives its subject from the actual active lecturer and returns explicit facts plus SHA-256. Verified/unverified/expired eligibility, current evidence availability and historical attestation provenance remain separate. It neither exports certificate bytes/private paths nor creates verification decisions. The protected PDF gateway repeats the same facts/access read before releasing generated bytes.
 
-Test entry points: [qualification-passport-db-tests.mjs](scripts/qualification-passport-db-tests.mjs), [qualification-passport-api-check.mjs](scripts/qualification-passport-api-check.mjs).
+Test entry points: [qualification-passport-db-tests.mjs](../scripts/qualification-passport-db-tests.mjs), [qualification-passport-api-check.mjs](../scripts/qualification-passport-api-check.mjs).
 
 <a id="section-migration-guide-52-recipient-role-substitution-pricing-and-unknown-forecast-costs"></a>
 
 ### 52. Recipient-role substitution pricing and unknown forecast costs
 
-Source: [20261116091025_role_aware_handover_and_forecast.sql](supabase/migrations/20261116091025_role_aware_handover_and_forecast.sql).
+Source: [20261116091025_role_aware_handover_and_forecast.sql](../supabase/migrations/20261116091025_role_aware_handover_and_forecast.sql).
 
 Captures the recipient's own private role-pricing context and net quote. Acceptance rechecks that context under the existing locks, then independently verifies the inserted claim and revenue snapshot. Original accepted fees and customer gross remain immutable. Other lecturers and ordinary management cannot inspect the recipient's fee/hash. Role-dependent prospective costs remain unknown (`null`) with an explicit count rather than presenting the raw privacy sentinel as a zero cost.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs).
 
 <a id="section-migration-guide-53-withdrawal-authority-after-concurrent-role-edits"></a>
 
 ### 53. Withdrawal authority after concurrent role edits
 
-Source: [20261116091026_substitution_withdrawal_permission_recheck.sql](supabase/migrations/20261116091026_substitution_withdrawal_permission_recheck.sql).
+Source: [20261116091026_substitution_withdrawal_permission_recheck.sql](../supabase/migrations/20261116091026_substitution_withdrawal_permission_recheck.sql).
 
 Rechecks current manager withdrawal capability after the profile, schedule, job, claim and offer locks. A request queued behind a role edit cannot use its former permission. Immutable proposer/source ownership remains a separate active-account right. No released substitution implementation is edited.
 
-Test entry point: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), including an observed blocked-session negative-control regression.
+Test entry point: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover.archived.mjs), including an observed blocked-session negative-control regression.
 
 <a id="section-migration-guide-54-current-course-context-in-the-own-teaching-day"></a>
 
 ### 54. Current course context in the own Teaching Day
 
-Source: [20261116091027_teaching_day_course_workspace.sql](supabase/migrations/20261116091027_teaching_day_course_workspace.sql).
+Source: [20261116091027_teaching_day_course_workspace.sql](../supabase/migrations/20261116091027_teaching_day_course_workspace.sql).
 
 Extends the existing own-day projection with the current nonarchived course, its explicitly selected same-organisation shared contact, shared preparation totals and bounded exact authorised clean resource versions. The active lecturer must still own a confirmed, unreleased assignment session. Internal contacts/notes, another organisation's contact and private document versions remain excluded. Shared progress stays distinct from the lecturer's three private checklist items.
 
-Test entry points: [teaching-day-course-db-tests.mjs](scripts/teaching-day-course-db-tests.mjs), [dashboard-personal-api-check.mjs](scripts/dashboard-personal-api-check.mjs).
+Test entry points: [teaching-day-course-db-tests.mjs](../scripts/teaching-day-course-db-tests.mjs), [dashboard-personal-api-check.mjs](../scripts/dashboard-personal-api-check.mjs).
 
 <a id="section-migration-guide-55-current-resulting-assignment-on-accepted-retries"></a>
 
 ### 55. Current resulting assignment on accepted retries
 
-Source: [20261116091029_substitution_receipt_current_status.sql](supabase/migrations/20261116091029_substitution_receipt_current_status.sql).
+Source: [20261116091029_substitution_receipt_current_status.sql](../supabase/migrations/20261116091029_substitution_receipt_current_status.sql).
 
 An exact accepted-offer retry reads the resulting claim's current owner, job and status under the existing locks. A subsequently cancelled assignment returns `cancelled`, without new reservations, notifications or audit events. Exact quote hash and explicit terms consent remain mandatory. Historical accepted-offer state alone no longer fabricates a current confirmation.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs).
 
 <a id="section-migration-guide-56-current-lecturer-authority-on-accepted-retries"></a>
 
 ### 56. Current lecturer authority on accepted retries
 
-Source: [20261116091030_substitution_retry_current_lecturer_authority.sql](supabase/migrations/20261116091030_substitution_retry_current_lecturer_authority.sql).
+Source: [20261116091030_substitution_retry_current_lecturer_authority.sql](../supabase/migrations/20261116091030_substitution_retry_current_lecturer_authority.sql).
 
 After the existing profile/workflow locks and exact consent checks, accepted retries require current lecturer authority. An active account that lost its teaching role receives `not_eligible`; a suspended account is denied. Tests observe both role and activation mutations holding the profile lock, then verify the waiting request uses the newly committed authority without changing business history or creating notices.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
 
 <a id="section-migration-guide-57-explicit-plpgsql-initializer-types-and-quiz-index"></a>
 
 ### 57. Explicit PL/pgSQL initializer types and quiz index
 
-Source: [20261116091031_smart_operations_explicit_plpgsql_types.sql](supabase/migrations/20261116091031_smart_operations_explicit_plpgsql_types.sql).
+Source: [20261116091031_smart_operations_explicit_plpgsql_types.sql](../supabase/migrations/20261116091031_smart_operations_explicit_plpgsql_types.sql).
 
 The strict complete-CI lint gate found implicit text-to-UUID-array/JSONB initializer conversions and a shadowed quiz loop index/unused local row. This forward migration explicitly types the three empty values, removes the unused declaration and gives the automatic loop index its own name. Independent exact-definition comparison confirms every other business, permission, lock, retry and grant remains unchanged. All three replacement routines pass actual `plpgsql_check` with ordinary/extra
 warnings enabled; focused course/workbench/brief SQL flows pass. The complete CI gate is retained.
 
-Test entry points: [course-workspace-db-tests.mjs](scripts/course-workspace-db-tests.mjs), [workbench-db-tests.mjs](scripts/workbench-db-tests.mjs), [client-request-brief-db-tests.mjs](scripts/client-request-brief-db-tests.mjs).
+Test entry points: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs), [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs), [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
 
 <a id="section-migration-guide-58-effective-accepted-amendments-and-active-forecast-months"></a>
 
 ### 58. Effective accepted amendments and active forecast months
 
-Source: [20261116091032_amendment_aware_finance_forecast.sql](supabase/migrations/20261116091032_amendment_aware_finance_forecast.sql).
+Source: [20261116091032_amendment_aware_finance_forecast.sql](../supabase/migrations/20261116091032_amendment_aware_finance_forecast.sql).
 
 An internal, ungranted adapter resolves the optional Formal Amendments module's actual `effective_assignment(uuid)` at read time. Current accepted lecturer cost and margin use that effective net; only unreleased allocations choose the month. Original claims and customer-gross ledger rows remain immutable. Valid accepted zero fees are supported; missing, negative and nonfinite snapshots fail. The original-currency, nullable prospective-price and current finance/MFA boundaries stay effective.
 
-Test entry point: [amendment-forecast-db-tests.mjs](scripts/amendment-forecast-db-tests.mjs). Default replay verifies the current source; explicit pinned local amendment fixtures exercise real consent/application in both installation orders. The executed21 focused groups and14 existing finance groups are separate from full native/Auth/browser acceptance. Contract and evidence.
+Test entry point: [amendment-forecast-db-tests.mjs](../scripts/amendment-forecast-db-tests.mjs). Default replay verifies the current source; explicit pinned local amendment fixtures exercise real consent/application in both installation orders. The executed21 focused groups and14 existing finance groups are separate from full native/Auth/browser acceptance. Contract and evidence.
 
 <a id="section-migration-guide-59-dedicated-private-document-isolation-at-course-boundaries"></a>
 
 ### 59. Dedicated private document isolation at course boundaries
 
-Source: [20261116091034_course_document_dedicated_registry_isolation.sql](supabase/migrations/20261116091034_course_document_dedicated_registry_isolation.sql).
+Source: [20261116091034_course_document_dedicated_registry_isolation.sql](../supabase/migrations/20261116091034_course_document_dedicated_registry_isolation.sql).
 
 Optional Support, enquiry and customer-invoice registries are checked dynamically on course selection, sharing, current resource reads and exact download facts. An unconditional course-resource trigger and shared document/version locks serialize cross-domain registration. Removed share history still prevents reusing the same document for a private enquiry. Normal authorised exact-version teaching resources retain their course audience access. Existing routine identities, unrelated action
 branches and private execution grants are preserved.
 
-Test entry point: [course-document-privacy-db-tests.mjs](scripts/course-document-privacy-db-tests.mjs). Its self-contained, hash-bound contract metadata and exact enquiry RPC excerpt exercise18 groups in both module orders, including observed lock races. These fixtures do not claim full foreign-module or actual Edge/Auth acceptance. Boundary and evidence.
+Test entry point: [course-document-privacy-db-tests.mjs](../scripts/course-document-privacy-db-tests.mjs). Its self-contained, hash-bound contract metadata and exact enquiry RPC excerpt exercise18 groups in both module orders, including observed lock races. These fixtures do not claim full foreign-module or actual Edge/Auth acceptance. Boundary and evidence.
 
 <a id="section-migration-guide-60-current-waitlist-authority-after-a-profile-lock-wait"></a>
 
 ### 60. Current waitlist authority after a profile-lock wait
 
-Source: [20261116091534_waitlist_current_authority_after_profile_lock.sql](supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql).
+Source: [20261116091534_waitlist_current_authority_after_profile_lock.sql](../supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql).
 
 Replaces only the existing private waitlist mutation implementation, preserving its public API and grants. Immediately after the existing profile `FOR SHARE` lock, it rechecks current account activation and, for joining, current lecturer authority. A request that waited behind a committed suspension may neither join nor leave using the earlier authority result; the waitlist and corresponding notice remain unchanged. An active former lecturer may still withdraw their own existing interest. No
 assignment, capacity reservation or accepted commercial snapshot is changed.
 
-Test entry point: [waitlist-authority-db-tests.mjs](scripts/waitlist-authority-db-tests.mjs). Four deterministic real PostgreSQL cases observe the profile-lock wait and verify suspended join/leave denial, downgraded-role join denial and permitted active-former-lecturer withdrawal. The vulnerable original routine fails the suspension regression before this correction; all four cases pass with the new migration. These focused results do not replace current combined native/Auth/browser acceptance.
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). Four deterministic real PostgreSQL cases observe the profile-lock wait and verify suspended join/leave denial, downgraded-role join denial and permitted active-former-lecturer withdrawal. The vulnerable original routine fails the suspension regression before this correction; all four cases pass with the new migration. These focused results do not replace current combined native/Auth/browser acceptance.
 The preceding 59 SQL files remain byte-identical.
 
 <a id="section-migration-guide-61-metadata-private-waitlist-withdrawal-and-retained-interest"></a>
 
 ### 61. Metadata-private waitlist withdrawal and retained interest
 
-Source: [20261116100136_waitlist_private_withdrawal_receipts.sql](supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql).
+Source: [20261116100136_waitlist_private_withdrawal_receipts.sql](../supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql).
 
 An idempotent leave request is own-state cleanup, not a foreign job lookup. After the current active-account/profile-lock checks, a caller without their own interest receives the same empty-title receipt for guessed private or missing job IDs before any foreign job lookup or row lock. Null job IDs remain denied. All successful leave receipts omit the title, including when removing a genuine own row, and preserve the permitted withdrawal by an active former lecturer.
 
 Stored own interest does not grant access to later private job edits. Exact and own-list projections redact draft/archived titles unless the caller currently has ordinary job-read authority. The existing reduced published/filled marketplace projection remains intact. The UI labels hidden interest generically, omits its job-detail link and retains its own leave action; no private title or job-existence oracle is introduced by withdrawal. The preceding 60 migration files and public API/grant
 identities remain unchanged.
 
-Test entry point: [waitlist-authority-db-tests.mjs](scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance;
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance;
 exact broader outcomes belong in the relevant pull request checks.
 
 <a id="section-migration-guide-62-explicit-safe-update-targets-for-service-only-push-configuration"></a>
 
 ### 62. Explicit safe-update targets for service-only Push configuration
 
-Source: [20261116101427_web_push_safe_update_targets.sql](supabase/migrations/20261116101427_web_push_safe_update_targets.sql).
+Source: [20261116101427_web_push_safe_update_targets.sql](../supabase/migrations/20261116101427_web_push_safe_update_targets.sql).
 
 Preserves the existing private `configure_web_push` signature, public invoker wrapper, service-only execution grants and public-key validation. A changed VAPID public key invalidates only currently active subscriptions with an explicit `WHERE active` predicate. The configuration write targets its existing singleton with `WHERE singleton=true`. Inactive device history is retained; the database's safe-update protection remains enabled rather than being disabled to permit unbounded updates.
 
-The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test.
-Existing [Push PostgreSQL checks](scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in the relevant pull request checks; a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
+The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test.
+Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in the relevant pull request checks; a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
 
 <a id="section-migration-guide-63-derived-course-readiness-and-scoped-preparation"></a>
 
 ### 63. Derived course readiness and scoped preparation
 
-Source: [20261116121554_course_readiness.sql](supabase/migrations/20261116121554_course_readiness.sql).
+Source: [20261116121554_course_readiness.sql](../supabase/migrations/20261116121554_course_readiness.sql).
 
 Private settings/tasks/instruction receipts complement live assignment, agreement, qualification, material, contact and schedule checks. No percentage setter exists. Reads require current course management/MFA or assignment ownership; historical or published visibility alone does not grant preparation access. Writers lock the run before the preparation advisory lock, and compare reviewed versions. A thin wrapper reuses current standalone job creation and fills its newly created run's mode/venue;
 it never rewrites existing authored runs.
 
-Tests: [readiness-db-tests.mjs](scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](scripts/readiness-api-check.mjs).
+Tests: [readiness-db-tests.mjs](../scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](../scripts/readiness-api-check.mjs).
 
 <a id="section-migration-guide-64-private-support-tickets-and-dedicated-attachments"></a>
 
 ### 64. Private support tickets and dedicated attachments
 
-Source: [20261116121556_internal_support_desk.sql](supabase/migrations/20261116121556_internal_support_desk.sql).
+Source: [20261116121556_internal_support_desk.sql](../supabase/migrations/20261116121556_internal_support_desk.sql).
 
 Own ticket history and explicit MFA support authority replace an administrator-wide shortcut. Replies, internal notes, transitions, version checks and retry receipts stay private; internal notes/files are withheld from requesters. Clean single-version evidence becomes dedicated/frozen and the ticket ACL takes precedence over ordinary personal-document ownership, including after role revocation.
 
-Tests: [support-db-tests.mjs](scripts/support-db-tests.mjs), [support-api-check.mjs](scripts/support-api-check.mjs).
+Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-check.mjs](../scripts/support-api-check.mjs).
 
-The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. Chronology and evidence.
+The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](../scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. Chronology and evidence.
 
 <a id="section-migration-guide-65-whole-block-replacement-without-premature-release"></a>
 
 ### 65. Whole-block replacement without premature release
 
-Source: [20261116121558_replacement_marketplace.sql](supabase/migrations/20261116121558_replacement_marketplace.sql).
+Source: [20261116121558_replacement_marketplace.sql](../supabase/migrations/20261116121558_replacement_marketplace.sql).
 
 Open/selected emergency searches keep the original confirmed allocation. Sorted profile/lecturer locks precede job/claim/offer locks. The existing current claim implementation executes inside a subtransaction; every failed handover restores the original, while success retains old financial/schedule history and transfers current calendar/chat/file authority. Optional role-price helpers are discovered by exact trusted signatures and missing quotes fail closed. Started/invoiced/partial-work
 orchestration and ordered notifications remain explicit limitations.
 
-Tests: [replacements-db-tests.mjs](scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](scripts/replacements-api-check.mjs).
+Tests: [replacements-db-tests.mjs](../scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](../scripts/replacements-api-check.mjs).
 
 <a id="section-migration-guide-66-immutable-lecturer-delivery-evidence"></a>
 
 ### 66. Immutable lecturer delivery evidence
 
-Source: [20261116121600_attendance_delivery.sql](supabase/migrations/20261116121600_attendance_delivery.sql).
+Source: [20261116121600_attendance_delivery.sql](../supabase/migrations/20261116121600_attendance_delivery.sql).
 
 Assignment sessions own drafts, immutable submitted revisions and independent review/customer events. Version/request locks protect concurrent changes. Customer projections omit draft/private notes/invoice IDs; existing accepted fees and invoices never change when evidence is corrected. The feature records freelance teaching delivery and does not introduce payroll or clock-in processing.
 
-Tests: [delivery-db-tests.mjs](scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](scripts/delivery-api-check.mjs).
+Tests: [delivery-db-tests.mjs](../scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](../scripts/delivery-api-check.mjs).
 
 <a id="section-migration-guide-67-current-authority-operational-inbox-targets"></a>
 
 ### 67. Current-authority operational inbox targets
 
-Source: [20261116121603_operations_notification_integration.sql](supabase/migrations/20261116121603_operations_notification_integration.sql).
+Source: [20261116121603_operations_notification_integration.sql](../supabase/migrations/20261116121603_operations_notification_integration.sql).
 
 Preserves the prior resolver and composes readiness/support/delivery/replacement destinations under current access. Assigned preparation reminders respect preferences and actual task changes. Removed memberships, cancelled allocations and revoked capabilities cannot turn an old notification into a private-resource link. No mail service or public cache is added.
 
-Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. The extension ledger distinguishes executed focused checks from full acceptance and release status.
+Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. The extension ledger distinguishes executed focused checks from full acceptance and release status.
 
 <a id="section-migration-guide-68-optional-forward-notification-and-handover-composition"></a>
 
 ### 68. Optional forward notification and handover composition
 
-Source: [20261116121605_operational_module_notification_handover_integration.sql](supabase/migrations/20261116121605_operational_module_notification_handover_integration.sql).
+Source: [20261116121605_operational_module_notification_handover_integration.sql](../supabase/migrations/20261116121605_operational_module_notification_handover_integration.sql).
 
 Replaces the current inbox target in place and retains an owner-only trusted core/smart fallback. Readiness, delivery, support and marketplace targets retain their own current resource checks; exact optional enquiry/amendment helpers fail closed when absent. Where directed substitutions are installed, an accepted transition atomically closes competing open marketplace offers, with idempotent historical repair. No email/push category is activated. Later modules that replace this resolver must
 preserve its composition in their own newer migration.
 
-Tests: automatically discovered [operational-forward-db-tests.mjs](scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](scripts/operational-pr17-integration.mjs). Integration, chronology and actual evidence.
+Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](../scripts/operational-pr17-integration.mjs). Integration, chronology and actual evidence.
 
 <a id="section-migration-guide-69-private-website-enquiry-intake-and-planning"></a>
 
 ### 69. Private website enquiry intake and planning
 
-Source: [20261116143242_website_enquiry_intake.sql](supabase/migrations/20261116143242_website_enquiry_intake.sql).
+Source: [20261116143242_website_enquiry_intake.sql](../supabase/migrations/20261116143242_website_enquiry_intake.sql).
 
 A service-only intake RPC validates a bounded, consent-versioned submission and records original private content, sender-scoped retry identity and durable rate limits. Current `organisations.manage` and MFA protect the management queue, history, assignment, notes and customer linking. Conversion additionally requires `courses.manage`, locks the enquiry and creates a complete unpublished course run atomically; it creates no accepted quote, job or customer account. Private ledgers retain RLS
 without direct browser grants.
@@ -2614,7 +2614,7 @@ without direct browser grants.
 The current notification resolver discovers its owner-only enquiry helper without renaming the accepted resolver or granting authenticated users direct helper execution. Later capability/status revocation is checked after lock waits. The integration-only Edge endpoint remains disabled by default and requires a separate server credential; a public Website change or external delivery is not implied by a source merge. See [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) for the HTTP contract
 and activation boundary.
 
-Tests: [enquiries-db-tests.mjs](scripts/enquiries-db-tests.mjs), [enquiries-upgrade-db-tests.mjs](scripts/enquiries-upgrade-db-tests.mjs), [enquiries-api-check.mjs](scripts/enquiries-api-check.mjs) and [enquiries.spec.ts](tests/e2e/enquiries.spec.ts). These are entry points; actual execution remains source-bound evidence in the relevant pull request checks.
+Tests: [enquiries-db-tests.mjs](../scripts/enquiries-db-tests.mjs), [enquiries-upgrade-db-tests.mjs](../scripts/enquiries-upgrade-db-tests.mjs), [enquiries-api-check.mjs](../scripts/enquiries-api-check.mjs) and [enquiries.spec.ts](../tests/e2e/enquiries.spec.ts). These are entry points; actual execution remains source-bound evidence in the relevant pull request checks.
 
 <a id="section-migration-guide-the-critical-data-flows"></a>
 
@@ -2678,7 +2678,7 @@ source-file reconciliation before release, not an installed-database history rep
 | 20261116063201         | 20261116091032         | Then pending PR17 file   |
 | 20261116065156         | 20261116091034         | Then pending PR17 file   |
 
-A private experimental database that applied earlier unmerged identifiers needs separate inspection; never reset or falsify its history. Actual hosted history and any planned installation require the existing exact-source migration review, backup, writer-stop and recovery gates. The reviewed updater plan is an operating-controller extension, not a migration; [REVIEWED_MIGRATION_PLANS](OPERATIONS.md#section-reviewed-migration-plans) documents its release/history binding and one-shot approval.
+A private experimental database that applied earlier unmerged identifiers needs separate inspection; never reset or falsify its history. Actual hosted history and any planned installation require the existing exact-source migration review, backup, writer-stop and recovery gates. The reviewed updater plan is an operating-controller extension, not a migration; [REVIEWED_MIGRATION_PLANS](../OPERATIONS.md#section-reviewed-migration-plans) documents its release/history binding and one-shot approval.
 Source documentation proves no live activation or complete acceptance.
 
 <a id="section-migration-guide-before-changing-sql"></a>
@@ -2695,13 +2695,13 @@ Source documentation proves no live activation or complete acceptance.
 
 ## Job briefing migration
 
-[Job briefing contacts and references](supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](GUIDE.md#section-job-briefing).
+[Job briefing contacts and references](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](GUIDE.md#section-job-briefing).
 
 <a id="section-migration-guide-71-reasoned-short-notice-assignment-withdrawals"></a>
 
 ### 71. Reasoned short-notice assignment withdrawals
 
-Source: [20261116170334_assignment_withdrawal_requests.sql](supabase/migrations/20261116170334_assignment_withdrawal_requests.sql).
+Source: [20261116170334_assignment_withdrawal_requests.sql](../supabase/migrations/20261116170334_assignment_withdrawal_requests.sql).
 
 Adds private application and actor-command tables with RLS and no client table
 grants. Own withdrawal at least 168 hours before the first session releases the
@@ -2712,9 +2712,9 @@ private cancellation/lifecycle/notification helpers are retained behind restrict
 wrappers; the old self-cancellation endpoint cannot bypass review. A claim-status
 trigger closes requests overtaken by administrative cancellation or substitution.
 
-Test entry points: [claim-withdrawal-db-tests.mjs](scripts/claim-withdrawal-db-tests.mjs),
-[assignment-withdrawal-api-check.mjs](scripts/assignment-withdrawal-api-check.mjs)
-and [assignment-withdrawal.spec.ts](tests/e2e/assignment-withdrawal.spec.ts).
+Test entry points: [claim-withdrawal-db-tests.mjs](../scripts/claim-withdrawal-db-tests.mjs),
+[assignment-withdrawal-api-check.mjs](../scripts/assignment-withdrawal-api-check.mjs)
+and [assignment-withdrawal.spec.ts](../tests/e2e/assignment-withdrawal.spec.ts).
 See [workflow and operations](GUIDE.md#section-assignment-withdrawals) and the pull request for actual
 executed results; this inventory does not certify a hosted installation.
 
@@ -2792,7 +2792,7 @@ Persist only non-sensitive UI preferences such as locale and theme. Switching lo
 > The recorded 16 November 2026 06:42:36 UTC snapshot had three active `main` rulesets and the sole personal PR-only review exception for `CarinaSchoppe` (`User:29256704`). The 12:16:58 UTC disabled-review readback is historical. A subsequent live readback confirms review ruleset `27329000` active after its 13:38 UTC update; all fifteen strict checks and the separate history/signature layer retain no bypass actors, and neither roles nor the maintenance App gain a review exception. Root changed
 > no server settings. [GitHub administration](DEVELOPMENT.md#section-github-workflow-active-rule-layers) retains the dated chronology. The prepared App controller still requires independent current-head review for every author, and active policy alone does not prove its delivery.
 
-The prepared integration now includes accepted Main38 `bcba6734`, with all 69 released SQL files and Main25 production application bytes unchanged. Its support browser fixture and API-generator/documentation changes still require fresh combined-source acceptance. QA results scopes the pre-Main38 697/358/31/8 local checks and pending `02dc8a84` workflow; [ROADMAP](ROADMAP.md) retains the full A–N scope. The retired implementation plan/work log are not recreated, and neither prior evidence nor
+The prepared integration now includes accepted Main38 `bcba6734`, with all 69 released SQL files and Main25 production application bytes unchanged. Its support browser fixture and API-generator/documentation changes still require fresh combined-source acceptance. QA results scopes the pre-Main38 697/358/31/8 local checks and pending `02dc8a84` workflow; [ROADMAP](../ROADMAP.md) retains the full A–N scope. The retired implementation plan/work log are not recreated, and neither prior evidence nor
 source presence establishes controller/App-merge delivery or production acceptance.
 
 **Pre-Main38 Main25 evidence:** Current Main25 quality composition includes accepted `4f7f6c06` and exactly 69 SQL sources, with the previous 68 unchanged. Local checks pass 697 frontend cases/91 files, V8 S66.70/B62.08/F56.69/L68.84%, both critical APIs 100% across 65 included cases, 358 runtime/maintenance cases including 17 real Deno HTTP cases, 31 package cases in 10.2 seconds and eight production enquiry Edge-handler cases. Full types/ESLint/actionlint/source-workflow-doc formatting,
@@ -2905,14 +2905,14 @@ The `PR preview deployments` workflow is manual-only. The verified downloadable
 PR package remains an artifact, independent of optional deployment metadata.
 See [PR_PREVIEWS](DEVELOPMENT.md#section-pr-previews) for that explicit publication and cleanup path.
 
-[CodeQL](.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, Dependency review and the generated CodeQL finding result are mandatory PR checks.
+[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, Dependency review and the generated CodeQL finding result are mandatory PR checks.
 Fourteen contexts are bound to GitHub Actions integration `15368`, and generated CodeQL to `57789`. The automatic publisher also verifies this separate Security workflow succeeded on the exact main push. The manual release job keeps its existing dependencies.
 
 <a id="section-ci-quality-interpreting-source-and-integration-evidence"></a>
 
 ## Interpreting source and integration evidence
 
-The checked-in migration inventory and generated [API reference](API_REFERENCE.md) describe current source. Counts in earlier 24-, 27-, 32- or 36-migration checkpoints below remain historical measurements. They are not current inventory or acceptance of a later composition. The current module-to-suite map is [FUNCTIONAL_ACCEPTANCE](DEVELOPMENT.md#section-functional-acceptance); actual executed outcomes belong in the relevant pull request checks.
+The checked-in migration inventory and generated [API reference](../API_REFERENCE.md) describe current source. Counts in earlier 24-, 27-, 32- or 36-migration checkpoints below remain historical measurements. They are not current inventory or acceptance of a later composition. The current module-to-suite map is [FUNCTIONAL_ACCEPTANCE](DEVELOPMENT.md#section-functional-acceptance); actual executed outcomes belong in the relevant pull request checks.
 
 Documentation and metadata checks cover their own scope. API-generator, test, workflow or infrastructure changes conservatively select full acceptance. The required suite must pass on the final submitted source; neither collection, an earlier green revision nor a merged PR proves hosted installation.
 
@@ -2937,7 +2937,7 @@ coverage command and retains its reports with the private test artifacts.
 The later functional preflight integrating accepted Main16 source, the Calendar correction and the scoped picker fixes passed **372/372 Vitest cases in 57 files**: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. This is actual unit/component evidence for that functional checkpoint. Documentation integration and complete native acceptance still require a fresh combined run; these percentages are not an overall system-coverage
 or production claim.
 
-Critical areas have stricter gates: 100% for browser-key configuration, time-zone/DST/date logic and scheduling; separate high statement/branch/function/line thresholds for file transfer and safe knowledge content. Exact values are in [vite.config.ts](vite.config.ts). Future improvements should raise measured coverage; thresholds are not automatically lowered.
+Critical areas have stricter gates: 100% for browser-key configuration, time-zone/DST/date logic and scheduling; separate high statement/branch/function/line thresholds for file transfer and safe knowledge content. Exact values are in [vite.config.ts](../vite.config.ts). Future improvements should raise measured coverage; thresholds are not automatically lowered.
 
 New real cases check uploads only after online/auth confirmation, progress capped at 95% until clean status is confirmed, quarantine/timeouts/retry context, exact-version `no-store` downloads and rejection of secret browser keys. The test run needs no real user or customer file.
 
@@ -2945,7 +2945,7 @@ New real cases check uploads only after online/auth confirmation, progress cappe
 
 ## Dependabot and security features
 
-[dependabot.yml](.github/dependabot.yml) adds updates for SHA-pinned GitHub Actions (Mondays 04:17 UTC / 14:17 Brisbane) and npm security fixes (daily configuration 04:47 UTC / 14:47 Brisbane). Regular npm/Node/JSR/container versions remain with the existing daily full candidate-verification path, avoiding two uncoordinated systems handling the same regular updates. Vitest and `@vitest/*` are treated there as one family with matching exact peers.
+[dependabot.yml](../.github/dependabot.yml) adds updates for SHA-pinned GitHub Actions (Mondays 04:17 UTC / 14:17 Brisbane) and npm security fixes (daily configuration 04:47 UTC / 14:47 Brisbane). Regular npm/Node/JSR/container versions remain with the existing daily full candidate-verification path, avoiding two uncoordinated systems handling the same regular updates. Vitest and `@vitest/*` are treated there as one family with matching exact peers.
 
 Dependabot PRs receive suitable existing type/area/risk labels and run through the same checks. There is no blanket automatic merge of unverified dependencies. Dependabot alerts were already enabled; security-update PRs, Secret Scanning and Push Protection have now been enabled and read back on the public repository. The initially disabled dependency graph was enabled in repository settings; the real Dependency Review retry and comparison of 12 changed dependencies passed. No paid service was
 added. Full npm audit still reports the four previously documented low-severity build-tool findings in the unchanged `deepmerge`/Workbox chain; the production audit is separate. Dependency review evaluates newly introduced findings and does not declare this existing debt fixed.
@@ -3142,7 +3142,7 @@ CI retains separate safe summary artifacts for the verify and browser jobs, avoi
 
 ## Existing module slices and their connected suites
 
-This maps the authoritative specification A–N to delivered connected suites, including the accepted `99add7d` operational source and its 68 immutable migrations. Each row describes the **implemented slice**. This source inventory does not claim a fresh combined pass after that integration. The full remaining feature list in [roadmap](ROADMAP.md) is still required; these suite associations do not claim that every target feature or every branch already exists or is covered.
+This maps the authoritative specification A–N to delivered connected suites, including the accepted `99add7d` operational source and its 68 immutable migrations. Each row describes the **implemented slice**. This source inventory does not claim a fresh combined pass after that integration. The full remaining feature list in [roadmap](../ROADMAP.md) is still required; these suite associations do not claim that every target feature or every branch already exists or is covered.
 
 | Module                                                              | Real API/database suites under `scripts/`                                                                                                                                                                                                                                                                                                                                  | Browser files under `tests/e2e/`                                                                                                                                                                   |
 |---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -3160,7 +3160,7 @@ This maps the authoritative specification A–N to delivered connected suites, i
 | M Inbox/preferences/reminders/delivery                              | `notifications`, `attention`, `announcements`, `notification-delivery`, `web-push` API/DB; `notification-mail` API; `smart-notifications`, `web-push-safeupdate`, `operational-forward` DB; domain deduplication                                                                                                                                                           | `notifications`, `push`, `attention`, `announcements`, `dashboard`, `dashboard-personal`, `job-lifecycle`                                                                                          |
 | N Administration/audit/control centre/support                       | `accounts`, `admin-audit`, `taxonomy`, `comments`, `job-picker`, `announcements`, `qualifications`, `timesheets-finance`, `support` API/DB; `delegated-pricing` DB                                                                                                                                                                                                         | `accounts`, `admin-audit`, `taxonomy`, `comments`, `job-pickers`, `announcements`, `qualifications`, `timesheets-finance`, `roles-pricing`, `support`, `portal`                                    |
 
-SQL discovery selects every `*-db-tests.mjs` and API discovery selects every `*-api-check.mjs`. The core database runner and real Edge invitation run separately. HTTP suites use Auth-issued identities. The optional privileged TOTP policy has [dedicated SQL fixtures](scripts/privileged-authenticator-db-tests.mjs).
+SQL discovery selects every `*-db-tests.mjs` and API discovery selects every `*-api-check.mjs`. The core database runner and real Edge invitation run separately. HTTP suites use Auth-issued identities. The optional privileged TOTP policy has [dedicated SQL fixtures](../scripts/privileged-authenticator-db-tests.mjs).
 
 The latest operational addition supplies four API/DB pairs (`readiness`, `delivery`, `replacements`, `support`) and four new browser files with those same stems. Additional discovered SQL suites cover directed-versus-marketplace handover, individual lecturer pricing, support/course evidence registries, chat and document access after replacement, and forward notification integration. The historical role-percentage probes are retained as `*.archived.mjs` for reference. The separately invoked `support-course-pr17-check.mjs` requires a pinned source commit;
 `operational-pr17-integration.mjs` requires the installed smart-operations prerequisites. Neither is an automatically discovered API suite. Browser discovery determines the complete current title/project count; this inventory does not turn authored cases or older passing runs into acceptance of the 68-migration composition.
@@ -3211,13 +3211,13 @@ Local frozen `b93b400` passed the complete command with exit0 on16November2026:7
 
 # Creating and working on issues
 
-A useful issue describes a reproducible problem or a verifiable goal. Start with the [GitHub issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Please write new issues in English so everyone can follow the discussion. The overall contribution process is in [CONTRIBUTING](CONTRIBUTING.md).
+A useful issue describes a reproducible problem or a verifiable goal. Start with the [GitHub issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Please write new issues in English so everyone can follow the discussion. The overall contribution process is in [CONTRIBUTING](../CONTRIBUTING.md).
 
 <a id="section-issue-guide-before-opening-an-issue"></a>
 
 ## Before opening an issue
 
-Search open and closed issues as well as active pull requests. For an apparently missing product feature, check the [roadmap](ROADMAP.md). A feature listed as pending can be clarified in a proposal; it should not be reported as a broken workflow that has already been delivered.
+Search open and closed issues as well as active pull requests. For an apparently missing product feature, check the [roadmap](../ROADMAP.md). A feature listed as pending can be clarified in a proposal; it should not be reported as a broken workflow that has already been delivered.
 
 Keep each issue focused on one related problem. Report unrelated bugs separately so their reproduction, tests and resolution remain clear.
 
@@ -3294,9 +3294,9 @@ An issue may be closed as completed, duplicate or not planned; read its resoluti
 > Reviewed server snapshot on 16 November 2026 at 15:08:47 UTC (17 November in Australia/Brisbane): Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later
 > differ. [Reviewed rule configuration](DEVELOPMENT.md#section-github-workflow-active-rule-layers).
 
-This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development); reports start with the [issue guide](DEVELOPMENT.md#section-issue-guide). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
+This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development); reports start with the [issue guide](DEVELOPMENT.md#section-issue-guide). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](.github/labels.json) now
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now
 contains 36 managed labels; nine original GitHub labels are also preserved.
 
 The native controller and continuous read-only probe remain prepared; a manual metadata-access proof does not establish their default-branch execution.
@@ -3462,7 +3462,7 @@ The gated [PR preview package and deployment record](DEVELOPMENT.md#section-pr-p
 
 The review layer was reactivated after its 13:38 UTC update. An earlier 12:16 UTC disabled-layer observation is historical and does not establish a current policy blocker. No Root server-setting change is claimed; active protection alone does not prove default-branch controller execution or an App merge.
 
-Contributors should start with [CONTRIBUTING](CONTRIBUTING.md), the [issue guide](DEVELOPMENT.md#section-issue-guide) and the [pull request guide](DEVELOPMENT.md#section-pull-request-guide). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
+Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](DEVELOPMENT.md#section-issue-guide) and the [pull request guide](DEVELOPMENT.md#section-pull-request-guide). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 Current publication policy: `./portal check` and `./portal test` remain the local verification commands. After exact-current-main push runs of both Portal checks and Security analysis succeed, the trusted automatic CMS publisher can publish the immutable development release. The existing manual exact-SHA `Portal checks` dispatch remains available. PR deployment metadata remains manual-only; see [PR_PREVIEWS](DEVELOPMENT.md#section-pr-previews). The VPS independently applies its migration, backup
 and health gates; publication is not proof of installation.
@@ -3481,9 +3481,9 @@ pull-request rule. Committing JSON does not activate protection; later [server-s
 
 | Layer                    | Ruleset ID | Source                                        | Recorded exceptions                                                                        |
 |--------------------------|------------|-----------------------------------------------|--------------------------------------------------------------------------------------------|
-| History and integrity    | `27315671` | [history.json](.github/rulesets/history.json) | None: signatures, deletion/force-update restrictions and the existing history rules apply. |
-| Pull requests and review | `27329000` | [review.json](.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`) through PRs. No role or App exception.              |
-| Required verification    | `27329142` | [checks.json](.github/rulesets/checks.json)   | None: strict current-base checks apply to humans and Apps.                                 |
+| History and integrity    | `27315671` | [history.json](../.github/rulesets/history.json) | None: signatures, deletion/force-update restrictions and the existing history rules apply. |
+| Pull requests and review | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`) through PRs. No role or App exception.              |
+| Required verification    | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None: strict current-base checks apply to humans and Apps.                                 |
 
 Under that recorded active policy, the sole personal review exception follows `CarinaSchoppe` (immutable user ID `29256704`) when performing a native PR merge, not the PR author. It grants no direct-main push, CI bypass or history/signature bypass. Maintain/Admin roles confer no review exception; all other acting accounts need independent current-head approval, latest-push approval and resolved review conversations. The maintenance App uses the ordinary reviewed native path and has no review or
 check exception.
@@ -3586,10 +3586,10 @@ The packaged launcher uses owned local database identities and distinct ports. S
 
 ## Labels and metadata validation
 
-[labels.json](.github/labels.json) contains 36 managed entries: eight types, 24 areas, three risk levels and `merge:hold`. It is the shared catalogue used by local and CI validation. The stop signal grants no permission and does not replace categories or checks; preserve it until its stated concern is addressed. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values
+[labels.json](../.github/labels.json) contains 36 managed entries: eight types, 24 areas, three risk levels and `merge:hold`. It is the shared catalogue used by local and CI validation. The stop signal grants no permission and does not replace categories or checks; preserve it until its stated concern is addressed. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values
 within these three categories are rejected. The [pull request guide](DEVELOPMENT.md#section-pull-request-guide-pull-request-labels) explains how to choose them. The proposed metadata gate also rejects `merge:hold`; until that source is accepted on main, use Draft and disable native auto-merge as described above. A label alone does not pause the existing native queue.
 
-The [metadata workflow](.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed.
+The [metadata workflow](../.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed.
 Repository, PR number and live head identity are validated; titles, bodies and labels remain data. Its regression tests are discovered automatically by `./portal test`:
 
 ```bash
@@ -3625,7 +3625,7 @@ These tags are not production approvals or new Semver releases. They do not chan
 
 Bug reports and feature requests start with the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Blank issues are disabled in favour of the forms. This is a setting of the chooser interface, not a technical restriction on the issue API.
 
-Private vulnerability reporting is linked from [SECURITY](SECURITY.md). It, Secret Scanning and Push Protection were enabled and read back in earlier administration tasks; their current settings were not re-read during this documentation audit. Private reporting alone does not enable the other controls. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.
+Private vulnerability reporting is linked from [SECURITY](../SECURITY.md). It, Secret Scanning and Push Protection were enabled and read back in earlier administration tasks; their current settings were not re-read during this documentation audit. Private reporting alone does not enable the other controls. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.
 ## White-label browser build
 
 A default build uses the Luminovia internal edition. To preview a customer brand, set `PORTAL_ACADEMY_BRAND_FILE` to an absolute operator-owned JSON path and provide the usual public Supabase URL and publishable key. The JSON file contains only public display configuration. Keep licence material, credentials and operator configuration outside it.
@@ -3683,7 +3683,7 @@ Customer operators obtain the two trusted Ed25519 public keys and the expected i
 
 ### Prepare a dedicated customer runtime
 
-The [dedicated academy installation runbook](deploy/academy/README.md) pairs a fresh private backend with a customer-specific signed browser build. It covers the target JSON, independent credentials and volumes, first-administrator setup, loopback TLS checks and the explicit ingress profile.
+The [dedicated academy installation runbook](../deploy/academy/README.md) pairs a fresh private backend with a customer-specific signed browser build. It covers the target JSON, independent credentials and volumes, first-administrator setup, loopback TLS checks and the explicit ingress profile.
 
 For the database, the operator uses the staged local Compose installation or an explicit private libpq target. Run the following after applying the pinned migrations to an empty database. First provision and pin its licence, then through private GoTrue administration create the confirmed administrator and pass that Auth UUID to the second command.
 

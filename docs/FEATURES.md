@@ -1,6 +1,6 @@
 # Luminovia Portal – Funktionskatalog
 
-Dieser Katalog beschreibt die Funktionen im aktuellen Quellstand. Sichtbarkeit und Aktionen hängen von Edition, Rolle, Organisation, Kurszuordnung, Freigaben und Lizenz ab. Für Installationsfreigaben gelten die [Produkt-Roadmap](ROADMAP.md) und die [White-Label-Roadmap](WHITELABEL_ROADMAP.md).
+Dieser Katalog beschreibt die Funktionen im aktuellen Quellstand. Sichtbarkeit und Aktionen hängen von Edition, Rolle, Organisation, Kurszuordnung, Freigaben und Lizenz ab. Für Installationsfreigaben gelten die [Produkt-Roadmap](../ROADMAP.md) und die [White-Label-Roadmap](../WHITELABEL_ROADMAP.md).
 
 [Editionen](#editionen) · [Oberfläche](#oberfläche-einstieg-und-persönliche-einstellungen) · [Konten](#konten-unternehmen-und-berechtigungen) · [LMS](#kurse-klassen-und-premium-lms) · [Aufträge](#interne-aufträge-unternehmen-und-kursbetrieb) · [Kalender](#kalender-verfügbarkeit-und-importe) · [Zusammenarbeit](#kommunikation-wissensbasis-und-dateien) · [Finanzen](#interne-vergütung-verträge-rechnungen-und-analysen) · [API](#schnittstellen-und-integrationen) · [Betrieb](#white-label-installation-lizenz-und-betrieb)
 
@@ -90,12 +90,12 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 
 ## Schnittstellen und Integrationen
 
-- Editionsbezogene OpenAPI-3.1-Dokumente, integrierter API-Explorer, interaktives Swagger UI und abrufbare JSON-Verträge. Registrierte Auth-, REST/RPC-, Edge- und Dateischnittstellen sind im [API-Referenzhandbuch](API_REFERENCE.md) dokumentiert.
+- Editionsbezogene OpenAPI-3.1-Dokumente, integrierter API-Explorer, interaktives Swagger UI und abrufbare JSON-Verträge. Registrierte Auth-, REST/RPC-, Edge- und Dateischnittstellen sind im [API-Referenzhandbuch](../API_REFERENCE.md) dokumentiert.
 - Zweisprachiger Academy-Download für Geschäftsabläufe mit OpenAPI-Operationen, HTTP-Methoden, Statuscodes, Swagger-Verfügbarkeit und begründeten Ausnahmen. Der Index ist an Version, Edition und Installation gebunden.
 - Versionierte Konto- und Einladungsoperationen, Login und Recovery, kurs- und rollenbezogene Operationen, geschützte Dateiübertragung, Kursdokumente, Kalenderfeed, Benachrichtigungen, zeitnahe Kurskommunikation und die Website-Anfragen-Schnittstelle.
 - Organisationsgebundene Integrationsschlüssel für veröffentlichte Kursverzeichnisse und passende Berechtigungen für Einschreibungen oder aggregierte Berichte. Getrennt ausstellen, rotieren und widerrufen. Berechtigungen orientieren sich an Edition, Schlüsselzweck und aktuellen Organisationsrechten.
 - Signierte Webhooks für Kursveröffentlichung, Kursänderungen, Terminwechsel, Zuweisungen, Anmeldungen, Prüfungsveröffentlichung, Anwesenheit, Abschlüsse und Materialveröffentlichung. Abonnements, separate Signaturgeheimnisse, Empfängerprüfung, Zustellverlauf und Wiederholungen mit stabiler Ereignis-ID. Interne Buchungsvorgänge verwenden die vorgesehenen kaufmännischen Ereignisse.
-- Dokumentierte Beispiele für Einladungen, Kursentwürfe, Kurssuche, Einschreibung, Berichte und signierten Webhook-Empfang. Schreiboperationen mit unterstützter Wiederholungskennung können nach einer unterbrochenen Antwort ohne ungewollten Doppelvorgang fortgesetzt werden. [Integrationsbeispiele](scripts/examples/README.md)
+- Dokumentierte Beispiele für Einladungen, Kursentwürfe, Kurssuche, Einschreibung, Berichte und signierten Webhook-Empfang. Schreiboperationen mit unterstützter Wiederholungskennung können nach einer unterbrochenen Antwort ohne ungewollten Doppelvorgang fortgesetzt werden. [Integrationsbeispiele](../scripts/examples/README.md)
 
 ## White-Label-Installation, Lizenz und Betrieb
 
@@ -104,5 +104,5 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Eigener Academy-Name, Kurzname, Akzent, Logo, Favicon, PWA-Installationssymbole, öffentliche Datenschutz-/Rechts-/Supportlinks und gebrandete PDFs. Geprüfte Assets können veröffentlicht und Installationssymbole auf den Paketstand zurückgesetzt werden.
 - Signierte Releases und installationsgebundene, signierte Lizenzen mit Test-/Vertragslaufzeit, Verlängerung, exaktem Release-Bezug und konfigurierten Limits für Plätze, Speicher und API. Aktiver Betrieb, lesende Kulanz und Ablauf werden serverseitig durchgesetzt. Betreiber können die gültige Lizenz anzeigen und erneuern.
 - Editionsspezifische Browserpakete, geprüfte Installation und Austausch, Migrationsprotokoll, Health-Bericht mit Scannerstatus, Backup-Prüfung, verschlüsselte Backups und Wiederherstellung in separatem Ziel. Autorisierter verschlüsselter Offboarding-Export für Kurs-, Teilnehmenden- und freigegebene Dateidaten.
-- Lokale Start-, Stop-, Status-, Neustart- und geschützte Reset-Funktionen im internen Tooling. Separater persistenter Vorschau-Stack für GitHub `main` und isolierte Testumgebungen. Installation, Update, Wiederherstellung und Betrieb sind in den [Betriebsanleitungen](OPERATIONS.md) und im [Academy-Handbuch](deploy/academy/README.md) beschrieben.
+- Lokale Start-, Stop-, Status-, Neustart- und geschützte Reset-Funktionen im internen Tooling. Separater persistenter Vorschau-Stack für GitHub `main` und isolierte Testumgebungen. Installation, Update, Wiederherstellung und Betrieb sind in den [Betriebsanleitungen](../OPERATIONS.md) und im [Academy-Handbuch](../deploy/academy/README.md) beschrieben.
 - Reduzierte, such- und filterbare Auditansichten für berechtigte Administration. Datenbankberechtigungen prüfen aktuelle Ressourcenmitgliedschaft, Schreibversion und Dateifreigabe. Für private Direktnachrichten, Kalender und persönliche Nachweise gelten eigene Zugriffsregeln.

@@ -21,6 +21,8 @@ const rootDocuments = new Set([
     "CHANGELOG.md",
     "ROADMAP.md",
     "PRODUCT.md",
+    "FEATURES.md",
+    "design-qa.md",
     "PRODUCT_BRIEF.txt",
     "OPERATIONS_BRIEF.txt",
     "DEVELOPMENT.md",

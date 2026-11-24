@@ -45,13 +45,9 @@ test("repository documentation links and heading fragments resolve", async () =>
         "CONTRIBUTING.md",
         "SECURITY.md",
         "ROADMAP.md",
-        "PRODUCT.md",
-        "DEVELOPMENT.md",
         "OPERATIONS.md",
-        "GUIDE.md",
         "API_REFERENCE.md",
         "CONTRIBUTORS.md",
-        "design-qa.md",
     ];
 
     /** Collects delivered Markdown documents recursively for local link validation. */
@@ -149,10 +145,12 @@ test("public guidance and current catalogue contain no historical customer ident
         "SECURITY.md",
         "data/course-building-blocks.json",
         "ROADMAP.md",
-        "PRODUCT.md",
-        "DEVELOPMENT.md",
+        "docs/PRODUCT.md",
+        "docs/FEATURES.md",
+        "docs/design-qa.md",
+        "docs/DEVELOPMENT.md",
         "OPERATIONS.md",
-        "GUIDE.md",
+        "docs/GUIDE.md",
         "API_REFERENCE.md",
     ];
 
@@ -184,11 +182,16 @@ test("public guidance and current catalogue contain no historical customer ident
 });
 
 // The programme's governing AGENTS instructions require these durable source
-// records. Keep the consolidated product docs at the root and retain an
+// records. Keep the consolidated product docs and retain an
 // explicit inventory of project records and published materials under docs/.
 test("documentation retains the approved project records and published materials", async () => {
     const requiredRecords = new Set([
         "CONTRIBUTOR_RIGHTS_AGREEMENT_DRAFT.md",
+        "PRODUCT.md",
+        "DEVELOPMENT.md",
+        "GUIDE.md",
+        "FEATURES.md",
+        "design-qa.md",
         "IMPLEMENTATION_PLAN.md",
         "QOL_FEATURE_MATRIX.md",
         "QOL_MASTER_PROMPT.txt",

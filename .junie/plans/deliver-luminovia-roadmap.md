@@ -46,7 +46,7 @@ Die OneDrive-Datei `ROADMAP.txt` ist der verbindliche Änderungsauftrag: **FC-01
 
 - Extend existing feature owners and adjacent tests in `src/`; keep shared navigation presentation in the portal shell.
 - Add versioned SQL in `supabase/migrations/`; add a product API Edge package, tentatively `supabase/functions/product-api/`, plus neutral installer/edition configuration in the follow-on. Never rewrite released migration bytes or vendored Supabase sources.
-- Extend `scripts/*-api-check.mjs`, `scripts/*-db-tests.mjs`, `tests/e2e/`, `API_REFERENCE.md`, `GUIDE.md`, `ROADMAP.md` and `WHITELABEL_ROADMAP.md` at their owning milestones. Use `.github/workflows/ci.yml` and `security.yml` as the canonical CI gate owners.
+- Extend `scripts/*-api-check.mjs`, `scripts/*-db-tests.mjs`, `tests/e2e/`, `API_REFERENCE.md`, `docs/GUIDE.md`, `ROADMAP.md` and `WHITELABEL_ROADMAP.md` at their owning milestones. Use `.github/workflows/ci.yml` and `security.yml` as the canonical CI gate owners.
 
 ### Architecture
 

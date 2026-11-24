@@ -64,7 +64,7 @@ node scripts/academy-runtime-config.mjs "$runtime_root" "$installation_id" \
 
 The command creates a private directory with empty `data`, `backups` and `browser` paths, an `installation.json` containing the public installation identity, and three separate environment files. Only `runtime.env.public.env` goes to the browser build. Keep `runtime.env` and `runtime.env.notification.env` private. The API uses the same HTTPS host under `/backend`. Every instance receives independent credentials, Compose and storage namespaces.
 
-Build and sign the matching brand and edition using the [browser package commands](../../DEVELOPMENT.md#white-label-browser-build). Obtain the signed licence, detached browser signature and two trusted public keys through the agreed delivery channels. Keep both signing keys with their respective issuers. Store the exact source commit in the independently reviewed target JSON.
+Build and sign the matching brand and edition using the [browser package commands](../../docs/DEVELOPMENT.md#white-label-browser-build). Obtain the signed licence, detached browser signature and two trusted public keys through the agreed delivery channels. Keep both signing keys with their respective issuers. Store the exact source commit in the independently reviewed target JSON.
 
 After setup, a confirmed local administrator opens **Academy administration → Public links** to set the academy's support, privacy policy, legal notice and terms URLs. Use publicly intended HTTPS addresses. Blank fields hide the corresponding links. These settings appear before sign-in and in the academy footer. Editing requires an active licence.
 
@@ -198,7 +198,7 @@ The read-only receipt reports the exact licensed release, licence dates and curr
 
 ## Apply a renewed licence on the same release
 
-Keep the previous signed licence, target JSON and exact installed browser package. The issuer supplies a new currently active licence for the same installation, edition and source revision. Obtain a new detached signature for the exact existing package using the [release signing command](../../DEVELOPMENT.md#sign-and-verify-an-offline-browser-release). Verify the new licence and signature with the independently trusted keys and retain the previous receipt before maintenance. A release change uses the [separate upgrade steps](#upgrade-an-existing-academy).
+Keep the previous signed licence, target JSON and exact installed browser package. The issuer supplies a new currently active licence for the same installation, edition and source revision. Obtain a new detached signature for the exact existing package using the [release signing command](../../docs/DEVELOPMENT.md#sign-and-verify-an-offline-browser-release). Verify the new licence and signature with the independently trusted keys and retain the previous receipt before maintenance. A release change uses the [separate upgrade steps](#upgrade-an-existing-academy).
 
 Stop ingress using the installed release's Compose configuration. Keep the private database running. Execute the renewal with the current reviewed operator tooling and the existing runtime and target paths. The Linux host needs `flock` for the maintenance lock.
 

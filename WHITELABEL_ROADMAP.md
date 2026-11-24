@@ -1,6 +1,6 @@
 # White-Label Roadmap
 
-Implementation status and remaining acceptance for Academy Self-Hosted and Academy Managed. See the [feature catalogue](FEATURES.md#editionen) for current capabilities. Acceptance applies to the authorised customer installation, its edition, signed licence and exact release revision. The [target acceptance guide](deploy/academy/TARGET-ACCEPTANCE.md) defines the procedures and required evidence.
+Implementation status and remaining acceptance for Academy Self-Hosted and Academy Managed. See the [feature catalogue](docs/FEATURES.md#editionen) for current capabilities. Acceptance applies to the authorised customer installation, its edition, signed licence and exact release revision. The [target acceptance guide](deploy/academy/TARGET-ACCEPTANCE.md) defines the procedures and required evidence.
 
 ## Implemented capabilities and remaining delivery evidence
 

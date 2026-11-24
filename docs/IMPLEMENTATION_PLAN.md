@@ -8,6 +8,8 @@
 - [x] Let job managers attach a missing original PDF at the source reference with exact digest validation and explicit visibility.
 - [x] Import the exact catalogue PDFs into private Storage and serve them to authorised staff and assigned lecturers through job source links.
 
+The [root README](../README.md#documentation) links to the product, user and development guides in this directory. The [portal roadmap](../ROADMAP.md) and the [White-Label roadmap](../WHITELABEL_ROADMAP.md) remain the entry points for outstanding work.
+
 ## Hosted administrator reset
 
 - [x] Implement the CMS confirmation form, current-account reauthentication, backup gate and private socket connection to the existing reset operation.
@@ -897,7 +899,7 @@ The complete target and all unrelated pending work remain below.
 ## Confirmed permanent deletion — current user extension
 
 - [x] Record the latest direct decision: permanent confirmed deletion, no trash; companies only own jobs; this task does not merge unrelated PRs.
-- [x] Audit actual account/Storage/job/company/FK behavior on main1de544d; define the bounded [execution contract](../GUIDE.md#section-permanent-deletion).
+- [x] Audit actual account/Storage/job/company/FK behavior on main1de544d; define the bounded [execution contract](GUIDE.md#section-permanent-deletion).
 - [x] Implement typed administrative deletion plans, current authority/MFA, dependency handling, irreversible fences and truthful completion;25new real SQL groups and reduced-content/executor recovery review pass.
 - [x] Implement server-only native Auth hard deletion and exact all-version Storage cleanup, upload leases/path fences and failure/retry orchestration;62Edge unit cases pass. Actual native byte/Auth/race acceptance remains pending below.
 - [x] Close inherited company job/history/attachment bypasses and expose only own-company deletion targets;7real company SQL groups pass.
@@ -1125,7 +1127,7 @@ Carina clarified that PR17 is next; unrelated PRs and historical reservations be
 **Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete
 local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
 
-The entire new request is preserved in [SMART_OPERATIONS_SPEC](../PRODUCT.md#section-smart-operations-spec): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
+The entire new request is preserved in [SMART_OPERATIONS_SPEC](PRODUCT.md#section-smart-operations-spec): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
 
 Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `0a6002a`/PR21 after `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.
 
@@ -1133,7 +1135,7 @@ Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating 
 - [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
 - [x] Implement fresh permission-checked personal ICS downloads, bounded periods/size, explicit private-event inclusion and UTC/zone preservation.
 - [x] Implement explicit self-opt-in staff email/phone contact visibility, current staff-only projection and versioned DE/EN controls; focused SQL/component checks pass.
-- [x] Complete local integrated acceptance on signed d7d3c58: 219 component tests, 272 SQL cases/groups, 23 actual business API suites, 80 desktop/mobile cases and two built-PWA cases; exit 0 after cleanup. [Evidence](../DEVELOPMENT.md#section-test-plan).
+- [x] Complete local integrated acceptance on signed d7d3c58: 219 component tests, 272 SQL cases/groups, 23 actual business API suites, 80 desktop/mobile cases and two built-PWA cases; exit 0 after cleanup. [Evidence](DEVELOPMENT.md#section-test-plan).
 - [ ] Observe separate current PR application/native retained-image CI and review status; no production acceptance is inferred from local success.
 - [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
 - [x] Implement source and focused checks for Push, waitlists/atomic substitutions, shared learning/customer workspaces, attendance/Q&A/notebook/feedback/quiz/PDF completion, timesheets/statements/forecasts/Control Center, tasks/templates/favourites/recommendations, revocable calendars/offline schedules and stable eleven-area search. These are source checkpoints, not combined acceptance.
@@ -1166,7 +1168,7 @@ The earlier PR10, PR27 and PR29 preparation notes below record their named histo
 
 ## Seven additional operational modules — current user request
 
-The [operational brief](../OPERATIONS_BRIEF.txt) defines the scope of the seven additions. [Ownership/PR audit](../DEVELOPMENT.md#section-architecture), [actual status and next actions](../OPERATIONS.md#section-hostinger-development).
+The [operational brief](../OPERATIONS_BRIEF.txt) defines the scope of the seven additions. [Ownership/PR audit](DEVELOPMENT.md#section-architecture), [actual status and next actions](../OPERATIONS.md#section-hostinger-development).
 
 - [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
 - [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.
@@ -1365,7 +1367,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Current functional delivery — accepted source and necessary current-main integration
 
-- [x] Accept signed0950506 in all15required checks:72stages,94application+2PWA cases without skips/retries,258SQLgroups including legacy,19API suites and actual26-migration/20-suite native retention/TLS/cleanup. [Source-specific proof](../DEVELOPMENT.md#section-test-plan).
+- [x] Accept signed0950506 in all15required checks:72stages,94application+2PWA cases without skips/retries,258SQLgroups including legacy,19API suites and actual26-migration/20-suite native retention/TLS/cleanup. [Source-specific proof](DEVELOPMENT.md#section-test-plan).
 - [x] Preserve prepared PR27 publication controls and integrate actual PR21 main0a6002a5 locally; resolve both documentation histories without implementation conflicts. Local source/build acceptance passes254frontend cases/52files and all102runtime checks; migration/dependency bytes remain unchanged.
 - [x] Integrate owner30075c9's necessary lifecycle-fixture race correction: actual quotes captured before all50claims, exact winner/session assertions retained and deterministic late-reader coverage added. Local syntax/lint/format checks pass; do not label this a new full SQL pass.
 - [x] Correct the separate commission fixture with10pre-reviewed authorised quotes before10parallel claims, exact1winner/9filled/revenue/allocation assertions and a deterministic late-reader case. Local syntax/lint/format passes; complete SQL acceptance remains pending.
@@ -1426,8 +1428,8 @@ The current required-check policy has 15 contexts. Older 14-check readbacks belo
 > Historical PR21 acceptance notes follow. PR18 and PR21 have since merged; they do not impose a current merge hold. The active joint integration is recorded above.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
@@ -1488,17 +1490,17 @@ The VPS polling timer and normal/hosted data are unchanged. This direction super
 Current delivery instruction: signed commit→push→prepared PR→direct merge after current full CI. Actual PR15 main43504b8 and subsequently accepted PR18 mainfabd71a (merged05:09:15UTC) are incorporated on the owned PR12 branch. All incoming roles/private pricing/welcome/preview functions and our functional assertions are preserved; migration/dependency bytes match accepted PR18. Local92runtime/249frontend cases and type/lint/format/actionlint/unchanged coverage floors pass. The published be1run
 failed89/90browser cases at a desktop navigation-readiness race; signedf010721 corrects it with a genuine desktop/mobile Chromium diagnostic. Push the final combined source and require fresh exact-head application/native/security acceptance, then merge PR12 without another approval question. Production remains separate.
 
-**Latest accepted functional application source before the roles extension:** signed f7453a6, CI43799280625, all68stages,90application+2PWA browser cases with zero skips/retries,234SQL/all18APIs and actual native retained-data compatibility passed. This is historical proof for that exact source; final acceptance of the combined26-migration roles extension is pending. [Actual counts and limits](../DEVELOPMENT.md#section-test-plan).
+**Latest accepted functional application source before the roles extension:** signed f7453a6, CI43799280625, all68stages,90application+2PWA browser cases with zero skips/retries,234SQL/all18APIs and actual native retained-data compatibility passed. This is historical proof for that exact source; final acceptance of the combined26-migration roles extension is pending. [Actual counts and limits](DEVELOPMENT.md#section-test-plan).
 
 Current user priority: verify real connected user functions and repair missing behavior/test coverage, not rely on unit percentages. Isolated branch `codex/full-functional-integration-tests` starts at1341b16; concurrent shared-checkout onboarding/role/preview work is preserved and requires separate acceptance.
 
-- [x] Read complete specification, current owning source/migrations and actual domain discovery. Map existing A–N slices to [functional acceptance suites](../DEVELOPMENT.md#section-functional-acceptance), preserving the complete remaining product ledger.
+- [x] Read complete specification, current owning source/migrations and actual domain discovery. Map existing A–N slices to [functional acceptance suites](DEVELOPMENT.md#section-functional-acceptance), preserving the complete remaining product ledger.
 - [x] Add real calendar lifecycle/DST/private/global browser workflows and six-source search/privacy/language/navigation checks.
 - [x] Extend existing knowledge/chat/commercial/commission HTTP suites for missing connected operations, state transitions, current MFA/qualification/contract checks and retry/privacy boundaries.
 - [x] Implement discovered-versus-executed browser enforcement, zero skipped/flaky/retried cases, separate application/PWA reports and source-bound stage evidence. Actual exit-zero-skipped/focused-suite negative probe passes.
-- [x] Complete fresh frozen `./portal test` on signed b93b400:run3346a7e6,actual exit0,68passed stages,234SQL/all18APIs/78application+2PWA,zero skipped/retried browser cases and owned cleanup. [Actual results](../DEVELOPMENT.md#section-test-plan).
+- [x] Complete fresh frozen `./portal test` on signed b93b400:run3346a7e6,actual exit0,68passed stages,234SQL/all18APIs/78application+2PWA,zero skipped/retried browser cases and owned cleanup. [Actual results](DEVELOPMENT.md#section-test-plan).
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
-- [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](../DEVELOPMENT.md#section-test-plan).
+- [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](DEVELOPMENT.md#section-test-plan).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
 - [ ] Correct the independent be1ef25 desktop search-navigation readiness race (89/90cases passed; no skip/retry), then accept the final roles-integrated source in complete application/native/security CI before direct merge.
 
@@ -1515,7 +1517,7 @@ Carina requires signed commit → push → prepared PR → direct merge after re
 
 - [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
 - [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
-- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](../GUIDE.md#section-welcome-guide).
+- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDE.md#section-welcome-guide).
 
 Exact combined/native/security, extended real-account browser acceptance and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). Application head13313de passed all combined/native/security gates. Current main metadata changes are integrated with unchanged application source and21passingtargetedguards. Further main merges are temporarily held by user-authorised coordination until PR15 completes. The prior merged PR16
 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
@@ -1544,7 +1546,7 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
-[Roles and private pricing](../GUIDE.md#section-delegated-roles-pricing), [welcome guide](../GUIDE.md#section-welcome-guide), [PR previews](../DEVELOPMENT.md#section-pr-previews). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+[Roles and private pricing](GUIDE.md#section-delegated-roles-pricing), [welcome guide](GUIDE.md#section-welcome-guide), [PR previews](DEVELOPMENT.md#section-pr-previews). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
 
 ## Comprehensive code comments and agent guide
 
@@ -1553,7 +1555,7 @@ Requested directly on `main`: explain the maintained code throughout and provide
 - [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR
       acceptance remains required.
 - [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
-- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](../DEVELOPMENT.md#section-migration-guide); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](DEVELOPMENT.md#section-migration-guide); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
 - [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
 - [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
 
@@ -1565,7 +1567,7 @@ Current reconciliation preserves all32 released migration bytes and94 product be
 
 ## Historical PR CI repair
 
-Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](../DEVELOPMENT.md#section-ci-quality);14 is a cancelled temporary-base fixture, not a failed product merge.
+Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](DEVELOPMENT.md#section-ci-quality);14 is a cancelled temporary-base fixture, not a failed product merge.
 
 - [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
 - [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
@@ -1601,8 +1603,8 @@ No new application migration, production deployment or reduction of the remainin
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
@@ -1659,7 +1661,7 @@ Current request: visible compilation/type/style/quality/security/coverage tasks,
 - [x] Read back current Maintainer/Admin ALWAYS; synchronize both dormant review/check rules and source JSON with the same current role preference and9check names. No roles/invitations/Appkeys added.
 - [x] Complete local workflow/format/build/guard checks and actual exact-head PRquality/coverage/security acceptance; PR11 merged as6648651, proving direct Maintainer merge while full checks run. Main repeats the complete application/native/release gates; its actual outcome is taken from CI and the operational evidence record, not assumed from this checkbox.
 
-The first whole-main CodeQL baseline reports existing warnings beyond the earlier PR diff; [bounded triage](../DEVELOPMENT.md#section-ci-quality) records actual contexts, three tested small hardenings and remaining local-reader/scanner/Origin follow-up. No false zero-finding or complete security-certification claim is made.
+The first whole-main CodeQL baseline reports existing warnings beyond the earlier PR diff; [bounded triage](DEVELOPMENT.md#section-ci-quality) records actual contexts, three tested small hardenings and remaining local-reader/scanner/Origin follow-up. No false zero-finding or complete security-certification claim is made.
 
 The additional PR-/check rules remain disabled until the independently prepared maintenance App has a proven token/promotion path; current effective Maintainer/Admin merge freedom is already present. The older personal PR-only preference below is superseded. Full remaining product scope stays unchanged.
 
@@ -1684,8 +1686,8 @@ The incoming PR17 history recorded the following earlier pending instruction whe
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
-- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](../DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](../README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](DEVELOPMENT.md#section-architecture); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
@@ -1697,10 +1699,10 @@ The full product and operational ledger remains below. Those PR13 checks concern
 ## Concurrent quality baseline and current governance
 
 Incoming main `3256d1a` adds visible build/type/lint/format/connectivity checks, enforceable V8 coverage floors and reports, independent CodeQL, Dependency Review and dependency-update guidance. These are preserved. The pre-incoming316-unit result and pre-Demo342-test coverage pass are historical source-bound checkpoints. The first32-migration exact CI subsequently failed the two Calendar language journeys; the corrected combined source requires the fresh complete acceptance above.
-See [CI_QUALITY](../DEVELOPMENT.md#section-ci-quality) and [CODE_SCANNING_TRIAGE](../DEVELOPMENT.md#section-ci-quality).
+See [CI_QUALITY](DEVELOPMENT.md#section-ci-quality) and [CODE_SCANNING_TRIAGE](DEVELOPMENT.md#section-ci-quality).
 
 The three live rules are active after the user's clarification: Maintain/Admin review exception through PRs only; all14 currently required CI contexts and signatures remain compulsory for humans; only the scoped tested maintenance App has its technical review/check exception. History has no bypass. The configured App's actual main-only workflow probe remains after the tested product merge. Auto-Merge availability is enabled. Source and live rule details are
-in [GITHUB_WORKFLOW](../DEVELOPMENT.md#section-github-workflow).
+in [GITHUB_WORKFLOW](DEVELOPMENT.md#section-github-workflow).
 
 ## Current combined source — complete acceptance next
 
@@ -1721,7 +1723,7 @@ These modules are **not yet accepted**. Finish source and focused checks, freeze
 ## M7 discovery and community source frozen — complete acceptance pending
 
 Current branch `codex/community-and-resource-completion` preserves all24accepted M6 migrations and adds five actual CLI migrations (29total). Connected source now includes server-side file search/cursors/private tags and virtual folders, job discovery/exact details/scalar counts/private saved views, structured chat mentions and existing-policy moderation/drag-drop, effective in-app quiet hours and versioned DE/EN announcements.
-See [FILES](../GUIDE.md#section-files), [JOB_DISCOVERY](../GUIDE.md#section-job-discovery), [CHAT](../GUIDE.md#section-chat), [NOTIFICATIONS](../GUIDE.md#section-notifications), [ANNOUNCEMENTS](../GUIDE.md#section-announcements), [ARCHITECTURE](../DEVELOPMENT.md#section-architecture) and [ERD](../DEVELOPMENT.md#section-erd).
+See [FILES](GUIDE.md#section-files), [JOB_DISCOVERY](GUIDE.md#section-job-discovery), [CHAT](GUIDE.md#section-chat), [NOTIFICATIONS](GUIDE.md#section-notifications), [ANNOUNCEMENTS](GUIDE.md#section-announcements), [ARCHITECTURE](DEVELOPMENT.md#section-architecture) and [ERD](DEVELOPMENT.md#section-erd).
 
 Integrated preflight passed source lint/type/format and240Vitest cases across50files. Compiler graph:119reachable modules/32routes, no unresolved imports/unreachable modules/unused runtime exports. The generated API reference inventories146actual migrated public functions. Focused real temporary-PostgreSQL groups: files6, jobs9(including observed save/remove role-withdrawal races), mentions11, attention9(timezones/DST/CAS/retained inbox), announcements16
 (profile-lock/revocation/commit/ACK/publication privacy). API/browser scenarios are authored and discovered but **not yet a passed canonical M7/native acceptance**.
@@ -1733,26 +1735,26 @@ Independent M6follow-up PR9 records accepted evidence and fixes a reproduced160m
 The current attached master prompt is unchanged. The entire module ledger below remains required; accepted client accounts, 50/50 default, optional managed learners and selfhost development continue. This M6 product work is isolated on `codex/complete-operations-and-local-preview`. Preserve all existing migration history and independently delivered runtime/governance changes.
 
 The independent runtime delivery merged through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) as `5f89986`. `./portal github` retrieves exact current main into an owned persistent preview at `5373`/`563xx`; `./portal github test` uses a separate latest-source QA checkout. Normal `5173`/`543xx` records are preserved. Real-Git/process fixtures and a separate actual native rehearsal are recorded in WORKLOG; the independent runtime merge does not certify
-this new business source. [Preview/migration controls](../DEVELOPMENT.md#section-github-local-preview).
+this new business source. [Preview/migration controls](DEVELOPMENT.md#section-github-local-preview).
 
 | M6 vertical                                                 | Implemented source and focused evidence                                                                                                                                                                                                                         | Remaining acceptance/boundary                                                                                                                          |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Taxonomy](../GUIDE.md#section-taxonomy)                    | DE/EN hierarchy, aliases, related authorized templates, current-MFA versioned CRUD/archive; preserves existing expertise IDs/expiry/references; 10 real PostgreSQL groups                                                                                       | Combined Auth/API/browser and retained-data CI passed on9d9bc56; physical/manual acceptance remains separate.                                          |
-| [Availability](../GUIDE.md#section-availability)            | Own private windows/notes, explicit reduced management sharing, atomic unavailable-window/assignment exclusion; 8 real PostgreSQL groups including real claim/blockout race                                                                                     | Current Auth/API/browser and retained-data checks passed. No private-calendar/admin bypass or scheduled booking.                                       |
-| [Job lifecycle/capacity](../GUIDE.md#section-job-lifecycle) | Versioned metadata/deadlines/copy/archive, whole-block cancellation/reopening, accessible management Kanban; explicit new standalone 1–20 per-position offers, immutable legacy budgets, revenue/client projections; controlled invoice/cancellation race fixed | Combined SQL/Auth/REST/WebSocket/browser and retained-data acceptance passed, including repeated reopening. No automatic substitute selection.         |
-| [Dashboard](../GUIDE.md#section-dashboard)                  | Personal calendar/chat/inbox/scanned-file previews, own pending contract receipts and authorized management follow-ups; bounded shared query observers                                                                                                          | Complete management cost/document workflow and broader matching/search remain in the ledger; native browser cases passed.                              |
-| [Notifications](../GUIDE.md#section-notifications)          | Own stable inbox/read state, current-authorized links, versioned preferences, final-transaction matching, cancellation/claim receipts, explicit session/contract reminder refresh; 15 real PostgreSQL groups                                                    | Quiet hours, announcement banners, approved durable email/retry and optional push remain pending. No background scheduler/mail is claimed.             |
-| [Administrative audit](../GUIDE.md#section-admin-audit)     | Current `audit.read`/MFA, exact reviewed action allowlist, safe metadata only, finite 30/93-day windows and tuple cursors; 9 unit/component tests and 7 real PostgreSQL groups                                                                                  | Retention, bulk recovery, brand/permission settings and broader diagnostic UI remain pending. Native Auth/API/browser and retained-data checks passed. |
+| [Taxonomy](GUIDE.md#section-taxonomy)                    | DE/EN hierarchy, aliases, related authorized templates, current-MFA versioned CRUD/archive; preserves existing expertise IDs/expiry/references; 10 real PostgreSQL groups                                                                                       | Combined Auth/API/browser and retained-data CI passed on9d9bc56; physical/manual acceptance remains separate.                                          |
+| [Availability](GUIDE.md#section-availability)            | Own private windows/notes, explicit reduced management sharing, atomic unavailable-window/assignment exclusion; 8 real PostgreSQL groups including real claim/blockout race                                                                                     | Current Auth/API/browser and retained-data checks passed. No private-calendar/admin bypass or scheduled booking.                                       |
+| [Job lifecycle/capacity](GUIDE.md#section-job-lifecycle) | Versioned metadata/deadlines/copy/archive, whole-block cancellation/reopening, accessible management Kanban; explicit new standalone 1–20 per-position offers, immutable legacy budgets, revenue/client projections; controlled invoice/cancellation race fixed | Combined SQL/Auth/REST/WebSocket/browser and retained-data acceptance passed, including repeated reopening. No automatic substitute selection.         |
+| [Dashboard](GUIDE.md#section-dashboard)                  | Personal calendar/chat/inbox/scanned-file previews, own pending contract receipts and authorized management follow-ups; bounded shared query observers                                                                                                          | Complete management cost/document workflow and broader matching/search remain in the ledger; native browser cases passed.                              |
+| [Notifications](GUIDE.md#section-notifications)          | Own stable inbox/read state, current-authorized links, versioned preferences, final-transaction matching, cancellation/claim receipts, explicit session/contract reminder refresh; 15 real PostgreSQL groups                                                    | Quiet hours, announcement banners, approved durable email/retry and optional push remain pending. No background scheduler/mail is claimed.             |
+| [Administrative audit](GUIDE.md#section-admin-audit)     | Current `audit.read`/MFA, exact reviewed action allowlist, safe metadata only, finite 30/93-day windows and tuple cursors; 9 unit/component tests and 7 real PostgreSQL groups                                                                                  | Retention, bulk recovery, brand/permission settings and broader diagnostic UI remain pending. Native Auth/API/browser and retained-data checks passed. |
 
 Taxonomy and availability together passed 18 focused Vitest tests. The generated [API reference](../API_REFERENCE.md) currently inventories 125 public RPCs from a disposable migration replay. Static connectivity/type checks and focused passes are source evidence, not a complete product or deployment guarantee. **M6 application and retained-data CI passed on signed 9d9bc56; PR8 merged as dc8e9a7.** All 70 browser cases,234 SQL cases,18 actual business API suites and2 built-PWA cases
-passed. [Exact evidence and local wrapper limitation](../DEVELOPMENT.md#section-test-plan). The complete remaining product ledger still applies. No production or public-website change belongs to this milestone.
+passed. [Exact evidence and local wrapper limitation](DEVELOPMENT.md#section-test-plan). The complete remaining product ledger still applies. No production or public-website change belongs to this milestone.
 
 ## GitHub contribution and governance continuation
 
 Requested: require independent review for other contributors while allowing `CarinaSchoppe` to merge through a personal PR-only exception; supply useful labels/tags, issue/PR templates and a GitHub-discoverable contribution guide. Contributor source passed exact CI and merged through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) as `18ce633`. The catalogue now contains 30 managed labels plus nine preserved original GitHub labels; earlier PR
-classifications retain existing labels. [PR guide](../DEVELOPMENT.md#section-pull-request-guide).
+classifications retain existing labels. [PR guide](DEVELOPMENT.md#section-pull-request-guide).
 
-[GitHub administration](../DEVELOPMENT.md#section-github-workflow) records the current active history/review/CI policies. Maintain/Admin roles may bypass only the review requirement through PRs; CI and signatures remain mandatory. The private repository-scoped App5776881, selected installation182397724 and main-only signing Environment are configured. Its actual protected signing/bypass probe passed without any signature exception; the real main-only workflow probe follows the tested merge.
+[GitHub administration](DEVELOPMENT.md#section-github-workflow) records the current active history/review/CI policies. Maintain/Admin roles may bypass only the review requirement through PRs; CI and signatures remain mandatory. The private repository-scoped App5776881, selected installation182397724 and main-only signing Environment are configured. Its actual protected signing/bypass probe passed without any signature exception; the real main-only workflow probe follows the tested merge.
 Earlier standard-bot failures and disabled-rule checkpoints remain historical in WORKLOG. No production or public-website change belongs to this task.
 
 ## M5 local acceptance passed — system functionality and performance audit
@@ -1765,7 +1767,7 @@ Requested after PR #4: inspect the delivered code for concrete defects, disconne
 - [x] Update developer/test/security documentation with examined scope, measured results and remaining gates.
 - [x] Complete the local command and signed push. Exact combined/native CI and the authorised merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5); inspect that durable record on continuation.
 
-Local frozen `7abad7e` passed 117 source, 33 runtime, 42 Edge, 174 SQL, 12 API, 54 browser and 2 PWA checks plus build/persistence/cleanup. Main `11448e4` maintenance/backup source was preserved, with 76 Python and 60 Node guards. Exact PR CI43752233890 passed, PR #5 merged as `bb32274`, and exact-main CI43753910114 also passed. Ordinary automatic hosted activation is recorded below. [Evidence](../DEVELOPMENT.md#section-test-plan).
+Local frozen `7abad7e` passed 117 source, 33 runtime, 42 Edge, 174 SQL, 12 API, 54 browser and 2 PWA checks plus build/persistence/cleanup. Main `11448e4` maintenance/backup source was preserved, with 76 Python and 60 Node guards. Exact PR CI43752233890 passed, PR #5 merged as `bb32274`, and exact-main CI43753910114 also passed. Ordinary automatic hosted activation is recorded below. [Evidence](DEVELOPMENT.md#section-test-plan).
 
 ## Daily maintenance and complete recovery accepted on KVM1
 
@@ -1791,11 +1793,11 @@ Requested 16 November: source-grounded functional/dead-code/connection audit; me
 - [x] Update README, developer/feature/API documentation, test inventory and exact acceptance evidence; review readable desktop/mobile/DE/EN/theme screens.
 - [x] Pass the complete isolated command and push signed source. Exact CI and the authorised merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4); check its current state on continuation. Production publishing remains separate.
 
-Combined frozen source `4c7c897` passed the full command with exit 0:91 source, 21 runtime, 37 Edge, 165 SQL, 12 real API suites/Mailpit, 52 browser and 2 PWA cases; release controls 28 Python/ 35 Node/ 11 Envoy/ 10 Caddy. [Exact evidence](../DEVELOPMENT.md#section-test-plan). Hosted M4 passed its separate reviewed14→17 transition and ordinary maintenance-release installation; current hosted M5/schema18 acceptance is recorded above.
+Combined frozen source `4c7c897` passed the full command with exit 0:91 source, 21 runtime, 37 Edge, 165 SQL, 12 real API suites/Mailpit, 52 browser and 2 PWA cases; release controls 28 Python/ 35 Node/ 11 Envoy/ 10 Caddy. [Exact evidence](DEVELOPMENT.md#section-test-plan). Hosted M4 passed its separate reviewed14→17 transition and ordinary maintenance-release installation; current hosted M5/schema18 acceptance is recorded above.
 
 ## M3 and self-hosted development accepted — account, profile and commission extension
 
-The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](../PRODUCT.md#section-accounts-revenue-spec). PR #2 was verified and merged; M3 was delivered separately from `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API
+The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](PRODUCT.md#section-accounts-revenue-spec). PR #2 was verified and merged; M3 was delivered separately from `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API
 suites plus Mailpit, 46 browser workflows, build and 2 PWA checks. Exact GitHub/main integration is recorded on [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3). Remaining original modules below are still required.
 
 ## Previous accepted checkpoint — persistent local system and M2

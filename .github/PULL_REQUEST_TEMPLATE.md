@@ -29,7 +29,7 @@ A merged PR does not authorize production deployment or risky data migrations.
 
 ## Before review
 
-- [ ] I have followed [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) and the [pull request guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/DEVELOPMENT.md#section-pull-request-guide).
+- [ ] I have followed [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) and the [pull request guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/DEVELOPMENT.md#section-pull-request-guide).
 - [ ] This change contains no secrets, private documents or personal test data.
 - [ ] Tests and documentation match the change; remaining gaps are listed above.
 - [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label are set. For a fork PR without label access, ask a maintainer to classify it.
