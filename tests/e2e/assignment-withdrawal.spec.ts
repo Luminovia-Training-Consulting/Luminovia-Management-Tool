@@ -117,15 +117,14 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
             }),
         );
         const first = Date.now() + 3 * 86400000;
-        await checked(
-            service.from("job_sessions").insert(
-                [0, 1].map((index) => ({
-                    job_id: job,
-                    starts_at: new Date(first + index * 86400000).toISOString(),
-                    ends_at: new Date(first + index * 86400000 + 3600000).toISOString(),
-                })),
-            ),
-        );
+        // Assignment sessions snapshot these intervals, so the test can prove
+        // that the complete fictional block remains reserved during review.
+        const expectedSessions = [0, 1].map((index) => ({
+            job_id: job,
+            starts_at: new Date(first + index * 86400000).toISOString(),
+            ends_at: new Date(first + index * 86400000 + 3600000).toISOString(),
+        }));
+        await checked(service.from("job_sessions").insert(expectedSessions));
         await checked(
             owner.auth.signInWithPassword({
                 email: teacher.email,
@@ -174,16 +173,23 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
         await expect(
             own.getByRole("status").filter({hasText: "In Prüfung"}).first(),
         ).toBeVisible();
+        const pendingSessions = await checked(
+            owner
+                .from("assignment_sessions")
+                .select("starts_at,ends_at,released_at")
+                .eq("claim_id", claim.claim_id),
+            {requireData: true},
+        );
         expect(
-            (
-                await checked(
-                    owner
-                        .from("assignment_sessions")
-                        .select("released_at")
-                        .eq("claim_id", claim.claim_id),
-                )
-            ).every((session) => session.released_at === null),
-        ).toBe(true);
+            pendingSessions.map(({starts_at, ends_at}) => ({
+                job_id: job,
+                starts_at,
+                ends_at,
+            })),
+        ).toEqual(expectedSessions);
+        expect(pendingSessions.every((session) => session.released_at === null)).toBe(
+            true,
+        );
         await page.evaluate(() => document.fonts.ready);
         await page.screenshot({
             path: `.local/screenshots/${testInfo.project.name}-withdrawal-pending-de-light.png`,
@@ -223,17 +229,32 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
                 exact: false,
             }),
         ).toBeVisible();
+        const rejectedClaim = await checked(
+            owner
+                .from("job_claims")
+                .select("status")
+                .eq("id", claim.claim_id)
+                .single(),
+            {requireData: true},
+        );
+        expect(rejectedClaim.status).toBe("confirmed");
+        const rejectedSessions = await checked(
+            owner
+                .from("assignment_sessions")
+                .select("starts_at,ends_at,released_at")
+                .eq("claim_id", claim.claim_id),
+            {requireData: true},
+        );
         expect(
-            (
-                await checked(
-                    owner
-                        .from("job_claims")
-                        .select("status")
-                        .eq("id", claim.claim_id)
-                        .single(),
-                )
-            ).status,
-        ).toBe("confirmed");
+            rejectedSessions.map(({starts_at, ends_at}) => ({
+                job_id: job,
+                starts_at,
+                ends_at,
+            })),
+        ).toEqual(expectedSessions);
+        expect(rejectedSessions.every((session) => session.released_at === null)).toBe(
+            true,
+        );
         await own
             .getByRole("button", {name: "Rücktritt beantragen", exact: true})
             .click();
@@ -295,6 +316,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
                         .select("status")
                         .eq("id", claim.claim_id)
                         .single(),
+                    {requireData: true},
                 )
             ).status,
         ).toBe("cancelled");
@@ -303,6 +325,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
                 .from("assignment_sessions")
                 .select("released_at")
                 .eq("claim_id", claim.claim_id),
+            {requireData: true},
         );
         expect(released).toHaveLength(2);
         expect(released.every((session) => session.released_at !== null)).toBe(
