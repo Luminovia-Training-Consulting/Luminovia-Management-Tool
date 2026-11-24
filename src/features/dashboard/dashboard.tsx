@@ -183,12 +183,16 @@ export function Dashboard() {
       {(!staff || clientAccount) && (
         <section className="panel dashboard-account-destination">
           <h2>{t(clientAccount ? "clientPortal" : "myCourses")}</h2>
-          <TextLink to={clientAccount ? "/client" : "/courses"}>
-            {t(clientAccount ? "requestCourses" : "courses")}
-          </TextLink>
-          {clientAccount && (
-            <TextLink to="/my-reviews">{dashboard("companyReviews")}</TextLink>
-          )}
+          <div className="dashboard-destination-actions">
+            <TextLink to={clientAccount ? "/client" : "/courses"}>
+              {t(clientAccount ? "requestCourses" : "courses")}
+            </TextLink>
+            {clientAccount && (
+              <TextLink to="/my-reviews">
+                {dashboard("companyReviews")}
+              </TextLink>
+            )}
+          </div>
         </section>
       )}
       {!staff && (

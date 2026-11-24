@@ -356,7 +356,7 @@ export function AdminMailPage({ academy }: { academy?: "active" | "grace" }) {
     );
   };
   return (
-    <section className="mail-settings">
+    <section className="mail-settings section-stack">
       <PageHeading
         title={t("title")}
         description={t(academy ? "academyDescription" : "description")}

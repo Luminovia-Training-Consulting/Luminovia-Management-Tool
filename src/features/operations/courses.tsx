@@ -1966,7 +1966,10 @@ export function CoursesPage() {
         </Notice>
       )}
       {lastPage > 0 && (
-        <nav className="page-actions" aria-label={t("courseListPages")}>
+        <nav
+          className="page-actions course-pagination"
+          aria-label={t("courseListPages")}
+        >
           <p role="status">
             {t("courseListRange", { from: start + 1, to: end, total })}
           </p>
@@ -2095,20 +2098,20 @@ export function CoursesPage() {
                   <CalendarDays size={17} />
                   {run.course_sessions.length} · {run.time_zone}
                 </p>
-                <div className="operations-actions">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCourseView({ run: run.id })}
-                  >
-                    {t("viewCourseRun")}
-                  </Button>
-                  {manage && (
-                    <>
-                      {jobs.map((job) => (
+                <div className="course-card-actions">
+                  <div className="operations-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCourseView({ run: run.id })}
+                    >
+                      {t("viewCourseRun")}
+                    </Button>
+                    {manage &&
+                      jobs.map((job) => (
                         <Button
                           key={job.id}
                           asChild
-                          variant="ghost"
+                          variant="secondary"
                           className="course-run-job-link"
                         >
                           <Link to={`/jobs/${job.id}`}>
@@ -2118,6 +2121,9 @@ export function CoursesPage() {
                           </Link>
                         </Button>
                       ))}
+                  </div>
+                  {manage && (
+                    <div className="operations-actions">
                       {marketplaceAction(run, true)}
                       <Button
                         variant="ghost"
@@ -2154,7 +2160,7 @@ export function CoursesPage() {
                         linkedJobs={run.jobs}
                         onReviewSessions={() => reviewSchedule(run)}
                       />
-                    </>
+                    </div>
                   )}
                 </div>
               </article>

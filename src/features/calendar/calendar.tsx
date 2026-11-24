@@ -940,8 +940,11 @@ export function CalendarPage() {
           </Button>
         }
       />
-      <CalendarInvitationOverview actor={session!.user.id} />
-      <CalendarTools actor={session!.user.id} zone={zone} />
+      <div className="calendar-utilities">
+        <CalendarInvitationOverview actor={session!.user.id} />
+        <CalendarTools actor={session!.user.id} zone={zone} />
+        <CalendarColorPreferences actor={session!.user.id} />
+      </div>
       <div className="calendar-controls">
         <div
           className="segmented"
@@ -1052,7 +1055,6 @@ export function CalendarPage() {
           </select>
         </Field>
       </div>
-      <CalendarColorPreferences actor={session!.user.id} />
       {topicIds.length > 0 && (
         <div
           className="calendar-topic-tags"
