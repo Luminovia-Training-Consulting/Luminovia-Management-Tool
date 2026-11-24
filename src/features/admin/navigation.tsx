@@ -134,25 +134,15 @@ export function AdministrationSection({ area }: { area?: AdministrationArea }) {
         <ul className="administration-destinations">
           {items.map((item) => (
             <li key={item.to}>
-              <Link
-                to={item.to}
-                className="panel"
-                aria-labelledby={`admin-label-${item.label}`}
-                aria-describedby={`admin-description-${item.label}`}
-              >
+              <Link to={item.to} className="panel">
                 <span>
-                  <strong
-                    id={`admin-label-${item.label}`}
-                    className="administration-destination-label"
-                  >
+                  <strong className="administration-destination-label">
                     {item.to === "/control-center" && (
                       <LayoutDashboard size={20} aria-hidden="true" />
                     )}
                     {t(item.label)}
-                  </strong>
-                  <small id={`admin-description-${item.label}`}>
-                    {t(item.description)}
-                  </small>
+                  </strong>{" "}
+                  <small>{t(item.description)}</small>
                 </span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>

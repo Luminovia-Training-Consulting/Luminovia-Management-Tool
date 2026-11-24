@@ -379,15 +379,14 @@ it.each(["admin", "management"])(
     await user.click(
       within(screen.getByRole("navigation", { name: "Verwaltung" })).getByRole(
         "link",
-        { name: "Kursbetrieb" },
+        { name: /^Kursbetrieb(?: |$)/ },
       ),
     );
-    expect(screen.getByRole("link", { name: "Leitstand" })).toHaveAttribute(
-      "href",
-      "/control-center",
-    );
     expect(
-      screen.getByRole("link", { name: "Themen & Tools" }),
+      screen.getByRole("link", { name: /^Leitstand(?: |$)/ }),
+    ).toHaveAttribute("href", "/control-center");
+    expect(
+      screen.getByRole("link", { name: /^Themen & Tools(?: |$)/ }),
     ).toHaveAttribute("href", "/topics");
   },
 );
@@ -418,24 +417,23 @@ it.each(["admin", "management"])(
     const sections = within(
       screen.getByRole("navigation", { name: "Verwaltung" }),
     );
-    expect(sections.getByRole("link", { name: "Kursbetrieb" })).toHaveAttribute(
-      "aria-current",
-      "location",
-    );
+    expect(
+      sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
+    ).toHaveAttribute("aria-current", "location");
     await user.click(
-      sections.getByRole("link", { name: "Unternehmen & Personen" }),
+      sections.getByRole("link", { name: /^Unternehmen & Personen(?: |$)/ }),
     );
-    expect(screen.getByRole("link", { name: "Unternehmen" })).toHaveAttribute(
-      "href",
-      "/admin/clients",
+    expect(
+      screen.getByRole("link", { name: /^Unternehmen(?! & Personen)/ }),
+    ).toHaveAttribute("href", "/admin/clients");
+    expect(
+      screen.getByRole("link", { name: /^Dozierende(?: |$)/ }),
+    ).toHaveAttribute("href", "/people");
+    expect(screen.queryByRole("link", { name: /^Verträge(?: |$)/ })).toBeNull();
+    await user.click(
+      sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
     );
-    expect(screen.getByRole("link", { name: "Dozierende" })).toHaveAttribute(
-      "href",
-      "/people",
-    );
-    expect(screen.queryByRole("link", { name: "Verträge" })).toBeNull();
-    await user.click(sections.getByRole("link", { name: "Kursbetrieb" }));
-    await user.click(screen.getByRole("link", { name: "Verträge" }));
+    await user.click(screen.getByRole("link", { name: /^Verträge(?: |$)/ }));
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/contracts",
     );
@@ -473,11 +471,13 @@ it("keeps the overview in place and exposes only available areas after permissio
   rerender();
   expect(screen.getByRole("heading", { name: "Verwaltung" })).toBeVisible();
   const nav = within(screen.getByRole("navigation", { name: "Verwaltung" }));
-  expect(nav.getByRole("link", { name: "Kursbetrieb" })).toBeVisible();
+  expect(nav.getByRole("link", { name: /^Kursbetrieb(?: |$)/ })).toBeVisible();
   expect(
-    nav.getByRole("link", { name: "Unternehmen & Personen" }),
+    nav.getByRole("link", { name: /^Unternehmen & Personen(?: |$)/ }),
   ).toBeVisible();
-  expect(nav.queryByRole("link", { name: "Plattformbetrieb" })).toBeNull();
+  expect(
+    nav.queryByRole("link", { name: /^Plattformbetrieb(?: |$)/ }),
+  ).toBeNull();
 });
 it("hides the Control Center without its current management permission", () => {
   access.roles = ["management"];

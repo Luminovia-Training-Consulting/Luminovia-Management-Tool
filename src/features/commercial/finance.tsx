@@ -2,6 +2,7 @@
  * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
  * confirmed server rows; payment reversals require their own auditable action.
  */
+import { FinanceRows } from "./finance-rows";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
 import { lazy, Suspense, useState } from "react";
@@ -995,60 +996,57 @@ function EarningsTable({
 }) {
   const { t, i18n } = useTranslation("commercial");
   return (
-    <div
-      className="commercial-table-scroll"
-      role="region"
-      aria-label={t("earnings")}
-      tabIndex={0}
-    >
-      <table className="commercial-table">
-        <thead>
-          <tr>
-            <th>{t("assignment")}</th>
-            {manager && <th>{t("lecturer")}</th>}
-            <th>{t("dates")}</th>
-            <th>{t("total")}</th>
-            <th>{t("status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.claim_id}>
-              <td>
-                <strong>{row.title}</strong>
-                <small>{row.customer_name}</small>
-                {invoiceAction?.(row)}
-                {manageSeries && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    type="button"
-                    onClick={() => manageSeries(row)}
-                  >
-                    {t("invoiceSeriesManage")}
-                  </Button>
-                )}
-              </td>
-              {manager && <td>{row.lecturer_name}</td>}
-              <td>
-                {dateTime(row.starts_at, i18n.language, zone)}
-                <small>{dateTime(row.ends_at, i18n.language, zone)}</small>
-              </td>
-              <td>
-                {money(Number(row.total_amount), row.currency, i18n.language)}
-              </td>
-              <td>
-                <span className={`badge commercial-status-${row.stage}`}>
-                  {row.stage === "review"
-                    ? t("invoiceReviewStage")
-                    : t(row.stage)}
-                </span>
-              </td>
+    <FinanceRows label={t("earnings")} total={rows.length}>
+      {(shown) => (
+        <table className="commercial-table">
+          <thead>
+            <tr>
+              <th>{t("assignment")}</th>
+              {manager && <th>{t("lecturer")}</th>}
+              <th>{t("dates")}</th>
+              <th>{t("total")}</th>
+              <th>{t("status")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.slice(0, shown).map((row) => (
+              <tr key={row.claim_id}>
+                <td>
+                  <strong>{row.title}</strong>
+                  <small>{row.customer_name}</small>
+                  {invoiceAction?.(row)}
+                  {manageSeries && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      type="button"
+                      onClick={() => manageSeries(row)}
+                    >
+                      {t("invoiceSeriesManage")}
+                    </Button>
+                  )}
+                </td>
+                {manager && <td>{row.lecturer_name}</td>}
+                <td>
+                  {dateTime(row.starts_at, i18n.language, zone)}
+                  <small>{dateTime(row.ends_at, i18n.language, zone)}</small>
+                </td>
+                <td>
+                  {money(Number(row.total_amount), row.currency, i18n.language)}
+                </td>
+                <td>
+                  <span className={`badge commercial-status-${row.stage}`}>
+                    {row.stage === "review"
+                      ? t("invoiceReviewStage")
+                      : t(row.stage)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </FinanceRows>
   );
 }
 

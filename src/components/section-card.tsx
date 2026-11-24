@@ -1,13 +1,12 @@
-import { useId, type ComponentProps } from "react";
+import type { ComponentProps } from "react";
 import { Link } from "react-router-dom";
 
 type CardCopy = { title: string; description: string };
 
-function CardContent({ title, description, id }: CardCopy & { id: string }) {
+function CardContent({ title, description }: CardCopy) {
   return (
     <>
-      <strong>{title}</strong>
-      <small id={id}>{description}</small>
+      <strong>{title}</strong> <small>{description}</small>
     </>
   );
 }
@@ -17,10 +16,9 @@ export function SectionLink({
   description,
   ...props
 }: Omit<ComponentProps<typeof Link>, "children"> & CardCopy) {
-  const id = useId();
   return (
-    <Link {...props} aria-label={title} aria-describedby={id}>
-      <CardContent title={title} description={description} id={id} />
+    <Link {...props}>
+      <CardContent title={title} description={description} />
     </Link>
   );
 }
@@ -30,10 +28,9 @@ export function SectionButton({
   description,
   ...props
 }: Omit<ComponentProps<"button">, "children"> & CardCopy) {
-  const id = useId();
   return (
-    <button {...props} type="button" aria-label={title} aria-describedby={id}>
-      <CardContent title={title} description={description} id={id} />
+    <button {...props} type="button">
+      <CardContent title={title} description={description} />
     </button>
   );
 }

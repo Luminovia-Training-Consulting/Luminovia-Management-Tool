@@ -384,7 +384,7 @@ function AccountsDirectory({
   if (accounts.isError)
     return <ErrorState retry={() => void accounts.refetch()} />;
   return (
-    <div className="section-stack">
+    <div className="section-stack account-directory">
       <section className="panel">
         <div className="account-directory-toolbar">
           <Field id="account-search" label={t("search")}>
@@ -408,7 +408,12 @@ function AccountsDirectory({
             </Button>
           )}
         </div>
-        <p>{t("count", { count: accounts.data.total })}</p>
+        <p className="account-directory-count">
+          {t("count", { count: accounts.data.total })}
+        </p>
+      </section>
+      <InviteForm allRoles canAssignRoles={canAssign} />
+      <section className="panel">
         <ul className="account-list">
           {accounts.data.items.map((person) => (
             <li key={person.id}>
@@ -467,13 +472,6 @@ function AccountsDirectory({
                     <Link to="/clients">{t("manageCompany")}</Link>
                   </Button>
                 )}
-                {person.id !== actorId && (
-                  <PermanentDeleteAction
-                    kind="account"
-                    id={person.id}
-                    label={person.display_name || person.email}
-                  />
-                )}
                 {canAssign &&
                   (person.id === actorId
                     ? person.roles.some(
@@ -495,6 +493,13 @@ function AccountsDirectory({
                       {t(person.id === actorId ? "ownRoles" : "roles")}
                     </Button>
                   )}
+                {person.id !== actorId && (
+                  <PermanentDeleteAction
+                    kind="account"
+                    id={person.id}
+                    label={person.display_name || person.email}
+                  />
+                )}
               </div>
             </li>
           ))}
@@ -553,7 +558,6 @@ function AccountsDirectory({
           }}
         />
       )}
-      <InviteForm allRoles canAssignRoles={canAssign} />
       <Dialog
         open={selected !== null}
         onOpenChange={(value) => {

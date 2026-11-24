@@ -3,7 +3,7 @@
  * suggestions and personal widgets. Preview-array length never replaces totals;
  * current roles/capabilities gate the actor-scoped queries.
  */
-import { FinancialSummaryCards } from "../commercial/revenue";
+import { FinancialSummaryCards } from "../commercial/financial-summary-cards";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

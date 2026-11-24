@@ -139,16 +139,8 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
         )}
       >
         {visible.map(({ suffix: path, label, personal, staff }) => (
-          <NavLink
-            key={path}
-            to={base + path}
-            end={path !== "/analytics"}
-            aria-labelledby={`finance-label-${label}`}
-            aria-describedby={
-              scope === "company" ? undefined : `finance-description-${label}`
-            }
-          >
-            <strong id={`finance-label-${label}`}>
+          <NavLink key={path} to={base + path} end={path !== "/analytics"}>
+            <strong>
               {t(
                 scope === "personal" && path === "/accounting"
                   ? "myInvoiceExports"
@@ -156,9 +148,10 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
               )}
             </strong>
             {scope !== "company" && (
-              <small id={`finance-description-${label}`}>
-                {t(scope === "personal" ? personal : staff)}
-              </small>
+              <>
+                {" "}
+                <small>{t(scope === "personal" ? personal : staff)}</small>
+              </>
             )}
           </NavLink>
         ))}

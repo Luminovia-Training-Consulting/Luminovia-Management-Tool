@@ -81,7 +81,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await adminLogin(page, admin);
     await page.goto("/courses");
     await page
-        .getByRole("link", {name: "Kursvorlagen öffnen", exact: true})
+        .getByRole("button", {name: "Vorlagen", exact: true})
         .click();
     await page
         .getByRole("searchbox", {name: "Suchen", exact: true})

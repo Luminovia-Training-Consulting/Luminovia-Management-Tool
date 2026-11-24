@@ -208,6 +208,26 @@ function view(
   return client;
 }
 
+it("pages accepted earnings within their own region", async () => {
+  earnings = Array.from({ length: 25 }, (_, index) =>
+    earning(`batch-${index + 1}`),
+  );
+  view();
+  const list = within(
+    await screen.findByRole("region", { name: "Vereinbarte Honorare" }),
+  );
+  expect(list.getAllByRole("row")).toHaveLength(13);
+  const loadMore = () =>
+    list.getByRole("button", { name: "Weitere Einträge laden" });
+  await userEvent.click(loadMore());
+  expect(list.getAllByRole("row")).toHaveLength(25);
+  await userEvent.click(loadMore());
+  expect(list.getAllByRole("row")).toHaveLength(26);
+  expect(
+    list.queryByRole("button", { name: "Weitere Einträge laden" }),
+  ).not.toBeInTheDocument();
+});
+
 it("hides cached monthly earnings when the server no longer permits the read", async () => {
   const client = view();
   const trend = { name: "Monatliche Entwicklung" };

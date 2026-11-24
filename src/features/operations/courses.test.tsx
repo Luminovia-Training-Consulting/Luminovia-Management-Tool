@@ -293,6 +293,7 @@ it("filters the visible course list by time without requiring administrative per
     })),
   });
 
+  await user.click(screen.getByText("Filter", { selector: "summary" }));
   const period = await screen.findByRole("combobox", {
     name: "Kurse nach Zeitraum filtern",
   });
@@ -407,7 +408,7 @@ it.each([
     templates: [{ ...template, owner_organisation_id: companyId }],
   });
   await userEvent.click(
-    await screen.findByRole("link", { name: "Kursvorlagen öffnen" }),
+    await screen.findByRole("button", { name: "Vorlagen" }),
   );
   expect(screen.getByTestId("course-route")).toHaveTextContent(
     "/courses?tab=templates",
@@ -562,6 +563,9 @@ it("links a saved offer draft from the course card without marking it as listed"
       name: "Auftrag für die Stellenbörse erstellen",
     }),
   ).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByText("Weitere Aktionen", { selector: "summary" }),
+  );
   expect(
     screen.getAllByRole("button", {
       name: "Ausschreibung prüfen",
@@ -1843,6 +1847,7 @@ it("prioritizes published courses and makes dated drafts separately filterable",
         (entry) => within(entry).getByRole("heading", { level: 2 }).textContent,
       );
   expect(headings()).toEqual([live.title, template.title, past.title]);
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
   expect(screen.getByRole("option", { name: "Entwürfe (2)" })).toBeVisible();
   await userEvent.selectOptions(
     screen.getByLabelText("Planungsstatus"),
@@ -1850,6 +1855,10 @@ it("prioritizes published courses and makes dated drafts separately filterable",
   );
   expect(headings()).toEqual([template.title, past.title]);
   const card = screen.getAllByRole("article")[0];
+  expect(card.querySelector(".course-card-more")).not.toHaveAttribute("open");
+  await userEvent.click(
+    within(card).getByText("Weitere Aktionen", { selector: "summary" }),
+  );
   const remove = within(card).getByRole("button", {
     name: `Löschen: ${template.title}`,
   });
@@ -1857,7 +1866,7 @@ it("prioritizes published courses and makes dated drafts separately filterable",
     name: "Archivieren",
   });
   expect(
-    remove.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING,
+    archive.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
 });
 
@@ -1928,6 +1937,9 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
   expect(
     actions.getByRole("link", { name: "Auftrag ansehen" }),
   ).toHaveAttribute("href", `/jobs/${jobId}`);
+  await userEvent.click(
+    actions.getByText("Weitere Aktionen", { selector: "summary" }),
+  );
   expect(
     actions.getByRole("link", { name: "Weiteren Auftrag erstellen" }),
   ).toHaveAttribute("href", `/courses?offer=${runId}`);
@@ -1943,6 +1955,7 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
     screen.getByRole("heading", { name: openTemplate.title }),
   ).toBeVisible();
 
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
   const lecturerFilter = screen.getByRole("combobox", { name: "Dozent:in" });
   await userEvent.selectOptions(lecturerFilter, "current-lecturer");
   expect(
@@ -2001,6 +2014,9 @@ it("opens company-scoped planning and keeps drafts with no published offer visib
       },
     ],
   });
+  await userEvent.click(
+    screen.getByText("Filter (1)", { selector: "summary" }),
+  );
   const status = screen.getByRole("combobox", { name: "Planungsstatus" });
   expect(screen.getByRole("combobox", { name: "Unternehmen" })).toHaveValue(
     companyId,
@@ -2071,6 +2087,7 @@ it("shows all company and internal course statuses with distinct company and cre
   expect(courses[2].getByText("Archiviert", { exact: true })).toBeVisible();
   expect(courses[2].getByText("Herkunft unbekannt")).toBeVisible();
 
+  await userEvent.click(screen.getByText("Filter", { selector: "summary" }));
   const filter = screen.getByRole("combobox", { name: "Planungsstatus" });
   await userEvent.selectOptions(filter, "archived");
   expect(screen.getAllByRole("article")).toHaveLength(1);

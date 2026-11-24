@@ -604,3 +604,46 @@
 .finance-overview > p {
   margin: 0;
 }
+
+.finance-rows-scroll {
+  max-block-size: clamp(19rem, 56vh, 36rem);
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.finance-rows.panel > .finance-rows-scroll {
+  margin-block-start: 0;
+}
+
+.finance-rows-scroll th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: inset 0 -1px var(--line);
+}
+
+.finance-rows-scroll td {
+  padding-block: 0.55rem;
+  vertical-align: middle;
+}
+
+.finance-rows-scroll td small {
+  margin-block-start: 0.2rem;
+}
+
+.finance-rows-scroll td .button {
+  margin-block-start: 0.35rem;
+}
+
+.finance-rows-more {
+  display: flex;
+  justify-content: center;
+  padding: 0.85rem;
+  overflow-anchor: none;
+}
+
+.finance-rows-count {
+  margin: 0.75rem 0 0;
+}

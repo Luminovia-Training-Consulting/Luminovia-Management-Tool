@@ -544,46 +544,80 @@
   margin-bottom: 20px;
 }
 
-.course-toolbar-header,
-.course-toolbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 .course-toolbar-header {
-  justify-content: space-between;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
-.course-toolbar-header .segmented {
-  flex-wrap: wrap;
+.course-view-switch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 8px;
+  inline-size: min(100%, 21rem);
+}
+
+.course-view-switch .button {
+  min-block-size: 3rem;
+  font-size: 0.95rem;
+  white-space: normal;
 }
 
 .course-toolbar-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   gap: 12px;
   align-items: end;
 }
 
+.course-search-row .field,
 .course-toolbar-filters .field {
   min-width: 0;
   margin: 0;
 }
 
-@container (max-width: 32rem) {
-  .course-toolbar-filters > .field:first-child {
-    grid-column: 1 / -1;
-  }
+.course-search-row {
+  inline-size: min(100%, 34rem);
 }
 
-@container (min-width: 55rem) {
-  .course-toolbar-filters:has(> :nth-child(5)) {
-    grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(0, 1fr));
-  }
+:is(.course-tools, .course-filters, .course-card-more) > summary {
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
+  list-style: none;
+  white-space: normal;
+}
+
+:is(.course-tools, .course-filters, .course-card-more)
+  > summary::-webkit-details-marker {
+  display: none;
+}
+
+.course-tools-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.course-tools-actions > .button {
+  white-space: normal;
+}
+
+.course-tools[open] > summary,
+.course-filters[open] > summary {
+  margin-block-end: 0.65rem;
+}
+
+.course-card-more[open] > summary {
+  margin-block-end: 0.45rem;
+}
+
+.course-secondary-actions > .button-danger,
+.course-record-actions > .button-danger {
+  margin-inline-start: auto;
+}
+
+.company-delete-actions {
+  justify-content: flex-end;
 }
 
 .operations-header-actions {
@@ -594,8 +628,15 @@
 }
 
 .course-card-actions {
-  display: grid;
-  gap: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.course-card-actions > .course-card-more[open],
+.operations-course > .operations-actions > .course-card-more[open] {
+  flex-basis: 100%;
 }
 
 .course-list-footer > p {

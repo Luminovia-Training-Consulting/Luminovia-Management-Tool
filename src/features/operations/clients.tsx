@@ -686,11 +686,13 @@ function ClientWorkspace({
           />
         )}
         {orgEdit && (
-          <PermanentDeleteAction
-            kind="organisation"
-            id={orgEdit.id}
-            label={orgEdit.name}
-          />
+          <div className="operations-actions company-delete-actions">
+            <PermanentDeleteAction
+              kind="organisation"
+              id={orgEdit.id}
+              label={orgEdit.name}
+            />
+          </div>
         )}
       </Dialog>
       <Dialog

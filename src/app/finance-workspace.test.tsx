@@ -85,11 +85,12 @@ it("opens company invoices by default and keeps lecturer finance out of the comp
   state.permissions = [];
   open("/finance");
   await screen.findByRole("heading", { name: "Company invoices" });
-  expect(screen.queryByRole("link", { name: "financeOverview" })).toBeNull();
-  expect(screen.getByRole("link", { name: "analytics" })).toHaveAttribute(
-    "href",
-    "/client/finance/analytics",
-  );
+  expect(
+    screen.queryByRole("link", { name: /^financeOverview(?: |$)/ }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("link", { name: /^analytics(?: |$)/ }),
+  ).toHaveAttribute("href", "/client/finance/analytics");
 });
 
 it("keeps management tabs together and forwards query and fragment from legacy accounting links", async () => {
@@ -99,14 +100,13 @@ it("keeps management tabs together and forwards query and fragment from legacy a
   await screen.findByRole("heading", {
     name: "Accounting?invoice=example#payments",
   });
-  expect(screen.getByRole("link", { name: "financeOverview" })).toHaveAttribute(
-    "href",
-    "/admin/finance",
-  );
   expect(
-    screen.getByRole("link", { name: "accountingExports" }),
+    screen.getByRole("link", { name: /^financeOverview(?: |$)/ }),
+  ).toHaveAttribute("href", "/admin/finance");
+  expect(
+    screen.getByRole("link", { name: /^accountingExports(?: |$)/ }),
   ).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "analytics" })).toBeVisible();
+  expect(screen.getByRole("link", { name: /^analytics(?: |$)/ })).toBeVisible();
 });
 
 it("keeps a manager who also teaches in personal finance unless opening a platform link", async () => {
@@ -114,11 +114,12 @@ it("keeps a manager who also teaches in personal finance unless opening a platfo
   state.permissions = ["finance.manage"];
   open("/finance");
   await screen.findByRole("heading", { name: "Overview" });
-  expect(screen.getByRole("link", { name: "analytics" })).toHaveAttribute(
-    "href",
-    "/finance/analytics",
-  );
-  expect(screen.queryByRole("link", { name: "accountingExports" })).toBeNull();
+  expect(
+    screen.getByRole("link", { name: /^analytics(?: |$)/ }),
+  ).toHaveAttribute("href", "/finance/analytics");
+  expect(
+    screen.queryByRole("link", { name: /^accountingExports(?: |$)/ }),
+  ).toBeNull();
 });
 
 it("forwards management invoice-series bookmarks for dual-role users to the platform view", async () => {
@@ -126,10 +127,9 @@ it("forwards management invoice-series bookmarks for dual-role users to the plat
   state.permissions = ["finance.manage"];
   open("/finance?series=fictional");
   await screen.findByRole("heading", { name: "Platform overview" });
-  expect(screen.getByRole("link", { name: "analytics" })).toHaveAttribute(
-    "href",
-    "/admin/finance/analytics",
-  );
+  expect(
+    screen.getByRole("link", { name: /^analytics(?: |$)/ }),
+  ).toHaveAttribute("href", "/admin/finance/analytics");
 });
 
 it("keeps the staff workspace inaccessible to an ordinary lecturer", async () => {

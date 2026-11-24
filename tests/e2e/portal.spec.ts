@@ -99,22 +99,20 @@ test("administration navigation keeps shared workflows together on desktop and m
     if (mobile) await more.press("Escape");
 
     const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
-    await expect(sections.getByRole("link", {name: "Plattformfinanzen", exact: true})).toBeVisible();
-    await sections.getByRole("link", {name: "Unternehmen & Personen", exact: true}).click();
-    await expect(page.getByRole("link", {name: "Unternehmen", exact: true})).toBeVisible();
-    await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
-    await page.getByRole("link", {name: "Dozierende", exact: true}).click();
+    await expect(sections.getByRole("link", {name: /^Plattformfinanzen(?: |$)/})).toBeVisible();
+    await sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Unternehmen(?! & Personen)/})).toBeVisible();
+    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
+    await page.getByRole("link", {name: /^Dozierende(?: |$)/}).click();
     await expect(page).toHaveURL(/\/people$/);
     await expect(page.getByRole("heading", {name: "Dozierende", exact: true})).toBeVisible();
-    await expect(sections.getByRole("link", {name: "Unternehmen & Personen", exact: true})).toHaveAttribute("aria-current", "location");
+    await expect(sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/})).toHaveAttribute("aria-current", "location");
 
-    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
-    await expect(page.getByRole("link", {name: "Leitstand", exact: true})).toHaveAttribute("href", "/control-center");
-    await expect(page.getByRole("link", {name: "Themen & Tools", exact: true})).toHaveAttribute("href", "/topics");
-    await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveAccessibleDescription(
-        "Vertragsdokumente zuordnen und Bestätigungen nachverfolgen.",
-    );
-    await page.getByRole("link", {name: "Leitstand", exact: true}).click();
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Leitstand(?: |$)/})).toHaveAttribute("href", "/control-center");
+    await expect(page.getByRole("link", {name: /^Themen & Tools(?: |$)/})).toHaveAttribute("href", "/topics");
+    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveAccessibleName(/Vertragsdokumente zuordnen und Bestätigungen nachverfolgen/);
+    await page.getByRole("link", {name: /^Leitstand(?: |$)/}).click();
     const dates = page.locator(".finance-period");
     const until = dates.locator('input[type="date"]').last();
     const show = dates.getByRole("button", {name: "Zeitraum anzeigen", exact: true});
@@ -125,38 +123,38 @@ test("administration navigation keeps shared workflows together on desktop and m
         expect(Math.abs(fieldBox.y + fieldBox.height - buttonBox.y - buttonBox.height)).toBeLessThan(2);
     }
     await show.click();
-    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
-    await page.getByRole("link", {name: "Verträge", exact: true}).click();
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await page.getByRole("link", {name: /^Verträge(?: |$)/}).click();
     await expect(page).toHaveURL(/\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
-    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
-    await page.getByRole("link", {name: "Auftragsänderungen", exact: true}).click();
+    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
+    await page.getByRole("link", {name: /^Auftragsänderungen(?: |$)/}).click();
     await expect(page).toHaveURL(/\/changes$/);
 });
 
 test("section cards remain visible and file search clears its icon on desktop and mobile", async ({page}) => {
     await login(page, process.env.E2E_ADMIN_EMAIL!);
     await page.goto("/chats");
-    const forum = page.getByRole("link", {name: "Forum", exact: true});
+    const forum = page.getByRole("link", {name: /^Forum(?: |$)/});
     await expect(forum).toBeVisible();
-    await expect(forum).toHaveAccessibleDescription(/diskutiere/i);
+    await expect(forum).toHaveAccessibleName(/diskutiere/i);
     await forum.click();
     await expect(forum).toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("button", {name: "Diskussionen", exact: true})).toBeVisible();
+    await expect(page.getByRole("button", {name: /^Diskussionen(?: |$)/})).toBeVisible();
 
     await page.goto("/courses");
     const courseSections = page.getByRole("navigation", {name: "Kursbereiche"});
-    await expect(courseSections.getByRole("button", {name: "Kursbereitschaft"})).toHaveAccessibleDescription(/Kursstart/);
-    await courseSections.getByRole("button", {name: "Durchführung", exact: true}).click();
-    await expect(courseSections.getByRole("button", {name: "Durchführung", exact: true})).toHaveAttribute("aria-current", "page");
+    await expect(courseSections.getByRole("button", {name: /^Kursbereitschaft(?: |$)/})).toHaveAccessibleName(/Kursstart/);
+    await courseSections.getByRole("button", {name: /^Durchführung(?: |$)/}).click();
+    await expect(courseSections.getByRole("button", {name: /^Durchführung(?: |$)/})).toHaveAttribute("aria-current", "page");
 
     await page.goto("/assistance");
-    await expect(page.getByRole("button", {name: "Support", exact: true})).toHaveAccessibleDescription(/Tickets/);
-    await expect(page.getByRole("button", {name: "Probleme lösen"})).toHaveAccessibleDescription(/Schritt/);
-    await page.getByRole("link", {name: "API-Dokumentation", exact: true}).click();
-    await expect(page.getByRole("link", {name: "API-Dokumentation", exact: true})).toHaveAttribute("aria-current", "page");
-    await page.getByRole("link", {name: "Swagger UI", exact: true}).click();
-    await expect(page.getByRole("link", {name: "Swagger UI", exact: true})).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("button", {name: /^Support(?: |$)/})).toHaveAccessibleName(/Tickets/);
+    await expect(page.getByRole("button", {name: /^Probleme lösen(?: |$)/})).toHaveAccessibleName(/Schritt/);
+    await page.getByRole("link", {name: /^API-Dokumentation(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^API-Dokumentation(?: |$)/})).toHaveAttribute("aria-current", "page");
+    await page.getByRole("link", {name: /^Swagger UI(?: |$)/}).click();
+    await expect(page.getByRole("link", {name: /^Swagger UI(?: |$)/})).toHaveAttribute("aria-current", "page");
 
     await page.goto("/files");
     const search = page.getByRole("searchbox", {name: "Dateien suchen"});
@@ -214,15 +212,15 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
             nav.previousElementSibling?.classList.contains("dashboard-metrics"),
         )).toBe(true);
         await page.goto("/finance");
-        await expect(page.getByRole("navigation", {name: "Meine Finanzen", exact: true}).getByRole("link", {name: "Analysen", exact: true}))
-            .toHaveAccessibleDescription("Eigene Einsätze und Einnahmen auswerten");
+        await expect(page.getByRole("navigation", {name: "Meine Finanzen", exact: true}).getByRole("link", {name: /^Analysen(?: |$)/}))
+            .toHaveAccessibleName(/Eigene Einsätze und Einnahmen auswerten/);
         await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
         await expect(page.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true})).toHaveCount(0);
         const personalReport = page.waitForRequest((request) =>
             new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
         );
         await page.getByRole("navigation", {name: "Meine Finanzen", exact: true})
-            .getByRole("link", {name: "Analysen", exact: true}).click();
+            .getByRole("link", {name: /^Analysen(?: |$)/}).click();
         expect((await personalReport).postDataJSON()).toMatchObject({p_scope: "personal"});
         await page.goto("/admin/finance");
         await expect(page.getByRole("heading", {name: "Plattformfinanzen", exact: true})).toBeVisible();
@@ -230,16 +228,47 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
         const staffReport = page.waitForRequest((request) =>
             new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
         );
-        await finance.getByRole("link", {name: "Analysen", exact: true}).click();
+        await finance.getByRole("link", {name: /^Analysen(?: |$)/}).click();
         expect((await staffReport).postDataJSON()).toMatchObject({p_scope: "staff"});
         await expect(page.getByLabel("Ansicht", {exact: true})).toHaveCount(0);
-        await finance.getByRole("link", {name: "Buchhaltung und Exporte", exact: true}).click();
+        await finance.getByRole("link", {name: /^Buchhaltung und Exporte(?: |$)/}).click();
         const source = page.getByLabel("Rechnungsquelle", {exact: true});
         await expect(source).toHaveValue("lecturer_all");
         await expect(source.locator('option[value="own"]')).toHaveCount(0);
     } finally {
         await checked(control.auth.admin.deleteUser(manager.id));
     }
+});
+
+test("finance earnings render the next batch when their own list is scrolled", async ({page}) => {
+    const lecturer = await actor("Fictional finance paging lecturer", "lecturer");
+    await login(page, lecturer.email);
+    const earnings = Array.from({length: 25}, (_, index) => ({
+        claim_id: randomUUID(),
+        job_id: randomUUID(),
+        lecturer_id: lecturer.id,
+        lecturer_name: lecturer.name,
+        title: `Fictional paged earnings ${index + 1}`,
+        customer_name: "Fictional finance academy",
+        starts_at: "2057-05-06T08:00:00Z",
+        ends_at: "2057-05-06T09:00:00Z",
+        amount: 120,
+        rate_unit: "fixed_total",
+        total_amount: 120,
+        currency: "EUR",
+        stage: "expected",
+        invoice_id: null,
+    }));
+    await page.route("**/rest/v1/rpc/finance_earnings", route => route.fulfill({json: earnings}));
+    await page.goto("/finance");
+    const region = page.getByRole("region", {name: "Vereinbarte Honorare", exact: true});
+    await expect(region.getByRole("row")).toHaveCount(13);
+    await region.scrollIntoViewIfNeeded();
+    await region.evaluate(el => el.scrollTop = el.scrollHeight);
+    await expect(region.getByRole("row")).toHaveCount(25);
+    await region.evaluate(el => el.scrollTop = el.scrollHeight);
+    await expect(region.getByRole("row")).toHaveCount(26);
+    await expect(region.getByText("Fictional paged earnings 25", {exact: true})).toBeVisible();
 });
 
 test("private routes require real authentication and login is accessible", async ({

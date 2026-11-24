@@ -39,7 +39,9 @@ vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: fake.actor } } }),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
-vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
+vi.mock("../commercial/financial-summary-cards", () => ({
+  FinancialSummaryCards: () => null,
+}));
 
 const clients: QueryClient[] = [];
 

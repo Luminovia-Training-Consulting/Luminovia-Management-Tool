@@ -7,7 +7,15 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
 import { courseWorkspaceEntitlementQuery } from "../learning/api";
@@ -36,7 +44,15 @@ import {
 } from "../learning/course-phase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BookOpen, CalendarDays, Copy, Plus, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  Copy,
+  Plus,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import { DateTime } from "luxon";
 import "./i18n";
 import "./styles.css";
@@ -1251,6 +1267,20 @@ function courseRunStatus(run: CourseRun) {
   return "planning";
 }
 
+function CourseActionDisclosure({ children }: { children: ReactNode }) {
+  const { t } = useTranslation("operations");
+  return (
+    <details className="course-card-more">
+      <summary className="button button-ghost">
+        {t("courseMoreActions")} <ChevronDown size={16} aria-hidden="true" />
+      </summary>
+      <div className="operations-actions course-secondary-actions">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 /** Combine templates/runs with explicitly requested publication/copy actions. */
 export function CoursesPage() {
   const { t, i18n } = useTranslation(["operations", "courseSeries"]);
@@ -1692,6 +1722,16 @@ export function CoursesPage() {
       : visibleTemplates;
   const total = tab === "runs" ? filteredRuns.length : filteredTemplates.length;
   const shownCount = Math.min(visibleList.count, total);
+  const canPlanSeries =
+    canCreateTemplate &&
+    visibleTemplates.some((template) => !template.archived_at);
+  const activeFilters =
+    Number(phase !== "all") +
+    (manage
+      ? Number(Boolean(company)) +
+        Number(canPrepareOffer && Boolean(lecturer)) +
+        Number(selectedRunStatus !== "all")
+      : 0);
   return (
     <>
       <PageHeading
@@ -1717,121 +1757,159 @@ export function CoursesPage() {
                 <Link to="/learning">{t("translation:myCourses")}</Link>
               </Button>
             )}
-            {manage && tab === "templates" && (
-              <TableImport
-                inDialog
-                label={
-                  i18n.language.startsWith("de")
-                    ? "Kursvorlagen importieren"
-                    : "Import course templates"
-                }
-                filename="course-templates"
-                columns={["title", "description", "syllabus", "prerequisites"]}
-                example={[
-                  "Excel Grundlagen",
-                  "Einführung in Tabellen",
-                  "Formatierung und Formeln",
-                  "",
-                ]}
-                parse={(row) =>
-                  templateSchema.parse({
-                    ...row,
-                    topic_ids: [],
-                    archived: false,
-                  })
-                }
-                save={(row, key) => importTableRow(key, "course-template", row)}
-                refresh={() =>
-                  client.invalidateQueries({ queryKey: ["operations"] })
-                }
-              />
-            )}
-            {manage &&
-              tab === "runs" &&
-              templates.data.some((template) => !template.archived_at) && (
-                <TableImport
-                  inDialog
-                  label={
-                    i18n.language.startsWith("de")
-                      ? "Kursentwürfe mit einem Termin importieren"
-                      : "Import course drafts with one session"
-                  }
-                  filename="course-drafts"
-                  columns={[
-                    "template_title",
-                    "company_name",
-                    "time_zone",
-                    "delivery_type",
-                    "venue",
-                    "starts_at",
-                    "ends_at",
-                  ]}
-                  example={[
-                    "Excel Grundlagen",
-                    "",
-                    "Europe/Berlin",
-                    "online",
-                    "",
-                    "2027-01-11T09:00",
-                    "2027-01-11T12:00",
-                  ]}
-                  parse={(row) => {
-                    const matchingTemplates = templates.data.filter(
-                      (item) =>
-                        !item.archived_at &&
-                        item.title === row.template_title.trim(),
-                    );
-                    const companyName = row.company_name.trim();
-                    const companies = orgs.data.filter(
-                      (item) => !item.archived_at && item.name === companyName,
-                    );
-                    if (
-                      matchingTemplates.length !== 1 ||
-                      (companyName && companies.length !== 1)
-                    )
-                      throw new Error("ambiguous course references");
-                    const values = runSchema.parse({
-                      template_id: matchingTemplates[0].id,
-                      organisation_id: companyName ? companies[0].id : "",
-                      time_zone: row.time_zone,
-                      delivery_type: row.delivery_type,
-                      venue: row.venue,
-                      published: false,
-                      archived: false,
-                      sessions: [
-                        { starts_at: row.starts_at, ends_at: row.ends_at },
-                      ],
-                    });
-                    const starts_at = zonedInstantForScheduleEdit(
-                      row.starts_at,
-                      values.time_zone,
-                    );
-                    const ends_at = zonedInstantForScheduleEdit(
-                      row.ends_at,
-                      values.time_zone,
-                    );
-                    if (
-                      !starts_at ||
-                      !ends_at ||
-                      (compareCourseInstants(ends_at, starts_at) ?? 0) <= 0
-                    )
-                      throw new Error("invalid course session");
-                    return { ...values, sessions: [{ starts_at, ends_at }] };
-                  }}
-                  save={(row, key) => importTableRow(key, "course-draft", row)}
-                  refresh={() =>
-                    client.invalidateQueries({ queryKey: ["operations"] })
-                  }
-                />
-              )}
+            <details className="course-tools">
+              <summary className="button button-secondary">
+                {t("courseTools")} <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div className="course-tools-actions">
+                {canPlanSeries && (
+                  <Button
+                    variant="secondary"
+                    disabled={!online}
+                    onClick={() => setSeriesTemplate(null)}
+                  >
+                    {t("courseSeries:title")}
+                  </Button>
+                )}
+                <Button asChild variant="secondary">
+                  <Link to="/learning?view=materials">
+                    {t("learning:materialLibrary")}
+                  </Link>
+                </Button>
+                {manage && tab === "templates" && (
+                  <TableImport
+                    inDialog
+                    label={
+                      i18n.language.startsWith("de")
+                        ? "Kursvorlagen importieren"
+                        : "Import course templates"
+                    }
+                    filename="course-templates"
+                    columns={[
+                      "title",
+                      "description",
+                      "syllabus",
+                      "prerequisites",
+                    ]}
+                    example={[
+                      "Excel Grundlagen",
+                      "Einführung in Tabellen",
+                      "Formatierung und Formeln",
+                      "",
+                    ]}
+                    parse={(row) =>
+                      templateSchema.parse({
+                        ...row,
+                        topic_ids: [],
+                        archived: false,
+                      })
+                    }
+                    save={(row, key) =>
+                      importTableRow(key, "course-template", row)
+                    }
+                    refresh={() =>
+                      client.invalidateQueries({ queryKey: ["operations"] })
+                    }
+                  />
+                )}
+                {manage &&
+                  tab === "runs" &&
+                  templates.data.some((template) => !template.archived_at) && (
+                    <TableImport
+                      inDialog
+                      label={
+                        i18n.language.startsWith("de")
+                          ? "Kursentwürfe mit einem Termin importieren"
+                          : "Import course drafts with one session"
+                      }
+                      filename="course-drafts"
+                      columns={[
+                        "template_title",
+                        "company_name",
+                        "time_zone",
+                        "delivery_type",
+                        "venue",
+                        "starts_at",
+                        "ends_at",
+                      ]}
+                      example={[
+                        "Excel Grundlagen",
+                        "",
+                        "Europe/Berlin",
+                        "online",
+                        "",
+                        "2027-01-11T09:00",
+                        "2027-01-11T12:00",
+                      ]}
+                      parse={(row) => {
+                        const matchingTemplates = templates.data.filter(
+                          (item) =>
+                            !item.archived_at &&
+                            item.title === row.template_title.trim(),
+                        );
+                        const companyName = row.company_name.trim();
+                        const companies = orgs.data.filter(
+                          (item) =>
+                            !item.archived_at && item.name === companyName,
+                        );
+                        if (
+                          matchingTemplates.length !== 1 ||
+                          (companyName && companies.length !== 1)
+                        )
+                          throw new Error("ambiguous course references");
+                        const values = runSchema.parse({
+                          template_id: matchingTemplates[0].id,
+                          organisation_id: companyName ? companies[0].id : "",
+                          time_zone: row.time_zone,
+                          delivery_type: row.delivery_type,
+                          venue: row.venue,
+                          published: false,
+                          archived: false,
+                          sessions: [
+                            { starts_at: row.starts_at, ends_at: row.ends_at },
+                          ],
+                        });
+                        const starts_at = zonedInstantForScheduleEdit(
+                          row.starts_at,
+                          values.time_zone,
+                        );
+                        const ends_at = zonedInstantForScheduleEdit(
+                          row.ends_at,
+                          values.time_zone,
+                        );
+                        if (
+                          !starts_at ||
+                          !ends_at ||
+                          (compareCourseInstants(ends_at, starts_at) ?? 0) <= 0
+                        )
+                          throw new Error("invalid course session");
+                        return {
+                          ...values,
+                          sessions: [{ starts_at, ends_at }],
+                        };
+                      }}
+                      save={(row, key) =>
+                        importTableRow(key, "course-draft", row)
+                      }
+                      refresh={() =>
+                        client.invalidateQueries({ queryKey: ["operations"] })
+                      }
+                    />
+                  )}
+              </div>
+            </details>
           </div>
         }
       />
       <section className="panel course-toolbar" aria-label={t("catalogue")}>
         <div className="course-toolbar-header">
-          <div className="segmented" role="group" aria-label={t("catalogue")}>
+          <div
+            className="course-view-switch"
+            role="group"
+            aria-label={t("catalogue")}
+          >
             <Button
-              variant={tab === "runs" ? "default" : "ghost"}
+              variant={tab === "runs" ? "default" : "secondary"}
               aria-pressed={tab === "runs"}
               onClick={() => setTab("runs")}
             >
@@ -1839,7 +1917,7 @@ export function CoursesPage() {
             </Button>
             {(manage || companyViewer) && (
               <Button
-                variant={tab === "templates" ? "default" : "ghost"}
+                variant={tab === "templates" ? "default" : "secondary"}
                 aria-pressed={tab === "templates"}
                 onClick={() => setTab("templates")}
               >
@@ -1847,32 +1925,8 @@ export function CoursesPage() {
               </Button>
             )}
           </div>
-          <div className="course-toolbar-actions">
-            {canCreateTemplate &&
-              visibleTemplates.some((template) => !template.archived_at) && (
-                <Button
-                  variant="secondary"
-                  disabled={!online}
-                  onClick={() => setSeriesTemplate(null)}
-                >
-                  {t("courseSeries:title")}
-                </Button>
-              )}
-            {(manage || companyViewer) && tab === "runs" && (
-              <Button asChild variant="secondary">
-                <Link to="/courses?tab=templates">
-                  {t("openTemplateLibrary")}
-                </Link>
-              </Button>
-            )}
-            <Button asChild variant="secondary">
-              <Link to="/learning?view=materials">
-                {t("learning:materialLibrary")}
-              </Link>
-            </Button>
-          </div>
         </div>
-        <div className="course-toolbar-filters">
+        <div className="course-search-row">
           <Field id="course-search" label={t("search")}>
             <input
               id="course-search"
@@ -1888,84 +1942,96 @@ export function CoursesPage() {
               }}
             />
           </Field>
-          {tab === "runs" && (
-            <CoursePhaseFilter
-              id="catalogue-course-phase"
-              value={phase}
-              onChange={setPhase}
-            />
-          )}
-          {manage && tab === "runs" && (
-            <>
-              <Field
-                id="course-company-filter"
-                label={t("courseCompanyFilter")}
-              >
-                <select
-                  id="course-company-filter"
-                  value={company}
-                  onChange={(event) => {
-                    const next = new URLSearchParams(params);
-                    if (event.target.value)
-                      next.set("company", event.target.value);
-                    else next.delete("company");
-                    setParams(next, { replace: true });
-                  }}
-                >
-                  <option value="">{t("allCourseCompanies")}</option>
-                  {orgs.data.map(({ id, name }) => (
-                    <option key={id} value={id}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {canPrepareOffer && (
-                <Field
-                  id="course-lecturer-filter"
-                  label={t("courseLecturerFilter")}
-                >
-                  <select
-                    id="course-lecturer-filter"
-                    value={lecturer}
-                    onChange={(event) => {
-                      setLecturer(event.target.value);
-                    }}
-                  >
-                    <option value="">{t("allCourseLecturers")}</option>
-                    {lecturerOptions.map(([id, name]) => (
-                      <option key={id} value={id}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
-              <Field
-                id="course-staffing-filter"
-                label={t("courseRunStatusFilter")}
-              >
-                <select
-                  id="course-staffing-filter"
-                  value={runStatus}
-                  onChange={(event) => {
-                    setRunStatus(event.target.value);
-                  }}
-                >
-                  <option value="all">{t("allCourseRunStatuses")}</option>
-                  <option value="planning">
-                    {t("courseDraftCount", { count: draftCount })}
-                  </option>
-                  <option value="published">{t("published")}</option>
-                  <option value="archived">{t("archive")}</option>
-                  {canPrepareOffer && (
-                    <option value="assigned">{t("onlyAssignedRuns")}</option>
-                  )}
-                </select>
-              </Field>
-            </>
-          )}
         </div>
+        {tab === "runs" && (
+          <details className="course-filters">
+            <summary className="button button-secondary">
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              {activeFilters
+                ? t("courseActiveFilters", { count: activeFilters })
+                : t("courseFilters")}
+            </summary>
+            <div className="course-toolbar-filters">
+              <CoursePhaseFilter
+                id="catalogue-course-phase"
+                value={phase}
+                onChange={setPhase}
+              />
+              {manage && (
+                <>
+                  <Field
+                    id="course-company-filter"
+                    label={t("courseCompanyFilter")}
+                  >
+                    <select
+                      id="course-company-filter"
+                      value={company}
+                      onChange={(event) => {
+                        const next = new URLSearchParams(params);
+                        if (event.target.value)
+                          next.set("company", event.target.value);
+                        else next.delete("company");
+                        setParams(next, { replace: true });
+                      }}
+                    >
+                      <option value="">{t("allCourseCompanies")}</option>
+                      {orgs.data.map(({ id, name }) => (
+                        <option key={id} value={id}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  {canPrepareOffer && (
+                    <Field
+                      id="course-lecturer-filter"
+                      label={t("courseLecturerFilter")}
+                    >
+                      <select
+                        id="course-lecturer-filter"
+                        value={lecturer}
+                        onChange={(event) => {
+                          setLecturer(event.target.value);
+                        }}
+                      >
+                        <option value="">{t("allCourseLecturers")}</option>
+                        {lecturerOptions.map(([id, name]) => (
+                          <option key={id} value={id}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
+                  <Field
+                    id="course-staffing-filter"
+                    label={t("courseRunStatusFilter")}
+                  >
+                    <select
+                      id="course-staffing-filter"
+                      value={runStatus}
+                      onChange={(event) => {
+                        setRunStatus(event.target.value);
+                      }}
+                    >
+                      <option value="all">{t("allCourseRunStatuses")}</option>
+                      <option value="planning">
+                        {t("courseDraftCount", { count: draftCount })}
+                      </option>
+                      <option value="published">{t("published")}</option>
+                      <option value="archived">{t("archive")}</option>
+                      {canPrepareOffer && (
+                        <option value="assigned">
+                          {t("onlyAssignedRuns")}
+                        </option>
+                      )}
+                    </select>
+                  </Field>
+                </>
+              )}
+            </div>
+          </details>
+        )}
       </section>
       {message && (
         <Notice>
@@ -2102,24 +2168,33 @@ export function CoursesPage() {
                     >
                       {t("viewCourseRun")}
                     </Button>
-                    {manage &&
-                      jobs.map((job) => (
-                        <Button
-                          key={job.id}
-                          asChild
-                          variant="secondary"
-                          className="course-run-job-link"
-                        >
-                          <Link to={`/jobs/${job.id}`}>
-                            {jobs.length === 1
-                              ? t("viewCourseAssignment")
-                              : t("viewCourseJob", { title: job.title })}
-                          </Link>
-                        </Button>
-                      ))}
+                    {manage && jobs.length === 1 && (
+                      <Button
+                        asChild
+                        variant="secondary"
+                        className="course-run-job-link"
+                      >
+                        <Link to={`/jobs/${jobs[0].id}`}>
+                          {t("viewCourseAssignment")}
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                   {manage && (
-                    <div className="operations-actions">
+                    <CourseActionDisclosure>
+                      {jobs.length > 1 &&
+                        jobs.map((job) => (
+                          <Button
+                            key={job.id}
+                            asChild
+                            variant="secondary"
+                            className="course-run-job-link"
+                          >
+                            <Link to={`/jobs/${job.id}`}>
+                              {t("viewCourseJob", { title: job.title })}
+                            </Link>
+                          </Button>
+                        ))}
                       {marketplaceAction(run, true)}
                       <Button
                         variant="ghost"
@@ -2136,14 +2211,6 @@ export function CoursesPage() {
                         <Copy size={15} />
                         {t("duplicate")}
                       </Button>
-                      <PermanentDeleteAction
-                        shortLabel
-                        kind="course_run"
-                        id={run.id}
-                        label={template?.title ?? t("courses")}
-                        linkedJobs={run.jobs}
-                        onReviewSessions={() => reviewSchedule(run)}
-                      />
                       <Button
                         variant="ghost"
                         disabled={!online || archiveRun.isPending}
@@ -2156,7 +2223,15 @@ export function CoursesPage() {
                       >
                         {t(run.archived_at ? "restore" : "archiveAction")}
                       </Button>
-                    </div>
+                      <PermanentDeleteAction
+                        shortLabel
+                        kind="course_run"
+                        id={run.id}
+                        label={template?.title ?? t("courses")}
+                        linkedJobs={run.jobs}
+                        onReviewSessions={() => reviewSchedule(run)}
+                      />
+                    </CourseActionDisclosure>
                   )}
                 </div>
               </article>
@@ -2207,15 +2282,6 @@ export function CoursesPage() {
                     {t("createRunFromTemplate")}
                   </Button>
                 )}
-                {!template.archived_at && (
-                  <Button
-                    variant="secondary"
-                    disabled={!online}
-                    onClick={() => setSeriesTemplate(template)}
-                  >
-                    {t("courseSeries:title")}
-                  </Button>
-                )}
                 {canEditTemplate(template) && (
                   <Button
                     variant="secondary"
@@ -2225,23 +2291,38 @@ export function CoursesPage() {
                     {t("edit")}
                   </Button>
                 )}
-                {manage && (
-                  <Button
-                    variant="ghost"
-                    disabled={!online}
-                    onClick={() => {
-                      duplicate.reset();
-                      setCopy({
-                        type: "template",
-                        id: template.id,
-                        title: template.title,
-                      });
-                      setCopyTitle(`${template.title} · ${t("copySuffix")}`);
-                    }}
-                  >
-                    <Copy size={16} />
-                    {t("duplicate")}
-                  </Button>
+                {(!template.archived_at || manage) && (
+                  <CourseActionDisclosure>
+                    {!template.archived_at && (
+                      <Button
+                        variant="secondary"
+                        disabled={!online}
+                        onClick={() => setSeriesTemplate(template)}
+                      >
+                        {t("courseSeries:title")}
+                      </Button>
+                    )}
+                    {manage && (
+                      <Button
+                        variant="ghost"
+                        disabled={!online}
+                        onClick={() => {
+                          duplicate.reset();
+                          setCopy({
+                            type: "template",
+                            id: template.id,
+                            title: template.title,
+                          });
+                          setCopyTitle(
+                            `${template.title} · ${t("copySuffix")}`,
+                          );
+                        }}
+                      >
+                        <Copy size={16} />
+                        {t("duplicate")}
+                      </Button>
+                    )}
+                  </CourseActionDisclosure>
                 )}
               </div>
             </article>
@@ -2510,16 +2591,6 @@ export function CoursesPage() {
                   {t("edit")}
                 </Button>
               )}
-              <PermanentDeleteAction
-                shortLabel
-                kind="course_run"
-                id={detail.id}
-                label={findTemplate(detail)?.title ?? t("courses")}
-                linkedJobs={detail.jobs}
-                onReviewSessions={
-                  manage ? () => reviewSchedule(detail) : undefined
-                }
-              />
               {manage && (
                 <Button
                   variant="secondary"
@@ -2534,6 +2605,16 @@ export function CoursesPage() {
                   {t(detail.archived_at ? "restore" : "archiveAction")}
                 </Button>
               )}
+              <PermanentDeleteAction
+                shortLabel
+                kind="course_run"
+                id={detail.id}
+                label={findTemplate(detail)?.title ?? t("courses")}
+                linkedJobs={detail.jobs}
+                onReviewSessions={
+                  manage ? () => reviewSchedule(detail) : undefined
+                }
+              />
             </div>
             {manage && (
               <div className="course-marketplace-state">

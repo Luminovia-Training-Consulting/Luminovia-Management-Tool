@@ -33,7 +33,7 @@ test("Chats and legacy articles reach the same Forum and outsiders cannot open a
         await login(page, administrator.email);
         await page.goto("/chats");
         await page
-            .getByRole("link", {name: "Forum", exact: true})
+            .getByRole("link", {name: /^Forum(?: |$)/})
             .click();
         await expect(page).toHaveURL(/\/chats\/forum$/);
         await expect(
