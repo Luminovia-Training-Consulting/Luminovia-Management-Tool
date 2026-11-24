@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
-import {chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync,} from "node:fs";
+import {chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {runInNewContext} from "node:vm";
@@ -200,8 +200,10 @@ test("Draft checks are bounded while ready events and main/manual retain complet
         (step) => step.run === "node scripts/ci-pr-check.mjs sql",
     );
     const baseline = ci.jobs["verify-selfhost"].steps.find((step) =>
-        step.run?.includes("git archive HEAD^"),
+        step.id === "baseline",
     );
+    assert.equal(baseline.env.PREVIOUS_MAIN_SHA, "${{ github.event.before }}");
+    assert.equal(native.env.BASELINE_COMMIT, "${{ steps.baseline.outputs.commit }}");
     // Ready/risky PRs/main/manual run both complete suites; proven Draft UI/docs
     // take faster paths. SQL shards still exercise the new runner on a risky PR.
     for (const [event_name, profile] of [
@@ -690,4 +692,63 @@ test("browser scope preflight accepts exact successful full profiles on every ev
                 `${event}/${profile}/${scopeResult}/${draft}/${action}`,
             );
         }
+});
+
+
+test("native upgrade archives previous main across a multi-commit push", () => {
+    const ci = yamlValue(parsers.yaml.parse(readFileSync(
+        new URL("../.github/workflows/ci.yml", import.meta.url), "utf8",
+    )));
+    const job = ci.jobs["verify-selfhost"];
+    assert.equal(job.steps.find((step) => step.uses?.startsWith("actions/checkout@")).with["fetch-depth"], "0");
+    const {run} = job.steps.find((step) => step.id === "baseline");
+    const fixture = mkdtempSync(join(tmpdir(), "native-main-baseline-"));
+    try {
+        const git = (...args) => {
+            const result = spawnSync("git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                "-c", "commit.gpgsign=false", ...args], {cwd: fixture, encoding: "utf8"});
+            assert.equal(result.status, 0, result.stderr);
+            return result.stdout.trim();
+        };
+        const file = join(fixture, "migration.sql");
+        const commit = (content) => {
+            writeFileSync(file, content);
+            git("add", "migration.sql");
+            git("commit", "-qm", content);
+            return git("rev-parse", "HEAD");
+        };
+        git("init", "-q");
+        const previousMain = commit("Previously released");
+        const intermediate = commit("Unreleased intermediate");
+        const head = commit("Final candidate");
+        git("checkout", "--detach", previousMain);
+        const unrelated = commit("Unrelated history");
+        git("checkout", "--detach", head);
+        const archive = (event, previous, runId) => {
+            const directory = join(fixture, runId);
+            mkdirSync(directory);
+            const output = join(directory, "outputs");
+            const result = spawnSync("bash", ["-ec", run], {
+                cwd: fixture, encoding: "utf8",
+                env: {...process.env, GITHUB_EVENT_NAME: event, PREVIOUS_MAIN_SHA: previous,
+                    RUNNER_TEMP: directory, GITHUB_OUTPUT: output},
+            });
+            return {result, directory, output};
+        };
+        for (const [event, sha, expected, content] of [
+            ["push", previousMain, previousMain, "Previously released"],
+            ["pull_request", "", intermediate, "Unreleased intermediate"],
+            ["workflow_dispatch", "", intermediate, "Unreleased intermediate"],
+        ]) {
+            const {result, directory, output} = archive(event, sha, event);
+            assert.equal(result.status, 0, result.stderr);
+            assert.equal(readFileSync(output, "utf8").trim(), `commit=${expected}`);
+            assert.equal(readFileSync(join(directory, "selfhost-baseline", "migration.sql"), "utf8"), content);
+        }
+        assert.notEqual(archive("push", head, "invalid-current").result.status, 0);
+        assert.notEqual(archive("push", "", "invalid-missing").result.status, 0);
+        assert.notEqual(archive("push", unrelated, "invalid-history").result.status, 0);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
 });

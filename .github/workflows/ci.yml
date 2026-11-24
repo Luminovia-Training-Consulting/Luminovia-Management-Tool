@@ -293,7 +293,7 @@ jobs:
         if: needs.scope.outputs.profile != 'docs'
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         if: needs.scope.outputs.profile != 'docs'
         with:
@@ -308,13 +308,30 @@ jobs:
         if: needs.scope.outputs.profile == 'docs'
         run: echo 'Documentation-only merge; source/runtime/security gates run, SQL and native acceptance are not claimed.' >> "$GITHUB_STEP_SUMMARY"
       - name: Archive previous committed runtime for retained-data upgrade check
+        id: baseline
         if: needs.scope.outputs.profile == 'full'
+        env:
+          PREVIOUS_MAIN_SHA: ${{ github.event.before }}
         run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            # A fast-forward merge can contain unpublished intermediate commits.
+            # The push event identifies the previous state of the released branch.
+            [[ "$PREVIOUS_MAIN_SHA" =~ ^[0-9a-f]{40}$ ]]
+            baseline="$(git rev-parse --verify "$PREVIOUS_MAIN_SHA^{commit}")"
+            test "$baseline" != "$(git rev-parse HEAD)"
+            git merge-base --is-ancestor "$baseline" HEAD
+          else
+            baseline="$(git rev-parse --verify 'HEAD^')"
+          fi
           mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
-          git archive HEAD^ | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+          git archive "$baseline" | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+          echo "commit=$baseline" >> "$GITHUB_OUTPUT"
       - name: Complete isolated native selfhost verification
         if: needs.scope.outputs.profile == 'full'
-        run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
+        env:
+          BASELINE_COMMIT: ${{ steps.baseline.outputs.commit }}
+        run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$BASELINE_COMMIT" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   preview-package:
     name: PR preview package
     needs: [quality, coverage, verify, verify-selfhost, verify-browser, scope]
