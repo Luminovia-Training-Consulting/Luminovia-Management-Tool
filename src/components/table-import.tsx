@@ -9,6 +9,7 @@ import {
 } from "../features/learning/attendance-import";
 import { Field, Notice } from "./common";
 import { Button } from "./ui/button";
+import { Dialog } from "./ui/dialog";
 
 function rejectionCode(cause: unknown) {
   return cause && typeof cause === "object" && "code" in cause
@@ -41,6 +42,7 @@ function saveFailureReason(cause: unknown, de: boolean) {
 export function TableImport<T>({
   label,
   filename,
+  inDialog = false,
   columns,
   example,
   parse,
@@ -50,6 +52,7 @@ export function TableImport<T>({
 }: {
   label: string;
   filename: string;
+  inDialog?: boolean;
   columns: readonly string[];
   example: readonly string[];
   parse: (values: Record<string, string>) => T;
@@ -120,6 +123,8 @@ export function TableImport<T>({
     );
   }
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
 
   async function prepare(file: File) {
     setBusy(true);
@@ -239,9 +244,8 @@ export function TableImport<T>({
     }
   }
 
-  return (
-    <details className="panel">
-      <summary>{label}</summary>
+  const content = (
+    <>
       <p>
         {de
           ? "Ersetze die Beispielzeile durch deine Daten und prüfe die Vorschau. Der Import legt neue Einträge an und stoppt bei einem Speicherfehler."
@@ -385,6 +389,45 @@ export function TableImport<T>({
         </>
       )}
       {status && <Notice kind={error ? "error" : undefined}>{status}</Notice>}
+    </>
+  );
+
+  if (inDialog)
+    return (
+      <>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={(event) => {
+            setTrigger(event.currentTarget);
+            setOpen(true);
+          }}
+        >
+          {label}
+        </Button>
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            if (!busy) setOpen(next);
+          }}
+          title={label}
+          description={
+            de
+              ? "CSV- oder XLSX-Datei prüfen und importieren."
+              : "Review and import a CSV or XLSX file."
+          }
+          returnFocusTo={trigger}
+          closeDisabled={busy}
+        >
+          {content}
+        </Dialog>
+      </>
+    );
+
+  return (
+    <details className="panel">
+      <summary>{label}</summary>
+      {content}
     </details>
   );
 }
