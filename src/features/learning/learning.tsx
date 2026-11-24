@@ -94,8 +94,18 @@ function useAction(course: string, actor: string, academy = false) {
       academy
         ? courseAction(course, action, payload, version, true)
         : courseAction(course, action, payload, version),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: courseWorkspaceKey(actor, course) }),
+    onSuccess: async (_, { action }) => {
+      await client.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course),
+      });
+      if (action === "contact_select") {
+        await Promise.all(
+          ["job-briefing", "job-lifecycle", "teaching-day"].map((key) =>
+            client.invalidateQueries({ queryKey: [key, actor] }),
+          ),
+        );
+      }
+    },
   });
 }
 
@@ -270,7 +280,11 @@ function CourseContact({
   const { t } = useTranslation("learning");
   const online = useOnline();
   const save = useAction(course.id, actor);
-  const [selected, setSelected] = useState("");
+  const [draftContact, setDraftContact] = useState<{
+    id: string;
+    version: number;
+  }>();
+  const selected = draftContact?.id ?? course.selected_contact_id ?? "";
   const [copyStatus, setCopyStatus] = useState<{
     url: string;
     status: "success" | "error";
@@ -345,20 +359,28 @@ function CourseContact({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate({
-              action: "contact_select",
-              payload: { contact_id: selected || null },
-              version: course.settings_version,
-            });
+            save.mutate(
+              {
+                action: "contact_select",
+                payload: { contact_id: selected || null },
+                version: draftContact?.version ?? course.settings_version,
+              },
+              { onSuccess: () => setDraftContact(undefined) },
+            );
           }}
         >
           <Field id="course-contact" label={t("selectContact")}>
             <select
               id="course-contact"
               value={selected}
-              onChange={(event) => setSelected(event.target.value)}
+              onChange={(event) =>
+                setDraftContact({
+                  id: event.target.value,
+                  version: draftContact?.version ?? course.settings_version,
+                })
+              }
             >
-              <option value="">{t("noContact")}</option>
+              <option value="">{t("defaultCourseContact")}</option>
               {course.contact_options.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -367,10 +389,12 @@ function CourseContact({
             </select>
           </Field>
           <p className="muted">{t("contactHelp")}</p>
-          <Button disabled={!online || save.isPending}>{t("save")}</Button>
+          <Button disabled={!online || save.isPending || !draftContact}>
+            {t("save")}
+          </Button>
         </form>
       )}
-      <Result error={save.isError} />
+      <Result error={save.isError} success={save.isSuccess} />
     </section>
   );
 }
@@ -1247,10 +1271,15 @@ function CourseWorkspaceLayout({
               />
             )}
             <CourseContact
+              key={`${actor}:${course.id}`}
               course={course}
               actor={actor}
               url={classroom}
-              canEditContact={!academy && course.access.manager}
+              canEditContact={
+                !academy &&
+                course.access.manager &&
+                course.lms_enabled !== false
+              }
               canEditMeeting={canEdit && course.meeting_link?.can_edit === true}
             />
             {editor && (

@@ -592,6 +592,8 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
                 "can_edit",
                 "can_duplicate",
                 "can_edit_course_details",
+                "can_edit_metadata",
+                "replaceable_claim_ids",
                 "can_edit_dispatch",
                 "can_edit_schedule",
                 "can_reassign_company",

@@ -157,6 +157,8 @@ Staff contact sharing is an explicit own email/phone opt-in, private by default,
 
 ## Validation and rollout boundaries
 
+The [course and assignment workflow](GUIDE.md#section-course-building-blocks-daily-workflow) covers direct navigation from a run to its offer, confirmed lecturer filtering, inherited company contacts, audited listing edits and whole-block lecturer replacements. The PostgreSQL regression exercises contact precedence, current permissions, preserved claim terms, conflict rollback and committed notices. Date and commercial changes to confirmed work still use assignment amendments. Partial, started and invoiced replacements remain separate work.
+
 Each vertical requires real PostgreSQL permission/concurrency checks, actual Auth/REST/Storage where relevant and meaningful desktop/mobile DE/EN journeys. The earlier root-owned source checkpoint reported **499 unit/component passes**; later Teaching Day focused checks separately passed five new and nine existing SQL groups plus eleven UI/contact cases, type/lint and documentation checks. These numbers are not added together into an invented new whole-source result. Auth/API/browser cases that
 are authored, earlier accepted checkpoints and current focused results do not establish the pending complete merged/native/retained-data/PWA gate.
 

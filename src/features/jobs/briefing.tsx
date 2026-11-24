@@ -154,6 +154,7 @@ function BriefingContent({
   if (
     !hasReference &&
     !current.has_contact &&
+    !current.fallback_contact &&
     !current.can_manage &&
     !managementHint
   )
@@ -260,6 +261,26 @@ function BriefingContent({
           {current.reference_description && (
             <p className="preserve-text">{current.reference_description}</p>
           )}
+        </div>
+      )}
+      {current.fallback_contact && (
+        <div className="job-briefing-block">
+          <h3>{t("contact")}</h3>
+          <div className="job-briefing-contact">
+            <strong>{current.fallback_contact.name}</strong>
+            {current.fallback_contact.email && (
+              <a
+                href={`mailto:${encodeURIComponent(current.fallback_contact.email)}`}
+              >
+                {current.fallback_contact.email}
+              </a>
+            )}
+            {current.fallback_contact.phone && (
+              <a href={phoneHref(current.fallback_contact.phone)}>
+                {current.fallback_contact.phone}
+              </a>
+            )}
+          </div>
         </div>
       )}
       {current.has_contact && (

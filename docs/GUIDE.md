@@ -1376,6 +1376,14 @@ Public documentation, examples and screenshots must use neutral descriptions or 
 
 Open **Courses → Edit** to update venue and access link. Publish the linked teaching offer to list it for eligible lecturers. If a sole linked offer has an editable future schedule, saving dates updates the course and the offer together. Eligible linked drafts also offer selectors for template, organisation, time zone and delivery mode. Changing the display time zone preserves the scheduled instants. For confirmed work, **Propose schedule change** opens the amendment form for the selected assignment and uses the existing approval workflow.
 
+Use **Auftrag anzeigen / View assignment** on an existing course offer, including filled and closed offers. Course management can filter the list by confirmed lecturer and see the current names on the course card.
+
+**Auftrag bearbeiten / Edit assignment** opens the listing editor for job managers. They can change the title and description of a filled listing and open its class, assignment, contact and reference controls. Eligible unaccepted offers support direct date and authorised price changes. For a confirmed assignment, open the proposal for its lecturer to change dates or rebalance the existing gross amount between lecturer and platform. The amended terms take effect through the consent workflow. Linked template, company, delivery mode and time-zone changes follow the existing linked-draft rules.
+
+A saved job contact takes precedence over the course's selected contact. With both fields empty, the assignment shows the company's newest active contact. Inherited details are available to current managers and confirmed lecturers. They remain separate from the editable job contact. Clearing the course selection restores automatic company contact selection for linked assignments.
+
+To replace a lecturer, open **Dozent:in wechseln / Replace lecturer** beside their confirmed claim and select an eligible replacement. The entire future unbilled block transfers in one transaction. A conflict keeps the original assignment in place. On confirmation, the former lecturer receives a cancellation notice and the replacement receives an assignment confirmation. The original accepted terms remain in the claim history.
+
 Building-block/template discussions are attached to the actual reusable template, so teaching notes persist across runs of that template. Job discussions remain attached to the individual job. These are teaching-team discussions; clients/learners do not receive their bodies. Course enrolment, invoices and private commercial/DM/calendar boundaries remain independent and enforced.
 
 <a id="section-course-building-blocks-source-identity-and-editorial-decisions"></a>

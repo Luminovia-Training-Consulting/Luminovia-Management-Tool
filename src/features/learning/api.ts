@@ -97,6 +97,7 @@ export interface CourseWorkspace {
     can_edit: boolean;
   } | null;
   contact: { name: string; email: string; phone: string } | null;
+  selected_contact_id?: string | null;
   contact_options: { id: string; name: string }[];
   sessions: CourseSession[];
   preparation: PreparationItem[];

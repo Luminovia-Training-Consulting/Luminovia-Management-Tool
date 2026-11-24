@@ -1,5 +1,6 @@
 /** Staff allocate one complete teaching block through an online authoritative transaction. */
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { useRequestKey } from "../../lib/request-key";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -23,10 +24,12 @@ export function ManualAssignment({
   jobId,
   version,
   published,
+  replacement,
 }: {
   jobId: string;
   version: number;
   published: boolean;
+  replacement?: { claimId: string; lecturer: string };
 }) {
   const { i18n } = useTranslation(),
     de = i18n.language.startsWith("de"),
@@ -35,17 +38,31 @@ export function ManualAssignment({
     online = useOnline();
   const [open, setOpen] = useState(false),
     [search, setSearch] = useState(""),
-    [selected, setSelected] = useState("");
-  const identity = useRef<{ target: string; key: string } | null>(null);
+    [selected, setSelected] = useState(""),
+    [reasonText, setReasonText] = useState(""),
+    [reviewedVersion, setReviewedVersion] = useState(version);
+  const request = useRequestKey();
+  const formId = replacement?.claimId ?? jobId;
   const query = useQuery({
-    queryKey: ["manual-assignment-candidates", actor, jobId, search],
+    queryKey: [
+      "manual-assignment-candidates",
+      actor,
+      jobId,
+      replacement?.claimId,
+      search,
+    ],
     enabled: open,
     retry: false,
     queryFn: async () => {
-      const { data, error } = await db().rpc("manual_assignment_candidates", {
-        p_job_id: jobId,
-        p_search: search,
-      });
+      const { data, error } = replacement
+        ? await db().rpc("job_replacement_candidates", {
+            p_claim_id: replacement.claimId,
+            p_search: search,
+          })
+        : await db().rpc("manual_assignment_candidates", {
+            p_job_id: jobId,
+            p_search: search,
+          });
       if (error) throw error;
       return data as Candidate[];
     },
@@ -56,15 +73,26 @@ export function ManualAssignment({
       requireOnline();
       if (!candidate || candidate.eligibility !== "eligible")
         throw Error("Choose an available lecturer");
-      if (identity.current?.target !== candidate.id)
-        identity.current = { target: candidate.id, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("manual_assign_job", {
-        p_job_id: jobId,
+      const input = {
         p_lecturer_id: candidate.id,
         p_terms_version: candidate.terms_version,
-        p_expected_job_version: version,
-        p_request_id: identity.current.key,
-      });
+        p_expected_job_version: reviewedVersion,
+        p_request_id: request.forInput(
+          JSON.stringify([
+            candidate.id,
+            candidate.terms_version,
+            reviewedVersion,
+            reasonText.trim(),
+          ]),
+        ),
+      };
+      const { data, error } = replacement
+        ? await db().rpc("replace_job_lecturer", {
+            ...input,
+            p_claim_id: replacement.claimId,
+            p_reason: reasonText.trim(),
+          })
+        : await db().rpc("manual_assign_job", { ...input, p_job_id: jobId });
       if (error) throw error;
       return data as { status: string; claim_id?: string };
     },
@@ -76,7 +104,8 @@ export function ManualAssignment({
       if (receipt.status === "confirmed") {
         setOpen(false);
         setSelected("");
-        identity.current = null;
+        setReasonText("");
+        request.clear();
       }
     },
   });
@@ -89,6 +118,10 @@ export function ManualAssignment({
         : "Requirements not met",
       prerequisite_missing: de ? "Vertrag fehlt" : "Contract missing",
       unavailable: de ? "Nicht verfügbar" : "Unavailable",
+      terms_changed: de
+        ? "Der Auftrag wurde geändert. Öffne die Zuweisung erneut."
+        : "The assignment changed. Reopen the form.",
+      already_assigned: de ? "Bereits zugewiesen" : "Already assigned",
       quote_unavailable: de
         ? "Honorar passt nicht zu Budget oder Währung"
         : "Compensation does not match budget or currency",
@@ -99,30 +132,47 @@ export function ManualAssignment({
         variant="secondary"
         onClick={() => {
           save.reset();
+          setReviewedVersion(version);
           setOpen(true);
         }}
-        disabled={!online || !published}
+        disabled={!online || (!replacement && !published)}
       >
-        {de ? "Dozent:in zuweisen" : "Assign lecturer"}
+        {replacement
+          ? de
+            ? "Dozent:in wechseln"
+            : "Replace lecturer"
+          : de
+            ? "Dozent:in zuweisen"
+            : "Assign lecturer"}
       </Button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
         title={
-          de ? "Dozent:in verbindlich zuweisen" : "Confirm lecturer assignment"
+          replacement
+            ? de
+              ? `${replacement.lecturer} ersetzen`
+              : `Replace ${replacement.lecturer}`
+            : de
+              ? "Dozent:in verbindlich zuweisen"
+              : "Confirm lecturer assignment"
         }
         description={
-          de
-            ? "Die Zuweisung umfasst alle Termine des Auftrags. Verfügbarkeit, Voraussetzungen und Honorar werden vor der Bestätigung online geprüft."
-            : "The assignment includes every session. Availability, requirements and compensation are checked online before confirmation."
+          replacement
+            ? de
+              ? "Der Wechsel umfasst alle Termine. Nach erfolgreicher Prüfung werden beide Dozent:innen im Portal benachrichtigt."
+              : "The replacement covers every session. Both lecturers receive a portal notification after the change succeeds."
+            : de
+              ? "Die Zuweisung umfasst alle Termine des Auftrags. Verfügbarkeit, Voraussetzungen und Honorar werden vor der Bestätigung online geprüft."
+              : "The assignment includes every session. Availability, requirements and compensation are checked online before confirmation."
         }
       >
         <Field
-          id={`assign-search-${jobId}`}
+          id={`assign-search-${formId}`}
           label={de ? "Dozent:innen suchen" : "Find lecturers"}
         >
           <input
-            id={`assign-search-${jobId}`}
+            id={`assign-search-${formId}`}
             value={search}
             maxLength={200}
             onChange={(e) => setSearch(e.target.value)}
@@ -134,11 +184,11 @@ export function ManualAssignment({
           <ErrorState retry={() => void query.refetch()} />
         ) : (
           <Field
-            id={`assign-user-${jobId}`}
+            id={`assign-user-${formId}`}
             label={de ? "Dozent:in" : "Lecturer"}
           >
             <select
-              id={`assign-user-${jobId}`}
+              id={`assign-user-${formId}`}
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
             >
@@ -169,16 +219,36 @@ export function ManualAssignment({
             )}
           </p>
         )}
+        {replacement && (
+          <Field
+            id={`replacement-reason-${formId}`}
+            label={de ? "Grund für den Wechsel" : "Reason for replacement"}
+          >
+            <textarea
+              id={`replacement-reason-${formId}`}
+              value={reasonText}
+              maxLength={1000}
+              onChange={(event) => setReasonText(event.target.value)}
+            />
+          </Field>
+        )}
         <Button
           disabled={
             !online ||
+            (Boolean(replacement) && reasonText.trim().length < 5) ||
             save.isPending ||
             query.isFetching ||
             candidate?.eligibility !== "eligible"
           }
           onClick={() => save.mutate()}
         >
-          {de ? "Gesamten Auftrag zuweisen" : "Assign complete block"}
+          {replacement
+            ? de
+              ? "Dozentenwechsel bestätigen"
+              : "Confirm replacement"
+            : de
+              ? "Gesamten Auftrag zuweisen"
+              : "Assign complete block"}
         </Button>
         {save.isError && (
           <Notice kind="error">

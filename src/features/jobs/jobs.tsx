@@ -67,6 +67,8 @@ export function JobDetail() {
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
+  const [editButtonTarget, setEditButtonTarget] =
+    useState<HTMLDivElement | null>(null);
   const [accepted, setAccepted] = useState<string | null>(null);
   // Network uncertainty preserves the same operation; only a confirmed claim
   // later receives a fresh identity for a genuine reopening.
@@ -201,15 +203,20 @@ export function JobDetail() {
         eyebrow={job.customer_name}
         title={job.title}
         action={
-          <span className={`status status-${job.status}`}>
-            {job.urgent_reopened_at && job.status === "published"
-              ? t("sickDay:urgent")
-              : t(job.status)}
-          </span>
+          <div className="page-actions">
+            <span className={`status status-${job.status}`}>
+              {job.urgent_reopened_at && job.status === "published"
+                ? t("sickDay:urgent")
+                : t(job.status)}
+            </span>
+            <div ref={setEditButtonTarget} />
+          </div>
         }
       />
       {permissions.data?.includes("jobs.manage") && (
-        <JobPricingPanel job={job} />
+        <div id="job-pricing">
+          <JobPricingPanel job={job} />
+        </div>
       )}
       {!companyDispatchOnly && (
         <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
@@ -315,7 +322,12 @@ export function JobDetail() {
               </>
             )}
           </section>
-          <JobLifecyclePanel job={job} dispatchOnly={companyDispatchOnly} />
+          <JobLifecyclePanel
+            key={job.id}
+            job={job}
+            dispatchOnly={companyDispatchOnly}
+            editButtonTarget={editButtonTarget}
+          />
           {!companyDispatchOnly && (
             <>
               <JobBriefing

@@ -1803,14 +1803,17 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
         jobs: [
           {
             ...job,
-            capacity: 2,
+            status: "filled",
+            capacity: 1,
             job_claims: [
               {
                 status: "confirmed",
+                lecturer_id: "current-lecturer",
                 profiles: { display_name: "Fictional lecturer" },
               },
               {
                 status: "cancelled",
+                lecturer_id: "former-lecturer",
                 profiles: { display_name: "Former lecturer" },
               },
             ],
@@ -1823,11 +1826,26 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
 
   expect(
     screen.getByRole("link", {
-      name: "Fictional active order · 1 von 2 besetzt",
+      name: "Fictional active order · 1 von 1 besetzt",
     }),
   ).toHaveAttribute("href", `/jobs/${jobId}`);
-  expect(screen.getByText(/Fictional lecturer/)).toBeVisible();
+  expect(screen.getByText("Dozent:in: Fictional lecturer")).toBeVisible();
+  expect(
+    screen.getByRole("link", {
+      name: "Auftrag anzeigen: Fictional active order",
+    }),
+  ).toHaveAttribute("href", `/jobs/${jobId}`);
   expect(screen.queryByText(/Former lecturer/)).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: openTemplate.title }),
+  ).toBeVisible();
+
+  const lecturerFilter = screen.getByRole("combobox", { name: "Dozent:in" });
+  await userEvent.selectOptions(lecturerFilter, "current-lecturer");
+  expect(
+    screen.queryByRole("heading", { name: openTemplate.title }),
+  ).not.toBeInTheDocument();
+  await userEvent.selectOptions(lecturerFilter, "");
   expect(
     screen.getByRole("heading", { name: openTemplate.title }),
   ).toBeVisible();

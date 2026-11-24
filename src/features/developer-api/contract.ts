@@ -869,6 +869,9 @@ const jobBriefingFields = {
 };
 const jobBriefingResult = object({
   ...jobBriefingFields,
+  fallback_contact: {
+    anyOf: [object({ name: text, email: text, phone: text }), { type: "null" }],
+  },
   version,
   has_contact: boolean,
   contact_visible: boolean,
@@ -997,6 +1000,35 @@ const dispatchDirectory = object({
     }),
   },
 });
+const manualAssignmentCandidates = {
+  type: "array",
+  maxItems: 50,
+  items: object({
+    id: uuid,
+    name: text,
+    eligibility: {
+      enum: [
+        "eligible",
+        "unavailable",
+        "not_eligible",
+        "conflict",
+        "prerequisite_missing",
+        "quote_unavailable",
+      ],
+    },
+    terms_version: { ...version, minimum: 1 },
+    quote: { anyOf: [object(lecturerQuote), { type: "null" }] },
+  }),
+};
+const manualAssignmentReceipt = {
+  anyOf: [
+    object({ status: replacementRefusal }),
+    object({
+      status: { enum: ["confirmed", "cancelled"] },
+      claim_id: uuid,
+    }),
+  ],
+};
 const lifecycleCommand = rpc(
   "native_manage_job_offer",
   "Jobs",
@@ -2571,26 +2603,7 @@ const nativePaths = {
     "Read current instructor candidates for a job",
     "Requires current job management authority. Eligibility follows the complete block, scheduling conflicts and lecturer requirements. Only finance-authorised callers receive the candidate's quote. The current terms version identifies the terms to review.",
     { p_job_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
-    {
-      type: "array",
-      maxItems: 50,
-      items: object({
-        id: uuid,
-        name: text,
-        eligibility: {
-          enum: [
-            "eligible",
-            "unavailable",
-            "not_eligible",
-            "conflict",
-            "prerequisite_missing",
-            "quote_unavailable",
-          ],
-        },
-        terms_version: { ...version, minimum: 1 },
-        quote: { anyOf: [object(lecturerQuote), { type: "null" }] },
-      }),
-    },
+    manualAssignmentCandidates,
     ["p_search"],
   ),
   "/rest/v1/rpc/manual_assign_job": rpc(
@@ -2605,15 +2618,31 @@ const nativePaths = {
       p_expected_job_version: { ...version, minimum: 1 },
       ...idempotency,
     },
+    manualAssignmentReceipt,
+  ),
+  "/rest/v1/rpc/job_replacement_candidates": rpc(
+    "native_job_replacement_candidates",
+    "Jobs",
+    "Read replacement candidates for a confirmed lecturer assignment",
+    "Requires job management authority. Candidates are checked against the entire future assignment. Only finance-authorised callers receive quotes.",
+    { p_claim_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
+    manualAssignmentCandidates,
+    ["p_search"],
+  ),
+  "/rest/v1/rpc/replace_job_lecturer": rpc(
+    "native_replace_job_lecturer",
+    "Jobs",
+    "Transfer a confirmed assignment to another lecturer",
+    "Requires job management authority and the reviewed job and terms versions. Release and reassignment commit together for a complete future block. Both lecturers receive a notification after confirmation. A retry must use the same parameters.",
     {
-      anyOf: [
-        object({ status: replacementRefusal }),
-        object({
-          status: { enum: ["confirmed", "cancelled"] },
-          claim_id: uuid,
-        }),
-      ],
+      p_claim_id: uuid,
+      p_lecturer_id: uuid,
+      p_terms_version: { ...version, minimum: 1 },
+      p_expected_job_version: { ...version, minimum: 1 },
+      p_reason: { ...text, minLength: 5, maxLength: 1000 },
+      ...idempotency,
     },
+    manualAssignmentReceipt,
   ),
   "/rest/v1/rpc/create_capacity_job": rpc(
     "native_create_capacity_job",
@@ -2719,6 +2748,8 @@ const nativePaths = {
       can_edit: boolean,
       can_edit_schedule: boolean,
       can_edit_course_details: boolean,
+      can_edit_metadata: boolean,
+      replaceable_claim_ids: { type: "array", items: uuid },
       can_duplicate: boolean,
       organisation_id: nullableUuid,
       can_reassign_company: boolean,
@@ -2772,6 +2803,10 @@ const nativePaths = {
             offerAction(["reopen"], {
               reason: { ...lifecycleReason, minLength: 5 },
               claim_deadline: lifecycleDeadline,
+            }),
+            offerAction(["edit_metadata"], {
+              title: { ...text, minLength: 1, maxLength: 200 },
+              description: { ...text, maxLength: 12000 },
             }),
             offerAction(["edit"], {
               reason: lifecycleReason,

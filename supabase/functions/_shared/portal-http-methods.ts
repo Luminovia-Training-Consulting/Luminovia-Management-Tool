@@ -137,6 +137,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   job_lifecycle: "GET",
   job_picker: "GET",
   job_related_navigation: "GET",
+  job_replacement_candidates: "GET",
   job_substitutions: "GET",
   job_waitlist: "GET",
   knowledge_access: "GET",

@@ -166,6 +166,7 @@ export interface CourseRun {
     capacity?: number;
     job_claims?: {
       status: string;
+      lecturer_id?: string;
       profiles: { display_name: string } | null;
     }[];
   }[];
@@ -250,7 +251,7 @@ export const runsQuery = (actor: string, withAssignments = false) =>
           .select(
             `*,course_sessions(*),jobs(id,title,status,company_internal,claim_deadline,job_sessions(starts_at)${
               withAssignments
-                ? ",capacity,job_claims(status,profiles!job_claims_lecturer_id_fkey(display_name))"
+                ? ",capacity,job_claims(status,lecturer_id,profiles!job_claims_lecturer_id_fkey(display_name))"
                 : ""
             })`,
           )

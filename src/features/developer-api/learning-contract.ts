@@ -258,7 +258,10 @@ const workspaceFields = {
   }),
 };
 
-export const workspaceResult = record(workspaceFields);
+export const workspaceResult = record({
+  ...workspaceFields,
+  selected_contact_id: nullable(uuid),
+});
 export const internalWorkspaceResult = {
   oneOf: [
     workspaceResult,

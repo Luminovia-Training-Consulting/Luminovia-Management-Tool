@@ -1281,6 +1281,7 @@ export function CoursesPage() {
   const resetPages = () => setPages({ runs: 0, templates: 0 });
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [runStatus, setRunStatus] = useState("all");
+  const [lecturer, setLecturer] = useState("");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [seriesTemplate, setSeriesTemplate] = useState<Template | null>();
@@ -1335,8 +1336,10 @@ export function CoursesPage() {
                     title: job.title,
                     count: claims.length,
                     capacity: job.capacity ?? claims.length,
-                    names: claims.flatMap(({ profiles }) =>
-                      profiles?.display_name ? [profiles.display_name] : [],
+                    lecturers: claims.flatMap(({ lecturer_id, profiles }) =>
+                      profiles?.display_name
+                        ? [{ id: lecturer_id, name: profiles.display_name }]
+                        : [],
                     ),
                   },
                 ]
@@ -1345,6 +1348,21 @@ export function CoursesPage() {
         ]),
       ),
     [runs.data],
+  );
+  const lecturerOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          Array.from(assignmentsByRun.values()).flatMap((assignments) =>
+            assignments.flatMap(({ lecturers }) =>
+              lecturers.flatMap(({ id, name }) =>
+                id ? [[id, name] as const] : [],
+              ),
+            ),
+          ),
+        ),
+      ).sort((a, b) => a[1].localeCompare(b[1], i18n.language)),
+    [assignmentsByRun, i18n.language],
   );
   const organisationName = (id: string | null | undefined) =>
     id
@@ -1476,6 +1494,11 @@ export function CoursesPage() {
               selectedRunStatus !== "assigned" &&
               courseRunStatus(run) !== selectedRunStatus) ||
             (onlyAssignedRuns && !assignments.length) ||
+            (canPrepareOffer &&
+              lecturer &&
+              !assignments.some(({ lecturers }) =>
+                lecturers.some(({ id }) => id === lecturer),
+              )) ||
             (phase !== "all" &&
               scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) !==
                 phase)
@@ -1489,7 +1512,9 @@ export function CoursesPage() {
             organisationName(run.organisation_id),
             run.venue,
             ...(canPrepareOffer
-              ? assignments.flatMap(({ names }) => names)
+              ? assignments.flatMap(({ lecturers }) =>
+                  lecturers.map(({ name }) => name),
+                )
               : []),
           ]
             .join(" ")
@@ -1519,6 +1544,19 @@ export function CoursesPage() {
               </Link>
             ))
           : t(closedReason)}
+        {run.jobs
+          ?.filter(
+            ({ id, status }) =>
+              status !== "draft" &&
+              !liveOffers.some((offer) => offer.id === id),
+          )
+          .map((job) => (
+            <Button key={job.id} asChild variant="secondary">
+              <Link to={`/jobs/${job.id}`}>
+                {t("viewCourseJob", { title: job.title })}
+              </Link>
+            </Button>
+          ))}
       </>
     );
   };
@@ -1536,7 +1574,7 @@ export function CoursesPage() {
           )}
         </div>
       );
-    if (run.archived_at) return null;
+    if (run.archived_at || run.jobs?.length) return null;
     if (!canPrepareOffer)
       return <p className="muted">{t("offerPermissionRequired")}</p>;
     const company = organisationsById.get(run.organisation_id ?? "");
@@ -1802,6 +1840,28 @@ export function CoursesPage() {
                 ))}
               </select>
             </Field>
+            {canPrepareOffer && (
+              <Field
+                id="course-lecturer-filter"
+                label={t("courseLecturerFilter")}
+              >
+                <select
+                  id="course-lecturer-filter"
+                  value={lecturer}
+                  onChange={(event) => {
+                    setLecturer(event.target.value);
+                    resetPages();
+                  }}
+                >
+                  <option value="">{t("allCourseLecturers")}</option>
+                  {lecturerOptions.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field
               id="course-staffing-filter"
               label={t("courseRunStatusFilter")}
@@ -1960,6 +2020,20 @@ export function CoursesPage() {
                         closedReason === "marketplaceClosed") && (
                         <span className="badge">{t("closedCourseOffer")}</span>
                       )}
+                    {canPrepareOffer &&
+                      Array.from(
+                        new Set(
+                          assignmentsByRun
+                            .get(run.id)
+                            ?.flatMap(({ lecturers }) =>
+                              lecturers.map(({ name }) => name),
+                            ),
+                        ),
+                      ).map((name) => (
+                        <span className="badge" key={name}>
+                          {t("courseLecturerName", { name })}
+                        </span>
+                      ))}
                   </div>
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
@@ -1976,8 +2050,6 @@ export function CoursesPage() {
                         {assignment.title} ·{" "}
                         {t("assignmentCoverage", assignment)}
                       </Link>
-                      {assignment.names.length > 0 &&
-                        ` · ${assignment.names.join(", ")}`}
                     </p>
                   ))}
                 <p className="muted">

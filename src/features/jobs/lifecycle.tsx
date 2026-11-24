@@ -7,7 +7,10 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  */
 import { type FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { changeCandidatesQuery } from "../changes/api";
+import { commissionAccessQuery } from "../commercial/commission-api";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { Trash2 } from "lucide-react";
@@ -52,9 +55,11 @@ type Confirmation = {
 export function JobLifecyclePanel({
   job,
   dispatchOnly = false,
+  editButtonTarget,
 }: {
   job: Job;
   dispatchOnly?: boolean;
+  editButtonTarget?: HTMLElement | null;
 }) {
   const { session } = useAuth();
   const { t, i18n } = useTranslation("jobLifecycle");
@@ -62,6 +67,20 @@ export function JobLifecyclePanel({
   const client = useQueryClient();
   const navigate = useNavigate();
   const state = useQuery(lifecycleQuery(session!.user.id, job.id));
+  const candidates = useQuery({
+    ...changeCandidatesQuery(session!.user.id),
+    enabled:
+      state.isSuccess &&
+      state.data.can_edit_metadata === true &&
+      state.data.claims.some(({ status }) => status === "confirmed") &&
+      online,
+  });
+  const pricing = useQuery({
+    ...commissionAccessQuery(session!.user.id),
+    enabled: Boolean(
+      editButtonTarget && !job.company_internal && state.data?.can_edit,
+    ),
+  });
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [reason, setReason] = useState("");
   const [reopenDeadline, setReopenDeadline] = useState("");
@@ -99,6 +118,25 @@ export function JobLifecyclePanel({
   if (state.isPending) return <Loading />;
   if (state.isError) return <ErrorState retry={() => void state.refetch()} />;
   const info = state.data;
+  const canEdit = info.can_edit || info.can_edit_metadata;
+  const amendmentActions = candidates.isSuccess
+    ? candidates.data
+        .filter(
+          (candidate) =>
+            candidate.current.job_id === job.id &&
+            (candidate.schedule_editable || candidate.can_price),
+        )
+        .map((candidate) => (
+          <Button key={candidate.claim_id} asChild variant="secondary">
+            <Link
+              to={`/changes?claim=${candidate.claim_id}&new=1`}
+              onClick={() => setEditing(false)}
+            >
+              {t("adjustAssignment", { name: candidate.lecturer_name })}
+            </Link>
+          </Button>
+        ))
+    : [];
   const capacity = info.capacity ?? job.capacity ?? 1;
   const maxNetBudget =
     info.max_net_budget !== undefined
@@ -116,7 +154,7 @@ export function JobLifecyclePanel({
       classId={info.class_id}
       className={info.class_name}
       meetingUrl={info.meeting_url}
-      contact={info.dispatch_contact}
+      contact={!editButtonTarget || dispatchOnly ? info.dispatch_contact : null}
       version={info.version}
       editable={
         info.can_edit_dispatch === true && !(info.can_manage && info.can_edit)
@@ -172,8 +210,97 @@ export function JobLifecyclePanel({
               },
       });
   };
+  const editForm =
+    canEdit &&
+    editing &&
+    (info.can_edit ? (
+      <EditOffer
+        key={job.id}
+        job={job}
+        canEditSchedule={info.can_edit_schedule === true}
+        version={info.version}
+        organisationId={info.organisation_id}
+        canReassignCompany={info.can_reassign_company === true}
+        canEditDispatch={info.can_edit_dispatch === true}
+        classId={info.class_id}
+        pending={change.isPending}
+        save={(input) => change.mutate(input)}
+      />
+    ) : (
+      <EditOfferMetadata
+        key={job.id}
+        job={job}
+        version={info.version}
+        disabled={!online || change.isPending}
+        save={(input) => change.mutate(input)}
+      />
+    ));
+  const editButton = (label: string) => (
+    <Button
+      variant="secondary"
+      disabled={!online || change.isPending}
+      onClick={() => {
+        change.reset();
+        setEditing(!editing);
+      }}
+    >
+      {label}
+    </Button>
+  );
+  const changeError = change.isError && (
+    <Notice kind="error">
+      {typeof change.error === "object" &&
+      "code" in change.error &&
+      change.error.code === "40001"
+        ? t("stale")
+        : t("failed")}
+    </Notice>
+  );
   return (
-    <section className="panel job-lifecycle" aria-label={t("heading")}>
+    <section
+      id="job-allocation"
+      className="panel job-lifecycle"
+      aria-label={t("heading")}
+    >
+      {editButtonTarget &&
+        canEdit &&
+        createPortal(editButton(t("editAssignment")), editButtonTarget)}
+      {editButtonTarget && (
+        <Dialog
+          open={Boolean(editing && canEdit)}
+          onOpenChange={setEditing}
+          title={t("editAssignment")}
+          description={t("editAssignmentHelp")}
+          returnFocusTo={editButtonTarget.querySelector("button")}
+          closeDisabled={change.isPending}
+        >
+          <div className="page-actions">
+            <Button asChild variant="secondary">
+              <a href="#job-briefing" onClick={() => setEditing(false)}>
+                {t("editReference")}
+              </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <a href="#job-allocation" onClick={() => setEditing(false)}>
+                {t("manageAllocation")}
+              </a>
+            </Button>
+            {info.can_edit &&
+              pricing.isSuccess &&
+              (pricing.data.can_manage_gross ||
+                pricing.data.can_manage_own_course_pricing) && (
+                <Button asChild variant="secondary">
+                  <a href="#job-pricing" onClick={() => setEditing(false)}>
+                    {t("editPricing")}
+                  </a>
+                </Button>
+              )}
+            {amendmentActions}
+          </div>
+          {editForm}
+          {changeError}
+        </Dialog>
+      )}
       <div className="job-life-heading">
         <div>
           <h2>{t("heading")}</h2>
@@ -182,7 +309,8 @@ export function JobLifecyclePanel({
         <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       </div>
       {dispatch}
-      {info.can_manage &&
+      {!editButtonTarget &&
+        info.can_manage &&
         info.can_edit &&
         info.can_reassign_company &&
         !editing && (
@@ -306,18 +434,9 @@ export function JobLifecyclePanel({
       )}
       {info.can_manage && (
         <div className="job-life-actions">
-          {info.can_edit && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                change.reset();
-                setEditing(!editing);
-              }}
-              disabled={!online || change.isPending}
-            >
-              {t("edit")}
-            </Button>
-          )}
+          {!editButtonTarget &&
+            canEdit &&
+            editButton(info.can_edit ? t("edit") : t("editAssignment"))}
           {cancelled
             ? confirmedCount < capacity &&
               job.status !== "published" && (
@@ -373,28 +492,10 @@ export function JobLifecyclePanel({
           )}
         </div>
       )}
-      {editing && info.can_edit && (
-        <EditOffer
-          key={job.id}
-          job={job}
-          canEditSchedule={info.can_edit_schedule === true}
-          version={info.version}
-          organisationId={info.organisation_id}
-          canReassignCompany={info.can_reassign_company === true}
-          canEditDispatch={info.can_edit_dispatch === true}
-          classId={info.class_id}
-          pending={change.isPending}
-          save={(input) => change.mutate(input)}
-        />
-      )}
-      {change.isError && (
-        <Notice kind="error">
-          {typeof change.error === "object" &&
-          "code" in change.error &&
-          change.error.code === "40001"
-            ? t("stale")
-            : t("failed")}
-        </Notice>
+      {!editButtonTarget && editForm}
+      {(!editing || !editButtonTarget) && changeError}
+      {amendmentActions.length > 0 && (
+        <div className="job-life-actions">{amendmentActions}</div>
       )}
       {change.isSuccess && <Notice>{t("saved")}</Notice>}
       {cancelled && <p className="muted">{t("frozen")}</p>}
@@ -442,6 +543,18 @@ export function JobLifecyclePanel({
                     {event.reason}
                   </p>
                 ))}
+              {info.can_manage &&
+                info.replaceable_claim_ids?.includes(claim.id) && (
+                  <ManualAssignment
+                    jobId={job.id}
+                    version={info.version}
+                    published={job.status === "published"}
+                    replacement={{
+                      claimId: claim.id,
+                      lecturer: claim.lecturer_name,
+                    }}
+                  />
+                )}
               {claim.can_cancel &&
                 info.can_manage &&
                 claim.lecturer_id !== session!.user.id && (
@@ -756,6 +869,57 @@ function JobDispatchForm({
 }
 
 /** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
+function EditOfferMetadata({
+  job,
+  version,
+  disabled,
+  save,
+}: {
+  job: Job;
+  version: number;
+  disabled: boolean;
+  save: (input: Omit<OfferInput, "request">) => void;
+}) {
+  const { t } = useTranslation("jobLifecycle");
+  const [expectedVersion] = useState(version);
+  const [title, setTitle] = useState(job.title);
+  const [description, setDescription] = useState(job.description);
+  return (
+    <form
+      className="job-life-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (disabled || !title.trim()) return;
+        save({
+          job: job.id,
+          action: "edit_metadata",
+          version: expectedVersion,
+          payload: { title, description },
+        });
+      }}
+    >
+      <Field id="offer-title" label={t("title")}>
+        <input
+          id="offer-title"
+          value={title}
+          required
+          maxLength={200}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Field>
+      <Field id="offer-description" label={t("description")}>
+        <textarea
+          id="offer-description"
+          value={description}
+          maxLength={12000}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+      </Field>
+      <Button disabled={disabled || !title.trim()}>{t("save")}</Button>
+    </form>
+  );
+}
+
 function EditOffer({
   job,
   canEditSchedule,

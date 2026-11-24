@@ -79,6 +79,7 @@ export type BriefingValues = z.infer<typeof briefingValuesSchema>;
 
 /** Server projection contains redacted strings when contact visibility is not currently granted. */
 export interface JobBriefingData extends BriefingValues {
+  fallback_contact?: { name: string; email: string; phone: string } | null;
   version: number;
   has_contact: boolean;
   contact_visible: boolean;
@@ -93,6 +94,10 @@ const responseSchema = briefingValuesSchema.extend({
   // briefingWebUrl, so an unparseable destination can never become a link.
   reference_url: briefingText(2048),
   version: z.number().int().nonnegative(),
+  fallback_contact: z
+    .object({ name: z.string(), email: z.string(), phone: z.string() })
+    .nullable()
+    .optional(),
   has_contact: z.boolean(),
   contact_visible: z.boolean(),
   can_manage: z.boolean(),

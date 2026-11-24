@@ -423,6 +423,10 @@ const pairs: Record<string, [string, string]> = {
     "Unternehmenskontakt für diesen Kurs freigeben",
     "Share a company contact for this course",
   ],
+  defaultCourseContact: [
+    "Unternehmenskontakt für Aufträge verwenden",
+    "Use the company contact for assignments",
+  ],
   contactHelp: [
     "Nur ein Kontakt der zugeordneten Organisation wird im Kurs für berechtigte Kursmitglieder sichtbar. Interne Unternehmensnotizen bleiben privat.",
     "Only a contact from the linked organisation is shared with authorised course members. Internal company notes stay private.",

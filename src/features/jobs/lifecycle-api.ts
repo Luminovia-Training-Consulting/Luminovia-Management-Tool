@@ -42,6 +42,8 @@ export interface JobLifecycle {
   max_net_budget?: number | null;
   can_manage: boolean;
   can_edit: boolean;
+  can_edit_metadata?: boolean;
+  replaceable_claim_ids?: string[];
   can_edit_schedule?: boolean;
   can_edit_course_details?: boolean;
   can_duplicate: boolean;
@@ -141,7 +143,14 @@ export async function saveJobDispatch(
 /** Submit one versioned offer action; the server decides returned state and side effects. */
 export async function manageOffer(input: {
   job: string;
-  action: "draft" | "published" | "archived" | "reopen" | "edit" | "duplicate";
+  action:
+    | "draft"
+    | "published"
+    | "archived"
+    | "reopen"
+    | "edit"
+    | "edit_metadata"
+    | "duplicate";
   version: number;
   request: string;
   payload?: Record<string, unknown>;

@@ -8,7 +8,7 @@ const de = {
   edit: "Kontakt oder Webverweis bearbeiten",
   configureLink: "Kontakt oder Webverweis ergänzen",
   editDescription:
-    "Alle Angaben sind freiwillig. Wähle bewusst, ab wann die Kontaktangaben sichtbar sind.",
+    "Ohne eigene Kontaktangaben übernimmt der Auftrag den Kurskontakt oder den neuesten aktiven Unternehmenskontakt.",
   reference: "Externe Auftragsreferenz",
   referenceUrl: "Weblink zum Auftrag",
   referenceLabel: "Bezeichnung des Weblinks",
@@ -53,7 +53,7 @@ const en: Record<keyof typeof de, string> = {
   edit: "Edit contact or web reference",
   configureLink: "Add contact or web reference",
   editDescription:
-    "Every field is optional. Deliberately choose when contact details become visible.",
+    "When these contact fields are empty, the job uses the course contact or the company’s newest active contact.",
   reference: "External job reference",
   referenceUrl: "Job web link",
   referenceLabel: "Web link label",

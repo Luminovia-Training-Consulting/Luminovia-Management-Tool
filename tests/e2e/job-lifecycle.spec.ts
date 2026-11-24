@@ -85,12 +85,8 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
         name: "Zuweisung und Auftragsverlauf",
         exact: true,
     });
-    await management
-        .getByRole("button", {
-            name: "Unangenommenen Auftrag bearbeiten",
-            exact: true,
-        })
-        .click();
+    await page.getByRole("button", {name: "Auftrag bearbeiten", exact: true}).click();
+    await expect(page.getByRole("dialog", {name: "Auftrag bearbeiten"})).toBeVisible();
     const company = page.getByLabel("Unternehmen für diesen Auftrag", {exact: true});
     await expect(company).toHaveValue(originalCompany);
     await company.selectOption(destinationCompany);
@@ -140,6 +136,21 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
                 "Dein Auftrag ist bestätigt. Alle Termine sind reserviert.",
             ),
         ).toBeVisible();
+        await page.goto("/courses");
+        const courseCard = page.getByRole("article").filter({
+            has: page.getByRole("heading", {name: "Fictional lifecycle curriculum", exact: true}),
+        });
+        await page.getByRole("combobox", {name: "Dozent:in", exact: true}).selectOption(teacher.id);
+        await expect(courseCard.getByText("Dozent:in: Fictional lifecycle lecturer", {exact: true})).toBeVisible();
+        await courseCard.getByRole("link", {name: "Auftrag anzeigen: Fictional lifecycle block", exact: true}).click();
+        await expect(page).toHaveURL(new RegExp(`/jobs/${job}$`));
+        await page.getByRole("button", {name: "Auftrag bearbeiten", exact: true}).click();
+        const occupiedEditor = page.getByRole("dialog", {name: "Auftrag bearbeiten"});
+        await expect(occupiedEditor.getByRole("link", {name: /Termine oder Honorar für/})).toBeVisible();
+        await occupiedEditor.getByLabel("Auftragstitel", {exact: true}).fill("Fictional revised lifecycle block");
+        await page.screenshot({path: `.local/screenshots/${testInfo.project.name}-filled-assignment-editor.png`});
+        await occupiedEditor.getByRole("button", {name: "Auftrag speichern", exact: true}).click();
+        await expect(page.getByRole("heading", {name: "Fictional revised lifecycle block", exact: true})).toBeVisible();
         await lecturerPage
             .getByRole("button", {
                 name: "Von diesem Auftrag zurücktreten",
