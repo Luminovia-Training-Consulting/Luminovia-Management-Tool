@@ -830,6 +830,32 @@ const pairs: Record<string, [string, string]> = {
   marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
   marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
   courseRunAssigned: ["Besetzt", "Filled"],
+  companyCourses: ["Kurse des Unternehmens", "Company courses"],
+  courseCompanyFilter: ["Unternehmen", "Company"],
+  allCourseCompanies: ["Alle Unternehmen", "All companies"],
+  courseRunStatusFilter: ["Planungsstatus", "Planning status"],
+  allCourseRunStatuses: ["Alle Status", "All statuses"],
+  planningCourseRuns: ["In Planung", "In planning"],
+  noPlanningCourseRuns: [
+    "Keine Kurse in Planung gefunden.",
+    "No courses in planning found.",
+  ],
+  searchCoursesAndLecturers: [
+    "Kurs, Unternehmen oder Dozierende",
+    "Course, company or lecturer",
+  ],
+  onlyAssignedRuns: [
+    "Nur Kurse mit Zuweisung",
+    "Only courses with assignments",
+  ],
+  noAssignedRuns: [
+    "Keine Kurse mit bestätigter Zuweisung gefunden.",
+    "No courses with a confirmed assignment found.",
+  ],
+  assignmentCoverage: [
+    "{{count}} von {{capacity}} besetzt",
+    "{{count}} of {{capacity}} filled",
+  ],
   courseRunClosed: ["Geschlossen", "Closed"],
   openMarketplaceDraft: ["Entwurf öffnen: {{title}}", "Open draft: {{title}}"],
   openListedOffer: ["Ausschreibung öffnen: {{title}}", "Open offer: {{title}}"],

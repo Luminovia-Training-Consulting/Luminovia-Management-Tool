@@ -162,6 +162,11 @@ export interface CourseRun {
     company_internal?: boolean;
     claim_deadline?: string | null;
     job_sessions?: { starts_at: string }[];
+    capacity?: number;
+    job_claims?: {
+      status: string;
+      profiles: { display_name: string } | null;
+    }[];
   }[];
 }
 
@@ -232,19 +237,25 @@ export const templatesQuery = (actor: string) =>
       ),
   });
 /** Read course_runs through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
-export const runsQuery = (actor: string) =>
+export const runsQuery = (actor: string, withAssignments = false) =>
   queryOptions({
-    queryKey: ["operations", "runs", actor],
+    queryKey: withAssignments
+      ? ["operations", "runs", actor, "assignments"]
+      : ["operations", "runs", actor],
     queryFn: ({ signal }) =>
-      readDirectoryPages<CourseRun>((from, to) =>
-        db()
+      readDirectoryPages<CourseRun>((from, to) => {
+        const query = db()
           .from("course_runs")
           .select(
-            "*,course_sessions(*),jobs(id,title,status,company_internal,claim_deadline,job_sessions(starts_at))",
+            `*,course_sessions(*),jobs(id,title,status,company_internal,claim_deadline,job_sessions(starts_at)${
+              withAssignments
+                ? ",capacity,job_claims(status,profiles!job_claims_lecturer_id_fkey(display_name))"
+                : ""
+            })`,
           )
           .order("created_at", { ascending: false })
-          .order("id")
-          .range(from, to)
-          .abortSignal(signal),
-      ),
+          .order("id");
+        if (withAssignments) query.eq("jobs.job_claims.status", "confirmed");
+        return query.range(from, to).abortSignal(signal);
+      }),
   });

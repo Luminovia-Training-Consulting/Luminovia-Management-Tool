@@ -138,11 +138,18 @@ function renderCourses({
   };
   for (const [name, value] of [
     ["templates", templates],
-    ["runs", runs],
     ["organisations", organisations],
     ["building-blocks", blocks],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
+  client.setQueryData(
+    runsQuery(
+      actor,
+      permissions.includes("courses.manage") &&
+        permissions.includes("jobs.manage"),
+    ).queryKey,
+    runs,
+  );
   client.setQueryData(["permissions", actor], permissions);
   client.setQueryData(["user-roles", actor], roles);
   client.setQueryData(["client-organisations", actor], organisations);
@@ -227,6 +234,7 @@ beforeEach(async () => {
     const query = {
       select: () => query,
       order: () => query,
+      eq: () => query,
       range: (from: number, to: number) => ({
         abortSignal: async () => ({
           data: structuredClone(
@@ -1771,4 +1779,117 @@ it("still opens a course detail from a bookmark outside the first page", async (
   expect(
     await screen.findByRole("dialog", { name: template.title }),
   ).toBeVisible();
+});
+
+it("shows confirmed lecturers and filters course runs by current staffing", async () => {
+  const openTemplate = {
+    ...template,
+    id: "open-template",
+    title: "Open classroom",
+  };
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    templates: [template, openTemplate],
+    runs: [
+      {
+        ...run,
+        jobs: [
+          {
+            ...job,
+            capacity: 2,
+            job_claims: [
+              {
+                status: "confirmed",
+                profiles: { display_name: "Fictional lecturer" },
+              },
+              {
+                status: "cancelled",
+                profiles: { display_name: "Former lecturer" },
+              },
+            ],
+          },
+        ],
+      },
+      { ...run, id: "open-run", template_id: openTemplate.id },
+    ],
+  });
+
+  expect(
+    screen.getByRole("link", {
+      name: "Fictional active order · 1 von 2 besetzt",
+    }),
+  ).toHaveAttribute("href", `/jobs/${jobId}`);
+  expect(screen.getByText(/Fictional lecturer/)).toBeVisible();
+  expect(screen.queryByText(/Former lecturer/)).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: openTemplate.title }),
+  ).toBeVisible();
+
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: "Planungsstatus" }),
+    "assigned",
+  );
+  expect(
+    screen.queryByRole("heading", { name: openTemplate.title }),
+  ).not.toBeInTheDocument();
+  await userEvent.type(screen.getByRole("searchbox"), "fictional lecturer");
+  expect(screen.getByRole("heading", { name: template.title })).toBeVisible();
+});
+
+it("opens company-scoped planning and keeps drafts with no published offer visible to staff", async () => {
+  const liveTemplate = {
+    ...template,
+    id: "published-template",
+    title: "Published course",
+  };
+  const otherTemplate = {
+    ...template,
+    id: "another-template",
+    title: "Other company draft",
+  };
+  const otherCompany = {
+    ...organisation,
+    id: "another-company",
+    name: "Other company",
+  };
+  renderCourses({
+    path: `/courses?company=${companyId}`,
+    organisations: [organisation, otherCompany],
+    templates: [template, liveTemplate, otherTemplate],
+    runs: [
+      { ...run, organisation_id: companyId },
+      {
+        ...run,
+        id: "published-run",
+        template_id: liveTemplate.id,
+        organisation_id: companyId,
+        jobs: [job],
+      },
+      {
+        ...run,
+        id: "another-run",
+        template_id: otherTemplate.id,
+        organisation_id: otherCompany.id,
+      },
+    ],
+  });
+  const status = screen.getByRole("combobox", { name: "Planungsstatus" });
+  expect(screen.getByRole("combobox", { name: "Unternehmen" })).toHaveValue(
+    companyId,
+  );
+  expect(
+    screen.getByRole("heading", { name: liveTemplate.title }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: otherTemplate.title }),
+  ).not.toBeInTheDocument();
+  await userEvent.selectOptions(status, "planning");
+  expect(screen.getByRole("heading", { name: template.title })).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: liveTemplate.title }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Ansehen" }));
+  expect(screen.getByTestId("course-route")).toHaveTextContent(
+    `company=${companyId}`,
+  );
 });

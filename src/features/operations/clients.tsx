@@ -6,6 +6,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
 import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -287,12 +288,14 @@ function ClientWorkspace({
   canManageIntegrations,
   canManageWebhooks,
   canSubscribeAccounting,
+  canManageCourses,
 }: {
   actor: string;
   isAdmin: boolean;
   canManageIntegrations: boolean;
   canManageWebhooks: boolean;
   canSubscribeAccounting: boolean;
+  canManageCourses: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const de = i18n.language.startsWith("de");
@@ -443,6 +446,17 @@ function ClientWorkspace({
                 </span>
               ))}
             </div>
+            {canManageCourses && (
+              <div className="operations-actions">
+                <Button asChild variant="secondary">
+                  <Link
+                    to={`/courses?company=${encodeURIComponent(organisation.id)}`}
+                  >
+                    {t("companyCourses")}
+                  </Link>
+                </Button>
+              </div>
+            )}
             <div className="section-stack company-operation-sections">
               {/* Each panel resets for a new organisation with its own sibling key. */}
               {premiumSetting && (
@@ -693,6 +707,7 @@ export function ClientsPage() {
         roles.data.includes("admin") || roles.data.includes("owner")
       }
       canSubscribeAccounting={permissions.data.includes("finance.gross.read")}
+      canManageCourses={permissions.data.includes("courses.manage")}
     />
   );
 }

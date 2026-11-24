@@ -493,6 +493,13 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         assert.equal(await countTemplates(ids.client), "1");
         assert.equal(await countTemplates(otherClient), "0");
         assert.equal(await countTemplates(ids.management), "1");
+        const plannedRun = await createRun(own, 14);
+        const readDraft = (user) => actor(user, `select count(*) from public.course_runs
+            where id=${q(plannedRun)} and organisation_id=${q(org)} and not published`);
+        assert.equal(await readDraft(ids.admin), "1");
+        assert.equal(await readDraft(ids.management), "1");
+        assert.equal(await readDraft(ids.client), "1");
+        assert.equal(await readDraft(otherClient), "0");
         await assert.rejects(
             sql(`insert into public.course_runs(template_id,organisation_id) values(${q(own)},${q(otherOrg)})`),
             /belongs to another company/,

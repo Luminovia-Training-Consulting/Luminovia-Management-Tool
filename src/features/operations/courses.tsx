@@ -1251,7 +1251,7 @@ export function CoursesPage() {
     enabled: Boolean(companyViewer),
   });
   const runs = useQuery({
-    ...runsQuery(actor),
+    ...runsQuery(actor, canPrepareOffer),
     refetchInterval: manage ? false : 10000,
     refetchOnMount: manage ? true : "always",
   });
@@ -1265,6 +1265,7 @@ export function CoursesPage() {
   const resetPages = () => setPages({ runs: 0, templates: 0 });
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [showArchivedRuns, setShowArchivedRuns] = useState(false);
+  const [runStatus, setRunStatus] = useState("all");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [seriesTemplate, setSeriesTemplate] = useState<Template | null>();
@@ -1273,12 +1274,17 @@ export function CoursesPage() {
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
+  const company = manage ? (params.get("company") ?? "") : "";
+  const setCourseView = (view: Record<string, string>, replace = false) =>
+    setParams(company ? { ...view, company } : view, { replace });
+  const onlyPlanningRuns = manage && runStatus === "planning";
+  const onlyAssignedRuns = canPrepareOffer && runStatus === "assigned";
   const tab =
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
       : "runs";
   const setTab = (next: "runs" | "templates") => {
-    setParams(next === "templates" ? { tab: next } : {});
+    setCourseView(next === "templates" ? { tab: next } : {});
   };
   const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
   const canCreateTemplate = manage || companyOrganisations.length > 0;
@@ -1297,6 +1303,33 @@ export function CoursesPage() {
   const topicsById = useMemo(
     () => new Map(topics.data?.map((item) => [item.id, item])),
     [topics.data],
+  );
+  const assignmentsByRun = useMemo(
+    () =>
+      new Map(
+        runs.data?.map((run) => [
+          run.id,
+          (run.jobs ?? []).flatMap((job) => {
+            const claims = job.job_claims?.filter(
+              ({ status }) => status === "confirmed",
+            );
+            return claims?.length
+              ? [
+                  {
+                    id: job.id,
+                    title: job.title,
+                    count: claims.length,
+                    capacity: job.capacity ?? claims.length,
+                    names: claims.flatMap(({ profiles }) =>
+                      profiles?.display_name ? [profiles.display_name] : [],
+                    ),
+                  },
+                ]
+              : [];
+          }),
+        ]),
+      ),
+    [runs.data],
   );
   const organisationName = (id: string | null | undefined) =>
     id
@@ -1329,7 +1362,7 @@ export function CoursesPage() {
     setRunEdit(run);
   };
   const reviewSchedule = (run: CourseRun) => {
-    setParams({}, { replace: true });
+    setCourseView({}, true);
     editRun(run, "schedule");
   };
   const planRun = (templateId: string) => {
@@ -1420,8 +1453,18 @@ export function CoursesPage() {
   const filteredRuns =
     tab === "runs"
       ? runs.data.filter((run) => {
+          const assignments = assignmentsByRun.get(run.id) ?? [];
           if (
             (run.archived_at && !(manage && showArchivedRuns)) ||
+            (company && run.organisation_id !== company) ||
+            (onlyPlanningRuns &&
+              (run.archived_at ||
+                run.published ||
+                assignments.length > 0 ||
+                run.jobs?.some(
+                  ({ status }) => status === "published" || status === "filled",
+                ))) ||
+            (onlyAssignedRuns && !assignments.length) ||
             (phase !== "all" &&
               scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) !==
                 phase)
@@ -1434,6 +1477,9 @@ export function CoursesPage() {
             template?.description,
             organisationName(run.organisation_id),
             run.venue,
+            ...(canPrepareOffer
+              ? assignments.flatMap(({ names }) => names)
+              : []),
           ]
             .join(" ")
             .toLowerCase()
@@ -1504,7 +1550,7 @@ export function CoursesPage() {
           variant="secondary"
           disabled={!online}
           onClick={() => {
-            if (detail) setParams({}, { replace: true });
+            if (detail) setCourseView({}, true);
             editRun(run, "organisation");
           }}
         >
@@ -1700,6 +1746,11 @@ export function CoursesPage() {
           <input
             id="course-search"
             type="search"
+            placeholder={
+              canPrepareOffer && tab === "runs"
+                ? t("searchCoursesAndLecturers")
+                : undefined
+            }
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -1716,6 +1767,50 @@ export function CoursesPage() {
               setPages({ ...pages, runs: 0 });
             }}
           />
+        )}
+        {manage && tab === "runs" && (
+          <>
+            <Field id="course-company-filter" label={t("courseCompanyFilter")}>
+              <select
+                id="course-company-filter"
+                value={company}
+                onChange={(event) => {
+                  const next = new URLSearchParams(params);
+                  if (event.target.value)
+                    next.set("company", event.target.value);
+                  else next.delete("company");
+                  setParams(next, { replace: true });
+                  resetPages();
+                }}
+              >
+                <option value="">{t("allCourseCompanies")}</option>
+                {orgs.data.map(({ id, name }) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field
+              id="course-staffing-filter"
+              label={t("courseRunStatusFilter")}
+            >
+              <select
+                id="course-staffing-filter"
+                value={runStatus}
+                onChange={(event) => {
+                  setRunStatus(event.target.value);
+                  resetPages();
+                }}
+              >
+                <option value="all">{t("allCourseRunStatuses")}</option>
+                <option value="planning">{t("planningCourseRuns")}</option>
+                {canPrepareOffer && (
+                  <option value="assigned">{t("onlyAssignedRuns")}</option>
+                )}
+              </select>
+            </Field>
+          </>
         )}
         {manage && tab === "runs" && (
           <label className="checkbox-label">
@@ -1798,9 +1893,13 @@ export function CoursesPage() {
       {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
-            phase === "all"
-              ? "learning:noCourses"
-              : "learning:noCoursesInPhase",
+            onlyPlanningRuns
+              ? "noPlanningCourseRuns"
+              : onlyAssignedRuns
+                ? "noAssignedRuns"
+                : phase === "all"
+                  ? "learning:noCourses"
+                  : "learning:noCoursesInPhase",
           )}
         </div>
       ) : tab === "runs" ? (
@@ -1843,6 +1942,17 @@ export function CoursesPage() {
                     {marketplaceAction(run)}
                   </div>
                 )}
+                {canPrepareOffer &&
+                  assignmentsByRun.get(run.id)?.map((assignment) => (
+                    <p key={assignment.id}>
+                      <Link to={`/jobs/${assignment.id}`}>
+                        {assignment.title} ·{" "}
+                        {t("assignmentCoverage", assignment)}
+                      </Link>
+                      {assignment.names.length > 0 &&
+                        ` · ${assignment.names.join(", ")}`}
+                    </p>
+                  ))}
                 <p className="muted">
                   {organisationName(run.organisation_id) ?? t("noCustomer")} ·{" "}
                   {t(run.delivery_type)}
@@ -1866,7 +1976,7 @@ export function CoursesPage() {
                 </p>
                 <Button
                   variant="secondary"
-                  onClick={() => setParams({ run: run.id })}
+                  onClick={() => setCourseView({ run: run.id })}
                 >
                   {t("view")}
                 </Button>
@@ -1951,7 +2061,7 @@ export function CoursesPage() {
                 <Button
                   variant="secondary"
                   onClick={() =>
-                    setParams({ tab: "templates", template: template.id })
+                    setCourseView({ tab: "templates", template: template.id })
                   }
                 >
                   {t("view")}
@@ -2109,7 +2219,7 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(templateDetail)}
         onOpenChange={(open) => {
-          if (!open) setParams({ tab: "templates" }, { replace: true });
+          if (!open) setCourseView({ tab: "templates" }, true);
         }}
         title={templateDetail?.title ?? t("template")}
         description={t("template")}
@@ -2216,7 +2326,7 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(offerRunId)}
         onOpenChange={(open) => {
-          if (!open) setParams({ run: offerRunId ?? "" }, { replace: true });
+          if (!open) setCourseView({ run: offerRunId ?? "" }, true);
         }}
         title={t("createRunOffer")}
         description={t("offerEditorDescription")}
@@ -2230,7 +2340,7 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(detail) && !offerRunId}
         onOpenChange={(open) => {
-          if (!open) setParams({}, { replace: true });
+          if (!open) setCourseView({}, true);
         }}
         title={
           detail ? (findTemplate(detail)?.title ?? t("courses")) : t("courses")
@@ -2245,7 +2355,7 @@ export function CoursesPage() {
                   <Button
                     disabled={!online}
                     onClick={() => {
-                      setParams({}, { replace: true });
+                      setCourseView({}, true);
                       editRun(detail);
                     }}
                   >
