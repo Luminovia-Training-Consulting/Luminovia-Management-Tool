@@ -96,12 +96,23 @@ export function dateTime(
   return formatter.format(new Date(iso));
 }
 
+const moneyFormatters = new Map<string, Intl.NumberFormat>();
+const maxMoneyFormatters = 32;
+
 /** Format the supplied amount in its original currency without exchange-rate conversion. */
 export function money(amount: number, currency: string, language: string) {
-  return new Intl.NumberFormat(language, {
-    style: "currency",
-    currency,
-  }).format(amount);
+  const key = JSON.stringify([language, currency]);
+  let formatter = moneyFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(language, {
+      style: "currency",
+      currency,
+    });
+    if (moneyFormatters.size >= maxMoneyFormatters)
+      moneyFormatters.delete(moneyFormatters.keys().next().value!);
+    moneyFormatters.set(key, formatter);
+  }
+  return formatter.format(amount);
 }
 
 /** Validate an IANA zone through Luxon rather than accepting arbitrary fixed-offset text. */
