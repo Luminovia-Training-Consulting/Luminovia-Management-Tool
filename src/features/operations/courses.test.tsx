@@ -1859,7 +1859,7 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
   expect(
     within(staffedCourse).queryByText("Besetzt", { exact: true }),
   ).not.toBeInTheDocument();
-  const actions = within(staffedCourse.querySelector(".operations-actions")!);
+  const actions = within(staffedCourse.querySelector(".course-card-actions")!);
   expect(actions.getByRole("button", { name: "Kurs ansehen" })).toBeVisible();
   expect(
     actions.getByRole("link", { name: "Auftrag ansehen" }),

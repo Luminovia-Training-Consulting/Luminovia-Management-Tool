@@ -239,146 +239,148 @@ export function PersonProfile() {
           )}
       </div>
 
-      <PersonContact actor={actor} target={id} />
-      <div className="people-details-grid">
-        <section className="panel">
-          <h2>{t("details")}</h2>
-          <p className="person-prose">{bio || t("noBio")}</p>
+      <div className="section-stack">
+        <PersonContact actor={actor} target={id} />
+        <div className="people-details-grid">
+          <section className="panel">
+            <h2>{t("details")}</h2>
+            <p className="person-prose">{bio || t("noBio")}</p>
 
-          {details.languages.length > 0 && (
-            <p>{details.languages.join(", ")}</p>
-          )}
-          {details.teaching_experience && (
-            <>
-              <h3>{t("experience")}</h3>
-              <p className="person-prose">{details.teaching_experience}</p>
-            </>
+            {details.languages.length > 0 && (
+              <p>{details.languages.join(", ")}</p>
+            )}
+            {details.teaching_experience && (
+              <>
+                <h3>{t("experience")}</h3>
+                <p className="person-prose">{details.teaching_experience}</p>
+              </>
+            )}
+          </section>
+          <section className="panel">
+            <h2>{t("expertise")}</h2>
+            {!details.topics.length ? (
+              <p>{t("noTopics")}</p>
+            ) : (
+              <ul>
+                {details.topics.map((topic) => (
+                  <li key={topic.id}>
+                    {i18n.language.startsWith("de")
+                      ? topic.label_de
+                      : topic.label_en}{" "}
+                    · {t(topic.verified ? "verified" : "selfDeclared")}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+        <section className="panel">
+          <h2>{t("courses")}</h2>
+          <Field id="profile-course-state" label={t("state")}>
+            <select
+              id="profile-course-state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+            >
+              <option value="">{t("allStates")}</option>
+              {(["current", "upcoming", "past"] as const).map((value) => (
+                <option key={value} value={value}>
+                  {t(value)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {courses.isPending ? (
+            <Loading />
+          ) : courses.isError ? (
+            <ErrorState retry={() => void courses.refetch()} />
+          ) : (
+            (["current", "upcoming", "past"] as const)
+              .filter((value) => !state || state === value)
+              .map((value) => (
+                <div key={value}>
+                  <h3>{t(value)}</h3>
+                  {!courses.data.some((item) => item.state === value) ? (
+                    <p>{t("noCourses")}</p>
+                  ) : (
+                    <ul className="people-course-list">
+                      {courses.data
+                        .filter((item) => item.state === value)
+                        .map((item) => (
+                          <li key={item.course_run_id}>
+                            <h3>
+                              {item.can_open ? (
+                                <Link to={`/courses?run=${item.course_run_id}`}>
+                                  {item.title}
+                                </Link>
+                              ) : (
+                                item.title
+                              )}
+                            </h3>
+                            <small>
+                              {dateTime(
+                                item.starts_at,
+                                i18n.language,
+                                item.time_zone,
+                              )}{" "}
+                              —{" "}
+                              {dateTime(
+                                item.ends_at,
+                                i18n.language,
+                                item.time_zone,
+                              )}{" "}
+                              · {item.time_zone}
+                            </small>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))
           )}
         </section>
         <section className="panel">
-          <h2>{t("expertise")}</h2>
-          {!details.topics.length ? (
-            <p>{t("noTopics")}</p>
+          <h2>{t("ratings")}</h2>
+          <p className="muted">{t("recentReviews")}</p>
+          {reviews.isPending ? (
+            <Loading />
+          ) : reviews.isError ? (
+            <ErrorState retry={() => void reviews.refetch()} />
+          ) : !reviews.data.length ? (
+            <p>{t("noReviews")}</p>
           ) : (
-            <ul>
-              {details.topics.map((topic) => (
-                <li key={topic.id}>
-                  {i18n.language.startsWith("de")
-                    ? topic.label_de
-                    : topic.label_en}{" "}
-                  · {t(topic.verified ? "verified" : "selfDeclared")}
+            <ul className="people-review-list">
+              {reviews.data.map((review) => (
+                <li key={review.id}>
+                  <div className="people-review-heading">
+                    <strong>
+                      {t("ratingValue", { value: review.rating })} ·{" "}
+                      {review.course_title}
+                    </strong>
+                    <small>{t(review.reviewer_label)}</small>
+                  </div>
+                  <p className="person-prose">{review.comment}</p>
+                  <small>
+                    {dateTime(
+                      review.created_at,
+                      i18n.language,
+                      details.time_zone,
+                    )}
+                  </small>
+                  {review.hidden && (
+                    <Notice>
+                      {t("hidden")}
+                      {review.moderation_reason &&
+                        ` · ${review.moderation_reason}`}
+                    </Notice>
+                  )}
+                  {details.can_moderate && <ModerateReview review={review} />}
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
-      <section className="panel">
-        <h2>{t("courses")}</h2>
-        <Field id="profile-course-state" label={t("state")}>
-          <select
-            id="profile-course-state"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-          >
-            <option value="">{t("allStates")}</option>
-            {(["current", "upcoming", "past"] as const).map((value) => (
-              <option key={value} value={value}>
-                {t(value)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {courses.isPending ? (
-          <Loading />
-        ) : courses.isError ? (
-          <ErrorState retry={() => void courses.refetch()} />
-        ) : (
-          (["current", "upcoming", "past"] as const)
-            .filter((value) => !state || state === value)
-            .map((value) => (
-              <div key={value}>
-                <h3>{t(value)}</h3>
-                {!courses.data.some((item) => item.state === value) ? (
-                  <p>{t("noCourses")}</p>
-                ) : (
-                  <ul className="people-course-list">
-                    {courses.data
-                      .filter((item) => item.state === value)
-                      .map((item) => (
-                        <li key={item.course_run_id}>
-                          <h3>
-                            {item.can_open ? (
-                              <Link to={`/courses?run=${item.course_run_id}`}>
-                                {item.title}
-                              </Link>
-                            ) : (
-                              item.title
-                            )}
-                          </h3>
-                          <small>
-                            {dateTime(
-                              item.starts_at,
-                              i18n.language,
-                              item.time_zone,
-                            )}{" "}
-                            —{" "}
-                            {dateTime(
-                              item.ends_at,
-                              i18n.language,
-                              item.time_zone,
-                            )}{" "}
-                            · {item.time_zone}
-                          </small>
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-            ))
-        )}
-      </section>
-      <section className="panel" style={{ marginTop: 24 }}>
-        <h2>{t("ratings")}</h2>
-        <p className="muted">{t("recentReviews")}</p>
-        {reviews.isPending ? (
-          <Loading />
-        ) : reviews.isError ? (
-          <ErrorState retry={() => void reviews.refetch()} />
-        ) : !reviews.data.length ? (
-          <p>{t("noReviews")}</p>
-        ) : (
-          <ul className="people-review-list">
-            {reviews.data.map((review) => (
-              <li key={review.id}>
-                <div className="people-review-heading">
-                  <strong>
-                    {t("ratingValue", { value: review.rating })} ·{" "}
-                    {review.course_title}
-                  </strong>
-                  <small>{t(review.reviewer_label)}</small>
-                </div>
-                <p className="person-prose">{review.comment}</p>
-                <small>
-                  {dateTime(
-                    review.created_at,
-                    i18n.language,
-                    details.time_zone,
-                  )}
-                </small>
-                {review.hidden && (
-                  <Notice>
-                    {t("hidden")}
-                    {review.moderation_reason &&
-                      ` · ${review.moderation_reason}`}
-                  </Notice>
-                )}
-                {details.can_moderate && <ModerateReview review={review} />}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </>
   );
 }

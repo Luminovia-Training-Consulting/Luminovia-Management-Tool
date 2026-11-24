@@ -172,62 +172,64 @@ export function AcademyPersonalSettingsPage() {
   return (
     <>
       <PageHeading title={word("Meine Einstellungen", "My settings")} />
-      {!writable && (
-        <Notice>
-          {word(
-            "Deine Einstellungen sind derzeit nur lesbar.",
-            "Your settings are currently read-only.",
-          )}
-        </Notice>
-      )}
-      {writable ? (
-        <>
-          <DisplayNameEditor
-            key={`name:${actor}`}
-            initial={displayName}
-            save={async (name) => {
-              const display_name = await saveAcademyDisplayName(actor, name);
-              cache.setQueryData<AcademyPersonalSettings>(
-                request.queryKey,
-                (previous) => previous && { ...previous, display_name },
-              );
-            }}
-          />
-          <AccountSettings
-            key={`email:${actor}`}
-            email={session?.user.email ?? ""}
-            separateProfile={false}
-          />
-        </>
-      ) : (
-        <section className="panel">
-          <p>
-            {t("displayName")}: {displayName}
-          </p>
-          <p>
-            {t("currentEmail")}: {session?.user.email}
-          </p>
-        </section>
-      )}
-      {writable && <AuthenticatorSettings actor={actor} />}
-      {writable && <DeliverySettings actor={actor} />}
-      <section className="panel">
-        <h2>{word("Sprache und Design", "Language and appearance")}</h2>
-        {writable ? (
-          <Preferences onSave={saveAppearance} />
-        ) : (
-          <dl>
-            <dt>{t("language")}</dt>
-            <dd>
-              {display.language === "de"
-                ? word("Deutsch", "German")
-                : word("Englisch", "English")}
-            </dd>
-            <dt>{t("theme")}</dt>
-            <dd>{t(display.theme)}</dd>
-          </dl>
+      <div className="section-stack">
+        {!writable && (
+          <Notice>
+            {word(
+              "Deine Einstellungen sind derzeit nur lesbar.",
+              "Your settings are currently read-only.",
+            )}
+          </Notice>
         )}
-      </section>
+        {writable ? (
+          <>
+            <DisplayNameEditor
+              key={`name:${actor}`}
+              initial={displayName}
+              save={async (name) => {
+                const display_name = await saveAcademyDisplayName(actor, name);
+                cache.setQueryData<AcademyPersonalSettings>(
+                  request.queryKey,
+                  (previous) => previous && { ...previous, display_name },
+                );
+              }}
+            />
+            <AccountSettings
+              key={`email:${actor}`}
+              email={session?.user.email ?? ""}
+              separateProfile={false}
+            />
+          </>
+        ) : (
+          <section className="panel">
+            <p>
+              {t("displayName")}: {displayName}
+            </p>
+            <p>
+              {t("currentEmail")}: {session?.user.email}
+            </p>
+          </section>
+        )}
+        {writable && <AuthenticatorSettings actor={actor} />}
+        {writable && <DeliverySettings actor={actor} />}
+        <section className="panel">
+          <h2>{word("Sprache und Design", "Language and appearance")}</h2>
+          {writable ? (
+            <Preferences onSave={saveAppearance} />
+          ) : (
+            <dl>
+              <dt>{t("language")}</dt>
+              <dd>
+                {display.language === "de"
+                  ? word("Deutsch", "German")
+                  : word("Englisch", "English")}
+              </dd>
+              <dt>{t("theme")}</dt>
+              <dd>{t(display.theme)}</dd>
+            </dl>
+          )}
+        </section>
+      </div>
     </>
   );
 }

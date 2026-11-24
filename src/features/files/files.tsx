@@ -726,7 +726,10 @@ function DocumentList({
               {(file.owner_id === session!.user.id || canDelete) && (
                 <details open={openMenuId === file.id}>
                   <summary
-                    aria-label={`${t("name")}: ${file.original_name}`}
+                    aria-label={t("moreActionsForFile", {
+                      name: file.original_name,
+                    })}
+                    title={t("moreActions")}
                     onClick={(event) => {
                       // Summary activation also covers Enter/Space. Keeping
                       // the native toggle out of state avoids queued events

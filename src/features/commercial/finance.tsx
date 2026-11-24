@@ -1150,63 +1150,67 @@ export function FinancePage() {
           )
         }
       />
-      <RevenuePanel />
-      {access.isSuccess && trendQuery.isSuccess && (
-        <FinanceTrendChart
-          earnings={earnings.data ?? []}
-          invoices={invoices.data ?? []}
-          source={trendSource}
-          zone={zone}
-        />
-      )}
-      {canSubmit && <MyInvoiceReviewRequests actor={actor} zone={zone} />}
-      {canSubmit && !effectiveAll && (
-        <MyInvoiceSeriesCorrections actor={actor} />
-      )}
-      {canSubmit && (
-        <MyInvoiceExceptions
-          actor={actor}
-          onSubmit={(approval) => {
-            setSelectedException(approval);
-            setSubmitting(true);
-          }}
-        />
-      )}
-      {canSubmit && !effectiveAll && (
-        <MyInvoiceSeries
-          entries={seriesEntries}
-          onSubmit={(entry) => {
-            setSelectedException(entry);
-            setSubmitting(true);
-          }}
-        />
-      )}
-      {seriesRecords.isError && (
-        <ErrorState retry={() => void seriesRecords.refetch()} />
-      )}
-      {manager && (
-        <>
-          <InvoiceReviewQueue actor={actor} />
-          <FinancePendingInvoiceExceptions actor={actor} />
-        </>
-      )}
-      {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
-      {manager && (
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={effectiveAll}
-            onChange={(event) => {
-              setAll(event.target.checked);
-              if (!event.target.checked && linkedSeriesId) closeSeries();
+      <div className="section-stack finance-overview">
+        <RevenuePanel />
+        {access.isSuccess && trendQuery.isSuccess && (
+          <FinanceTrendChart
+            earnings={earnings.data ?? []}
+            invoices={invoices.data ?? []}
+            source={trendSource}
+            zone={zone}
+          />
+        )}
+        {canSubmit && <MyInvoiceReviewRequests actor={actor} zone={zone} />}
+        {canSubmit && !effectiveAll && (
+          <MyInvoiceSeriesCorrections actor={actor} />
+        )}
+        {canSubmit && (
+          <MyInvoiceExceptions
+            actor={actor}
+            onSubmit={(approval) => {
+              setSelectedException(approval);
+              setSubmitting(true);
             }}
           />
-          {t("allPeople")}
-        </label>
-      )}
-      <p className="muted commercial-small">
-        {t("originalCurrency")} {t("invoiceBasis")}
-      </p>
+        )}
+        {canSubmit && !effectiveAll && (
+          <MyInvoiceSeries
+            entries={seriesEntries}
+            onSubmit={(entry) => {
+              setSelectedException(entry);
+              setSubmitting(true);
+            }}
+          />
+        )}
+        {seriesRecords.isError && (
+          <ErrorState retry={() => void seriesRecords.refetch()} />
+        )}
+        {manager && (
+          <>
+            <InvoiceReviewQueue actor={actor} />
+            <FinancePendingInvoiceExceptions actor={actor} />
+          </>
+        )}
+        {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
+        <div className="finance-scope-controls">
+          {manager && (
+            <label className="checkbox-label finance-scope-toggle">
+              <input
+                type="checkbox"
+                checked={effectiveAll}
+                onChange={(event) => {
+                  setAll(event.target.checked);
+                  if (!event.target.checked && linkedSeriesId) closeSeries();
+                }}
+              />
+              {t("allPeople")}
+            </label>
+          )}
+          <p className="muted commercial-small">
+            {t("originalCurrency")} {t("invoiceBasis")}
+          </p>
+        </div>
+      </div>
       {access.isPending || earnings.isPending || invoices.isPending ? (
         <Loading />
       ) : access.isError || earnings.isError || invoices.isError ? (

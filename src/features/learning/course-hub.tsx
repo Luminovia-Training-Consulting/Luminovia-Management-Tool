@@ -143,8 +143,8 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   });
 
   return (
-    <>
-      <nav className="page-actions" aria-label={t("hub")}>
+    <div className="course-learning-hub">
+      <nav className="course-learning-nav" aria-label={t("hub")}>
         <Button asChild variant={dashboard ? "default" : "secondary"}>
           <Link to="/learning" aria-current={dashboard ? "page" : undefined}>
             {t("hub")}
@@ -251,6 +251,6 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
             })}
         </div>
       )}
-    </>
+    </div>
   );
 }

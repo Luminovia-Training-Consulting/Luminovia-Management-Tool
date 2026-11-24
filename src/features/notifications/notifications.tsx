@@ -373,9 +373,11 @@ export function SettingsPage() {
         <summary>
           {de ? "Ruhezeiten & Zustellung" : "Quiet hours & delivery"}
         </summary>
-        <QuietHoursSettings />
-        <DeliverySettings actor={actor} />
-        <PushSettings key={actor} actor={actor} />
+        <div className="section-stack notification-delivery-stack">
+          <QuietHoursSettings />
+          <DeliverySettings actor={actor} />
+          <PushSettings key={actor} actor={actor} />
+        </div>
       </details>
       <details
         className="panel settings-section"

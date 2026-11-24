@@ -200,40 +200,59 @@ export function JobDetail() {
     <>
       <BackLink companyDispatchOnly={companyDispatchOnly} />
       <PageHeading eyebrow={job.customer_name} title={job.title} />
-      {permissions.data?.includes("jobs.manage") && (
-        <div id="job-pricing">
-          <JobPricingPanel job={job} />
+      <div className="section-stack job-detail-sections">
+        <div className="job-detail-toolbar">
+          {!companyDispatchOnly && (
+            <JobRelatedNavigation
+              actor={session!.user.id}
+              jobId={job.id}
+              afterWorkspace={<div ref={setEditButtonTarget} />}
+            />
+          )}
+          <span className={`status status-${job.status} job-detail-status`}>
+            {job.urgent_reopened_at && job.status === "published"
+              ? t("sickDay:urgent")
+              : t(job.status)}
+          </span>
         </div>
-      )}
-      <div className="job-detail-toolbar">
-        {!companyDispatchOnly && (
-          <>
-            <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
-            <div ref={setEditButtonTarget} />
-          </>
+        {permissions.data?.includes("jobs.manage") && (
+          <div id="job-pricing">
+            <JobPricingPanel job={job} />
+          </div>
         )}
-        <span className={`status status-${job.status} job-detail-status`}>
-          {job.urgent_reopened_at && job.status === "published"
-            ? t("sickDay:urgent")
-            : t(job.status)}
-        </span>
+        {!companyDispatchOnly &&
+          teaching &&
+          ownClaim?.status === "confirmed" && (
+            <div className="form-actions">
+              <JobSickDay
+                key={ownClaim.id}
+                claim={ownClaim}
+                zone={job.time_zone}
+              />
+              <Button asChild variant="secondary">
+                <Link to={`/finance?claim=${encodeURIComponent(ownClaim.id)}`}>
+                  {t("submitInvoice")}
+                </Link>
+              </Button>
+            </div>
+          )}
+        {!companyDispatchOnly && (
+          <JobWithdrawalPanel
+            key={job.id}
+            jobId={job.id}
+            zone={job.time_zone}
+          />
+        )}
+        {!companyDispatchOnly && teaching && <JobWaitlist jobId={job.id} />}
       </div>
-      {!companyDispatchOnly && teaching && ownClaim?.status === "confirmed" && (
-        <div className="form-actions">
-          <JobSickDay key={ownClaim.id} claim={ownClaim} zone={job.time_zone} />
-          <Button asChild variant="secondary">
-            <Link to={`/finance?claim=${encodeURIComponent(ownClaim.id)}`}>
-              {t("submitInvoice")}
-            </Link>
-          </Button>
-        </div>
-      )}
-      {!companyDispatchOnly && (
-        <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
-      )}
-      {!companyDispatchOnly && teaching && <JobWaitlist jobId={job.id} />}
-      <div className={companyDispatchOnly ? "stack" : "detail-layout"}>
-        <div>
+      <div
+        className={
+          companyDispatchOnly
+            ? "job-detail-content"
+            : "job-detail-content detail-layout"
+        }
+      >
+        <div className="section-stack job-detail-sections">
           <section className="panel">
             <div className="inline-meta">
               {job.location && (
