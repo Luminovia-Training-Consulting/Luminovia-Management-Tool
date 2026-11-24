@@ -186,11 +186,12 @@ const message = await (
         `${process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:54324"}/api/v1/message/${messages[0].ID}`,
     )
 ).json();
-const href = /href="([^"]+)"/.exec(message.HTML)?.[1]?.replaceAll("&amp;", "&");
-assert.ok(href, "Custom invitation email contains its acceptance link");
-const invitation = new URL(href);
+const callbacks = Array.from(message.HTML.matchAll(/\bhref="([^"]+)"/g), ([, href]) =>
+    URL.parse(href.replaceAll("&amp;", "&")),
+).filter((url) => url?.pathname === "/auth/callback");
+assert.equal(callbacks.length, 1, "Custom invitation email contains exactly one acceptance link");
+const [invitation] = callbacks;
 assert.equal(invitation.origin, new URL(headers.Origin).origin);
-assert.equal(invitation.pathname, "/auth/callback");
 assert.equal(invitation.searchParams.get("type"), "invite");
 assert.ok(
     invitation.searchParams.get("token_hash"),
