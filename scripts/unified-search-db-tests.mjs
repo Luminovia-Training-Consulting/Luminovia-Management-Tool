@@ -36,6 +36,10 @@ await withTestDatabase("unified_search", async ({sql, actor}) => {
  insert into public.messages(id,room_id,sender_id,body,client_id,request_hash)values(${q(msg)},${q(room)},${q(owner)},'Needle private body',${q(randomUUID())},'fictional-search-hash');
  insert into private.work_tasks(id,creator_id,assignee_id,scope,title,client_id,request_payload)values(${q(task)},${q(owner)},${q(owner)},'private','Needle own task',${q(randomUUID())},'{}');
  insert into public.course_templates(id,title)values(${q(template)},'Needle enrolled course');insert into public.course_runs(id,template_id)values(${q(run)},${q(template)}),(${q(otherRun)},${q(template)});insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)values(${q(run)},${q(learner)},'enrolled',${q(admin)});`);
+    assert.deepEqual(
+        (await search(owner, "%_", "files")).items.map(({id}) => id),
+        [ownFile],
+    );
     let result = await search(owner);
     const serialized = JSON.stringify(result);
     assert.ok(result.items.some((row) => row.id === ownFile));
@@ -112,6 +116,16 @@ await withTestDatabase("unified_search", async ({sql, actor}) => {
     console.log(
         "PASS Personally hidden messages are excluded before universal-search pagination without changing peer visibility or grants",
     );
+    const [literalMessage, nearMessage] = Array.from({length: 2}, randomUUID);
+    const literal = "!%_" + String.fromCharCode(92) + "Ärger";
+    await sql(`insert into public.messages(id,room_id,sender_id,body,client_id,request_hash)
+      values (${q(literalMessage)},${q(room)},${q(owner)},${q("Fictional " + literal)},${q(randomUUID())},'fixture'),
+             (${q(nearMessage)},${q(room)},${q(owner)},'Fictional !abcXaerger',${q(randomUUID())},'fixture');`);
+    assert.deepEqual(
+        (await search(owner, literal.toLowerCase(), "chats")).items.map(({id}) => id),
+        [literalMessage],
+    );
+    assert.deepEqual((await search(admin, literal, "chats")).items, []);
     await assert.rejects(search(learner), /Active account required/);
     console.log(
         "PASS Participant portal access is denied even with legacy course enrolment",
