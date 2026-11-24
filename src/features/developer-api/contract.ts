@@ -4711,7 +4711,10 @@ const paths: Record<string, Record<string, unknown>> = {
   ...Object.fromEntries(
     Object.entries(nativePaths).map(([path, operation]) => [
       path,
-      { post: { ...nativeExplorerPaths[path]?.post, ...operation.post } },
+      {
+        ...operation,
+        post: { ...nativeExplorerPaths[path]?.post, ...operation.post },
+      },
     ]),
   ),
   ...companyLecturerBlockPaths,
