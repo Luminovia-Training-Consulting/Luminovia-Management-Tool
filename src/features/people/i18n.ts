@@ -16,6 +16,8 @@ const de = {
   allLabels: "Alle Labels",
   empty: "Keine passenden Profile gefunden.",
   open: "Profil öffnen",
+  moreProfiles: "Weitere Profile anzeigen",
+  shownProfiles: "{{shown}} von {{total}} geladenen Profilen angezeigt",
   publicId: accountIdentifierLabels[0],
   details: "Öffentliche Profilangaben",
   detailsHelp:
@@ -102,6 +104,8 @@ const en: typeof de = {
   allLabels: "All labels",
   empty: "No matching profiles.",
   open: "Open profile",
+  moreProfiles: "Show more profiles",
+  shownProfiles: "Showing {{shown}} of {{total}} loaded profiles",
   publicId: accountIdentifierLabels[1],
   details: "Public profile details",
   detailsHelp:

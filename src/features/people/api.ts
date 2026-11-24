@@ -4,6 +4,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 import { callRpc } from "../../lib/rpc";
+import { db } from "../../lib/supabase";
 
 /** Intentionally shared expertise projection with verification status. */
 export interface PublicTopic {
@@ -111,12 +112,17 @@ export const peopleDirectoryQuery = (
 ) =>
   queryOptions({
     queryKey: ["people-directory", actor, search, label, topic],
-    queryFn: () =>
-      callRpc<PersonSummary[]>("people_directory", {
-        p_search: search,
-        p_label: label,
-        p_topic_id: topic || null,
-      }),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("people_directory", {
+          p_search: search,
+          p_label: label,
+          p_topic_id: topic || null,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as PersonSummary[];
+    },
   });
 /** Read the authorized target profile; actor partitions caches while the server checks target visibility. */
 export const personQuery = (actor: string, target: string) =>

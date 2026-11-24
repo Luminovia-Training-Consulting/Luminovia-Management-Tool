@@ -3,7 +3,7 @@
  * existing RPC; moderation remains a separate reasoned action.
  */
 import { callRpc } from "../../lib/rpc";
-import { useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,8 @@ import { UnavailablePerson } from "../accounts/unavailable-person";
 import { PersonExpertise } from "../accounts/person-expertise";
 import { PersonManagementActions } from "../accounts/person-actions";
 import { Avatar } from "../profile/avatar";
+import { chatContactsQuery } from "../chat/api";
+import { LoadMore } from "../../components/load-more";
 import { PersonContact } from "./person-contact";
 import { useAuth } from "../auth/auth-context";
 import { topicsQuery } from "../../lib/queries";
@@ -28,6 +30,8 @@ import {
 } from "../../components/common";
 import {
   type CourseReview,
+  type PersonSummary,
+  type TaughtCourse,
   peopleDirectoryQuery,
   personQuery,
   profileCoursesQuery,
@@ -36,14 +40,94 @@ import {
 import "./i18n";
 import "./people.css";
 
-/** Filter the permitted projection by search, label and expertise instead of assembling private profiles in the browser. */
+const directoryBatchSize = 24;
+const courseStates = ["current", "upcoming", "past"] as const;
+
+/** Defer card mounts so the avatar lookups for a full directory do not start together. */
+const PeopleDirectoryResults = memo(function PeopleDirectoryResults({
+  rows,
+  searchPending,
+}: {
+  rows: PersonSummary[];
+  searchPending: boolean;
+}) {
+  const { t, i18n } = useTranslation("people");
+  const [limit, setLimit] = useState(directoryBatchSize);
+  const ratings = useMemo(
+    () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
+    [i18n.language],
+  );
+  const shown = Math.min(rows.length, limit);
+  return (
+    <div className="section-stack" aria-busy={searchPending}>
+      <div className="people-grid">
+        {rows.slice(0, shown).map((person) => (
+          <article key={person.id} className="panel person-card">
+            <Avatar userId={person.id} name={person.display_name} decorative />
+            <h2>
+              <Link to={`/people/${person.id}`}>{person.display_name}</Link>
+            </h2>
+            <small className="public-user-id">
+              {t("publicId")}: <code>{person.luminovia_user_id}</code>
+            </small>
+            <p>
+              {(person.bio_de || person.bio_en).slice(0, 180) || t("noBio")}
+            </p>
+            <small>
+              {person.country}
+              {person.languages.length
+                ? ` · ${person.languages.join(", ")}`
+                : ""}
+            </small>
+            <span>
+              <Star aria-hidden="true" size={16} />{" "}
+              {person.review_count
+                ? t("ratingValue", {
+                    value: ratings.format(Number(person.rating_average)),
+                  })
+                : t("noReviews")}
+              {person.review_count > 0 &&
+                ` · ${t("ratingCount", { count: person.review_count })}`}
+            </span>
+            <Button asChild variant="secondary">
+              <Link to={`/people/${person.id}`}>{t("open")}</Link>
+            </Button>
+          </article>
+        ))}
+      </div>
+      {shown < rows.length && (
+        <LoadMore
+          disabled={searchPending}
+          pageKey={shown}
+          onLoad={() => setLimit(shown + directoryBatchSize)}
+        >
+          {t("moreProfiles")}
+        </LoadMore>
+      )}
+      {rows.length > directoryBatchSize && (
+        <p className="muted" role="status">
+          {t("shownProfiles", { shown, total: rows.length })}
+        </p>
+      )}
+    </div>
+  );
+});
+
+/** Read only confirmed filters and cancel earlier directory requests. */
 export function PeopleDirectory() {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
+  const actor = session!.user.id;
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [topic, setTopic] = useState("");
+  useEffect(() => {
+    if (search === appliedSearch) return;
+    const timer = setTimeout(() => setAppliedSearch(search), 250);
+    return () => clearTimeout(timer);
+  }, [search, appliedSearch]);
   const people = useQuery(
-    peopleDirectoryQuery(session!.user.id, search, "", topic),
+    peopleDirectoryQuery(actor, appliedSearch, "", topic),
   );
   const topics = useQuery(topicsQuery);
   return (
@@ -63,7 +147,10 @@ export function PeopleDirectory() {
           <select
             id="people-topic"
             value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            onChange={(e) => {
+              setTopic(e.target.value);
+              setAppliedSearch(search);
+            }}
           >
             <option value="">{t("allTopics")}</option>
             {topics.data?.map((item) => (
@@ -81,48 +168,11 @@ export function PeopleDirectory() {
       ) : !people.data.length ? (
         <div className="empty-state">{t("empty")}</div>
       ) : (
-        <div className="people-grid">
-          {people.data.map((person) => (
-            <article key={person.id} className="panel person-card">
-              <Avatar
-                userId={person.id}
-                name={person.display_name}
-                decorative
-              />
-              <h2>
-                <Link to={`/people/${person.id}`}>{person.display_name}</Link>
-              </h2>
-              <small className="public-user-id">
-                {t("publicId")}: <code>{person.luminovia_user_id}</code>
-              </small>
-              <p>
-                {(person.bio_de || person.bio_en).slice(0, 180) || t("noBio")}
-              </p>
-              <small>
-                {person.country}
-                {person.languages.length
-                  ? ` · ${person.languages.join(", ")}`
-                  : ""}
-              </small>
-              <span>
-                <Star aria-hidden="true" size={16} />{" "}
-                {person.review_count
-                  ? t("ratingValue", {
-                      value: Number(person.rating_average).toLocaleString(
-                        i18n.language,
-                        { maximumFractionDigits: 1 },
-                      ),
-                    })
-                  : t("noReviews")}
-                {person.review_count > 0 &&
-                  ` · ${t("ratingCount", { count: person.review_count })}`}
-              </span>
-              <Button asChild variant="secondary">
-                <Link to={`/people/${person.id}`}>{t("open")}</Link>
-              </Button>
-            </article>
-          ))}
-        </div>
+        <PeopleDirectoryResults
+          key={JSON.stringify([actor, appliedSearch, topic])}
+          rows={people.data}
+          searchPending={search !== appliedSearch}
+        />
       )}
     </>
   );
@@ -204,10 +254,20 @@ export function PersonProfile() {
     enabled: person.isSuccess,
   });
   const contacts = useQuery({
-    queryKey: ["profile-chat-contacts", actor],
-    queryFn: () => callRpc<{ id: string }[]>("chat_contacts"),
+    ...chatContactsQuery(actor),
+    enabled: person.isSuccess && id !== actor,
   });
   const [state, setState] = useState("");
+  const courseRows = courses.data;
+  const coursesByState = useMemo(() => {
+    const groups: Record<TaughtCourse["state"], TaughtCourse[]> = {
+      current: [],
+      upcoming: [],
+      past: [],
+    };
+    for (const course of courseRows ?? []) groups[course.state].push(course);
+    return groups;
+  }, [courseRows]);
   if (person.isPending) return <Loading />;
   if (person.isError)
     return <UnavailablePerson id={id} retry={() => void person.refetch()} />;
@@ -230,6 +290,7 @@ export function PersonProfile() {
           <Link to="/people">{t("back")}</Link>
         </Button>
         {id !== actor &&
+          !contacts.isError &&
           contacts.data?.some((contact) => contact.id === id) && (
             <Button asChild>
               <Link to={`/chats?contact=${id}`}>
@@ -285,7 +346,7 @@ export function PersonProfile() {
               onChange={(e) => setState(e.target.value)}
             >
               <option value="">{t("allStates")}</option>
-              {(["current", "upcoming", "past"] as const).map((value) => (
+              {courseStates.map((value) => (
                 <option key={value} value={value}>
                   {t(value)}
                 </option>
@@ -297,44 +358,42 @@ export function PersonProfile() {
           ) : courses.isError ? (
             <ErrorState retry={() => void courses.refetch()} />
           ) : (
-            (["current", "upcoming", "past"] as const)
+            courseStates
               .filter((value) => !state || state === value)
               .map((value) => (
                 <div key={value}>
                   <h3>{t(value)}</h3>
-                  {!courses.data.some((item) => item.state === value) ? (
+                  {!coursesByState[value].length ? (
                     <p>{t("noCourses")}</p>
                   ) : (
                     <ul className="people-course-list">
-                      {courses.data
-                        .filter((item) => item.state === value)
-                        .map((item) => (
-                          <li key={item.course_run_id}>
-                            <h3>
-                              {item.can_open ? (
-                                <Link to={`/courses?run=${item.course_run_id}`}>
-                                  {item.title}
-                                </Link>
-                              ) : (
-                                item.title
-                              )}
-                            </h3>
-                            <small>
-                              {dateTime(
-                                item.starts_at,
-                                i18n.language,
-                                item.time_zone,
-                              )}{" "}
-                              —{" "}
-                              {dateTime(
-                                item.ends_at,
-                                i18n.language,
-                                item.time_zone,
-                              )}{" "}
-                              · {item.time_zone}
-                            </small>
-                          </li>
-                        ))}
+                      {coursesByState[value].map((item) => (
+                        <li key={item.course_run_id}>
+                          <h3>
+                            {item.can_open ? (
+                              <Link to={`/courses?run=${item.course_run_id}`}>
+                                {item.title}
+                              </Link>
+                            ) : (
+                              item.title
+                            )}
+                          </h3>
+                          <small>
+                            {dateTime(
+                              item.starts_at,
+                              i18n.language,
+                              item.time_zone,
+                            )}{" "}
+                            —{" "}
+                            {dateTime(
+                              item.ends_at,
+                              i18n.language,
+                              item.time_zone,
+                            )}{" "}
+                            · {item.time_zone}
+                          </small>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>
