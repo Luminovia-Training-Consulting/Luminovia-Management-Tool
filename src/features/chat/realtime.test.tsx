@@ -134,6 +134,43 @@ it("refreshes the current history after a personal visibility change from anothe
     [{ queryKey: chatKeys.rooms("actor-a") }],
   ]);
 });
+it("revalidates saved history only when membership visibility changes or the connection was interrupted", async () => {
+  const { invalidate } = setup();
+  const channel = state.channels[0];
+  const rooms = { queryKey: chatKeys.rooms("actor-a") };
+  const messages = { queryKey: chatKeys.messages("actor-a", "room-a") };
+  const member = {
+    room_id: "room-a",
+    removed_at: null,
+    hidden_generation: 2,
+    joined_at: "2026-11-16T00:00:00Z",
+  };
+  act(() => channel.status("SUBSCRIBED"));
+  emit(channel, "chat_members:UPDATE", { new: member });
+  await advance();
+  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+
+  invalidate.mockClear();
+  for (let i = 0; i < 20; i++)
+    emit(channel, "chat_members:UPDATE", {
+      new: { ...member, last_read_message_id: `fictional-${i}` },
+    });
+  await advance();
+  expect(invalidate.mock.calls).toEqual([[rooms]]);
+
+  invalidate.mockClear();
+  emit(channel, "chat_members:UPDATE", {
+    new: { ...member, hidden_generation: 3 },
+  });
+  await advance();
+  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+
+  invalidate.mockClear();
+  act(() => channel.status("CHANNEL_ERROR"));
+  act(() => channel.status("SUBSCRIBED"));
+  await advance();
+  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+});
 it("removes revoked private rows synchronously and cancels queued or late message refreshes", async () => {
   const { client, invalidate } = setup();
   const key = [...chatKeys.messages("actor-a", "room-a"), ""];

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -127,7 +128,7 @@ export function CategorySelector({
 }
 
 /** Display validated internal destinations and bind each notification to its read action. */
-export function NotificationRow({
+export const NotificationRow = memo(function NotificationRow({
   item,
   zone,
   compact,
@@ -175,4 +176,4 @@ export function NotificationRow({
       )}
     </li>
   );
-}
+});

@@ -473,6 +473,7 @@ it("opening the inbox closes the native notification popover", async () => {
     "Benachrichtigungen: 45 ungelesen",
   );
   expect(summary).toHaveAccessibleName("Benachrichtigungen: 45 ungelesen");
+  expect(screen.queryByText(notice.title)).not.toBeInTheDocument();
   await userEvent.click(summary);
   const menu = summary.closest("details")!;
   expect(menu).toHaveAttribute("open");
@@ -480,6 +481,9 @@ it("opening the inbox closes the native notification popover", async () => {
     await screen.findByRole("link", { name: "Alle Benachrichtigungen" }),
   );
   await waitFor(() => expect(menu).not.toHaveAttribute("open"));
+  await waitFor(() =>
+    expect(screen.queryByText(notice.title)).not.toBeInTheDocument(),
+  );
 });
 
 it("lets keyboard users close the notification popover and returns focus to the bell", async () => {

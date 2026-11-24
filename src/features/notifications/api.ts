@@ -32,9 +32,12 @@ export function mergeNotificationPages(pages: InboxPage[] | undefined) {
   // Newer pages come first. For overlapping IDs, keep their first occurrence
   // instead of overwriting it with an older read state.
   const rows = new Map<string, NotificationItem>();
-  for (const item of (pages ?? []).flatMap((page) => page.items))
-    if (!rows.has(item.id)) rows.set(item.id, item);
-  return [...rows.values()];
+  for (const page of pages ?? []) {
+    for (const item of page.items) {
+      if (!rows.has(item.id)) rows.set(item.id, item);
+    }
+  }
+  return Array.from(rows.values());
 }
 
 /** Shared actor keys connect preview/inbox views with targeted read-state revalidation. */

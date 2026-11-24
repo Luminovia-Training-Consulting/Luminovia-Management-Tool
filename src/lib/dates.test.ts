@@ -158,6 +158,32 @@ it("bounds the formatter cache as the display locale changes", () => {
   }
 });
 
+it("reuses currency formatters across rows while retaining locale and currency", () => {
+  const formats = [
+    ["CAD", "en-CA"],
+    ["EUR", "en-CA"],
+    ["EUR", "fr-CA"],
+  ] as const;
+  const amount = -1234.5;
+  const expected = formats.map(([currency, language]) =>
+    new Intl.NumberFormat(language, { style: "currency", currency }).format(
+      amount,
+    ),
+  );
+  const constructor = vi.spyOn(Intl, "NumberFormat");
+  try {
+    for (let index = 0; index < 500; index++)
+      expect(
+        formats.map(([currency, language]) =>
+          money(amount, currency, language),
+        ),
+      ).toEqual(expected);
+    expect(constructor).toHaveBeenCalledTimes(3);
+  } finally {
+    constructor.mockRestore();
+  }
+});
+
 it("accepts an IANA display zone and rejects an invalid zone", () => {
   expect(validZone("Europe/Berlin")).toBe(true);
   expect(validZone("Invalid/Zone")).toBe(false);

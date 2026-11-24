@@ -56,6 +56,7 @@ import type { ChatMessage, ChatRoom } from "./types";
 import "./i18n";
 
 const olderHistoryThreshold = 120;
+const editWindow = 15 * 60_000;
 
 /** Bind history, read state, search, Realtime and attachments to one active room. */
 export function ChatThread({
@@ -81,10 +82,6 @@ export function ChatThread({
   const profile = useQuery(profileQuery(actor));
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(timer);
-  }, []);
   const [searchInput, setSearchInput] = useState("");
   const [replyId, setReplyId] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -102,6 +99,13 @@ export function ChatThread({
   const threadElement = useRef<HTMLElement>(null);
   const historyElement = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
+  const transcriptScroll = useRef<number | null>(null);
+  const displayedSearch = useRef("");
+  const applySearch = (next: string) => {
+    if (next && !search)
+      transcriptScroll.current = historyElement.current?.scrollTop ?? 0;
+    setSearch(next);
+  };
   const olderAnchor = useRef<{
     message: HTMLElement;
     contentTop: number;
@@ -139,7 +143,7 @@ export function ChatThread({
       search,
     };
     olderAnchor.current = anchor;
-    setFollowing(false);
+    if (!search) setFollowing(false);
     let result = await messages.fetchNextPage({ cancelRefetch: false });
     // A Realtime refresh can replace this request or already be in progress.
     // Continue once from the refreshed cursor if no older page was appended.
@@ -182,6 +186,37 @@ export function ChatThread({
     () => orderedCursorRows(messages.data?.pages, "ascending"),
     [messages.data?.pages],
   );
+  const editExpiry = useMemo(() => {
+    let earliest = Infinity;
+    for (const message of ordered) {
+      if (message.sender_id !== actor || message.deleted_at) continue;
+      const expires = Date.parse(message.created_at) + editWindow;
+      if (expires > now) earliest = Math.min(earliest, expires);
+    }
+    return earliest;
+  }, [ordered, actor, now]);
+  useEffect(() => {
+    if (!Number.isFinite(editExpiry)) return;
+    const delay = Math.min(2 ** 31 - 1, Math.max(0, editExpiry - Date.now()));
+    const timer = setTimeout(() => setNow(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [editExpiry, now]);
+  useLayoutEffect(() => {
+    if (!messages.isSuccess) return;
+    const pane = historyElement.current;
+    if (!pane) return;
+    if (search) {
+      if (displayedSearch.current === search) return;
+      displayedSearch.current = search;
+      pane.scrollTop = 0;
+    } else {
+      displayedSearch.current = "";
+      if (transcriptScroll.current === null) return;
+      pane.scrollTop = following ? pane.scrollHeight : transcriptScroll.current;
+      transcriptScroll.current = null;
+    }
+    lastScrollTop.current = pane.scrollTop;
+  }, [search, messages.isSuccess, following]);
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const language = i18n.resolvedLanguage ?? i18n.language;
   const messageRows = useMemo(() => {
@@ -487,7 +522,7 @@ export function ChatThread({
             role="search"
             onSubmit={(event) => {
               event.preventDefault();
-              setSearch(searchInput.trim());
+              applySearch(searchInput.trim());
             }}
           >
             <Search size={17} />
@@ -509,7 +544,7 @@ export function ChatThread({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setSearch("");
+                  applySearch("");
                   setSearchInput("");
                 }}
               >
@@ -534,8 +569,10 @@ export function ChatThread({
           lastScrollTop.current = area.scrollTop;
           const isAtEnd =
             area.scrollHeight - area.scrollTop - area.clientHeight <= 12;
-          setFollowing(isAtEnd);
-          if (isAtEnd) setNewMessages(false);
+          if (!search) {
+            setFollowing(isAtEnd);
+            if (isAtEnd) setNewMessages(false);
+          }
           if (movedUp && area.scrollTop <= olderHistoryThreshold && !retryOlder)
             void loadOlder();
         }}
@@ -606,7 +643,7 @@ export function ChatThread({
                       editable={
                         message.sender_id === actor &&
                         !message.deleted_at &&
-                        now - Date.parse(message.created_at) < 15 * 60_000
+                        now - Date.parse(message.created_at) < editWindow
                       }
                     />
                   </Fragment>
@@ -630,7 +667,7 @@ export function ChatThread({
           )}
         </div>
       )}
-      {!following && newMessages && (
+      {!search && !following && newMessages && (
         <Button
           variant="secondary"
           onClick={() => {
@@ -670,9 +707,9 @@ export function ChatThread({
         onDraftChange={onDraftChange}
         replyId={replyId}
         replyTarget={
-          historyUnavailable
-            ? undefined
-            : ordered.find((item) => item.id === replyId)
+          replyId && !historyUnavailable
+            ? ordered.find((item) => item.id === replyId)
+            : undefined
         }
         onCancelReply={() => setReplyId(null)}
       />

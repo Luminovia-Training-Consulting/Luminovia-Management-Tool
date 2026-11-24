@@ -22,6 +22,8 @@ export function useChatRealtime(actor: string, room: string | undefined) {
     if (!room) return;
     let active = true;
     let accessRevoked = false;
+    let visibilityKey: string | undefined;
+    let wasSubscribed = false;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let messagesPending = false;
     let roomsPending = false;
@@ -98,14 +100,38 @@ export function useChatRealtime(actor: string, room: string | undefined) {
             void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
             return;
           }
-          // Personal message visibility is persisted on this membership; other
-          // sessions must refetch history as well as the room directory.
-          refresh(payload.new.room_id === room, true);
+          if (payload.new.room_id !== room) {
+            refresh(false, true);
+            return;
+          }
+          // A read/mute/pin change needs the directory only. First and incomplete
+          // events still refresh history because they cannot prove visibility is unchanged.
+          const {
+            hidden_generation: generation,
+            joined_at: joined,
+            removed_at: removed,
+          } = payload.new;
+          const nextVisibility =
+            (typeof generation === "string" ||
+              typeof generation === "number") &&
+            typeof joined === "string" &&
+            removed === null
+              ? JSON.stringify([joined, generation])
+              : undefined;
+          const revalidateHistory =
+            nextVisibility === undefined || nextVisibility !== visibilityKey;
+          visibilityKey = nextVisibility;
+          refresh(revalidateHistory, true);
         },
       )
       .subscribe((next) => {
         if (!active) return;
         const value = next === "SUBSCRIBED" ? "connected" : "retrying";
+        if (value === "connected") {
+          if (wasSubscribed && statusRef.current !== "connected")
+            refresh(true, true);
+          wasSubscribed = true;
+        } else visibilityKey = undefined;
         if (value !== statusRef.current) {
           statusRef.current = value;
           setStatus(value);

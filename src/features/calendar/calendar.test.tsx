@@ -54,6 +54,7 @@ const state = vi.hoisted(() => ({
   claims: [] as unknown[],
   permissions: [] as string[],
   events: [] as unknown[],
+  loadEvents: vi.fn(),
   deleteEvent: vi.fn(),
   saveEvent: vi.fn(),
   rpc: vi.fn(),
@@ -124,7 +125,7 @@ vi.mock("../../lib/queries", () => ({
   topicsQuery: { queryKey: ["topics"], queryFn: async () => [] },
   eventsQuery: () => ({
     queryKey: ["events"],
-    queryFn: async () => state.events,
+    queryFn: () => state.loadEvents(),
   }),
 }));
 vi.mock("../operations/data", () => ({
@@ -276,6 +277,7 @@ vi.mock("@fullcalendar/react", () => ({
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.datesSetOnLocale = false;
+  state.loadEvents.mockImplementation(async () => state.events);
   state.callbacks = [];
   state.initialDate = undefined;
   state.displayedZone = undefined;
@@ -285,6 +287,7 @@ afterEach(() => {
   state.claims = [];
   state.permissions = [];
   state.events = [];
+  state.loadEvents.mockReset();
   vi.clearAllMocks();
 });
 it("keeps calendar tools collapsed until explicitly opened and preserves the disclosure across locale changes", async () => {
@@ -326,6 +329,69 @@ it("keeps calendar tools collapsed until explicitly opened and preserves the dis
   expect(tools).toHaveAttribute("open", "");
   client.clear();
 });
+it("keeps a populated grid stable when the search input changes without changing its filter", async () => {
+  state.events = Array.from({ length: 200 }, (_, index) => ({
+    id: `private-${index}`,
+    title: `Planning ${index}`,
+    starts_at: "2060-01-01T08:00:00Z",
+    ends_at: "2060-01-01T09:00:00Z",
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const grid = await screen.findByTestId("calendar-engine");
+  expect(within(grid).getAllByText(/^Planning /)).toHaveLength(200);
+  const renders = state.callbacks.length;
+
+  const search = screen.getByRole("searchbox", {
+    name: "Kalendertermine suchen",
+  });
+  fireEvent.change(search, { target: { value: "   " } });
+  expect(search).toHaveValue("   ");
+  expect(state.callbacks).toHaveLength(renders);
+
+  fireEvent.change(search, { target: { value: "Planning 199" } });
+  await waitFor(() =>
+    expect(within(grid).getAllByText(/^Planning /)).toHaveLength(1),
+  );
+  expect(within(grid).getByText("Planning 199")).toBeInTheDocument();
+});
+
+it("retries a failed private calendar read without requesting global events or empty assignment metadata", async () => {
+  state.loadEvents.mockRejectedValueOnce(
+    new Error("temporary calendar read failure"),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  const retry = await screen.findByRole("button", { name: "Erneut versuchen" });
+  await userEvent.click(retry);
+  await screen.findByTestId("calendar-engine");
+  expect(state.loadEvents).toHaveBeenCalledTimes(2);
+  expect(
+    calendarCalls().some(([name]) =>
+      ["global_calendar_events", "assignment_calendar_metadata"].includes(
+        String(name),
+      ),
+    ),
+  ).toBe(false);
+});
+
 it("filters loaded private, assignment, global and course titles without extra queries and supports both languages", async () => {
   const jobID = "d7000000-0000-4000-8000-000000000001";
   state.events = [

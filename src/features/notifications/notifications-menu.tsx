@@ -29,6 +29,7 @@ export function NotificationsMenu({
   const [category, setCategory] = useState<NotificationCategory>("all");
   const filterId = useId();
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [open, setOpen] = useState(false);
   const online = useOnline();
   const query = useQuery({
     ...notificationPreviewQuery(id),
@@ -58,7 +59,8 @@ export function NotificationsMenu({
   const { attributes: disclosure } = useDismissibleDisclosure(
     useLocation().key,
   );
-  const page = !query.isError && !awaitingAcademy ? query.data : undefined;
+  const page =
+    open && !query.isError && !awaitingAcademy ? query.data : undefined;
   const items =
     page?.items.filter(
       (item) =>
@@ -72,6 +74,10 @@ export function NotificationsMenu({
     <details
       className={`notification-menu${academy ? " academy-notification-menu" : ""}`}
       {...disclosure}
+      onToggle={(event) => {
+        if (event.target === event.currentTarget)
+          setOpen(event.currentTarget.open);
+      }}
     >
       <summary aria-label={`${t("title")}: ${countLabel}`}>
         <Bell aria-hidden="true" size={21} />
@@ -81,84 +87,90 @@ export function NotificationsMenu({
           </span>
         )}
       </summary>
-      <div className="notification-popover">
-        <h2>{t("title")}</h2>
-        {!academy && (
-          <>
-            <CategorySelector value={category} onChange={setCategory} />
+      {open && (
+        <div className="notification-popover">
+          <h2>{t("title")}</h2>
+          {!academy && (
+            <>
+              <CategorySelector value={category} onChange={setCategory} />
+              <p className="notification-filter-scope">{t("recentScope")}</p>
+            </>
+          )}
+          <Field
+            id={`notification-preview-filter-${filterId}`}
+            label={t("readFilter")}
+          >
+            <select
+              value={unreadOnly ? "unread" : "all"}
+              onChange={(event) =>
+                setUnreadOnly(event.target.value === "unread")
+              }
+            >
+              <option value="all">{t("all")}</option>
+              <option value="unread">{t("unread")}</option>
+            </select>
+          </Field>
+          {academy && unreadOnly && (
             <p className="notification-filter-scope">{t("recentScope")}</p>
-          </>
-        )}
-        <Field
-          id={`notification-preview-filter-${filterId}`}
-          label={t("readFilter")}
-        >
-          <select
-            value={unreadOnly ? "unread" : "all"}
-            onChange={(event) => setUnreadOnly(event.target.value === "unread")}
-          >
-            <option value="all">{t("all")}</option>
-            <option value="unread">{t("unread")}</option>
-          </select>
-        </Field>
-        {academy && unreadOnly && (
-          <p className="notification-filter-scope">{t("recentScope")}</p>
-        )}
-        {page && academy !== "grace" && (
-          <Button
-            variant="secondary"
-            disabled={
-              !online ||
-              mark.isPending ||
-              (category === "all" ? !page.unread_count : !filteredUnread.length)
-            }
-            onClick={() =>
-              mark.mutate(
-                category === "all"
-                  ? { ids: null, before: page.as_of, read: true }
-                  : { ids: filteredUnread, before: null, read: true },
-              )
-            }
-          >
-            {t(category === "all" ? "markAll" : "markCategoryVisible")}
-          </Button>
-        )}
-        {academy && !online ? (
-          <Notice>{t("offlineInbox")}</Notice>
-        ) : query.isPending || awaitingAcademy ? (
-          <Loading />
-        ) : query.isError ? (
-          <ErrorState retry={() => void query.refetch()} />
-        ) : items.length === 0 ? (
-          <p>
-            {t(
-              unreadOnly
-                ? "recentUnreadEmpty"
-                : category === "all"
-                  ? "empty"
-                  : "categoryEmpty",
-            )}
-          </p>
-        ) : (
-          <ul>
-            {items.map((item) => (
-              <NotificationRow
-                key={item.id}
-                item={item}
-                zone={zone}
-                compact
-                disabled={!online || mark.isPending}
-                readOnly={academy === "grace"}
-                mark={(id, read) =>
-                  mark.mutate({ ids: [id], before: null, read })
-                }
-              />
-            ))}
-          </ul>
-        )}
-        {mark.isError && <Notice kind="error">{t("error")}</Notice>}
-        <Link to="/notifications">{t("inbox")}</Link>
-      </div>
+          )}
+          {page && academy !== "grace" && (
+            <Button
+              variant="secondary"
+              disabled={
+                !online ||
+                mark.isPending ||
+                (category === "all"
+                  ? !page.unread_count
+                  : !filteredUnread.length)
+              }
+              onClick={() =>
+                mark.mutate(
+                  category === "all"
+                    ? { ids: null, before: page.as_of, read: true }
+                    : { ids: filteredUnread, before: null, read: true },
+                )
+              }
+            >
+              {t(category === "all" ? "markAll" : "markCategoryVisible")}
+            </Button>
+          )}
+          {academy && !online ? (
+            <Notice>{t("offlineInbox")}</Notice>
+          ) : query.isPending || awaitingAcademy ? (
+            <Loading />
+          ) : query.isError ? (
+            <ErrorState retry={() => void query.refetch()} />
+          ) : items.length === 0 ? (
+            <p>
+              {t(
+                unreadOnly
+                  ? "recentUnreadEmpty"
+                  : category === "all"
+                    ? "empty"
+                    : "categoryEmpty",
+              )}
+            </p>
+          ) : (
+            <ul>
+              {items.map((item) => (
+                <NotificationRow
+                  key={item.id}
+                  item={item}
+                  zone={zone}
+                  compact
+                  disabled={!online || mark.isPending}
+                  readOnly={academy === "grace"}
+                  mark={(id, read) =>
+                    mark.mutate({ ids: [id], before: null, read })
+                  }
+                />
+              ))}
+            </ul>
+          )}
+          {mark.isError && <Notice kind="error">{t("error")}</Notice>}
+          <Link to="/notifications">{t("inbox")}</Link>
+        </div>
+      )}
     </details>
   );
 }

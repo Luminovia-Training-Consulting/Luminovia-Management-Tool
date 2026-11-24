@@ -2,7 +2,7 @@
  * Bell menu, complete inbox and personal notification preferences. Preview/history share
  * appropriate caches while confirmed read state and version conflicts remain visible.
  */
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   useInfiniteQuery,
@@ -79,7 +79,15 @@ export function NotificationsPage({
     refetchInterval: sensitive ? 10_000 : undefined,
   });
   const profile = useQuery({ ...profileQuery(actor), enabled: !academy });
-  const mark = useReadState(actor);
+  const {
+    mutate: markRead,
+    isPending: marking,
+    isError: markFailed,
+  } = useReadState(actor);
+  const markItem = useCallback(
+    (id: string, read: boolean) => markRead({ ids: [id], before: null, read }),
+    [markRead],
+  );
   const refresh = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -158,9 +166,9 @@ export function NotificationsPage({
             {!readOnly && (
               <Button
                 variant="secondary"
-                disabled={!first || !canMark || mark.isPending}
+                disabled={!first || !canMark || marking}
                 onClick={() =>
-                  mark.mutate(
+                  markRead(
                     category === "all"
                       ? { ids: null, before: first!.as_of, read: true }
                       : {
@@ -200,7 +208,7 @@ export function NotificationsPage({
         )}
         {refresh.isSuccess && <Notice>{t("refreshed")}</Notice>}
       </section>
-      {(mark.isError || refresh.isError) && (
+      {(markFailed || refresh.isError) && (
         <Notice kind="error">{t("error")}</Notice>
       )}
       {!online && sensitive ? (
@@ -220,11 +228,9 @@ export function NotificationsPage({
                 key={item.id}
                 item={item}
                 zone={zone}
-                disabled={!online || mark.isPending}
+                disabled={!online || marking}
                 readOnly={readOnly}
-                mark={(id, read) =>
-                  mark.mutate({ ids: [id], before: null, read })
-                }
+                mark={markItem}
               />
             ))}
           </ul>

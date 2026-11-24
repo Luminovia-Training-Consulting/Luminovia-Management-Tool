@@ -214,6 +214,109 @@ function historyScroller() {
   return { pane, scroll };
 }
 
+it("restores the unfiltered transcript position and leaves unseen messages unread after a search", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const { client } = populatedThread(undefined, 20);
+  const { pane, scroll } = historyScroller();
+  const key = ["chat-messages", "actor", "room", ""];
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith("mark_chat_read", {
+      p_room_id: "room",
+      p_message_id: latestMessage.id,
+      p_muted: null,
+    }),
+  );
+  scroll(420);
+  client.setQueryData([...key.slice(0, -1), "earlier"], {
+    pages: [[olderMessage]],
+    pageParams: [null],
+  });
+  fireEvent.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
+  const searchbox = screen.getByRole("searchbox", {
+    name: "Nachrichten durchsuchen",
+  });
+  fireEvent.change(searchbox, { target: { value: "earlier" } });
+  fireEvent.submit(searchbox.closest("form")!);
+  expect(await screen.findByText(olderMessage.body)).toBeVisible();
+  expect(pane.scrollTop).toBe(0);
+  scroll(600);
+  const arrived = {
+    ...latestMessage,
+    id: "arrived-during-search",
+    created_at: "2026-01-01T08:02:00Z",
+    body: "New message from while searching",
+  };
+  client.setQueryData<{ pages: ChatMessage[][]; pageParams: unknown[] }>(
+    key,
+    (data) => ({
+      ...data!,
+      pages: [[arrived, ...data!.pages[0]]],
+    }),
+  );
+  fireEvent.change(searchbox, { target: { value: "" } });
+  fireEvent.submit(searchbox.closest("form")!);
+  expect(await screen.findByText(arrived.body)).toBeVisible();
+  expect(pane.scrollTop).toBe(420);
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "mark_chat_read"),
+  ).toHaveLength(1);
+  expect(
+    screen.getByRole("button", { name: "Zu neuen Nachrichten" }),
+  ).toBeVisible();
+  client.clear();
+});
+
+it("removes editing at the next actual deadline without a recurring transcript timer", async () => {
+  vi.useFakeTimers();
+  try {
+    const timer = vi.spyOn(window, "setTimeout");
+    const interval = vi.spyOn(window, "setInterval");
+    const { client } = populatedThread();
+    expect(interval.mock.calls.some(([, delay]) => delay === 30_000)).toBe(
+      false,
+    );
+    const key = ["chat-messages", "actor", "room", ""];
+    await act(async () => {
+      client.setQueryData(key, {
+        pages: [
+          [
+            {
+              ...latestMessage,
+              sender_id: "actor",
+              created_at: new Date(
+                Date.now() - (15 * 60_000 - 1_000),
+              ).toISOString(),
+            },
+          ],
+        ],
+        pageParams: [null],
+      });
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(
+      screen.getByRole("button", { name: "Nachricht bearbeiten" }),
+    ).toBeVisible();
+    expect(
+      timer.mock.calls.some(
+        ([, delay]) =>
+          typeof delay === "number" && delay >= 990 && delay <= 1_000,
+      ),
+    ).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(
+      screen.queryByRole("button", { name: "Nachricht bearbeiten" }),
+    ).not.toBeInTheDocument();
+    client.clear();
+  } finally {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
+});
+
 it("loads older history once on upward scroll and anchors a viewport that moved while loading", async () => {
   const { client } = populatedThread(undefined, 40);
   const { pane, scroll } = historyScroller();

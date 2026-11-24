@@ -12,8 +12,24 @@ import {
   defaultCalendarColors,
 } from "./calendar-color-api";
 import { orgQuery, runsQuery, templatesQuery } from "../operations/data";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DatesSetArg } from "@fullcalendar/core";
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type {
+  DateSelectArg,
+  DatesSetArg,
+  DayCellMountArg,
+  EventClickArg,
+  EventContentArg,
+  EventMountArg,
+} from "@fullcalendar/core";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -544,6 +560,35 @@ function CalendarTools({
   );
 }
 
+// FullCalendar resets its options on every React update. Stable props keep
+// transient toolbar and dialog state from rebuilding the grid.
+const CalendarGrid = memo(FullCalendar);
+const calendarPlugins = [
+  dayGridPlugin,
+  timeGridPlugin,
+  listPlugin,
+  interactionPlugin,
+  luxonPlugin,
+];
+const emptyMetadata = {
+  customerKey: "",
+  customerName: "",
+  topics: [] as { id: string; label_de: string; label_en: string }[],
+};
+
+function adjustDayCell({ el }: DayCellMountArg) {
+  el.removeAttribute("aria-labelledby");
+}
+
+function adjustCalendarEvent({ el, event }: EventMountArg) {
+  if (event.url) return;
+  // FullCalendar activates href-less anchors with Enter/Space.
+  const target = el.matches("a")
+    ? el
+    : el.querySelector(".fc-list-event-title a");
+  target?.setAttribute("role", "button");
+}
+
 type PersonalEditorDraft = {
   event?: PersonalEvent;
   range?: CalendarDraftRange;
@@ -569,12 +614,16 @@ export function CalendarPage() {
   const calendarColors = useQuery(calendarColorsQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
   const personal = useQuery(eventsQuery(session!.user.id));
-  const jobs = useQuery(
-    assignmentCalendarMetadataQuery(
-      session!.user.id,
-      (claims.data ?? []).map((claim) => claim.job_id),
-    ),
+  const actor = session!.user.id;
+  const jobOptions = useMemo(
+    () =>
+      assignmentCalendarMetadataQuery(
+        actor,
+        (claims.data ?? []).map((claim) => claim.job_id),
+      ),
+    [actor, claims.data],
   );
+  const jobs = useQuery(jobOptions);
   const [global, setGlobal] = useState(false);
   const publicRuns = useQuery({
     ...runsQuery(session!.user.id),
@@ -604,15 +653,17 @@ export function CalendarPage() {
   const [globalID, setGlobalID] = useState<string | null>(null);
   const retryGlobalPage = canRetryNextPage(globals);
   const globalsFailed = globals.isError && !retryGlobalPage;
-  const globalRows = globalsFailed
-    ? []
-    : [
-        ...new Map(
-          (globals.data?.pages ?? [])
-            .flatMap((page) => page.items)
-            .map((event) => [event.id, event]),
-        ).values(),
-      ];
+  const calendarPages = globals.data?.pages;
+  const globalRows = useMemo(() => {
+    if (globalsFailed) return [];
+    const indexed = new Map<
+      string,
+      NonNullable<typeof calendarPages>[number]["items"][number]
+    >();
+    for (const page of calendarPages ?? [])
+      for (const event of page.items) indexed.set(event.id, event);
+    return Array.from(indexed.values());
+  }, [calendarPages, globalsFailed]);
   const visibleRange = useRef(range);
   const handleDatesSet = useCallback((info: DatesSetArg) => {
     if (info.view?.title) setCalendarTitle(info.view.title);
@@ -663,17 +714,20 @@ export function CalendarPage() {
         currentLocation.search !== nextLocation.search ||
         currentLocation.hash !== nextLocation.hash),
   );
-  const openPersonalEditor = (draft: PersonalEditorDraft) => {
-    if (eventBusy) return;
-    if (open && eventDirty) {
-      setDiscardAction({ kind: "event", draft });
-      return;
-    }
-    setEditorDraft(draft);
-    setEventDirty(false);
-    setEventFormEpoch((value) => value + 1);
-    setOpen(true);
-  };
+  const openPersonalEditor = useCallback(
+    (draft: PersonalEditorDraft) => {
+      if (eventBusy) return;
+      if (open && eventDirty) {
+        setDiscardAction({ kind: "event", draft });
+        return;
+      }
+      setEditorDraft(draft);
+      setEventDirty(false);
+      setEventFormEpoch((value) => value + 1);
+      setOpen(true);
+    },
+    [eventBusy, eventDirty, open],
+  );
   const cancelDiscard = () => {
     setDiscardAction(null);
     if (blocker.state === "blocked") blocker.reset();
@@ -754,6 +808,232 @@ export function CalendarPage() {
     () => new Map(topics.data?.map((topic) => [topic.id, topic])),
     [topics.data],
   );
+  const colors = calendarColors.data ?? defaultCalendarColors;
+  const events = useMemo(
+    () =>
+      global
+        ? [
+            ...globalRows.map((e) => ({
+              id: e.id,
+              title: e.title,
+              start: e.starts_at,
+              end: e.ends_at,
+              display: "block",
+              color: "#1749b5",
+              textColor: "#ffffff",
+              extendedProps: { kind: "global", ...emptyMetadata },
+            })),
+            ...(publicRuns.isError || templates.isError
+              ? []
+              : (publicRuns.data ?? [])
+            )
+              .filter((run) => run.published && !run.archived_at)
+              .flatMap((run) => {
+                const template = templatesById.get(run.template_id);
+                const customerCreated = Boolean(run.organisation_id);
+                const customerName =
+                  !organisations.isError && run.organisation_id
+                    ? (organisationsById.get(run.organisation_id) ?? "")
+                    : "";
+                const courseTopics = topics.isError
+                  ? []
+                  : (template?.course_template_topics ?? []).flatMap(
+                      ({ topic_id }) => {
+                        const topic = topicsById.get(topic_id);
+                        return topic
+                          ? [
+                              {
+                                id: topic.id,
+                                label_de: topic.label_de,
+                                label_en: topic.label_en,
+                              },
+                            ]
+                          : [];
+                      },
+                    );
+                return run.course_sessions.map((s) => ({
+                  id: `course-${s.id}`,
+                  title: template?.title ?? t("courses"),
+                  start: s.starts_at,
+                  end: s.ends_at,
+                  display: "block",
+                  color: customerCreated
+                    ? colors.customer_event_color
+                    : "#326c58",
+                  textColor: customerCreated ? "#17283a" : "#ffffff",
+                  url: `/courses?run=${run.id}`,
+                  extendedProps: {
+                    kind: "course",
+                    customerCreated,
+                    customerKey: run.organisation_id ?? "",
+                    customerName,
+                    topics: courseTopics,
+                  },
+                }));
+              }),
+          ]
+        : [
+            ...(personal.data ?? []).map((e) => ({
+              id: e.id,
+              title: e.title,
+              start: e.starts_at,
+              end: e.ends_at,
+              display: "block",
+              color: colors.personal_event_color,
+              textColor: "#17283a",
+              extendedProps: { kind: "private", ...emptyMetadata },
+            })),
+            ...(claims.data ?? []).flatMap((claim) => {
+              const job = jobsById.get(claim.job_id);
+              const customerKey =
+                job?.organisation_id ??
+                (job?.organisation_name ? `name:${job.organisation_name}` : "");
+              const customerCreated = Boolean(customerKey);
+              return claim.assignment_sessions.map((session) => ({
+                id: session.id,
+                title: job?.title ?? t("assignment"),
+                start: session.starts_at,
+                end: session.ends_at,
+                display: "block",
+                color: customerCreated
+                  ? colors.customer_event_color
+                  : colors.assignment_event_color,
+                textColor: "#17283a",
+                url: `/jobs/${claim.job_id}`,
+                extendedProps: {
+                  kind: "assignment",
+                  customerCreated,
+                  customerKey,
+                  customerName: job?.organisation_name ?? "",
+                  topics: job?.topics ?? [],
+                },
+              }));
+            }),
+          ],
+    [
+      global,
+      globalRows,
+      publicRuns.data,
+      publicRuns.isError,
+      templates.isError,
+      templatesById,
+      organisations.isError,
+      organisationsById,
+      topics.isError,
+      topicsById,
+      personal.data,
+      claims.data,
+      jobsById,
+      colors,
+      t,
+    ],
+  );
+  // FullCalendar's grid stores civil times internally. Retain the exact source
+  // instants to label events in a repeated hour with separate UTC offsets.
+  const { sourceEvents, customers, eventTopics } = useMemo(() => {
+    const sourceEvents = new Map<string, (typeof events)[number]>();
+    const customers = new Map<string, string>();
+    const eventTopics = new Map<
+      string,
+      (typeof emptyMetadata.topics)[number]
+    >();
+    for (const event of events) {
+      sourceEvents.set(event.id, event);
+      const { customerKey, customerName, topics } = event.extendedProps;
+      if (customerName) customers.set(customerKey, customerName);
+      for (const topic of topics) eventTopics.set(topic.id, topic);
+    }
+    return { sourceEvents, customers, eventTopics };
+  }, [events]);
+  const language = i18n.language;
+  const german = language.startsWith("de");
+  const { customerOptions, topicOptions } = useMemo(
+    () => ({
+      customerOptions: [...customers].sort((a, b) =>
+        a[1].localeCompare(b[1], language),
+      ),
+      topicOptions: [...eventTopics.values()].sort((a, b) =>
+        (german ? a.label_de : a.label_en).localeCompare(
+          german ? b.label_de : b.label_en,
+          language,
+        ),
+      ),
+    }),
+    [customers, eventTopics, german, language],
+  );
+  const searchTerm = useDeferredValue(search.trim().toLocaleLowerCase());
+  const selectedTopics = useMemo(() => new Set(topicIds), [topicIds]);
+  const visibleEvents = useMemo(() => {
+    if (eventType === "all" && !customer && !selectedTopics.size && !searchTerm)
+      return events;
+    return events.filter(
+      (event) =>
+        (eventType === "all" || event.extendedProps.kind === eventType) &&
+        (!customer || event.extendedProps.customerKey === customer) &&
+        (!selectedTopics.size ||
+          event.extendedProps.topics.some((topic) =>
+            selectedTopics.has(topic.id),
+          )) &&
+        (!searchTerm || event.title.toLocaleLowerCase().includes(searchTerm)),
+    );
+  }, [events, eventType, customer, selectedTopics, searchTerm]);
+  const weekView = calendarView === "timeGridWeek";
+  const scopeAllowsSelection = !global || canManageGlobal;
+  const gridSelectionEnabled =
+    scopeAllowsSelection && online && !open && !globalDraft;
+  const openGridSelection = useCallback(
+    (range: CalendarDraftRange) => {
+      if (global) setGlobalDraft(range);
+      else openPersonalEditor({ range });
+    },
+    [global, openPersonalEditor],
+  );
+  const handleSelect = useCallback(
+    (info: DateSelectArg) => {
+      if (!gridSelectionEnabled) return;
+      selectedPointer.current = info.jsEvent ?? null;
+      openGridSelection(
+        calendarSelectionRange(info.startStr, info.endStr, info.allDay, zone),
+      );
+    },
+    [gridSelectionEnabled, openGridSelection, zone],
+  );
+  const handleDateClick = useCallback(
+    (info: DateClickArg) => {
+      if (!gridSelectionEnabled || selectedPointer.current === info.jsEvent)
+        return;
+      openGridSelection(calendarClickRange(info.dateStr, info.allDay, zone));
+    },
+    [gridSelectionEnabled, openGridSelection, zone],
+  );
+  const handleEventClick = useCallback(
+    (info: EventClickArg) => {
+      if (info.event.extendedProps.kind === "global") {
+        info.jsEvent.preventDefault();
+        setGlobalID(info.event.id);
+      }
+      if (info.event.extendedProps.kind === "private") {
+        const next = personal.data?.find((event) => event.id === info.event.id);
+        if (next) openPersonalEditor({ event: next });
+      }
+    },
+    [openPersonalEditor, personal.data],
+  );
+  const showEventContent = useCallback(
+    ({ event }: EventContentArg) => {
+      const source = sourceEvents.get(event.id);
+      const label =
+        source && calendarFoldLabel(source.start, source.end, zone, language);
+      if (!label) return true;
+      return (
+        <>
+          <div className="fc-event-time">{label}</div>
+          <div className="fc-event-title">{event.title}</div>
+        </>
+      );
+    },
+    [sourceEvents, zone, language],
+  );
   if (
     claims.isPending ||
     personal.isPending ||
@@ -779,9 +1059,9 @@ export function CalendarPage() {
           retry={() => {
             void claims.refetch();
             void personal.refetch();
-            void jobs.refetch();
-            void globals.refetch();
+            if (!claims.isError && jobOptions.enabled) void jobs.refetch();
             if (global) {
+              void globals.refetch();
               void publicRuns.refetch();
               void templates.refetch();
             }
@@ -789,145 +1069,6 @@ export function CalendarPage() {
         />
       </>
     );
-  const emptyMetadata = {
-    customerKey: "",
-    customerName: "",
-    topics: [] as { id: string; label_de: string; label_en: string }[],
-  };
-  const colors = calendarColors.data ?? defaultCalendarColors;
-  const events = global
-    ? [
-        ...globalRows.map((e) => ({
-          id: e.id,
-          title: e.title,
-          start: e.starts_at,
-          end: e.ends_at,
-          display: "block",
-          color: "#1749b5",
-          textColor: "#ffffff",
-          extendedProps: { kind: "global", ...emptyMetadata },
-        })),
-        ...(publicRuns.isError || templates.isError
-          ? []
-          : (publicRuns.data ?? [])
-        )
-          .filter((run) => run.published && !run.archived_at)
-          .flatMap((run) => {
-            const template = templatesById.get(run.template_id);
-            const customerCreated = Boolean(run.organisation_id);
-            const customerName =
-              !organisations.isError && run.organisation_id
-                ? (organisationsById.get(run.organisation_id) ?? "")
-                : "";
-            const courseTopics = topics.isError
-              ? []
-              : (template?.course_template_topics ?? []).flatMap(
-                  ({ topic_id }) => {
-                    const topic = topicsById.get(topic_id);
-                    return topic
-                      ? [
-                          {
-                            id: topic.id,
-                            label_de: topic.label_de,
-                            label_en: topic.label_en,
-                          },
-                        ]
-                      : [];
-                  },
-                );
-            return run.course_sessions.map((s) => ({
-              id: `course-${s.id}`,
-              title: template?.title ?? t("courses"),
-              start: s.starts_at,
-              end: s.ends_at,
-              display: "block",
-              color: customerCreated ? colors.customer_event_color : "#326c58",
-              textColor: customerCreated ? "#17283a" : "#ffffff",
-              url: `/courses?run=${run.id}`,
-              extendedProps: {
-                kind: "course",
-                customerCreated,
-                customerKey: run.organisation_id ?? "",
-                customerName,
-                topics: courseTopics,
-              },
-            }));
-          }),
-      ]
-    : [
-        ...personal.data.map((e) => ({
-          id: e.id,
-          title: e.title,
-          start: e.starts_at,
-          end: e.ends_at,
-          display: "block",
-          color: colors.personal_event_color,
-          textColor: "#17283a",
-          extendedProps: { kind: "private", ...emptyMetadata },
-        })),
-        ...claims.data.flatMap((claim) => {
-          const job = jobsById.get(claim.job_id);
-          const customerKey =
-            job?.organisation_id ??
-            (job?.organisation_name ? `name:${job.organisation_name}` : "");
-          const customerCreated = Boolean(customerKey);
-          return claim.assignment_sessions.map((session) => ({
-            id: session.id,
-            title: job?.title ?? t("assignment"),
-            start: session.starts_at,
-            end: session.ends_at,
-            display: "block",
-            color: customerCreated
-              ? colors.customer_event_color
-              : colors.assignment_event_color,
-            textColor: "#17283a",
-            url: `/jobs/${claim.job_id}`,
-            extendedProps: {
-              kind: "assignment",
-              customerCreated,
-              customerKey,
-              customerName: job?.organisation_name ?? "",
-              topics: job?.topics ?? [],
-            },
-          }));
-        }),
-      ];
-  // FullCalendar's grid stores civil times internally. Use the exact source
-  // instants to label events in a repeated hour with their separate UTC offsets.
-  const sourceEvents = new Map(events.map((event) => [event.id, event]));
-  const customerOptions = [
-    ...new Map(
-      events
-        .filter((event) => event.extendedProps.customerName)
-        .map((event) => [
-          event.extendedProps.customerKey,
-          event.extendedProps.customerName,
-        ]),
-    ).entries(),
-  ].sort((a, b) => a[1].localeCompare(b[1], i18n.language));
-  const topicOptions = [
-    ...new Map(
-      events
-        .flatMap((event) => event.extendedProps.topics)
-        .map((topic) => [topic.id, topic]),
-    ).values(),
-  ].sort((a, b) =>
-    (i18n.language.startsWith("de") ? a.label_de : a.label_en).localeCompare(
-      i18n.language.startsWith("de") ? b.label_de : b.label_en,
-      i18n.language,
-    ),
-  );
-  const searchTerm = search.trim().toLocaleLowerCase();
-  const selectedTopics = new Set(topicIds);
-  const weekView = calendarView === "timeGridWeek";
-  const scopeAllowsSelection = !global || canManageGlobal;
-  const gridSelectionEnabled =
-    scopeAllowsSelection && online && !open && !globalDraft;
-  const openGridSelection = (range: CalendarDraftRange) => {
-    if (!gridSelectionEnabled) return;
-    if (global) setGlobalDraft(range);
-    else openPersonalEditor({ range });
-  };
   return (
     <>
       <PageHeading
@@ -1061,7 +1202,7 @@ export function CalendarPage() {
           aria-label={filterText("selectedTopics")}
         >
           {topicIds.map((id) => {
-            const topic = topicOptions.find((value) => value.id === id);
+            const topic = eventTopics.get(id);
             const label = topic
               ? i18n.language.startsWith("de")
                 ? topic.label_de
@@ -1147,16 +1288,10 @@ export function CalendarPage() {
         >
           {/* A live timezone change can collapse distinct UTC instants in a DST
             fold. Build a new date environment from the source events instead. */}
-          <FullCalendar
+          <CalendarGrid
             key={`${zone}/${assignment ?? ""}`}
-            plugins={[
-              dayGridPlugin,
-              timeGridPlugin,
-              listPlugin,
-              interactionPlugin,
-              luxonPlugin,
-            ]}
-            locale={i18n.language.startsWith("de") ? deLocale : enLocale}
+            plugins={calendarPlugins}
+            locale={german ? deLocale : enLocale}
             timeZone={zone}
             ref={calendarRef}
             initialView={calendarView}
@@ -1167,84 +1302,20 @@ export function CalendarPage() {
             }
             headerToolbar={false}
             datesSet={handleDatesSet}
-            events={events.filter(
-              (event) =>
-                (eventType === "all" ||
-                  event.extendedProps.kind === eventType) &&
-                (!customer || event.extendedProps.customerKey === customer) &&
-                (!topicIds.length ||
-                  event.extendedProps.topics.some((topic) =>
-                    selectedTopics.has(topic.id),
-                  )) &&
-                event.title.toLocaleLowerCase().includes(searchTerm),
-            )}
+            events={visibleEvents}
             height="auto"
-            eventContent={({ event }) => {
-              const source = sourceEvents.get(event.id);
-              const label =
-                source &&
-                calendarFoldLabel(
-                  source.start,
-                  source.end,
-                  zone,
-                  i18n.language,
-                );
-              if (!label) return true;
-              return (
-                <>
-                  <div className="fc-event-time">{label}</div>
-                  <div className="fc-event-title">{event.title}</div>
-                </>
-              );
-            }}
-            dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
+            eventContent={showEventContent}
+            dayCellDidMount={adjustDayCell}
             eventInteractive
-            eventDidMount={({ el, event }) => {
-              if (event.url) return;
-              // FullCalendar already activates these controls with Enter/Space,
-              // but href-less anchors otherwise expose no action to screen readers.
-              const target = el.matches("a")
-                ? el
-                : el.querySelector(".fc-list-event-title a");
-              target?.setAttribute("role", "button");
-            }}
+            eventDidMount={adjustCalendarEvent}
             selectable={gridSelectionEnabled}
             selectMinDistance={6}
             selectLongPressDelay={400}
-            select={(info) => {
-              if (!gridSelectionEnabled) return;
-              selectedPointer.current = info.jsEvent ?? null;
-              openGridSelection(
-                calendarSelectionRange(
-                  info.startStr,
-                  info.endStr,
-                  info.allDay,
-                  zone,
-                ),
-              );
-            }}
-            dateClick={(info) => {
-              if (
-                !gridSelectionEnabled ||
-                selectedPointer.current === info.jsEvent
-              )
-                return;
-              openGridSelection(
-                calendarClickRange(info.dateStr, info.allDay, zone),
-              );
-            }}
+            select={handleSelect}
+            dateClick={handleDateClick}
             nowIndicator
             dayMaxEvents={3}
-            eventClick={(info) => {
-              if (info.event.extendedProps.kind === "global") {
-                info.jsEvent.preventDefault();
-                setGlobalID(info.event.id);
-              }
-              if (info.event.extendedProps.kind === "private") {
-                const next = personal.data.find((e) => e.id === info.event.id);
-                if (next) openPersonalEditor({ event: next });
-              }
-            }}
+            eventClick={handleEventClick}
           />
         </div>
       </div>
