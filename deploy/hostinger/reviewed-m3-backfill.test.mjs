@@ -10,7 +10,7 @@ import {resolve} from "node:path";
 import test from "node:test";
 import {backupRoot, databaseImage, fileDigest, repository} from "./backup.mjs";
 import {applyReviewedBackfill, buildBackfillSQL, loadReviewedSources, reviewedMigrations,} from "./reviewed-m3-backfill.mjs";
-import {inspectBackup} from "./restore-check.mjs";
+import {inspectBackup, restoreCheck} from "./restore-check.mjs";
 
 // Build the exact historical state for the successful or deliberately corrupted plan case.
 async function history() {
@@ -105,6 +105,7 @@ test("historical restore inspects the opened private manifest if its path is rep
         format: "luminovia-development-backup-v1",
         status: "complete",
         source: {image: databaseImage},
+        summary: {server_version: "17.6"},
         objects: {files: 0, bytes: 0},
         artifacts: {},
     };
@@ -150,6 +151,91 @@ test("historical restore inspects the opened private manifest if its path is rep
         t.mock.restoreAll();
         syncBuiltinESMExports();
     }
+});
+
+test("restore refuses malformed or unsafe manifests before creating a destination", async (t) => {
+    await mkdir(backupRoot, {recursive: true, mode: 0o700});
+    const directory = await mkdtemp(resolve(backupRoot, "restore-manifest-cases-"));
+    t.after(() => rm(directory, {recursive: true, force: true}));
+    const manifest = {
+        format: "luminovia-development-backup-v1",
+        status: "complete",
+        source: {image: databaseImage},
+        summary: {server_version: "17.6"},
+        objects: {files: 0, bytes: 0},
+        artifacts: {},
+    };
+    for (const name of ["database.dump", "roles.sql", "storage.tar", "objects.jsonl"]) {
+        const artifact = resolve(directory, name);
+        await writeFile(artifact, "", {mode: 0o600});
+        manifest.artifacts[name] = await fileDigest(artifact);
+    }
+    const path = resolve(directory, "manifest.json");
+    const writeManifest = () => writeFile(path, JSON.stringify(manifest), {mode: 0o600});
+    await writeManifest();
+
+    // Each invalid input must stop in inspectBackup, before restoreCheck allocates its extraction destination.
+    const rejectsBeforeDestination = async () => {
+        await assert.rejects(restoreCheck(directory));
+        assert.deepEqual(
+            (await readdir(directory)).filter((name) => name.startsWith("restore-")),
+            [],
+        );
+    };
+
+    await writeFile(path, "{", {mode: 0o600});
+    await rejectsBeforeDestination();
+    delete manifest.objects;
+    await writeManifest();
+    await rejectsBeforeDestination();
+    manifest.objects = {files: 0, bytes: 0};
+    manifest.artifacts["../../outside"] = {sha256: "0".repeat(64), bytes: 0};
+    await writeManifest();
+    await rejectsBeforeDestination();
+    delete manifest.artifacts["../../outside"];
+    manifest.format = "unsupported-backup-v99";
+    await writeManifest();
+    await rejectsBeforeDestination();
+    manifest.format = "luminovia-development-backup-v1";
+    manifest.artifacts["database.dump"].bytes++;
+    await writeManifest();
+    await rejectsBeforeDestination();
+    manifest.artifacts["database.dump"].bytes--;
+    manifest.artifacts["database.dump"].sha256 = "f".repeat(64);
+    await writeManifest();
+    await rejectsBeforeDestination();
+
+    const inventory = resolve(directory, "objects.jsonl");
+    await writeFile(
+        inventory,
+        JSON.stringify({path: "../outside", sha256: "0".repeat(64), bytes: 0}),
+        {mode: 0o600},
+    );
+    manifest.objects = {files: 1, bytes: 0};
+    manifest.artifacts["database.dump"].sha256 = (await fileDigest(
+        resolve(directory, "database.dump"),
+    )).sha256;
+    manifest.artifacts["objects.jsonl"] = await fileDigest(inventory);
+    await writeManifest();
+    await rejectsBeforeDestination();
+
+    // A malicious archive can still have a matching manifest hash, so reject its member path before extraction starts.
+    const archive = resolve(directory, "storage.tar");
+    execFileSync(
+        "python3",
+        [
+            "-c",
+            "import sys,tarfile; t=tarfile.open(sys.argv[1],'w'); i=tarfile.TarInfo('../outside'); i.size=0; t.addfile(i); t.close()",
+            archive,
+        ],
+        {stdio: "ignore"},
+    );
+    await writeFile(inventory, "", {mode: 0o600});
+    manifest.objects = {files: 0, bytes: 0};
+    manifest.artifacts["objects.jsonl"] = await fileDigest(inventory);
+    manifest.artifacts["storage.tar"] = await fileDigest(archive);
+    await writeManifest();
+    await rejectsBeforeDestination();
 });
 
 test("unexpected, missing and partial history cannot execute a migration", async () => {
