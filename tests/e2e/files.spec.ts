@@ -108,6 +108,25 @@ test("real private upload exposes authorized scan and current-version details, d
         name: new RegExp(renamed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     });
     await expect(result).toBeVisible();
+    const idleReads: string[] = [];
+    const navigations: string[] = [];
+    /** Counts actual document-metadata requests to detect unnecessary polling, not merely timer activity. */
+    const countReads = (request: Request) => {
+        const requestUrl = new URL(request.url());
+        if (
+            (request.method() === "POST" &&
+                requestUrl.pathname === "/rest/v1/rpc/document_discovery") ||
+            (request.method() === "GET" &&
+                requestUrl.pathname === "/rest/v1/documents")
+        )
+            idleReads.push(request.url());
+        if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+            navigations.push(request.url());
+    };
+    // Install before the discovery observer mounts so fast-forward advances a
+    // real poll timer registered on the remounted /files query.
+    page.on("request", countReads);
+    await page.clock.install();
     await result.click();
     await expect(page).toHaveURL(
         (url) => url.pathname === "/files" && url.searchParams.get("q") === renamed,
@@ -127,28 +146,21 @@ test("real private upload exposes authorized scan and current-version details, d
     // Observe a real settled list beyond its former ten-second polling period.
     // Preference-only renders must neither reload the document nor refetch files.
     await page.waitForLoadState("networkidle");
-    const idleReads: string[] = [];
-    const navigations: string[] = [];
-    /** Counts actual document-metadata requests to detect unnecessary polling, not merely timer activity. */
-    const countReads = (request: Request) => {
-        if (
-            request.method() === "GET" &&
-            new URL(request.url()).pathname === "/rest/v1/documents"
-        )
-            idleReads.push(request.url());
-        if (request.isNavigationRequest() && request.frame() === page.mainFrame())
-            navigations.push(request.url());
-    };
-    page.on("request", countReads);
+    // Ignore the required initial page fetch. The next observations cover only
+    // the settled list while preference-only rerenders happen.
+    idleReads.length = 0;
+    navigations.length = 0;
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.getByText(renamed, {exact: true})).toBeVisible();
-    await page.waitForTimeout(10_100);
+    await page.clock.fastForward(10_100);
+    await page.waitForLoadState("networkidle");
     expect(idleReads).toEqual([]);
     expect(navigations).toEqual([]);
     page.off("request", countReads);
+    await page.clock.resume();
     await page.getByLabel("Language", {exact: true}).selectOption("de");
     await page.getByLabel("Farbschema", {exact: true}).selectOption("system");
     const scan = await new AxeBuilder({page})
