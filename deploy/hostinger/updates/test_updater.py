@@ -254,6 +254,39 @@ class MigrationTests(unittest.TestCase):
         self.assertIn("regexp$'", command)
         self.assertTrue(command.endswith("COMMIT;\n"))
 
+    def test_lexer_ignores_transaction_tokens_in_supported_quoted_regions(self):
+        # Exercise PostgreSQL comments, escaped/doubled string delimiters,
+        # quoted identifiers and tagged dollar bodies without hiding SQL outside them.
+        source = r"""BEGIN;
+-- COMMIT; inside a line comment is inert
+/* outer comment /* nested ROLLBACK; comment */ still inert */
+SELECT 'COMMIT;''still text', E'ROLLBACK;\'still text', "COMMIT;";
+SELECT $body$COMMIT; $inner$ROLLBACK;$inner$ $body$;
+COMMIT;
+"""
+        self.assertEqual(len(u.migration_statements(source)), 2)
+        u.compatible_migration(source)
+        u.reviewed_transaction(source)
+
+    def test_identifier_suffix_cannot_open_a_dollar_quote_and_hide_commit(self):
+        # PostgreSQL requires whitespace between an identifier and a dollar quote.
+        # The classifier must see this actual COMMIT instead of masking it as a body.
+        source = "BEGIN;\nSELECT 1 AS foo$tag$;\nCOMMIT;\nSELECT $tag$body$tag$;\nCOMMIT;\n"
+        with self.assertRaisesRegex(u.UpdateError, "migration_requires_operator_review"):
+            u.compatible_migration(source)
+        with self.assertRaisesRegex(u.UpdateError, "reviewed_migration_transaction_escape"):
+            u.reviewed_transaction(source)
+
+    def test_transaction_control_corpus_covers_start_and_prepared_controls(self):
+        # Prepared transaction controls are transaction escapes even when their
+        # optional PREPARED clause follows the control keyword.
+        commands = ["START TRANSACTION", "COMMIT PREPARED 'x'", "ROLLBACK PREPARED 'x'"]
+        for command in commands:
+            with self.subTest(command=command), self.assertRaises(u.UpdateError):
+                u.compatible_migration("BEGIN;\n" + command + ";\nCOMMIT;\n")
+            with self.subTest(reviewed_command=command), self.assertRaises(u.UpdateError):
+                u.reviewed_transaction("BEGIN;\n" + command + ";\nCOMMIT;\n")
+
     def test_reviewed_and_automatic_paths_preserve_the_same_transaction_envelope(self):
         opening = "-- Fictional migration\nbegin transaction;"
         source = opening + "\nselect ';';\ncommit;\n"
