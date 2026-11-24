@@ -808,6 +808,27 @@ test("recognizable and explicitly excluded credential values never enter public 
     );
 });
 
+test("credential scanning covers unquoted and multiline values without rejecting public keys", (t) => {
+    // Exercise common operator file forms with fictional values and require a failed scan to leave no archive or manifest.
+    for (const payload of [
+        "POSTGRES_PASSWORD=FictionalUnquotedDatabasePassword123",
+        'JWT_SECRET:\n  "FictionalYamlSecretValue123456789"',
+        "-----BEGIN RSA PRIVATE KEY-----\nFictionalPrivateKeyBlock\n-----END RSA PRIVATE KEY-----",
+    ]) {
+        const child = fixture(t);
+        child.put("dist/assets/leak.js", payload);
+        assert.throws(() => child.release(), /credential|secret-key/);
+        assert.equal(existsSync(join(child.root, "out/cms-release.tar.gz")), false);
+        assert.equal(existsSync(join(child.root, "out/cms-release.json")), false);
+    }
+
+    // The public browser key is intentionally included in frontend code and must remain an allowed value.
+    const child = fixture(t);
+    child.put("dist/assets/public-config.js", `export const key = "${publicKey}";`);
+    assert.doesNotThrow(() => child.release());
+    assert.equal(existsSync(join(child.root, "out/cms-release.tar.gz")), true);
+});
+
 test("mutable image tags, different major versions and untested provenance block packaging", (t) => {
     for (const change of ["mutable", "major", "unreviewed", "digest-mismatch"]) {
         const child = fixture(t);

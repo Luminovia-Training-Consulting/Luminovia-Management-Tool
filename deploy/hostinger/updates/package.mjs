@@ -523,9 +523,10 @@ function assertNoCredentials(data, source, publicKey, forbiddenValues) {
         throw new Error("Release content contains a secret-key value.");
     }
     for (const assignment of text.matchAll(
-        /(?:SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|POSTGRES_PASSWORD|JWT_SECRET)["']?\s*[:=]\s*["']([^"']+)["']/g,
+        /(?:SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|POSTGRES_PASSWORD|JWT_SECRET)["']?\s*[:=]\s*(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s#"'`]+))/g,
     )) {
-        if (assignment[1].length >= 12 && !assignment[1].startsWith("${")) {
+        const value = assignment[1] ?? assignment[2] ?? assignment[3];
+        if (value.length >= 12 && !value.startsWith("${")) {
             throw new Error(
                 "Release content contains a literal server credential assignment.",
             );
