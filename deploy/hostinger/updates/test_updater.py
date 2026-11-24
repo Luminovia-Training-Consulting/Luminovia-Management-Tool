@@ -212,6 +212,11 @@ class ArchiveTests(unittest.TestCase):
             maximum["files"].append({"path": valid_path, "size": 0, "sha256": sha(b"")})
             u.validate_manifest(maximum)
 
+            # Supplementary characters use two UTF-16 code units in the packager.
+            unicode_boundary = "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/") - 2) + "😀"
+            self.assertTrue(u.allowed_path(unicode_boundary))
+            self.assertFalse(u.allowed_path(unicode_boundary + "a"))
+
             for suffix in ("a", "a" * 64 * 1024):
                 with self.subTest(extra_characters=len(suffix)):
                     oversized = copy.deepcopy(manifest)

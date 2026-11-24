@@ -38,7 +38,7 @@ WRITERS = ["auth", "rest", "realtime", "storage", "api-gw", "functions"]
 MAX_ARCHIVE = 64 * 1024 * 1024
 MAX_UNPACKED = 512 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
-# Match package.mjs so the updater rejects overlong names before touching disk.
+# Match the UTF-16 string length used by package.mjs.
 MAX_RELEASE_PATH = 250
 MIN_FREE = 2 * 1024 * 1024 * 1024
 CONTROLLER = "deploy/hostinger/updates/updater.py"
@@ -124,6 +124,7 @@ def allowed_path(name):
         not isinstance(name, str)
         or not name
         or len(name) > MAX_RELEASE_PATH
+        or len(name.encode("utf-16-le", errors="surrogatepass")) > 2 * MAX_RELEASE_PATH
         or "\\" in name
         or "\x00" in name
     ):
