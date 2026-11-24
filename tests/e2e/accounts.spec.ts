@@ -233,6 +233,8 @@ test("administrator combines own roles and delegates company, lecturer and parti
     expect(await rolesOf(admin.id)).toEqual(["admin", "client", "lecturer", "management", "participant"]);
     expect(await membersOf(admin.id)).toEqual([company.id]);
 
+    // Self-role updates can remount the account list, so search for the actor again before the next edit.
+    await search.fill(admin.email);
     await own.click();
     await ownEditor.getByLabel("Administration", {exact: true}).uncheck();
     await saveRoles("Meine Rollen", admin.name);

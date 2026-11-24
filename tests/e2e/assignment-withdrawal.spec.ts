@@ -6,6 +6,19 @@ import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 
+/** Normalize equivalent Postgres timestamptz spellings and row order for exact interval checks. */
+function canonicalIntervals(
+    rows: ReadonlyArray<{job_id: string; starts_at: string; ends_at: string}>,
+) {
+    return rows
+        .map(({job_id, starts_at, ends_at}) => ({
+            job_id,
+            starts_at: Date.parse(starts_at),
+            ends_at: Date.parse(ends_at),
+        }))
+        .sort((left, right) => left.starts_at - right.starts_at || left.ends_at - right.ends_at);
+}
+
 /** Remove only this case's validated UUID resources from its canonical disposable project. */
 function cleanupWithdrawal(job: string, users: string[]) {
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -176,17 +189,11 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
         const pendingSessions = await checked(
             owner
                 .from("assignment_sessions")
-                .select("starts_at,ends_at,released_at")
+                .select("job_id,starts_at,ends_at,released_at")
                 .eq("claim_id", claim.claim_id),
             {requireData: true},
         );
-        expect(
-            pendingSessions.map(({starts_at, ends_at}) => ({
-                job_id: job,
-                starts_at,
-                ends_at,
-            })),
-        ).toEqual(expectedSessions);
+        expect(canonicalIntervals(pendingSessions)).toEqual(canonicalIntervals(expectedSessions));
         expect(pendingSessions.every((session) => session.released_at === null)).toBe(
             true,
         );
@@ -241,17 +248,11 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
         const rejectedSessions = await checked(
             owner
                 .from("assignment_sessions")
-                .select("starts_at,ends_at,released_at")
+                .select("job_id,starts_at,ends_at,released_at")
                 .eq("claim_id", claim.claim_id),
             {requireData: true},
         );
-        expect(
-            rejectedSessions.map(({starts_at, ends_at}) => ({
-                job_id: job,
-                starts_at,
-                ends_at,
-            })),
-        ).toEqual(expectedSessions);
+        expect(canonicalIntervals(rejectedSessions)).toEqual(canonicalIntervals(expectedSessions));
         expect(rejectedSessions.every((session) => session.released_at === null)).toBe(
             true,
         );
