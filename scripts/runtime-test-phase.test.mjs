@@ -308,6 +308,7 @@ test("an explicit browser phase may execute one selected CI lane", async () => {
 test("CI desktop and opted-in local desktop require discovery and execution of the WebKit PWA", async () => {
     for (const [env, failingExecution] of [
         [{CI: "true", PORTAL_BROWSER_WEBKIT: "false"}, false],
+        [{CI: "true", PORTAL_BROWSER_SYSTEM_DEPS_READY: "1"}, false],
         [{CI: "false", PORTAL_BROWSER_WEBKIT: "true"}, false],
         [{CI: "true"}, true],
     ]) {
@@ -321,6 +322,10 @@ test("CI desktop and opted-in local desktop require discovery and execution of t
         const discovery = browserCommand(result, "pwa-webkit", true);
         const execution = browserCommand(result, "pwa-webkit");
         assert.ok(install && discovery && execution);
+        assert.equal(
+            install.args.includes("--with-deps"),
+            env.CI === "true" && env.PORTAL_BROWSER_SYSTEM_DEPS_READY !== "1",
+        );
         assert.ok(result.calls.indexOf(install) < result.calls.indexOf(discovery));
         assert.ok(result.calls.indexOf(discovery) < result.calls.indexOf(execution));
         assert.equal(execution.args[execution.args.indexOf("--project") + 1], "desktop-webkit");

@@ -525,11 +525,13 @@ try {
         // support Chromium while lacking WebKit's system libraries.
         const includeWebKit = browserProjects.includes("desktop-chromium") &&
             (process.env.CI === "true" || process.env.PORTAL_BROWSER_WEBKIT === "true");
+        const installSystemLibraries = process.env.CI === "true" &&
+            process.env.PORTAL_BROWSER_SYSTEM_DEPS_READY !== "1";
         await step("Install test browsers", "npx", [
             "--no-install",
             "playwright",
             "install",
-            ...(process.env.CI === "true" ? ["--with-deps"] : []),
+            ...(installSystemLibraries ? ["--with-deps"] : []),
             "chromium",
             ...(includeWebKit ? ["webkit"] : []),
         ]);

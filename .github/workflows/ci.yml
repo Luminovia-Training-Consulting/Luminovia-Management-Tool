@@ -211,9 +211,20 @@ jobs:
           cache: npm
       - if: needs.scope.outputs.profile == 'full'
         run: npm ci
+      - name: Install native browser libraries
+        if: needs.scope.outputs.profile == 'full'
+        timeout-minutes: 10
+        run: |
+          if test "$PORTAL_BROWSER_PROJECT" = desktop-chromium; then
+            npx --no-install playwright install-deps chromium webkit
+          else
+            npx --no-install playwright install-deps chromium
+          fi
       - name: Complete isolated browser acceptance
         id: browser
         if: needs.scope.outputs.profile == 'full'
+        env:
+          PORTAL_BROWSER_SYSTEM_DEPS_READY: "1"
         run: node scripts/runtime-test.mjs --phase browser
       - name: Preserve actual functional and integration acceptance
         if: always() && (steps.browser.outcome == 'success' || steps.browser.outcome == 'failure' || steps.browser.outcome == 'cancelled')

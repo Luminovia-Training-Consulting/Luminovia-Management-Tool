@@ -397,7 +397,10 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
                 `update public.documents set status='quarantined' where id='${document.id}'`,
             );
             assert.equal(testCheck(await snap(run), "materials").complete, false);
-            await file(admin, {kind: "cv", name: "Fictional confidential CV.pdf"});
+            const unrelated = await file(admin, {
+                kind: "cv",
+                name: "Fictional confidential CV.pdf",
+            });
             assert.equal(testCheck(await snap(run), "materials").complete, false);
             await sql(
                 `update public.documents set status='clean' where id='${document.id}';update public.document_versions set status='scan_error' where id='${document.version}'`,
@@ -410,13 +413,32 @@ await withTestDatabase("course_readiness", async ({sql, actor}) => {
             const state = await snap(run, teacher, "aal1");
             assert.ok(!JSON.stringify(state).includes("confidential CV"));
             assert.ok(state.documents.some((d) => d.id === document.id));
-            await sql(
-                `update public.documents set deleted_at=now() where id='${document.id}'`,
-            );
             const room = await sql(
                 `select id from public.chat_rooms where job_id='${job}'`,
             );
-            await file(teacher, {scope: "room", kind: "chat", room});
+            const roomDocument = await file(teacher, {scope: "room", kind: "chat", room});
+            // Guard the list's actual ACL entry point against unrelated records.
+            // This detects the former broad scan without a machine-dependent timing test.
+            const documents = await sql(
+                `begin;
+                 alter function private.can_access_document(uuid) rename to readiness_test_document_acl;
+                 create function private.can_access_document(p_id uuid) returns boolean
+                 language plpgsql stable security definer set search_path='' as $$
+                 begin
+                   if p_id = '${unrelated.id}' then
+                     raise exception 'Readiness evaluated an unrelated private document';
+                   end if;
+                   return private.readiness_test_document_acl(p_id);
+                 end;$$;
+                 set local role authenticated;
+                 set local request.jwt.claims=${quoteSql(JSON.stringify({sub: teacher, aal: "aal1", role: "authenticated"}))};
+                 select course->'documents' from jsonb_array_elements(public.course_readiness()) course where course->>'id'='${run}';
+                 rollback;`,
+            );
+            assert.deepEqual(JSON.parse(documents).map(({id}) => id), [roomDocument.id, document.id]);
+            await sql(
+                `update public.documents set deleted_at=now() where id='${document.id}'`,
+            );
             assert.equal(testCheck(await snap(run), "materials").complete, true);
             await sql(
                 `update public.chat_members set removed_at=now() where room_id='${room}' and user_id='${teacher}'`,

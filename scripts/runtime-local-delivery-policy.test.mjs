@@ -184,6 +184,12 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     assert.equal(browser.name, "Complete isolated browser acceptance");
     assert.equal(browser.run, "node scripts/runtime-test.mjs --phase browser");
     assert.equal(browser.if, "needs.scope.outputs.profile == 'full'");
+    const libraries = browserJob.steps.find((step) =>
+        step.run?.includes("playwright install-deps"),
+    );
+    assert.equal(libraries.if, browser.if);
+    assert.ok(browserJob.steps.indexOf(libraries) < browserJob.steps.indexOf(browser));
+    assert.equal(browser.env.PORTAL_BROWSER_SYSTEM_DEPS_READY, "1");
     const guards = ci.jobs.verify.steps.find(
         (step) => step.run === "node scripts/ci-pr-check.mjs guards",
     );
