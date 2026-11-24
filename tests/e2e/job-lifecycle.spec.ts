@@ -141,7 +141,7 @@ test("reasoned cancellation, automatic reopening, same-page reclaim and safe cop
             has: page.getByRole("heading", {name: "Fictional lifecycle curriculum", exact: true}),
         });
         await page.getByRole("combobox", {name: "Dozent:in", exact: true}).selectOption(teacher.id);
-        await expect(courseCard.getByText("Dozent:in: Fictional lifecycle lecturer", {exact: true})).toBeVisible();
+        await expect(courseCard.getByText("Auftrag besetzt · Fictional lifecycle lecturer", {exact: true})).toBeVisible();
         await courseCard.getByRole("link", {name: "Auftrag anzeigen: Fictional lifecycle block", exact: true}).click();
         await expect(page).toHaveURL(new RegExp(`/jobs/${job}$`));
         await page.getByRole("button", {name: "Auftrag bearbeiten", exact: true}).click();

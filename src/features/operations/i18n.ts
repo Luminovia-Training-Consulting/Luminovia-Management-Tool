@@ -795,7 +795,14 @@ const pairs: Record<string, [string, string]> = {
   viewCourseJob: ["Auftrag anzeigen: {{title}}", "View assignment: {{title}}"],
   courseLecturerFilter: ["Dozent:in", "Lecturer"],
   allCourseLecturers: ["Alle Dozent:innen", "All lecturers"],
-  courseLecturerName: ["Dozent:in: {{name}}", "Lecturer: {{name}}"],
+  marketplaceAssignedWithLecturers: [
+    "Auftrag besetzt · {{names}}",
+    "Offer filled · {{names}}",
+  ],
+  confirmedCourseLecturers: [
+    "Bestätigte Lehrkräfte: {{names}}",
+    "Confirmed lecturers: {{names}}",
+  ],
   marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
   courseRunAssigned: ["Besetzt", "Filled"],
   closedCourseOffer: ["Ausschreibung geschlossen", "Offer closed"],

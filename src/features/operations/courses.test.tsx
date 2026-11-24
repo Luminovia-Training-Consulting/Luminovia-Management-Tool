@@ -1800,6 +1800,7 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
     runs: [
       {
         ...run,
+        published: true,
         jobs: [
           {
             ...job,
@@ -1829,7 +1830,18 @@ it("shows confirmed lecturers and filters course runs by current staffing", asyn
       name: "Fictional active order · 1 von 1 besetzt",
     }),
   ).toHaveAttribute("href", `/jobs/${jobId}`);
-  expect(screen.getByText("Dozent:in: Fictional lecturer")).toBeVisible();
+  const staffedCourse = screen
+    .getByRole("heading", { name: template.title })
+    .closest("article")!;
+  expect(
+    within(staffedCourse).getByText("Auftrag besetzt · Fictional lecturer"),
+  ).toBeVisible();
+  expect(
+    within(staffedCourse).queryByText("Dozent:in: Fictional lecturer"),
+  ).not.toBeInTheDocument();
+  expect(
+    within(staffedCourse).queryByText("Besetzt", { exact: true }),
+  ).not.toBeInTheDocument();
   expect(
     screen.getByRole("link", {
       name: "Auftrag anzeigen: Fictional active order",

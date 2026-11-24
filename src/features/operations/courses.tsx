@@ -1529,21 +1529,39 @@ export function CoursesPage() {
       run,
       runs.dataUpdatedAt,
     );
+    const lecturerNames = canPrepareOffer
+      ? Array.from(
+          new Set(
+            assignmentsByRun
+              .get(run.id)
+              ?.flatMap(({ lecturers }) => lecturers.map(({ name }) => name)),
+          ),
+        ).join(", ")
+      : "";
+    const filled = closedReason === "marketplaceAssigned";
     return (
       <>
         <strong>{t("marketplaceStatus")}</strong>
-        {liveOffers.length
-          ? liveOffers.map((job) => (
-              <Link key={job.id} to={`/jobs/${job.id}`}>
-                {t(
-                  job.company_internal || run.own_lecturers_only
-                    ? "openCompanyOffer"
-                    : "openListedOffer",
-                  { title: job.title },
-                )}
-              </Link>
-            ))
-          : t(closedReason)}
+        {liveOffers.map((job) => (
+          <Link key={job.id} to={`/jobs/${job.id}`}>
+            {t(
+              job.company_internal || run.own_lecturers_only
+                ? "openCompanyOffer"
+                : "openListedOffer",
+              { title: job.title },
+            )}
+          </Link>
+        ))}
+        {(filled || !liveOffers.length) && (
+          <span>
+            {filled && lecturerNames
+              ? t("marketplaceAssignedWithLecturers", { names: lecturerNames })
+              : t(closedReason)}
+          </span>
+        )}
+        {!filled && lecturerNames && (
+          <span>{t("confirmedCourseLecturers", { names: lecturerNames })}</span>
+        )}
         {run.jobs
           ?.filter(
             ({ id, status }) =>
@@ -1996,7 +2014,8 @@ export function CoursesPage() {
                         )}
                       </span>
                     )}
-                    {status === "published" &&
+                    {!manage &&
+                      status === "published" &&
                       closedReason === "marketplaceAssigned" && (
                         <span className="badge">{t("courseRunAssigned")}</span>
                       )}
@@ -2007,20 +2026,6 @@ export function CoursesPage() {
                         closedReason === "marketplaceClosed") && (
                         <span className="badge">{t("closedCourseOffer")}</span>
                       )}
-                    {canPrepareOffer &&
-                      Array.from(
-                        new Set(
-                          assignmentsByRun
-                            .get(run.id)
-                            ?.flatMap(({ lecturers }) =>
-                              lecturers.map(({ name }) => name),
-                            ),
-                        ),
-                      ).map((name) => (
-                        <span className="badge" key={name}>
-                          {t("courseLecturerName", { name })}
-                        </span>
-                      ))}
                   </div>
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
