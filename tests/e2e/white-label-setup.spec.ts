@@ -32,9 +32,9 @@ test("admin saves Academy settings only for an active company member", async ({p
         await expect(open).toBeChecked();
         await page.getByLabel("Unternehmen", {exact: true}).selectOption(organisation);
         await expect(page.getByLabel("Rechtlicher Firmenname")).toHaveValue(companyName);
+        await expect(page.getByLabel(/Benutzername in der Akademie/)).toHaveCount(0);
         for (const [label, value] of [
             ["E-Mail des Firmenkontos", customer.email],
-            ["Benutzername in der Akademie (optional)", "practice-admin"],
             ["Name der Akademie", "Fictional Training Academy"],
             ["Kurzname", "Training"],
             ["Referenz für geprüfte Logos und Icons", "FICTIONAL-APPROVED-ASSETS"],

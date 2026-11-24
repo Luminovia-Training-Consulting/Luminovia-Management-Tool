@@ -169,9 +169,12 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await dialog.getByRole("button", {name: "Als Vorlage speichern", exact: true}).click();
     await expect(dialog).toBeHidden();
     await page.getByRole("button", {name: "Vorlagen", exact: true}).click();
+    // The shared Acceptance catalogue can put this title after the first page.
+    await page.getByLabel("Suchen", {exact: true}).fill(title);
     const templateCard = page.locator("article").filter({
         has: page.getByRole("heading", {name: title, exact: true}),
     });
+    await expect(templateCard).toBeVisible();
     await templateCard
         .getByRole("button", {name: "Aus Vorlage erstellen", exact: true})
         .click();
