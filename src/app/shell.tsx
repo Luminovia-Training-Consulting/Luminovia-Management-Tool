@@ -36,7 +36,6 @@ import {
   Settings2,
   UserRound,
   Users,
-  Wallet,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
 import { PortalNavigation } from "../components/portal-navigation";
@@ -90,7 +89,11 @@ import {
  * named focus/hover tooltips, a compact action toolbar and a complete mobile disclosure. React
  * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
  */
-const financeNavItem = { to: "/finance", icon: Wallet, label: "finance" };
+const financeNavItem = {
+  to: "/finance",
+  icon: ChartNoAxesCombined,
+  label: "finance",
+};
 
 export function Shell() {
   const { t } = useTranslation();
@@ -256,7 +259,9 @@ export function Shell() {
                 { to: "/my-reviews", icon: FileCheck2, label: "myReviews" },
               ]
             : []),
-          { to: "/people", icon: Users, label: "staffDirectory" },
+          ...(!administration.some(({ to }) => to === "/people")
+            ? [{ to: "/people", icon: Users, label: "staffDirectory" }]
+            : []),
           { to: "/chats", icon: MessagesSquare, label: "chats" },
           { to: "/files", icon: FolderOpen, label: "files" },
           ...(!administration.some(({ to }) => to === "/contracts") &&
@@ -271,15 +276,6 @@ export function Shell() {
             financeAccess.analytics)
             ? [financeNavItem]
             : []),
-          ...(permissions.data?.includes("jobs.manage")
-            ? [
-                {
-                  to: "/control-center",
-                  icon: ChartNoAxesCombined,
-                  label: "controlCenter",
-                },
-              ]
-            : []),
           ...(!administration.some(({ to }) => to === "/changes") &&
           (staff || clientPortalAccess)
             ? [{ to: "/changes", icon: FileCheck2, label: "assignmentChanges" }]
@@ -288,7 +284,9 @@ export function Shell() {
             ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
             : []),
           { to: "/assistance", icon: BookOpen, label: "helpSupport" },
-          { to: "/topics", icon: BookOpen, label: "topics" },
+          ...(!administration.some(({ to }) => to === "/topics")
+            ? [{ to: "/topics", icon: BookOpen, label: "topics" }]
+            : []),
           ...(administration.length
             ? [
                 {

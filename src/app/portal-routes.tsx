@@ -251,12 +251,6 @@ const CalendarPage = lazy(() =>
   })),
 );
 
-const PeopleAdminPage = lazy(() =>
-  import("../features/admin/people").then((module) => ({
-    default: module.PeopleAdminPage,
-  })),
-);
-
 const AdminPage = lazy(() =>
   import("../features/admin/admin").then((module) => ({
     default: module.AdminPage,
@@ -317,8 +311,6 @@ export default function PortalRoutes() {
           <Route path="search" element={<PortalSearch />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="client" element={<ClientPortalPage />} />
-          <Route path="people" element={<PeopleDirectory />} />
-          <Route path="people/:id" element={<PersonProfile />} />
           <Route path="my-reviews" element={<MyCourseReviews />} />
           <Route path="courses" element={<SectionHub kind="courses" />} />
           <Route path="readiness" element={<CourseReadinessPage />} />
@@ -338,7 +330,6 @@ export default function PortalRoutes() {
             path="timesheets"
             element={<Navigate to="/finance" replace />}
           />
-          <Route path="control-center" element={<ControlCenterPage />} />
           <Route
             path="courses/:id/workspace"
             element={<CourseWorkspacePage />}
@@ -384,7 +375,6 @@ export default function PortalRoutes() {
               </SwaggerRoute>
             }
           />
-          <Route path="topics" element={<TaxonomyPage />} />
           <Route
             path="availability"
             element={<Navigate to="/calendar" replace />}
@@ -395,6 +385,10 @@ export default function PortalRoutes() {
           />
           <Route path="auth/password" element={<PasswordRecovery />} />
           <Route element={<AdminNavigation />}>
+            <Route path="people" element={<PeopleDirectory />} />
+            <Route path="people/:id" element={<PersonProfile />} />
+            <Route path="control-center" element={<ControlCenterPage />} />
+            <Route path="topics" element={<TaxonomyPage />} />
             <Route path="contracts" element={<ContractsPage />} />
             <Route path="changes" element={<ChangeRequestsPage />} />
             <Route path="changes/:id" element={<ChangeRequestsPage />} />
@@ -413,7 +407,7 @@ export default function PortalRoutes() {
                 element={<AdministrationSection area="platform" />}
               />
               <Route path="assignments" element={<AdminPage />} />
-              <Route path="people" element={<PeopleAdminPage />} />
+              <Route path="people" element={<LegacyLecturersRoute />} />
               <Route path="clients" element={<ClientsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="mail" element={<AdminMailPage />} />
@@ -431,6 +425,22 @@ export default function PortalRoutes() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+/** Keep bookmarks for the former separate expertise directory working. */
+function LegacyLecturersRoute() {
+  const [params] = useSearchParams();
+  const id = params.get("user");
+  return (
+    <Navigate
+      replace
+      to={
+        id && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id)
+          ? `/people/${id}?expertise=1`
+          : "/people"
+      }
+    />
   );
 }
 

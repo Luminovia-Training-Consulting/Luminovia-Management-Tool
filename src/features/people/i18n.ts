@@ -6,7 +6,7 @@ import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
-  people: "Menschen & Profile",
+  people: "Dozierende",
   directoryHelp:
     "Themen, Erfahrungen und Bewertungen kennenlernen. Private Kontaktdaten und Honorare bleiben geschützt.",
   search: "Person suchen",
@@ -92,7 +92,7 @@ const de = {
   loading: "Wird geladen …",
 };
 const en: typeof de = {
-  people: "People & profiles",
+  people: "Lecturers",
   directoryHelp:
     "Discover topics, experience and reviews. Private contact details and fees stay protected.",
   search: "Search people",

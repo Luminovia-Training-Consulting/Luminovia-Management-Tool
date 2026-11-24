@@ -27,7 +27,7 @@ export function permittedTourModules(
       return teaching || permissions.includes("contracts.read");
     if (module.path === "/finance")
       return teaching || permissions.includes("finance.manage");
-    if (module.path === "/admin/people")
+    if (module.id === "admin-people")
       return (
         permissions.includes("users.manage") &&
         permissions.includes("qualifications.verify")

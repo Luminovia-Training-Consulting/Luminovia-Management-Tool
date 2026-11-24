@@ -12,7 +12,7 @@ import { CreateAccountForm } from "./create-account";
 import { ParticipantPlacementFields } from "../operations/participant-placement-fields";
 import { emptyParticipantPlacement } from "../operations/company-participant-schema";
 import { LecturerCompensation } from "../commercial/lecturer-compensation";
-import { PeopleDirectory } from "../admin/people";
+import { ManagedExpertise } from "../admin/people";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
 import { db } from "../../lib/supabase";
@@ -122,7 +122,7 @@ function AccountProfileDialog({
       {canVerify && openedExpertise && (
         <div hidden={!showExpertise}>
           {!own && <LecturerCompensation userId={person.id} />}
-          <PeopleDirectory actorId={actorId} accountId={person.id} />
+          <ManagedExpertise actorId={actorId} accountId={person.id} />
         </div>
       )}
     </Dialog>

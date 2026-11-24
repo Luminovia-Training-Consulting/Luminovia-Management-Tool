@@ -94,6 +94,8 @@ test("administration navigation keeps shared workflows together on desktop and m
     await expect(mainMenu.getByRole("link", {name: "Verwaltung", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Chat", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
+    for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
+        await expect(mainMenu.getByRole("link", {name, exact: true})).toHaveCount(0);
     if (mobile) await more.press("Escape");
 
     const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
@@ -101,12 +103,14 @@ test("administration navigation keeps shared workflows together on desktop and m
     await sections.getByRole("link", {name: "Unternehmen & Personen", exact: true}).click();
     await expect(page.getByRole("link", {name: "Unternehmen", exact: true})).toBeVisible();
     await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
-    await page.getByRole("link", {name: "Dozierende & Expertise", exact: true}).click();
-    await expect(page).toHaveURL(/\/admin\/people$/);
-    await expect(page.getByRole("heading", {name: "Dozierende & Expertise", exact: true})).toBeVisible();
+    await page.getByRole("link", {name: "Dozierende", exact: true}).click();
+    await expect(page).toHaveURL(/\/people$/);
+    await expect(page.getByRole("heading", {name: "Dozierende", exact: true})).toBeVisible();
     await expect(sections.getByRole("link", {name: "Unternehmen & Personen", exact: true})).toHaveAttribute("aria-current", "location");
 
     await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
+    await expect(page.getByRole("link", {name: "Leitstand", exact: true})).toHaveAttribute("href", "/control-center");
+    await expect(page.getByRole("link", {name: "Themen & Tools", exact: true})).toHaveAttribute("href", "/topics");
     await page.getByRole("link", {name: "Verträge", exact: true}).click();
     await expect(page).toHaveURL(/\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
@@ -556,10 +560,10 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
     await page.getByRole("button", {name: "Abmelden", exact: true}).click();
     await adminSession(page);
     await page.goto("/admin/people");
-    await page
-        .getByRole("searchbox", {name: "Personen suchen", exact: true})
-        .fill("Lea Sommer");
-    await page.getByRole("button", {name: /Lea Sommer/}).click();
+    await expect(page).toHaveURL(/\/people$/);
+    await page.locator("#people-search").fill("Lea Sommer");
+    await page.getByRole("link", {name: "Lea Sommer", exact: true}).click();
+    await page.getByRole("button", {name: "Qualifikationen und Nachweise", exact: true}).click();
     const review = page.getByRole("form", {
         name: "Expertise prüfen: Wireshark",
         exact: true,
@@ -587,11 +591,11 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
         .getByRole("button", {name: "Zugang sperren", exact: true})
         .click();
     const confirm = page.getByRole("dialog", {
-        name: "Portalzugriff sperren?",
+        name: "Zugang sperren",
         exact: true,
     });
     await confirm
-        .getByRole("button", {name: "Zugang sperren", exact: true})
+        .getByRole("button", {name: "Kontostatus bestätigen", exact: true})
         .click();
     await expect(confirm).not.toBeVisible();
     await expect
@@ -611,11 +615,11 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
         .getByRole("button", {name: "Zugang aktivieren", exact: true})
         .click();
     const restore = page.getByRole("dialog", {
-        name: "Portalzugriff aktivieren?",
+        name: "Zugang aktivieren",
         exact: true,
     });
     await restore
-        .getByRole("button", {name: "Zugang aktivieren", exact: true})
+        .getByRole("button", {name: "Kontostatus bestätigen", exact: true})
         .click();
     await expect(restore).not.toBeVisible();
     await expect

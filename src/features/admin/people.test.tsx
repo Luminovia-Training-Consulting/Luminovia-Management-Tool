@@ -17,7 +17,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { PeopleAdminPage } from "./people";
+import { ManagedExpertise } from "./people";
 
 type Result = { data: unknown; error: unknown };
 const state = vi.hoisted(() => ({
@@ -76,6 +76,12 @@ vi.mock("../../lib/supabase", () => ({
             : state.topics;
       return {
         select: () => ({
+          eq: async (column: string, value: string) => ({
+            data: structuredClone(
+              rows.filter((row) => Reflect.get(row, column) === value),
+            ),
+            error: null,
+          }),
           order: async () => ({ data: structuredClone(rows), error: null }),
         }),
       };
@@ -114,25 +120,23 @@ afterEach(() => {
 });
 
 /** Render the real page in its router/query context for the interaction checks below. */
-function page() {
-  render(
+function page(accountId = "lecturer") {
+  return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <PeopleAdminPage />
+        <ManagedExpertise
+          key={accountId}
+          actorId="admin"
+          accountId={accountId}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-/** Select the fictional lecturer row explicitly before testing an administrative change. */
-async function selectLecturer() {
-  await userEvent.click(
-    await screen.findByRole("button", {
-      name: "Mara Beispiel Aktiv",
-    }),
-  );
-  return screen.getByRole("region", { name: "Mara Beispiel" });
-}
+/** Wait for the profile-specific editor to load. */
+const selectLecturer = () =>
+  screen.findByRole("region", { name: "Mara Beispiel" });
 
 describe("people administration interactions (mocked backend)", () => {
   it("assigns a new topic to the selected lecturer before separate verification", async () => {
@@ -158,7 +162,7 @@ describe("people administration interactions (mocked backend)", () => {
     const lecturer = within(await selectLecturer());
     const user = userEvent.setup();
     await user.selectOptions(
-      await lecturer.findByLabelText("Thema auswählen"),
+      await lecturer.findByLabelText("Thema für diese Person"),
       "python",
     );
     await user.click(
@@ -256,13 +260,13 @@ describe("people administration interactions (mocked backend)", () => {
   });
 
   it("never offers self suspension and requires a named confirmation for another account", async () => {
-    page();
+    const own = page("admin");
     await screen.findByRole("heading", { name: "Ada Verwaltung" });
     expect(
       screen.queryByRole("button", { name: "Zugang sperren" }),
     ).not.toBeInTheDocument();
-    const search = screen.getByRole("searchbox", { name: "Personen suchen" });
-    await userEvent.type(search, "Mara");
+    own.unmount();
+    page();
     const person = await selectLecturer();
     await userEvent.click(
       within(person).getByRole("button", { name: "Zugang sperren" }),
@@ -278,7 +282,6 @@ describe("people administration interactions (mocked backend)", () => {
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Abbrechen" }),
     );
-    expect(search).toHaveValue("Mara");
     expect(screen.getByRole("region", { name: "Mara Beispiel" })).toBeVisible();
     await userEvent.click(
       within(person).getByRole("button", { name: "Zugang sperren" }),
@@ -306,7 +309,6 @@ describe("people administration interactions (mocked backend)", () => {
       p_user_id: "lecturer",
       p_active: false,
     });
-    expect(search).toHaveValue("Mara");
     expect(
       within(person).getByRole("button", { name: "Zugang aktivieren" }),
     ).toBeVisible();

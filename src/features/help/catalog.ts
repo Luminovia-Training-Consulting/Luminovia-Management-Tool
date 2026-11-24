@@ -1057,7 +1057,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "admin-people",
-    path: "/admin/people",
+    path: "/people#people-search",
     title: {
       de: "Zugänge & Qualifikationsprüfung",
       en: "Access & qualification review",
@@ -1068,12 +1068,12 @@ export const guideModules: GuideModule[] = [
     },
     steps: {
       de: [
-        "Öffne die betreffende Person und prüfe ihren aktuellen Kontostatus.",
+        "Öffne unter Dozierende das Profil und wähle Qualifikationen und Nachweise.",
         "Vergleiche angegebene Expertise mit dem Nachweis und einem gegebenenfalls erforderlichen Ablaufdatum.",
         "Bestätige die Prüfung oder sperre einen Zugang nur im vorgesehenen berechtigten Ablauf.",
       ],
       en: [
-        "Open the person and check their current account status.",
+        "Open the lecturer’s profile and select Qualifications and evidence.",
         "Compare declared expertise with evidence and any required expiry date.",
         "Confirm verification or suspend access only through the authorised workflow.",
       ],

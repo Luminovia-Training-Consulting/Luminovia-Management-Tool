@@ -68,14 +68,6 @@ const pairs: Record<string, [string, string]> = {
   notificationActivity: ["Neue Aktivität", "New activity"],
   sessionCount_one: ["{{count}} Termin", "{{count}} session"],
   sessionCount_other: ["{{count}} Termine", "{{count}} sessions"],
-  people: ["Personen & Expertise", "People & expertise"],
-  peopleIntro: [
-    "Verwalte den Portalzugriff und prüfe die von Dozierenden angegebenen Qualifikationen.",
-    "Manage portal access and review the expertise declared by lecturers.",
-  ],
-  peopleDirectory: ["Personen", "People"],
-  peopleSearch: ["Personen suchen", "Search people"],
-  peopleCount: ["Treffer: {{count}}", "Results: {{count}}"],
   peopleNoResults: [
     "Keine Personen zu dieser Suche gefunden.",
     "No people match this search.",
@@ -122,7 +114,7 @@ const pairs: Record<string, [string, string]> = {
     "Prüfe die Qualifikationsnachweise vor der Freigabe. Nachweisdateien werden derzeit außerhalb des Portals verwaltet.",
     "Review qualification evidence before verifying expertise. Evidence files are currently managed outside the portal.",
   ],
-  peopleExpertiseTopic: ["Thema auswählen", "Choose a topic"],
+  peopleExpertiseTopic: ["Thema für diese Person", "Topic for this lecturer"],
   peopleExpertiseAdd: ["Expertise hinzufügen", "Add expertise"],
   peopleExpertiseRemove: ["Expertise entfernen", "Remove expertise"],
   peopleExpertiseRevokeFirst: [
@@ -259,8 +251,8 @@ const pairs: Record<string, [string, string]> = {
   adminOverview: ["Übersicht", "Overview"],
   adminOperations: ["Kursbetrieb", "Course operations"],
   adminOperationsDescription: [
-    "Kurse, Aufträge, Änderungen und Verträge",
-    "Courses, assignments, changes and contracts",
+    "Aufträge, Leitstand, Themen und Verträge",
+    "Assignments, Control Center, topics and contracts",
   ],
   adminDirectory: ["Unternehmen & Personen", "Companies & people"],
   adminDirectoryDescription: [
@@ -272,7 +264,6 @@ const pairs: Record<string, [string, string]> = {
     "Ankündigungen, Protokoll, Mail und Systemeinstellungen",
     "Announcements, audit trail, mail and system settings",
   ],
-  adminLecturers: ["Dozierende & Expertise", "Lecturers & expertise"],
   adminAccounts: ["Benutzerkonten", "User accounts"],
   whiteLabel: ["White Label", "White Label"],
   mailSettings: ["E-Mail-Transport", "Mail transport"],

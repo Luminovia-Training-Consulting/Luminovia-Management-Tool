@@ -47,6 +47,18 @@ export function administrationLinks(
       end: true,
     },
     {
+      to: "/control-center",
+      label: "controlCenter",
+      area: "operations",
+      visible: has("jobs.manage"),
+    },
+    {
+      to: "/topics",
+      label: "topics",
+      area: "operations",
+      visible: has("taxonomy.manage"),
+    },
+    {
       to: "/changes",
       label: "assignmentChanges",
       area: "operations",
@@ -69,10 +81,10 @@ export function administrationLinks(
       visible: has("organisations.manage"),
     },
     {
-      to: "/admin/people",
-      label: "adminLecturers",
+      to: "/people",
+      label: "staffDirectory",
       area: "directory",
-      visible: has("users.manage") && has("qualifications.verify"),
+      visible: management,
     },
     {
       to: "/admin/accounts",

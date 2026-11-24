@@ -367,22 +367,28 @@ it("guest-only navigation exposes own profile/settings/help and no operational c
   expect(document.querySelector(".portal-tour")).toBeNull();
 });
 it.each(["admin", "management"])(
-  "shows the Control Center to %s with jobs.manage",
-  (role) => {
+  "moves operational and lecturer links out of the %s sidebar",
+  async (role) => {
     access.roles = [role];
-    access.permissions = ["jobs.manage"];
-    setup("/courses", false);
-    expect(screen.getByText("Live courses route")).toBeVisible();
-    expect(screen.getByRole("search")).toBeVisible();
-    expect(document.querySelector(".account-menu")).toBeInTheDocument();
+    access.permissions = ["jobs.manage", "taxonomy.manage"];
+    const { user } = setup("/courses", false);
+    const sidebar = within(screen.getByRole("complementary"));
+    for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
+      expect(sidebar.queryByRole("link", { name })).toBeNull();
+    await user.click(sidebar.getByRole("link", { name: "Verwaltung" }));
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Verwaltung" })).getByRole(
+        "link",
+        { name: "Kursbetrieb" },
+      ),
+    );
+    expect(screen.getByRole("link", { name: "Leitstand" })).toHaveAttribute(
+      "href",
+      "/control-center",
+    );
     expect(
-      screen.queryByRole("combobox", { name: "Navigationsvorschau" }),
-    ).toBeNull();
-    expect(
-      within(screen.getByRole("complementary")).getByRole("link", {
-        name: "Leitstand",
-      }),
-    ).toHaveAttribute("href", "/control-center");
+      screen.getByRole("link", { name: "Themen & Tools" }),
+    ).toHaveAttribute("href", "/topics");
   },
 );
 
@@ -423,9 +429,10 @@ it.each(["admin", "management"])(
       "href",
       "/admin/clients",
     );
-    expect(
-      screen.getByRole("link", { name: "Dozierende & Expertise" }),
-    ).toHaveAttribute("href", "/admin/people");
+    expect(screen.getByRole("link", { name: "Dozierende" })).toHaveAttribute(
+      "href",
+      "/people",
+    );
     expect(screen.queryByRole("link", { name: "Verträge" })).toBeNull();
     await user.click(sections.getByRole("link", { name: "Kursbetrieb" }));
     await user.click(screen.getByRole("link", { name: "Verträge" }));
@@ -447,6 +454,14 @@ it("keeps contracts and assignment changes directly accessible to lecturers", ()
     sidebar.getByRole("link", { name: "Auftragsänderungen" }),
   ).toHaveAttribute("href", "/changes");
   expect(screen.queryByRole("navigation", { name: "Verwaltung" })).toBeNull();
+  expect(sidebar.getByRole("link", { name: "Dozierende" })).toHaveAttribute(
+    "href",
+    "/people",
+  );
+  expect(sidebar.getByRole("link", { name: "Themen & Tools" })).toHaveAttribute(
+    "href",
+    "/topics",
+  );
 });
 
 it("keeps the overview in place and exposes only available areas after permissions load", () => {
@@ -460,8 +475,8 @@ it("keeps the overview in place and exposes only available areas after permissio
   const nav = within(screen.getByRole("navigation", { name: "Verwaltung" }));
   expect(nav.getByRole("link", { name: "Kursbetrieb" })).toBeVisible();
   expect(
-    nav.queryByRole("link", { name: "Unternehmen & Personen" }),
-  ).toBeNull();
+    nav.getByRole("link", { name: "Unternehmen & Personen" }),
+  ).toBeVisible();
   expect(nav.queryByRole("link", { name: "Plattformbetrieb" })).toBeNull();
 });
 it("hides the Control Center without its current management permission", () => {

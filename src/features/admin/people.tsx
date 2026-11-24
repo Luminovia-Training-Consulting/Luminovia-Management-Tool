@@ -13,10 +13,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, ShieldCheck, UserRound } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { DateTime } from "luxon";
-import { useAuth } from "../auth/auth-context";
 import { permissionsQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import { dateTime, zonedInstant } from "../../lib/dates";
@@ -24,13 +22,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import type { Expertise, Profile, Topic } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import {
-  ErrorState,
-  Field,
-  Loading,
-  Notice,
-  PageHeading,
-} from "../../components/common";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const expirySchema = z.object({ valid_until: z.string() });
@@ -107,6 +99,8 @@ function ExpertiseReview({
       await Promise.all([
         client.invalidateQueries({ queryKey: ["admin-expertise", actorId] }),
         client.invalidateQueries({ queryKey: ["expertise", profile.id] }),
+        client.invalidateQueries({ queryKey: ["person", actorId, profile.id] }),
+        client.invalidateQueries({ queryKey: ["people-directory", actorId] }),
         client.invalidateQueries({
           queryKey: qualificationKey(actorId, profile.id, topic.id),
         }),
@@ -307,46 +301,55 @@ function ExpertiseSelection({
   );
 }
 
-/** Load administrative profiles, expertise and account state; require explicit confirmation for the selected suspension target. */
-export function PeopleDirectory({
+/** Manage evidence and expertise for one explicitly selected account. */
+export function ManagedExpertise({
   actorId,
   accountId,
+  showAccountDetails = true,
 }: {
   actorId: string;
-  accountId?: string;
+  accountId: string;
+  showAccountDetails?: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const online = useOnline();
   const client = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [params, setParams] = useSearchParams();
-  const selectedId = accountId ?? params.get("user");
+  const permissions = useQuery(permissionsQuery(actorId));
+  const allowed =
+    !permissions.isError &&
+    permissions.data?.includes("users.manage") === true &&
+    permissions.data.includes("qualifications.verify");
   const [confirmation, setConfirmation] = useState<AccountChange | null>(null);
   const [updated, setUpdated] = useState<AccountChange | null>(null);
   const profiles = useQuery({
     queryKey: ["admin-people", actorId, accountId],
+    enabled: allowed,
     queryFn: async () => {
-      const query = db().from("profiles").select("*");
-      const { data, error } = await (accountId
-        ? query.eq("id", accountId)
-        : query.order("display_name"));
+      const { data, error } = await db()
+        .from("profiles")
+        .select("*")
+        .eq("id", accountId);
       if (error) throw error;
       return data as Profile[];
     },
   });
   const expertise = useQuery({
     queryKey: ["admin-expertise", actorId, accountId],
+    enabled: allowed,
     queryFn: async () => {
-      const query = db().from("lecturer_topics").select("*");
-      const { data, error } = await (accountId
-        ? query.eq("user_id", accountId)
-        : query.order("user_id"));
+      const { data, error } = await db()
+        .from("lecturer_topics")
+        .select("*")
+        .eq("user_id", accountId);
       if (error) throw error;
       return data as Expertise[];
     },
   });
-  const topics = useQuery(topicsQuery);
-  const lecturers = useQuery(commercialPeopleQuery(actorId));
+  const topics = useQuery({ ...topicsQuery, enabled: allowed });
+  const lecturers = useQuery({
+    ...commercialPeopleQuery(actorId),
+    enabled: allowed,
+  });
   const activation = useMutation({
     mutationFn: async (change: AccountChange) => {
       requireOnline();
@@ -366,6 +369,10 @@ export function PeopleDirectory({
       setConfirmation(null);
     },
   });
+  if (permissions.isPending) return <Loading />;
+  if (permissions.isError)
+    return <ErrorState retry={() => void permissions.refetch()} />;
+  if (!allowed) return <Notice kind="error">{t("noAccess")}</Notice>;
   if (profiles.isPending || expertise.isPending || topics.isPending)
     return <Loading />;
   if (profiles.isError || expertise.isError || topics.isError)
@@ -378,24 +385,10 @@ export function PeopleDirectory({
         }}
       />
     );
-  const needle = search.trim().toLocaleLowerCase(i18n.language);
-  const filtered = profiles.data.filter((profile) =>
-    [
-      profile.display_name,
-      profile.phone ?? "",
-      profile.bio_de,
-      profile.bio_en,
-      profile.time_zone,
-    ].some((value) => value.toLocaleLowerCase(i18n.language).includes(needle)),
-  );
-  const selected =
-    (selectedId
-      ? profiles.data.find((profile) => profile.id === selectedId)
-      : filtered[0]) ?? null;
-  const name = (profile: Profile) => profile.display_name || t("peopleUnnamed");
-  const selectedExpertise = selected
-    ? expertise.data.filter((item) => item.user_id === selected.id)
-    : [];
+  const selected = profiles.data[0];
+  if (!selected) return <Notice kind="error">{t("peopleNoResults")}</Notice>;
+  const name = selected.display_name || t("peopleUnnamed");
+  const selectedExpertise = expertise.data;
   return (
     <>
       {updated && (
@@ -405,68 +398,14 @@ export function PeopleDirectory({
           })}
         </Notice>
       )}
-      <div className={accountId ? undefined : "people-admin-layout"}>
-        {!accountId && (
-          <section
-            className="panel people-directory"
-            aria-labelledby="people-directory-title"
-          >
-            <h2 id="people-directory-title">{t("peopleDirectory")}</h2>
-            <Field id="people-search" label={t("peopleSearch")}>
-              <input
-                id="people-search"
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </Field>
-            <p className="muted">
-              {t("peopleCount", { count: filtered.length })}
-            </p>
-            {filtered.length ? (
-              <ul className="people-results">
-                {filtered.map((profile) => (
-                  <li key={profile.id}>
-                    <Button
-                      type="button"
-                      variant={
-                        selected?.id === profile.id ? "default" : "ghost"
-                      }
-                      className="people-person-button"
-                      aria-pressed={selected?.id === profile.id}
-                      onClick={() => {
-                        setParams({ user: profile.id });
-                        setUpdated(null);
-                      }}
-                    >
-                      <UserRound size={18} />
-                      <span>
-                        {name(profile)}{" "}
-                        <small>
-                          {t(
-                            profile.active ? "peopleActive" : "peopleInactive",
-                          )}
-                        </small>
-                      </span>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>{t("peopleNoResults")}</p>
-            )}
-          </section>
-        )}
-        {accountId && !selected && (
-          <Notice kind="error">{t("peopleNoResults")}</Notice>
-        )}
-        {selected && (
-          <section
-            className="panel people-profile"
-            aria-labelledby="people-profile-title"
-          >
+      <section
+        className="panel people-profile"
+        aria-labelledby="people-profile-title"
+      >
+        {showAccountDetails ? (
+          <>
             <div className="section-heading">
-              <h2 id="people-profile-title">{name(selected)}</h2>
+              <h2 id="people-profile-title">{name}</h2>
               <span className="badge">
                 {t(selected.active ? "peopleActive" : "peopleInactive")}
               </span>
@@ -503,7 +442,7 @@ export function PeopleDirectory({
                   activation.reset();
                   setConfirmation({
                     id: selected.id,
-                    name: name(selected),
+                    name,
                     active: !selected.active,
                   });
                 }}
@@ -513,42 +452,44 @@ export function PeopleDirectory({
               </Button>
             )}
             <hr />
-            <ProfileEvidence ownerId={selected.id} readOnly kinds={["cv"]} />
-            <h3>{t("peopleExpertiseTitle")}</h3>
-            <p>{t("intro", { ns: "qualifications" })}</p>
-            {selected.id !== actorId &&
-              lecturers.data?.some(({ id }) => id === selected.id) && (
-                <ExpertiseSelection
-                  key={selected.id}
-                  actor={actorId}
-                  lecturer={selected.id}
-                  topics={topics.data}
-                  current={selectedExpertise}
-                />
-              )}
-            <div className="people-expertise-list">
-              {selectedExpertise.length ? (
-                selectedExpertise.map((item) => {
-                  const topic = topics.data.find(
-                    (topic) => topic.id === item.topic_id,
-                  );
-                  return topic ? (
-                    <ExpertiseReview
-                      key={`${selected.id}:${item.topic_id}`}
-                      actorId={actorId}
-                      profile={selected}
-                      expertise={item}
-                      topic={topic}
-                    />
-                  ) : null;
-                })
-              ) : (
-                <p className="muted">{t("peopleNoExpertise")}</p>
-              )}
-            </div>
-          </section>
+          </>
+        ) : (
+          <h2 id="people-profile-title">{t("peopleExpertiseTitle")}</h2>
         )}
-      </div>
+        <ProfileEvidence ownerId={selected.id} readOnly kinds={["cv"]} />
+        {showAccountDetails && <h3>{t("peopleExpertiseTitle")}</h3>}
+        <p>{t("intro", { ns: "qualifications" })}</p>
+        {selected.id !== actorId &&
+          lecturers.data?.some(({ id }) => id === selected.id) && (
+            <ExpertiseSelection
+              key={selected.id}
+              actor={actorId}
+              lecturer={selected.id}
+              topics={topics.data}
+              current={selectedExpertise}
+            />
+          )}
+        <div className="people-expertise-list">
+          {selectedExpertise.length ? (
+            selectedExpertise.map((item) => {
+              const topic = topics.data.find(
+                (topic) => topic.id === item.topic_id,
+              );
+              return topic ? (
+                <ExpertiseReview
+                  key={`${selected.id}:${item.topic_id}`}
+                  actorId={actorId}
+                  profile={selected}
+                  expertise={item}
+                  topic={topic}
+                />
+              ) : null;
+            })
+          ) : (
+            <p className="muted">{t("peopleNoExpertise")}</p>
+          )}
+        </div>
+      </section>
       <Dialog
         open={confirmation !== null}
         onOpenChange={(open) => {
@@ -596,33 +537,6 @@ export function PeopleDirectory({
           <Notice kind="error">{t("peopleStatusFailed")}</Notice>
         )}
       </Dialog>
-    </>
-  );
-}
-
-/** Open the administrative directory only after permission loading succeeds. */
-export function PeopleAdminPage() {
-  const { t } = useTranslation();
-  const { session } = useAuth();
-  const actorId = session!.user.id;
-  const permissions = useQuery(permissionsQuery(actorId));
-  if (permissions.isPending) return <Loading />;
-  if (permissions.isError)
-    return <ErrorState retry={() => void permissions.refetch()} />;
-  if (
-    !permissions.data.includes("users.manage") ||
-    !permissions.data.includes("qualifications.verify")
-  )
-    return (
-      <>
-        <PageHeading title={t("adminLecturers")} />
-        <Notice kind="error">{t("noAccess")}</Notice>
-      </>
-    );
-  return (
-    <>
-      <PageHeading title={t("adminLecturers")} description={t("peopleIntro")} />
-      <PeopleDirectory actorId={actorId} />
     </>
   );
 }

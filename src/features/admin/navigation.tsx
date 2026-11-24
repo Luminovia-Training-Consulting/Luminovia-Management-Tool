@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutDashboard } from "lucide-react";
 import {
   ErrorState,
   Loading,
@@ -135,7 +135,12 @@ export function AdministrationSection({ area }: { area?: AdministrationArea }) {
             <li key={item.to}>
               <Link to={item.to} className="panel">
                 <span>
-                  <strong>{t(item.label)}</strong>
+                  <strong className="administration-destination-label">
+                    {item.to === "/control-center" && (
+                      <LayoutDashboard size={20} aria-hidden="true" />
+                    )}
+                    {t(item.label)}
+                  </strong>
                   {item.description && <small>{t(item.description)}</small>}
                 </span>
                 <ArrowRight size={18} aria-hidden="true" />
