@@ -54,3 +54,33 @@ export function courseSeriesSessions(
   }
   return sessions;
 }
+
+/** Count planning demand for reviewed sessions with one instructor per run. */
+export function courseSeriesWorkload(
+  runs: readonly Pick<SeriesRun, "sessions">[],
+) {
+  const events: { at: number; count: number }[] = [];
+  const workloads = runs.map(({ sessions }) => ({
+    sessions: sessions.length,
+    hours: sessions.reduce((hours, session) => {
+      const start = Date.parse(session.starts_at);
+      const end = Date.parse(session.ends_at);
+      events.push({ at: start, count: 1 }, { at: end, count: -1 });
+      return hours + (end - start) / 3_600_000;
+    }, 0),
+  }));
+  // An instructor finishing at the exact start time can cover the next slot.
+  events.sort((a, b) => a.at - b.at || a.count - b.count);
+  let active = 0;
+  let simultaneous = 0;
+  for (const { count } of events) {
+    active += count;
+    simultaneous = Math.max(simultaneous, active);
+  }
+  return {
+    runs: workloads,
+    sessions: workloads.reduce((count, run) => count + run.sessions, 0),
+    hours: workloads.reduce((hours, run) => hours + run.hours, 0),
+    simultaneous,
+  };
+}

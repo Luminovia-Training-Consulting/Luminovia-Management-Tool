@@ -33,6 +33,24 @@ i18n.addResourceBundle("de", "learningPrograms", {
     "Dieses Programm hat Einschreibungen. Die bestehende Kursreihenfolge und die Regeln bleiben verbindlich.",
   saveFailed:
     "Speichern fehlgeschlagen. Prüfe die Kursauswahl und lade bei zwischenzeitlichen Änderungen den aktuellen Stand.",
+  classProgress: "Gesamtfortschritt pro Klasse",
+  filterClass: "Klasse filtern",
+  allClasses: "Alle Klassen",
+  classProgressEmpty:
+    "In diesem Programm sind noch keine aktiven Teilnehmenden einer Klasse zugeordnet.",
+  classProgressParticipants:
+    "{{completed}} von {{total}} Teilnehmenden haben das Programm abgeschlossen.",
+  classProgressModules: "{{completed}} von {{total}} Kursabschlüssen erreicht.",
+  classPlacement: "Klassenzuordnung",
+  classPlacementHint:
+    "Die Klassenzuordnung gilt für das Unternehmen und ändert keine Kurseinschreibungen.",
+  placementParticipant: "Person für Klassenzuordnung",
+  placementClass: "Klasse für die Person",
+  placementNone: "Ohne Klasse",
+  savePlacement: "Klassenzuordnung speichern",
+  placementSaved: "Die Klassenzuordnung wurde gespeichert.",
+  placementFailed:
+    "Die Klassenzuordnung konnte nicht gespeichert werden. Prüfe den aktuellen Stand und wähle die Person erneut aus.",
   roster: "Eingeschriebene Teilnehmende",
   rosterEmpty: "Für diese Auswahl gibt es keine Einschreibungen.",
   enrolment: "Ganzes Programm zuweisen",
@@ -100,6 +118,25 @@ i18n.addResourceBundle("en", "learningPrograms", {
     "This programme has enrolments. Its existing order and rules are fixed.",
   saveFailed:
     "The changes could not be saved. Check the selected courses and reload if someone else changed the programme.",
+  classProgress: "Progress by class",
+  filterClass: "Filter by class",
+  allClasses: "All classes",
+  classProgressEmpty:
+    "No active learners enrolled in this programme have a class assignment yet.",
+  classProgressParticipants:
+    "{{completed}} of {{total}} learners have completed the programme.",
+  classProgressModules:
+    "{{completed}} of {{total}} course completions achieved.",
+  classPlacement: "Class placement",
+  classPlacementHint:
+    "Class placement applies to this company and preserves existing course enrolments.",
+  placementParticipant: "Learner to place",
+  placementClass: "Class for the learner",
+  placementNone: "No class",
+  savePlacement: "Save class placement",
+  placementSaved: "The class placement was saved.",
+  placementFailed:
+    "The class placement could not be saved. Check the current state and select the learner again.",
   roster: "Enrolled learners",
   rosterEmpty: "There are no enrolments for this selection.",
   enrolment: "Assign the whole programme",

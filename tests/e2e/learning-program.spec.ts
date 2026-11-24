@@ -54,14 +54,12 @@ test("a complete learning programme unlocks its next course and produces whole-p
           .insert({ id: template, title: `${name} ${part}` }),
       );
       await checked(
-        service
-          .from("course_runs")
-          .insert({
-            id,
-            template_id: template,
-            organisation_id: organisation,
-            published: true,
-          }),
+        service.from("course_runs").insert({
+          id,
+          template_id: template,
+          organisation_id: organisation,
+          published: true,
+        }),
       );
       const ends = Date.now() - (4 - index) * 86_400_000;
       await checked(
@@ -76,6 +74,16 @@ test("a complete learning programme unlocks its next course and produces whole-p
     }),
   );
 
+  const className = `${name} · Class A`;
+  const classOptions = await checked(
+    managerClient.rpc("set_course_class", {
+      p_course_id: courses[0].id,
+      p_class_id: null,
+      p_new_name: className,
+      p_expected_version: 0,
+    }),
+    { requireData: true },
+  );
   await login(page, manager.email);
   await page.goto("/learning?view=programmes");
   await page.getByRole("button", { name: "Programm anlegen" }).click();
@@ -96,6 +104,20 @@ test("a complete learning programme unlocks its next course and produces whole-p
   await page.getByRole("button", { name: "Für Programm einschreiben" }).click();
   await expect(
     page.getByText("Die Person wurde für das gesamte Programm eingeschrieben."),
+  ).toBeVisible();
+
+  await page.getByLabel("Person für Klassenzuordnung").selectOption(learner.id);
+  await page
+    .getByLabel("Klasse für die Person")
+    .selectOption(classOptions.current.id);
+  await page
+    .getByRole("button", { name: "Klassenzuordnung speichern" })
+    .click();
+  await expect(
+    page.getByText("Die Klassenzuordnung wurde gespeichert."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("0 von 2 Kursabschlüssen erreicht."),
   ).toBeVisible();
 
   const href = new URL(page.url()).pathname + new URL(page.url()).search;
@@ -166,6 +188,23 @@ test("a complete learning programme unlocks its next course and produces whole-p
     ).toBeVisible();
     await page.reload();
     await expect(page.getByText("2 von 2 Kursen abgeschlossen")).toBeVisible();
+    const classProgress = page.getByRole("region", {
+      name: "Gesamtfortschritt pro Klasse",
+    });
+    await classProgress
+      .getByLabel("Klasse filtern")
+      .selectOption(classOptions.current.id);
+    await expect(
+      classProgress.getByRole("heading", { name: className }),
+    ).toBeVisible();
+    await expect(
+      classProgress.getByText(
+        "1 von 1 Teilnehmenden haben das Programm abgeschlossen.",
+      ),
+    ).toBeVisible();
+    await expect(
+      classProgress.getByText("2 von 2 Kursabschlüssen erreicht."),
+    ).toBeVisible();
   } finally {
     await context.close();
   }

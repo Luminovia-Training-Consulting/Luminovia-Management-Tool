@@ -1272,4 +1272,11 @@ test("completed Premium course records a named closeout follow-up without resend
     await page.reload();
     await expect(page.getByText(/Abschluss bestätigt/)).toBeVisible();
     await expect(accept).toHaveCount(0);
+    await page.getByRole("link", {name: /Fictional course workspace manager.*Offen/}).click();
+    await expect(page.getByRole("heading", {name: /Kursabschluss prüfen/})).toBeVisible();
+    await page.getByRole("button", {name: "Als erledigt markieren"}).click();
+    await expect(page.getByText("Status gespeichert.")).toBeVisible();
+    await page.getByRole("link", {name: "Zum Kursabschluss"}).click();
+    await expect(page.getByRole("link", {name: /Fictional course workspace manager.*Erledigt/})).toBeVisible();
+
 });

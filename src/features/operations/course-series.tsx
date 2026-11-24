@@ -16,7 +16,10 @@ import {
   courseSeriesRequest,
   courseSeriesResult,
 } from "./course-series-schema";
-import { courseSeriesSessions } from "./course-series-schedule";
+import {
+  courseSeriesSessions,
+  courseSeriesWorkload,
+} from "./course-series-schedule";
 import "./course-series-i18n";
 import { z } from "zod";
 
@@ -196,6 +199,15 @@ export function CourseSeriesForm({
   });
   const id = (name: string) => `${instanceId}-${name}`;
   const results = plan.data?.run_ids;
+  const workload =
+    reviewed && plan.data?.conflicts.length === 0
+      ? courseSeriesWorkload(reviewed.p_runs)
+      : null;
+  const hourFormat = new Intl.NumberFormat(i18n.language, {
+    style: "unit",
+    unit: "hour",
+    maximumFractionDigits: 2,
+  });
   if (results?.length) {
     return (
       <>
@@ -436,6 +448,22 @@ export function CourseSeriesForm({
       {reviewed && (
         <section aria-label={t("reviewed")}>
           <h3>{t("reviewed")}</h3>
+          {workload && (
+            <section aria-labelledby={id("workload")}>
+              <h4 id={id("workload")}>{t("workload")}</h4>
+              <p className="muted">{t("workloadBasis")}</p>
+              <dl className="commercial-facts">
+                <dt>{t("totalSessions")}</dt>
+                <dd>{workload.sessions}</dd>
+                <dt>{t("totalHours")}</dt>
+                <dd>{hourFormat.format(workload.hours)}</dd>
+                <dt>{t("simultaneousInstructors")}</dt>
+                <dd>{workload.simultaneous}</dd>
+                <dt>{t("openInstructorAssignments")}</dt>
+                <dd>{workload.runs.length}</dd>
+              </dl>
+            </section>
+          )}
           {reviewed.p_runs.map((run, index) => (
             <details
               key={runs[index].key}
@@ -454,6 +482,11 @@ export function CourseSeriesForm({
                   reviewed.p_time_zone,
                 )}{" "}
                 ({reviewed.p_time_zone})
+                {workload &&
+                  ` · ${t("runWorkload", {
+                    count: workload.runs[index].sessions,
+                    hours: hourFormat.format(workload.runs[index].hours),
+                  })}`}
               </summary>
               <ol className="session-list">
                 {run.sessions.map(({ starts_at, ends_at }, position) => {

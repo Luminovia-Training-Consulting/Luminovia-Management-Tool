@@ -68,3 +68,12 @@
     display: none;
   }
 }
+
+.programme-roster .programme-class-progress {
+  display: grid;
+  overflow-wrap: anywhere;
+}
+
+.programme-class-progress h4 {
+  margin: 0;
+}

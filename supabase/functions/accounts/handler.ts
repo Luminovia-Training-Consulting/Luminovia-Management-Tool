@@ -188,6 +188,55 @@ function body(request: Request): Promise<unknown> {
     return boundedJson(request, 16 * 1024);
 }
 
+/** Only a claimed, tenant-bound native dispatch may start a company invitation. */
+async function deliverCompanyInvitation(deps: AccountDependencies, requestId: string): Promise<"sent" | "failed" | "in_progress"> {
+    if (!deps.privilegedRpc) return "in_progress";
+    const claimed = await deps.privilegedRpc("claim_company_participant_invitation", {p_request_id: requestId});
+    const delivery = object(claimed.data) ? claimed.data : null;
+    if (claimed.error || !delivery || delivery.deliver !== true ||
+        !uuid(delivery.invitation_id) || !uuid(delivery.organisation_id) ||
+        typeof delivery.email !== "string" || typeof delivery.display_name !== "string" ||
+        !uuid(delivery.idempotency_key) || delivery.role !== "participant") {
+        return "in_progress";
+    }
+    const invitation: Invitation<"participant"> = {
+        email: delivery.email,
+        display_name: delivery.display_name,
+        role: "participant",
+        organisation_id: delivery.organisation_id,
+        idempotency_key: delivery.idempotency_key,
+    };
+    const finish = (success: boolean) => deps.privilegedRpc!("finish_company_participant_invitation", {
+        p_request_id: requestId,
+        p_success: success,
+    });
+    let userId: string;
+    try {
+        userId = await deps.sendInvitation(invitation, new URL("/auth/callback", deps.appOrigin).toString());
+    } catch (error) {
+        try {
+            if (deps.rejectInvitationDelivery) {
+                await deps.rejectInvitationDelivery(delivery.invitation_id, definiteInvitationRejection(error));
+            } else {
+                await deps.completeInvitation(delivery.invitation_id, null, invitation.display_name, false);
+            }
+            const receipt = await finish(false);
+            return receipt.error ? "in_progress" : "failed";
+        } catch {
+            // A database error must leave the durable claim closed to repetition.
+            return "in_progress";
+        }
+    }
+    try {
+        await deps.completeInvitation(delivery.invitation_id, userId, invitation.display_name, true);
+        const receipt = await finish(true);
+        return receipt.error ? "in_progress" : "sent";
+    } catch {
+        // Provider acceptance is already possible; do not mark a pre-send rejection.
+        return "in_progress";
+    }
+}
+
 // Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.
 export function createAccountHandler(deps: AccountDependencies) {
     async function accessMail(email: string): Promise<{access_email?: "requested" | "failed"}> {
@@ -802,67 +851,12 @@ export function createAccountHandler(deps: AccountDependencies) {
                                     : "invalid_request",
                         },
                     );
-                const requestId = object(reservation.data)
-                    ? reservation.data.request_id
-                    : null;
-                if (!uuid(requestId)) return response(202, {status: "requested"});
-                const claimed = await deps.privilegedRpc(
-                    "claim_company_participant_invitation",
-                    {p_request_id: requestId},
-                );
-                const delivery = object(claimed.data) ? claimed.data : null;
-                if (
-                    claimed.error ||
-                    !delivery ||
-                    delivery.deliver !== true ||
-                    !uuid(delivery.invitation_id) ||
-                    !uuid(delivery.organisation_id) ||
-                    typeof delivery.email !== "string" ||
-                    typeof delivery.display_name !== "string" ||
-                    typeof delivery.idempotency_key !== "string" ||
-                    delivery.role !== "participant"
-                )
-                    return response(202, {status: "requested"});
-                const reservedInvitation: Invitation<"participant"> = {
-                    email: delivery.email,
-                    display_name: delivery.display_name,
-                    role: "participant",
-                    organisation_id: delivery.organisation_id,
-                    idempotency_key: delivery.idempotency_key,
-                };
-                try {
-                    const userId = await deps.sendInvitation(
-                        reservedInvitation,
-                        `${deps.appOrigin}/auth/callback`,
-                    );
-                    await deps.completeInvitation(
-                        delivery.invitation_id,
-                        userId,
-                        delivery.display_name,
-                        true,
-                    );
-                    await deps.privilegedRpc("finish_company_participant_invitation", {
-                        p_request_id: requestId,
-                        p_success: true,
-                    });
-                } catch {
+                const requestId = object(reservation.data) ? reservation.data.request_id : null;
+                if (uuid(requestId)) {
                     try {
-                        await deps.completeInvitation(
-                            delivery.invitation_id,
-                            null,
-                            delivery.display_name,
-                            false,
-                        );
+                        await deliverCompanyInvitation(deps, requestId);
                     } catch {
-                        // Never turn delivery diagnostics into account-existence evidence.
-                    }
-                    try {
-                        await deps.privilegedRpc("finish_company_participant_invitation", {
-                            p_request_id: requestId,
-                            p_success: false,
-                        });
-                    } catch {
-                        // The service queue remains private and can be reconciled by operations.
+                        // The company response must not disclose account existence or delivery state.
                     }
                 }
                 return response(202, {status: "requested"});
@@ -908,6 +902,12 @@ export function createAccountHandler(deps: AccountDependencies) {
                         status === "throttled" ? 429 : status === "idempotency_conflict" ? 409 : 200,
                         {status, invitation_id: invitationId},
                     );
+                }
+                if (retryInvitation && uuid(invitationId) && uuid(reserved.data.dispatch_id)) {
+                    const outcome = await deliverCompanyInvitation(deps, reserved.data.dispatch_id);
+                    return response(outcome === "failed" ? 502 : 200, {
+                        status: outcome, invitation_id: invitationId,
+                    });
                 }
                 if (retryInvitation) {
                     invitation = parseInvitation({

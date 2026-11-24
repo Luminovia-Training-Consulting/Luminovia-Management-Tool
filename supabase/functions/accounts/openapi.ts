@@ -565,7 +565,7 @@ export const accountOpenApi = {
             post: {
                 operationId: "retryAccountInvitationDelivery",
                 summary: "Send a new linked invitation after a definite Auth rejection",
-                description: "Requires current mail and account-role administration. The existing invitation fixes its assigned role, name and organisation. Use the original address or a corrected address and a stable request key. A provider-ambiguous delivery cannot be retried.",
+                description: "Requires current mail and account-role administration. The existing invitation fixes its assigned role, name, organisation and class, when applicable. Use the original address or a corrected address and a stable request key. A provider-ambiguous delivery cannot be retried.",
                 parameters: userId,
                 requestBody: jsonBody(record(invitationIdentity)),
                 responses: {

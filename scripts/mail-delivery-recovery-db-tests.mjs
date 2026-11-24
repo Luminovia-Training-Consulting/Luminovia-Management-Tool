@@ -49,6 +49,52 @@ await withTestDatabase("mail_recovery_test", async ({sql, actor}) => {
     assert.equal((await failures()).some(({id}) => id === original.invitation_id), false);
     console.log("PASS Corrected and unchanged-address invitation retries retain prior evidence and reserve once");
 
+    const [client, org, classId, removedClass, invited] = Array.from({length: 5}, randomUUID);
+    await sql(`insert into auth.users(id,email,email_confirmed_at) values
+      (${q(client)},'company-inviter@example.invalid',now());
+      insert into public.user_roles(user_id,role) values (${q(client)},'client');
+      insert into public.organisations(id,name) values (${q(org)},'Fictional company invitation');
+      insert into public.client_organisation_memberships(user_id,organisation_id) values (${q(client)},${q(org)});
+      insert into private.course_classes(id,organisation_id,name) values
+        (${q(classId)},${q(org)},'Original class'),(${q(removedClass)},${q(org)},'Removed class');`);
+    await call(admin, "set_company_premium", [q(org), "true", "0", q(randomUUID())]);
+    const service = async (routine, args) => sql(`begin;set local role service_role;
+      set local request.jwt.claims='{"role":"service_role"}';select public.${routine}(${args});commit`);
+    const makeRejectedClassInvite = async (email, classScope) => {
+        const reservation = await call(client, "reserve_class_participant_invitation",
+            [q(org), q(email), "'Fictional class participant'", q(randomUUID()), q(classScope)]);
+        const sending = JSON.parse(await service("claim_company_participant_invitation", q(reservation.request_id)));
+        assert.equal(sending.deliver, true);
+        await reject(sending.invitation_id, true);
+        await service("finish_company_participant_invitation", `${q(reservation.request_id)},false`);
+        return sending.invitation_id;
+    };
+    const classEmail = "class-original@example.invalid";
+    const originalClassInvite = await makeRejectedClassInvite(classEmail, classId);
+    const removed = await makeRejectedClassInvite("removed-class@example.invalid", removedClass);
+    await sql(`delete from private.course_classes where id=${q(removedClass)};`);
+    assert.equal((await failures()).find(({id}) => id === removed).retry_allowed, false);
+    await assert.rejects(retryInvite(removed, "replaced-without-class@example.invalid"), /42501/);
+    await assert.rejects(call(client, "reserve_invitation_delivery_retry",
+        [q(originalClassInvite), q(classEmail), q(randomUUID())]), /42501/);
+    assert.equal((await failures()).find(({id}) => id === originalClassInvite).retry_allowed, true);
+    const classRetryKey = randomUUID();
+    const correctedClassInvite = await retryInvite(originalClassInvite, classEmail, classRetryKey);
+    assert.equal(correctedClassInvite.status, "reserved");
+    const classSending = JSON.parse(await service("claim_company_participant_invitation", q(correctedClassInvite.dispatch_id)));
+    assert.equal(classSending.invitation_id, correctedClassInvite.invitation_id);
+    assert.equal(classSending.organisation_id, org);
+    assert.equal(JSON.parse(await service("claim_company_participant_invitation", q(correctedClassInvite.dispatch_id))).deliver, false);
+    await sql(`insert into auth.users(id,email,email_confirmed_at) values(${q(invited)},${q(classEmail)},now());`);
+    await service("complete_account_invitation", `${q(classSending.invitation_id)},${q(invited)},'Fictional class participant',true`);
+    await service("finish_company_participant_invitation", `${q(correctedClassInvite.dispatch_id)},true`);
+    const placement = JSON.parse(await sql(`select to_jsonb(m) from private.company_participant_memberships m where m.user_id=${q(invited)}`));
+    assert.equal(placement.organisation_id, org);
+    assert.equal(placement.class_id, classId);
+    assert.equal(placement.status, "pending");
+    assert.equal((await retryInvite(originalClassInvite, classEmail, classRetryKey)).status, "already_sent");
+    console.log("PASS Internal company recovery keeps the exact original class and consent before any learner access");
+
     const finished = "2026-01-02T03:04:05Z";
     await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
       values(${q(course)},'Fictional course','Fictional company','online','filled',100,'EUR','fixed_total',100,'Fictional terms');
@@ -136,5 +182,40 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
             `${q(original.creation_id)},${q(desired)},${q(randomUUID())}`), /PT409/);
         assert.equal((await request(admin, "mail_delivery_failures", "", "GET")).length, 0);
         console.log(`PASS ${edition} invitation recovery uses the licensed native administration gate and a scoped replacement`);
+        const [company, org, course, template, lostCourse] = Array.from({length: 5}, randomUUID);
+        await sql(`insert into auth.users(id,email,email_confirmed_at)
+          values (${q(company)},${q(company + "@example.invalid")},now());
+          insert into public.user_roles(user_id,role) values (${q(company)},'client');
+          insert into public.organisations(id,name) values (${q(org)},'Fictional Academy company');
+          insert into public.client_organisation_memberships(user_id,organisation_id) values (${q(company)},${q(org)});
+          insert into public.course_templates(id,title) values (${q(template)},'Fictional Academy course');
+          insert into public.course_runs(id,template_id,organisation_id)
+            values (${q(course)},${q(template)},${q(org)}),(${q(lostCourse)},${q(template)},${q(org)});`);
+        const service = (endpoint, args) => sql(`begin;set local role service_role;
+          set local request.jwt.claims='{"role":"service_role"}';set local request.path=${q("/rpc/" + endpoint)};
+          set local request.method='POST';select public.require_portal_access();select public.${endpoint}(${args});commit`);
+        const companyInvite = async (courseId, address) => {
+            const result = JSON.parse(await service("reserve_academy_company_invitation",
+                `${q(company)},${q(randomUUID())},${q(address)},'Fictional company learner',${q(courseId)}`));
+            assert.equal(result.status, "reserved");
+            assert.equal(await service("academy_reject_invitation_delivery", q(result.creation_id)), "t");
+            return result.creation_id;
+        };
+        const originalCourseInvite = await companyInvite(course, "original-company@example.invalid");
+        const staleCompanyInvite = await companyInvite(lostCourse, "lost-course-company@example.invalid");
+        await sql(`update public.course_runs set archived_at=now() where id=${q(lostCourse)}`);
+        assert.equal((await request(admin, "mail_delivery_failures", "", "GET"))
+            .find(({id}) => id === staleCompanyInvite).retry_allowed, false);
+        await assert.rejects(request(admin, "academy_reserve_invitation_delivery_retry",
+            `${q(staleCompanyInvite)},'archived-course@example.invalid',${q(randomUUID())}`), /42501/);
+        const sameScope = await request(admin, "academy_reserve_invitation_delivery_retry",
+            `${q(originalCourseInvite)},'corrected-company@example.invalid',${q(randomUUID())}`);
+        assert.equal(sameScope.status, "reserved");
+        assert.equal(sameScope.organisation_id, org);
+        assert.equal(sameScope.role, "participant");
+        assert.equal(await sql(`select delivery_course_id from private.academy_account_requests
+          where id=${q(sameScope.creation_id)}`), course);
+        console.log(`PASS ${edition} company invitations preserve the exact course and reject archived courses`);
+
     });
 }

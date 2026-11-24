@@ -20,6 +20,7 @@ it("lists typed learning programme operations and separates Academy write entitl
     const paths: Record<string, Record<string, unknown>> = document.paths;
     for (const rpc of [
       "learning_programs",
+      "learning_program_class_progress",
       "save_learning_program",
       "enrol_learning_program",
       "start_learning_program_course",
@@ -36,7 +37,10 @@ it("lists typed learning programme operations and separates Academy write entitl
           ? {}
           : {
               "x-portal-licence":
-                rpc === "learning_programs" ? "active-or-grace" : "active",
+                rpc === "learning_programs" ||
+                rpc === "learning_program_class_progress"
+                  ? "active-or-grace"
+                  : "active",
             }),
       });
     }
@@ -78,5 +82,27 @@ it("documents an exact saved scope and does not accept opaque course or actor da
   expect(
     schema.safeParse({ ...correct, p_course_ids: [correct.p_program_id] })
       .success,
+  ).toBe(false);
+});
+
+it("defines class-level counts without disclosing a learner's details", () => {
+  const result =
+    learningProgramPaths()["/rest/v1/rpc/learning_program_class_progress"].get
+      .responses["200"].content["application/json"].schema;
+  const validate = z.fromJSONSchema(result);
+  const group = {
+    class_id: "23e3ac26-57f8-4d41-9c6b-6d2bde23b3c9",
+    class_name: "Class A",
+    participants: 2,
+    participants_completed: 1,
+    module_slots: 4,
+    modules_completed: 2,
+  };
+  expect(validate.safeParse([group]).success).toBe(true);
+  expect(
+    validate.safeParse([{ ...group, participants: [group.class_id] }]).success,
+  ).toBe(false);
+  expect(
+    validate.safeParse([{ ...group, user_id: group.class_id }]).success,
   ).toBe(false);
 });

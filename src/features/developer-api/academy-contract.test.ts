@@ -210,6 +210,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "/rest/v1/rpc/course_series_classes",
           "/rest/v1/rpc/plan_course_series",
           "/rest/v1/rpc/learning_programs",
+          "/rest/v1/rpc/learning_program_class_progress",
+          "/rest/v1/rpc/set_company_participant_class",
           "/rest/v1/rpc/save_learning_program",
           "/rest/v1/rpc/enrol_learning_program",
           "/rest/v1/rpc/start_learning_program_course",

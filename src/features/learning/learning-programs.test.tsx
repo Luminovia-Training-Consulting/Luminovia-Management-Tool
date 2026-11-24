@@ -22,6 +22,7 @@ const fixture = vi.hoisted(() => ({
   detail: undefined as LearningProgramDetail | undefined,
   start: vi.fn(),
   save: vi.fn(),
+  place: vi.fn(),
 }));
 vi.mock("./learning-program-api", () => ({
   learningProgramsKey: (actor: string) => ["programmes", actor],
@@ -39,7 +40,29 @@ vi.mock("./learning-program-api", () => ({
       writable: true,
     }),
   }),
+  learningProgramClassProgressQuery: (actor: string, program: string) => ({
+    queryKey: ["programmes", actor, "class-progress", program],
+    queryFn: async () => [
+      {
+        class_id: first,
+        class_name: "Class A",
+        participants: 4,
+        participants_completed: 2,
+        module_slots: 8,
+        modules_completed: 6,
+      },
+      {
+        class_id: second,
+        class_name: "Class B",
+        participants: 5,
+        participants_completed: 0,
+        module_slots: 10,
+        modules_completed: 1,
+      },
+    ],
+  }),
   startLearningProgramCourse: fixture.start,
+  placeLearningProgramParticipant: fixture.place,
   saveLearningProgram: fixture.save,
   enrolLearningProgram: vi.fn(),
 }));
@@ -101,6 +124,7 @@ beforeEach(async () => {
   fixture.detail = undefined;
   fixture.start.mockResolvedValue(undefined);
   fixture.save.mockResolvedValue(id);
+  fixture.place.mockResolvedValue(undefined);
   await i18n.changeLanguage("de");
 });
 afterEach(cleanup);
@@ -188,4 +212,79 @@ it("renders the whole programme proof only when the server validates every cours
       name: "Nachweis drucken / als PDF speichern",
     }),
   ).toBeVisible();
+});
+
+it("shows correct class totals and filters the manager view without changing enrolments", async () => {
+  fixture.detail = {
+    ...learner(),
+    manage: true,
+    learner_name: null,
+    progress: null,
+    roster: [],
+  };
+  mount(id);
+  expect(
+    await screen.findByRole("heading", {
+      name: "Gesamtfortschritt pro Klasse",
+    }),
+  ).toBeVisible();
+  expect(
+    await screen.findByText(
+      "2 von 4 Teilnehmenden haben das Programm abgeschlossen.",
+    ),
+  ).toBeVisible();
+  expect(screen.getByText("6 von 8 Kursabschlüssen erreicht.")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Class B" })).toBeVisible();
+  fireEvent.change(screen.getByLabelText("Klasse filtern"), {
+    target: { value: second },
+  });
+  expect(screen.queryByRole("heading", { name: "Class A" })).toBeNull();
+  expect(screen.getByText("1 von 10 Kursabschlüssen erreicht.")).toBeVisible();
+});
+
+it("saves the existing membership version when changing a learner's class", async () => {
+  const current = learner();
+  fixture.detail = {
+    ...current,
+    manage: true,
+    can_write: true,
+    progress: null,
+    learner_name: null,
+    classes: [
+      { id: first, name: "Class A" },
+      { id: second, name: "Class B" },
+    ],
+    roster: [
+      {
+        id,
+        name: "Fictional learner",
+        active: true,
+        placement: { class_id: first, version: 4 },
+        progress: current.progress!,
+      },
+    ],
+  };
+  mount(id);
+  fireEvent.change(
+    await screen.findByLabelText("Person für Klassenzuordnung"),
+    { target: { value: id } },
+  );
+  expect(screen.getByLabelText("Klasse für die Person")).toHaveValue(first);
+  fireEvent.change(screen.getByLabelText("Klasse für die Person"), {
+    target: { value: second },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Klassenzuordnung speichern" }),
+  );
+  await waitFor(() =>
+    expect(fixture.place).toHaveBeenCalledWith(
+      {
+        p_organisation_id: organisation,
+        p_user_id: id,
+        p_class_id: second,
+        p_expected_version: 4,
+      },
+      expect.anything(),
+    ),
+  );
 });

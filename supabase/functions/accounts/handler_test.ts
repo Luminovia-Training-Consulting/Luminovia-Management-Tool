@@ -768,3 +768,52 @@ Deno.test("Academy retries use the original reviewed organization and normal nat
     assert.equal((await handler(request(endpoint, "POST", input))).status, 200);
     assert.equal(sends, 1);
 });
+
+Deno.test("a corrected company invitation can send only a claimed original class dispatch", async () => {
+    const actorEdgeAddress = "corrected-class@example.invalid";
+    const dispatchId = "6620e4ec-bb36-4516-ac0e-974fb3698bc3";
+    const company = "a03d22ee-beaf-487a-a558-fc3d01da0d6b";
+    let claimed = false;
+    const observations: string[] = [];
+    const { handler, request } = fixture({
+        rpc: async (token, operation, args) => {
+            assert.equal(token, "test-token");
+            assert.equal(operation, "reserve_invitation_delivery_retry");
+            assert.deepEqual(args, {p_invitation_id: id, p_email: actorEdgeAddress, p_request_id: key});
+            return {data: claimed ? {status: "in_progress", invitation_id: id} :
+                {status: "reserved", dispatch_id: dispatchId, invitation_id: id}};
+        },
+        privilegedRpc: async (name, args) => {
+            observations.push(name);
+            assert.equal(args?.p_request_id, dispatchId);
+            if (name === "claim_company_participant_invitation") {
+                claimed = true;
+                return {data: {
+                    deliver: true, invitation_id: id, organisation_id: company, role: "participant",
+                    email: actorEdgeAddress, display_name: "Fictional participant", idempotency_key: key,
+                }};
+            }
+            assert.equal(args?.p_success, false);
+            return {data: null};
+        },
+        sendInvitation: async (invitation) => {
+            observations.push("send");
+            assert.equal(invitation.organisation_id, company);
+            assert.equal(invitation.role, "participant");
+            throw {status: 422, code: "email_address_invalid"};
+        },
+        rejectInvitationDelivery: async (invitationId, definite) => {
+            observations.push("rejected");
+            assert.equal(invitationId, id);
+            assert.equal(definite, true);
+        },
+    });
+    const path = `v1/invitations/${id}/retry`;
+    const body = {email: actorEdgeAddress, idempotency_key: key};
+    assert.equal((await handler(request(path, "POST", {...body, class_id: company}))).status, 400);
+    assert.equal((await handler(request(path, "POST", body))).status, 502);
+    assert.equal((await handler(request(path, "POST", body))).status, 200);
+    assert.deepEqual(observations, [
+        "claim_company_participant_invitation", "send", "rejected", "finish_company_participant_invitation",
+    ]);
+});

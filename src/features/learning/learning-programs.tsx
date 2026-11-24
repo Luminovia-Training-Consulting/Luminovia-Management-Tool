@@ -7,6 +7,8 @@ import { Button } from "../../components/ui/button";
 import {
   enrolLearningProgram,
   learningProgramsKey,
+  learningProgramClassProgressQuery,
+  placeLearningProgramParticipant,
   learningProgramsQuery,
   saveLearningProgram,
   startLearningProgramCourse,
@@ -248,6 +250,199 @@ function ProgramEditor({
   );
 }
 
+function ProgrammeClassProgress({
+  actor,
+  program,
+}: {
+  actor: string;
+  program: string;
+}) {
+  const { t } = useTranslation("learningPrograms");
+  const [selection, setSelection] = useState("");
+  const progress = useQuery(learningProgramClassProgressQuery(actor, program));
+  const groups = progress.data ?? [];
+  const selected = groups.some((group) => group.class_id === selection)
+    ? selection
+    : "";
+  return (
+    <section
+      className="panel programme-panel"
+      aria-labelledby="programme-class-progress"
+    >
+      <h3 id="programme-class-progress">{t("classProgress")}</h3>
+      {progress.isPending || !progress.isFetchedAfterMount ? (
+        <Loading />
+      ) : progress.isError ? (
+        <ErrorState retry={() => void progress.refetch()} />
+      ) : groups.length === 0 ? (
+        <p>{t("classProgressEmpty")}</p>
+      ) : (
+        <>
+          <Field id="programme-class-filter" label={t("filterClass")}>
+            <select
+              id="programme-class-filter"
+              value={selected}
+              onChange={(event) => setSelection(event.target.value)}
+            >
+              <option value="">{t("allClasses")}</option>
+              {groups.map((group) => (
+                <option key={group.class_id} value={group.class_id}>
+                  {group.class_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <ul className="programme-roster">
+            {groups
+              .filter((group) => !selected || group.class_id === selected)
+              .map((group) => {
+                const courses = t("classProgressModules", {
+                  completed: group.modules_completed,
+                  total: group.module_slots,
+                });
+                return (
+                  <li className="programme-class-progress" key={group.class_id}>
+                    <h4>{group.class_name}</h4>
+                    <span>
+                      {t("classProgressParticipants", {
+                        completed: group.participants_completed,
+                        total: group.participants,
+                      })}
+                    </span>
+                    <span>{courses}</span>
+                    <progress
+                      max={group.module_slots}
+                      value={group.modules_completed}
+                      aria-label={`${group.class_name}: ${courses}`}
+                    />
+                  </li>
+                );
+              })}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ProgrammeClassPlacement({
+  organisation,
+  classes,
+  roster,
+  refresh,
+}: {
+  organisation: string;
+  classes: PickerOption[];
+  roster: NonNullable<LearningProgramDetail["roster"]>;
+  refresh: () => void;
+}) {
+  const { t } = useTranslation("learningPrograms");
+  const [draft, setDraft] = useState<{
+    id: string;
+    classId: string;
+    version: number;
+  } | null>(null);
+  const assignment = useMutation({
+    mutationFn: placeLearningProgramParticipant,
+    onSuccess: () => {
+      setDraft(null);
+      refresh();
+    },
+    onError: () => {
+      setDraft(null);
+      refresh();
+    },
+  });
+  const learners = roster.filter((person) => person.active && person.placement);
+  const current = learners.find((person) => person.id === draft?.id)?.placement;
+  const changed =
+    draft &&
+    current &&
+    draft.version === current.version &&
+    draft.classId !== (current.class_id ?? "");
+  if (!classes.length || !learners.length) return null;
+  return (
+    <>
+      <h4>{t("classPlacement")}</h4>
+      <p>{t("classPlacementHint")}</p>
+      <form
+        className="programme-picker"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!changed) return;
+          assignment.mutate({
+            p_organisation_id: organisation,
+            p_user_id: draft.id,
+            p_class_id: draft.classId || null,
+            p_expected_version: draft.version,
+          });
+        }}
+      >
+        <Field
+          id="programme-placement-learner"
+          label={t("placementParticipant")}
+        >
+          <select
+            id="programme-placement-learner"
+            value={draft?.id ?? ""}
+            disabled={assignment.isPending}
+            onChange={(event) => {
+              const person = learners.find(
+                (entry) => entry.id === event.target.value,
+              );
+              const placement = person?.placement;
+              assignment.reset();
+              setDraft(
+                person && placement
+                  ? {
+                      id: person.id,
+                      classId: placement.class_id ?? "",
+                      version: placement.version,
+                    }
+                  : null,
+              );
+            }}
+          >
+            <option value="">{t("selectParticipant")}</option>
+            {learners.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field id="programme-placement-class" label={t("placementClass")}>
+          <select
+            id="programme-placement-class"
+            value={draft?.classId ?? ""}
+            disabled={!draft || assignment.isPending}
+            onChange={(event) => {
+              if (draft) setDraft({ ...draft, classId: event.target.value });
+            }}
+          >
+            <option value="">{t("placementNone")}</option>
+            {classes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Button type="submit" disabled={!changed || assignment.isPending}>
+          {t("savePlacement")}
+        </Button>
+      </form>
+      {assignment.isSuccess && (
+        <Notice kind="success">{t("placementSaved")}</Notice>
+      )}
+      {(assignment.isError ||
+        (draft && (!current || draft.version !== current.version))) && (
+        <Notice kind="error">{t("placementFailed")}</Notice>
+      )}
+    </>
+  );
+}
+
 function ProgramManager({
   actor,
   program,
@@ -361,6 +556,7 @@ function ProgramManager({
         )}
         {archive.isError && <Notice kind="error">{t("saveFailed")}</Notice>}
       </section>
+      <ProgrammeClassProgress actor={actor} program={program.id} />
       <section className="panel programme-panel">
         {program.can_write && !program.archived && <h3>{t("enrolment")}</h3>}
         <Field id="programme-learner-search" label={t("findParticipant")}>
@@ -432,6 +628,14 @@ function ProgramManager({
           </ul>
         ) : (
           <p>{t("rosterEmpty")}</p>
+        )}
+        {program.can_write && roster && (
+          <ProgrammeClassPlacement
+            organisation={program.organisation_id}
+            classes={program.classes ?? []}
+            roster={roster}
+            refresh={refresh}
+          />
         )}
       </section>
     </>

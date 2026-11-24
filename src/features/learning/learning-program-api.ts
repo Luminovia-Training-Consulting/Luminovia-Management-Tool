@@ -4,6 +4,10 @@ import { db } from "../../lib/supabase";
 import {
   enrolLearningProgramRequest,
   learningProgramId,
+  learningProgramClassProgressResult,
+  learningProgramClassPlacementRequest,
+  type LearningProgramClassPlacementRequest,
+  readLearningProgramClassProgressRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
   saveLearningProgramRequest,
@@ -36,6 +40,27 @@ export const learningProgramsQuery = (
     retry: false,
   });
 
+export const learningProgramClassProgressQuery = (
+  actor: string,
+  program: string,
+) =>
+  queryOptions({
+    queryKey: [...learningProgramsKey(actor), "class-progress", program],
+    queryFn: async ({ signal }) => {
+      const args = readLearningProgramClassProgressRequest.parse({
+        p_program_id: program,
+      });
+      const { data, error } = await db()
+        .rpc("learning_program_class_progress", args, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return learningProgramClassProgressResult.parse(data);
+    },
+    staleTime: 0,
+    refetchOnMount: "always" as const,
+    retry: false,
+  });
+
 export async function saveLearningProgram(input: SaveLearningProgramRequest) {
   requireOnline();
   const { data, error } = await db().rpc(
@@ -62,6 +87,17 @@ export async function startLearningProgramCourse(
   const { error } = await db().rpc(
     "start_learning_program_course",
     startLearningProgramCourseRequest.parse(input),
+  );
+  if (error) throw error;
+}
+
+export async function placeLearningProgramParticipant(
+  input: LearningProgramClassPlacementRequest,
+) {
+  requireOnline();
+  const { error } = await db().rpc(
+    "set_company_participant_class",
+    learningProgramClassPlacementRequest.parse(input),
   );
   if (error) throw error;
 }

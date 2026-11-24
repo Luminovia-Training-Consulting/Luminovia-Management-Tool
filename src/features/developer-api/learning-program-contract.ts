@@ -2,6 +2,9 @@ import { z } from "zod";
 import {
   enrolLearningProgramRequest,
   learningProgramId,
+  learningProgramClassProgressResult,
+  learningProgramClassPlacementRequest,
+  readLearningProgramClassProgressRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
   saveLearningProgramRequest,
@@ -46,6 +49,22 @@ export function learningProgramPaths(academy = false) {
         content: jsonContent(learningProgramsResult),
       },
       ...failed,
+    },
+  };
+  const classProgress = {
+    ...access(false, false),
+    summary: "Read programme progress grouped by learner class",
+    description:
+      "For an authorised course manager or company contact only. Each row counts current active programme learners with an assigned class in the programme's company. Valid course completion receipts determine module and full-programme counts. The response contains class data and aggregate counts.",
+    responses: {
+      "200": {
+        description:
+          "Authorised aggregate class progress for the requested programme.",
+        content: jsonContent(learningProgramClassProgressResult),
+      },
+      "400": failed["400"],
+      "401": failed["401"],
+      "403": failed["403"],
     },
   };
   const query = [
@@ -106,6 +125,38 @@ export function learningProgramPaths(academy = false) {
         },
       },
     },
+    "/rest/v1/rpc/learning_program_class_progress": {
+      get: {
+        ...classProgress,
+        operationId: "getLearningProgrammeClassProgress",
+        parameters: [
+          {
+            in: "query",
+            name: "p_program_id",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+      },
+      post: {
+        ...classProgress,
+        operationId: "readLearningProgrammeClassProgress",
+        requestBody: {
+          required: true,
+          content: jsonContent(readLearningProgramClassProgressRequest),
+        },
+      },
+    },
+    ...(academy
+      ? {
+          "/rest/v1/rpc/set_company_participant_class": write(
+            "setAcademyCompanyParticipantClass",
+            "Set or clear one company participant’s class",
+            "Requires an active licence, current management or company contact authority, and the participant’s current company membership version. Use a class of that same company or null to clear the placement. Existing course and programme enrolments are unchanged.",
+            learningProgramClassPlacementRequest,
+          ),
+        }
+      : {}),
     "/rest/v1/rpc/save_learning_program": write(
       "saveLearningProgramme",
       "Save a company learning programme",

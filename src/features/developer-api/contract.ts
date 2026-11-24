@@ -160,6 +160,7 @@ import {
   courseStartResponse,
 } from "../readiness/course-start-schema.ts";
 import {
+  courseCloseoutFollowupSchema,
   courseCloseoutRequest,
   courseCloseoutResponse,
 } from "../learning/course-closeout-schema.ts";
@@ -2270,6 +2271,46 @@ const nativePaths = {
     "Creates an unpublished copy of the template reference and scheduled sessions and returns its ID.",
     { p_id: uuid },
     uuid,
+  ),
+  "/rest/v1/rpc/course_closeout_followup": {
+    ...rpc(
+      "readCourseCloseoutFollowupBody",
+      "Courses",
+      "Read a course closeout follow-up",
+      "Requires current course management and access to the exact follow-up task and its Premium course.",
+      { p_task_id: uuid },
+      z.toJSONSchema(courseCloseoutFollowupSchema),
+    ),
+    get: {
+      operationId: "readCourseCloseoutFollowup",
+      tags: ["Courses"],
+      summary: "Read a course closeout follow-up",
+      parameters: [
+        { in: "query", name: "p_task_id", required: true, schema: uuid },
+      ],
+      responses: {
+        "200": {
+          description: "Scoped follow-up",
+          content: json(z.toJSONSchema(courseCloseoutFollowupSchema)),
+        },
+        "403": {
+          description:
+            "Current access to this course and follow-up is required.",
+        },
+      },
+    },
+  },
+  "/rest/v1/rpc/set_course_closeout_followup_state": rpc(
+    "setCourseCloseoutFollowupState",
+    "Courses",
+    "Update one course closeout follow-up",
+    "Reuses the work task and its existing version and audit history. Requires current scope and a version from a confirmed read. An unchanged retry returns the current confirmed state.",
+    {
+      p_task_id: uuid,
+      p_state: { enum: ["open", "doing", "done"] },
+      p_version: { ...version, minimum: 1 },
+    },
+    z.toJSONSchema(courseCloseoutFollowupSchema),
   ),
   "/rest/v1/rpc/course_closeout": {
     ...rpc(

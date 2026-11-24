@@ -308,7 +308,7 @@ export const academyAdministrationPaths = {
       tags: ["Local academy administration"],
       summary: "Send a replacement for a definitively rejected invitation",
       description:
-        "Requires a current mail administrator and an active installation. The failed reservation supplies the name, role and organisation. Retry with a stable request key and the reviewed address. An uncertain result cannot start a second send.",
+        "Requires a current mail administrator and an active installation. The failed reservation supplies the name, role, organisation and original course when the invitation came from a company. Retry with a stable request key and the reviewed address. An uncertain result cannot start a second send.",
       security: credentials,
       "x-portal-licence": "active",
       parameters: [

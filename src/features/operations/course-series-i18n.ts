@@ -40,6 +40,29 @@ const messages = {
   remove: ["Durchlauf {{number}} entfernen", "Remove run {{number}}"],
   review: ["Termine und Konflikte prüfen", "Review sessions and conflicts"],
   reviewed: ["Geprüfte Termine", "Reviewed sessions"],
+  workload: ["Lehrbedarf", "Teaching workload"],
+  workloadBasis: [
+    "Berechnet mit einer Lehrkraft je Durchlauf. Die Besetzung erfolgt nach dem Anlegen der Entwürfe.",
+    "Based on one instructor per run. Assign instructors after creating the drafts.",
+  ],
+  totalSessions: ["Termine insgesamt", "Total sessions"],
+  totalHours: ["Geplante Terminzeit insgesamt", "Total scheduled hours"],
+  simultaneousInstructors: [
+    "Lehrkräfte gleichzeitig (Spitzenbedarf)",
+    "Instructors needed at the same time (peak)",
+  ],
+  openInstructorAssignments: [
+    "Offene Lehrkraftzuordnungen",
+    "Open instructor assignments",
+  ],
+  runWorkload_one: [
+    "{{count}} Termin · {{hours}}",
+    "{{count}} session · {{hours}}",
+  ],
+  runWorkload_other: [
+    "{{count}} Termine · {{hours}}",
+    "{{count}} sessions · {{hours}}",
+  ],
   invalid: [
     "Prüfe Vorlage, Unternehmen, Starttage, Tageszeiten, Zeitzone und unterrichtsfreie Tage. Alle Termine müssen in der Zukunft liegen und zeitlich eindeutig sein.",
     "Check the template, organisation, start dates, times, time zone and excluded dates. All sessions must be in the future with unambiguous times.",

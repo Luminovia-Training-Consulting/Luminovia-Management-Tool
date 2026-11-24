@@ -31,3 +31,13 @@ export const courseCloseoutResponse = z.object({
     }),
   ),
 });
+
+export const courseCloseoutFollowupSchema = z.object({
+  course_run_id: uuid,
+  title: z.string(),
+  state: z.enum(["open", "doing", "done", "cancelled"]),
+  due_at: date.nullable(),
+  time_zone: z.string(),
+  version: z.number().int().positive(),
+  can_update: z.boolean(),
+});

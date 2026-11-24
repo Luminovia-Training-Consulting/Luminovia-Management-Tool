@@ -216,6 +216,12 @@ const ControlCenterPage = lazy(() =>
     default: module.ControlCenterPage,
   })),
 );
+const CourseCloseoutFollowupRoute = lazy(() =>
+  import("../features/learning/course-closeout-followup").then((module) => ({
+    default: module.CourseCloseoutFollowupRoute,
+  })),
+);
+
 const CourseWorkspacePage = lazy(() =>
   import("../features/learning/learning").then((module) => ({
     default: module.CourseWorkspacePage,
@@ -322,7 +328,7 @@ export default function PortalRoutes() {
           <Route path="enquiries" element={<EnquiriesPage />} />
           <Route path="enquiries/:id" element={<EnquiriesPage />} />
           <Route path="learning" element={<LearningHubPage />} />
-          <Route path="workbench" element={<Navigate to="/" replace />} />
+          <Route path="workbench" element={<CourseCloseoutFollowupRoute />} />
           <Route
             path="timesheets"
             element={<Navigate to="/finance" replace />}

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { courseSeriesSessions } from "./course-series-schedule";
+import {
+  courseSeriesSessions,
+  courseSeriesWorkload,
+} from "./course-series-schedule";
 
 const input = {
   firstDay: "2027-03-26",
@@ -42,5 +45,49 @@ describe("course series exact schedule", () => {
     { zone: "Not/A_Zone" },
   ])("rejects an invalid schedule: %j", (changes) => {
     expect(courseSeriesSessions({ ...input, ...changes }, now)).toBeNull();
+  });
+});
+
+describe("course series teaching workload", () => {
+  it("counts parallel demand at the peak and lets adjoining time slots share coverage", () => {
+    const run = (starts_at: string, ends_at: string) => ({
+      sessions: [{ starts_at, ends_at }],
+    });
+    expect(
+      courseSeriesWorkload([
+        run("2027-03-26T08:00:00Z", "2027-03-26T10:00:00Z"),
+        run("2027-03-26T09:00:00Z", "2027-03-26T10:30:00Z"),
+        run("2027-03-26T11:00:00+01:00", "2027-03-26T12:00:00+01:00"),
+      ]),
+    ).toEqual({
+      runs: [
+        { sessions: 1, hours: 2 },
+        { sessions: 1, hours: 1.5 },
+        { sessions: 1, hours: 1 },
+      ],
+      sessions: 3,
+      hours: 4.5,
+      simultaneous: 2,
+    });
+  });
+
+  it("calculates elapsed hours for a session across daylight saving time", () => {
+    const sessions = courseSeriesSessions(
+      {
+        ...input,
+        firstDay: "2027-03-28",
+        weekdays: [7],
+        days: 1,
+        start: "01:00",
+        end: "04:00",
+      },
+      now,
+    )!;
+    expect(courseSeriesWorkload([{ sessions }])).toEqual({
+      runs: [{ sessions: 1, hours: 2 }],
+      sessions: 1,
+      hours: 2,
+      simultaneous: 1,
+    });
   });
 });

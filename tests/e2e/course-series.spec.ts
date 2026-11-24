@@ -106,6 +106,9 @@ test("course series reviews room collisions and creates independent exact drafts
   await dialog
     .getByRole("button", { name: "Termine und Konflikte prüfen" })
     .click();
+  const workload = dialog.getByRole("region", { name: "Lehrbedarf" });
+  await expect(workload).toBeVisible();
+  await expect(workload.locator("dd")).toHaveText(["6", "48 Std.", "2", "3"]);
   await dialog
     .getByRole("button", { name: "Alle Durchläufe als Entwurf anlegen" })
     .click();

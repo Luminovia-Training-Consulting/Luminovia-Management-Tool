@@ -1,7 +1,10 @@
 /** Exercise programme authority and progress through the actual course transactions. */
 import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
-import { learningProgramsResult } from "../src/features/learning/learning-program-schema.ts";
+import {
+  learningProgramClassProgressResult,
+  learningProgramsResult,
+} from "../src/features/learning/learning-program-schema.ts";
 import {
   configureAcademyCourseAccess,
   prepareAcademyInstallation,
@@ -34,7 +37,9 @@ await Promise.all(
         sessionOne,
         sessionTwo,
         program,
-      ] = Array.from({ length: 17 }, randomUUID);
+        classA,
+        classB,
+      ] = Array.from({ length: 19 }, randomUUID);
       const roles = [
         [admin, "admin"],
         [company, "client"],
@@ -99,6 +104,11 @@ await Promise.all(
       )
       insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at)
       select organisation_id,target_user_id,'active',id,${q(admin)},now() from accepted;
+      insert into private.course_classes(id,organisation_id,name) values
+        (${q(classA)},${q(org)},'Fictional Class A'),(${q(classB)},${q(org)},'Fictional Class B');
+      insert into private.course_class_assignments(course_id,organisation_id,class_id,version) values
+        (${q(first)},${q(org)},${q(classB)},1);
+
     `);
       if (internal)
         await actor(
@@ -111,6 +121,39 @@ await Promise.all(
     `;
       const invoke = (who, name, args, verb = "POST") =>
         actor(who, gateway(name, verb) + `select public.${name}(${args});`);
+      const classes = async (who = company) =>
+        learningProgramClassProgressResult.parse(
+          JSON.parse(
+            await invoke(
+              who,
+              "learning_program_class_progress",
+              q(program),
+              "GET",
+            ),
+          ),
+        );
+      const groupA = (
+        participants,
+        participantsCompleted,
+        modulesCompleted,
+      ) => ({
+        class_id: classA,
+        class_name: "Fictional Class A",
+        participants,
+        participants_completed: participantsCompleted,
+        module_slots: 2 * participants,
+        modules_completed: modulesCompleted,
+      });
+      const place = (who, learnerId, classId, version) =>
+        invoke(
+          who,
+          "set_company_participant_class",
+          `${q(org)},${q(learnerId)},${classId === null ? "null" : q(classId)},${version}`,
+        );
+      await assert.rejects(place(otherCompany, learner, classA, 1), /42501/);
+      await place(company, learner, classA, 1);
+      await place(admin, colleague, classB, 1);
+      await assert.rejects(place(company, learner, classB, 1), /PT409/);
       const view = async (who, target = program) =>
         learningProgramsResult.parse(
           JSON.parse(
@@ -158,6 +201,10 @@ await Promise.all(
       assert.equal(await save(company), program);
       assert.equal(await save(company), program);
       assert.equal((await view(company)).detail.version, 1);
+      assert.deepEqual(await classes(), []);
+      await assert.rejects(classes(otherCompany), /42501/);
+      await assert.rejects(classes(learner), /42501/);
+
       assert.equal((await view(otherCompany, null)).programs.length, 0);
       await assert.rejects(view(otherCompany), /42501/);
       await assert.rejects(view(learner), /42501/);
@@ -208,6 +255,8 @@ await Promise.all(
         ).id;
       };
       const firstReceipt = await complete(first, sessionOne);
+      assert.deepEqual(await classes(), [groupA(1, 0, 1)]);
+
       assert.equal((await progress()).steps[0].receipt_id, firstReceipt);
       assert.deepEqual(
         (await progress()).steps.map((step) => step.state),
@@ -219,10 +268,36 @@ await Promise.all(
       await start(learner, second);
       await start(learner, second);
       const secondReceipt = await complete(second, sessionTwo);
+      assert.deepEqual(await classes(admin), [groupA(1, 1, 2)]);
+      await enrol(company, colleague);
+      assert.deepEqual(await classes(), [
+        groupA(1, 1, 2),
+        {
+          class_id: classB,
+          class_name: "Fictional Class B",
+          participants: 1,
+          participants_completed: 0,
+          module_slots: 2,
+          modules_completed: 0,
+        },
+      ]);
+      await place(company, colleague, classA, 2);
+      assert.deepEqual(await classes(), [groupA(2, 1, 2)]);
+      const classOptions = (await view(company)).detail;
+      assert.equal(classOptions.classes.length, 2);
+      assert.deepEqual(
+        classOptions.roster.find((person) => person.id === colleague).placement,
+        { class_id: classA, version: 3 },
+      );
+      assert.equal((await view(learner)).detail.classes, null);
+      assert.equal((await view(learner)).detail.roster, null);
+
       assert.equal((await progress()).steps[1].receipt_id, secondReceipt);
       assert.ok((await progress()).completed_at);
       assert.equal(
-        (await view(company)).detail.roster[0].progress.completed,
+        (await view(company)).detail.roster.find(
+          (person) => person.id === learner,
+        ).progress.completed,
         2,
       );
       await invoke(
@@ -232,6 +307,10 @@ await Promise.all(
       );
       assert.equal((await progress()).completed_at, null);
       assert.equal((await progress()).completed, 1);
+      assert.deepEqual(await classes(), [groupA(2, 0, 1)]);
+      console.log(
+        `PASS ${edition} class progress follows current placements and valid receipts with no learner data or foreign access`,
+      );
       console.log(
         `PASS ${edition} canonical attendance and completion unlock the next module, and revocation withdraws the programme proof`,
       );
@@ -242,12 +321,14 @@ await Promise.all(
       await sql(`update private.company_participant_memberships set status='removed',removed_at=now()
       where organisation_id=${q(org)} and user_id=${q(learner)}`);
       await assert.rejects(view(learner), /42501/);
+      assert.deepEqual(await classes(), [groupA(1, 0, 0)]);
       if (internal) {
         await actor(
           admin,
           `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});`,
         );
         await assert.rejects(view(company), /42501/);
+        await assert.rejects(classes(), /42501/);
       }
       assert.equal(
         await sql(

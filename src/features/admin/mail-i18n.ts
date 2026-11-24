@@ -17,7 +17,7 @@ const de = {
     "Prüfe beim Mailanbieter, ob diese Nachricht bereits angenommen wurde.",
   correctedRecipient: "Empfängeradresse für die Einladung",
   verifiedRecipientHint:
-    "Kursmails gehen an die bestätigte Adresse des zugehörigen Kontos. Bei einem Tippfehler muss die betroffene Person ihre Konto-Adresse korrigieren und bestätigen.",
+    "Kursmails gehen an die bestätigte Adresse des zugehörigen Kontos. Die betroffene Person kann die Adresse in den eigenen Kontoeinstellungen unter „Zugangsdaten“ ändern. Sobald die Änderung bestätigt ist, kannst du diese Kursmail erneut anstoßen.",
   retryDelivery: "Zustellung erneut anstoßen",
   retrying: "Zustellung wird bearbeitet …",
   retryQueued: "Die Kursmail wurde erneut in die Warteschlange gestellt.",
@@ -112,7 +112,7 @@ const en: typeof de = {
     "Check with the mail provider whether this message was already accepted.",
   correctedRecipient: "Invitation recipient address",
   verifiedRecipientHint:
-    "Course mail goes to the verified address of the linked account. To fix a typo, the account holder must correct and confirm their email address.",
+    "Course mail goes to the verified address of the linked account. The account holder can change the address under Account credentials in their own settings. Once the change is confirmed, retry this course email here.",
   retryDelivery: "Retry delivery",
   retrying: "Processing delivery …",
   retryQueued: "Course mail was put back in the delivery queue.",

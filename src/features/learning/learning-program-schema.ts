@@ -38,6 +38,13 @@ const program = z.strictObject({
 const learnerEntry = option.extend({
   active: z.boolean(),
   progress: learningProgramProgress,
+  placement: z
+    .strictObject({
+      class_id: learningProgramId.nullable(),
+      version: z.number().int().positive(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const programDetail = program.extend({
@@ -52,6 +59,7 @@ const programDetail = program.extend({
   progress: learningProgramProgress.nullable(),
   learner_name: z.string().nullable(),
   roster: z.array(learnerEntry).nullable(),
+  classes: z.array(option).nullable().optional(),
 });
 export type LearningProgramDetail = z.infer<typeof programDetail>;
 
@@ -68,6 +76,20 @@ export const learningProgramsResult = z.strictObject({
   candidates: z.array(option.extend({ reference: z.string() })),
   detail: programDetail.nullable(),
   writable: z.boolean(),
+});
+
+export const learningProgramClassProgressResult = z.array(
+  z.strictObject({
+    class_id: learningProgramId,
+    class_name: z.string(),
+    participants: z.number().int().positive(),
+    participants_completed: z.number().int().nonnegative(),
+    module_slots: z.number().int().positive(),
+    modules_completed: z.number().int().nonnegative(),
+  }),
+);
+export const readLearningProgramClassProgressRequest = z.strictObject({
+  p_program_id: learningProgramId,
 });
 
 export const readLearningProgramsRequest = z.strictObject({
@@ -108,4 +130,14 @@ export const startLearningProgramCourseRequest = z.strictObject({
 });
 export type StartLearningProgramCourseRequest = z.infer<
   typeof startLearningProgramCourseRequest
+>;
+
+export const learningProgramClassPlacementRequest = z.strictObject({
+  p_organisation_id: learningProgramId,
+  p_user_id: learningProgramId,
+  p_class_id: learningProgramId.nullable(),
+  p_expected_version: z.number().int().positive(),
+});
+export type LearningProgramClassPlacementRequest = z.infer<
+  typeof learningProgramClassPlacementRequest
 >;
