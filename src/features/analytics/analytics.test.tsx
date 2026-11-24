@@ -65,6 +65,7 @@ function openAnalytics(
   canModel = false,
   path = "/analytics",
   scope?: "personal" | "staff",
+  grossForecast = false,
 ) {
   rpc.mockImplementation(
     (
@@ -73,6 +74,11 @@ function openAnalytics(
     ) => {
       const report = fakeReport(input?.p_scope ?? "");
       report.can_model_pipeline = canModel;
+      if (grossForecast && input?.p_scope === "staff") {
+        const amounts = report.months[0].currencies.EUR;
+        amounts.customer_cash = 340;
+        amounts.lecturer_cash = 140;
+      }
       if (input?.p_scope === "staff") {
         report.months.push({
           ...report.months[0],
@@ -88,31 +94,35 @@ function openAnalytics(
         until: "2027-01-30",
         time_zone: "Europe/Berlin",
         pipeline_probability: input?.p_pipeline_probability,
-        gross_authorized: false,
+        gross_authorized: grossForecast,
         payment_basis: "lecturer_invoice_payment_records",
         months: [
           {
             month: "2026-11-01",
             currency: "EUR",
             accepted_lecturer_cost: 0,
-            accepted_gross_known: null,
+            accepted_gross_known: grossForecast ? 1000 : null,
             accepted_margin_known: null,
-            unknown_gross_claims: null,
+            unknown_gross_claims: grossForecast ? 1 : null,
             pipeline_lecturer_cost_known: null,
             pipeline_cost_unknown_positions: 1,
-            pipeline_gross_known: null,
+            pipeline_gross_known: grossForecast
+              ? 400 * (input?.p_pipeline_probability ?? 0)
+              : null,
             lecturer_invoice_payments: 0,
           },
           {
             month: "2026-12-01",
             currency: "EUR",
             accepted_lecturer_cost: 0,
-            accepted_gross_known: null,
+            accepted_gross_known: grossForecast ? 500 : null,
             accepted_margin_known: null,
-            unknown_gross_claims: null,
+            unknown_gross_claims: grossForecast ? 0 : null,
             pipeline_lecturer_cost_known: 100,
             pipeline_cost_unknown_positions: 0,
-            pipeline_gross_known: null,
+            pipeline_gross_known: grossForecast
+              ? 200 * (input?.p_pipeline_probability ?? 0)
+              : null,
             lecturer_invoice_payments: 0,
           },
         ],
@@ -316,6 +326,56 @@ it("applies the finance scenario probability and hides the global scenario when 
   expect(
     screen.queryByRole("heading", { name: "Open work scenario" }),
   ).not.toBeInTheDocument();
+});
+
+it("combines confirmed and already weighted contract amounts without masking missing prices", async () => {
+  const user = userEvent.setup();
+  openAnalytics(
+    {
+      time_zone: "Europe/Berlin",
+      staff: true,
+      personal: false,
+      organisations: [],
+    },
+    true,
+    "/admin/finance/analytics",
+    "staff",
+    true,
+  );
+  const revenue = within(
+    (await screen.findByRole("heading", { name: "Expected revenue" })).closest(
+      "section",
+    )!,
+  );
+  expect(revenue.getByText("€1,800.00", { selector: "dd" })).toBeVisible();
+  expect(revenue.getByText(/one confirmed assignment/i)).toBeVisible();
+  const cash = within(
+    screen
+      .getByRole("heading", { name: "Recorded monthly payments" })
+      .closest("section")!,
+  );
+  await user.click(cash.getByText("Payments as a table"));
+  expect(cash.getByText("€340.00", { selector: "td" })).toBeVisible();
+  expect(cash.getByText("€140.00", { selector: "td" })).toBeVisible();
+  await user.click(revenue.getByText("Monthly values as a table"));
+  expect(revenue.getByText("€1,200.00", { selector: "td" })).toBeVisible();
+  const costs = within(
+    screen
+      .getByRole("heading", { name: "Monthly lecturer costs" })
+      .closest("section")!,
+  );
+  expect(costs.getByText("Estimate unavailable")).toBeVisible();
+  await user.selectOptions(
+    screen.getByLabelText("Acceptance probability"),
+    "0",
+  );
+  await waitFor(() => {
+    expect(
+      screen.getByText("Expected known revenue", { selector: "dt" })
+        .nextElementSibling,
+    ).toHaveTextContent("€1,500.00");
+  });
+  expect(screen.queryByText("Estimate unavailable")).toBeNull();
 });
 
 it("shows an operations or a finance comparison without reloading the scoped report", async () => {

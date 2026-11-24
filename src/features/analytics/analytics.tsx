@@ -14,7 +14,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { portalInternalEdition } from "../../lib/installation-brand";
 import { useAuth } from "../auth/auth-context";
-import { forecastQuery } from "../workbench/finance-api";
+import RevenueForecast from "./revenue-forecast";
 import { analyticsAccessQuery, analyticsReportQuery } from "./api";
 import {
   analyticsPreset,
@@ -22,19 +22,13 @@ import {
   analyticsUntil,
   type AnalyticsPeriod,
 } from "./period";
-import { ChartKey, ChartTable, LineChart, type ChartSeries } from "./charts";
 import { ReportPanels } from "./report-panels";
 import {
   analyticsScopes,
   type AnalyticsAccess,
   type AnalyticsCurrency,
 } from "./schema";
-import {
-  PeriodForm,
-  ReportingPeriodSelect,
-  ScenarioProbability,
-  Totals,
-} from "./report-ui";
+import { PeriodForm, ReportingPeriodSelect } from "./report-ui";
 import {
   hasLearningAnalytics,
   learningAnalyticsAccessQuery,
@@ -226,7 +220,7 @@ function AnalyticsView({
             scope === "staff" &&
             query.data.can_model_pipeline &&
             !organisation && (
-              <ScenarioPanel
+              <RevenueForecast
                 actor={actor}
                 zone={query.data.time_zone}
                 currency={selectedCurrency}
@@ -241,129 +235,6 @@ function AnalyticsView({
         />
       )}
     </>
-  );
-}
-
-function ScenarioPanel({
-  actor,
-  zone,
-  currency,
-}: {
-  actor: string;
-  zone: string;
-  currency: AnalyticsCurrency;
-}) {
-  const { t, i18n } = useTranslation("analytics");
-  const locale = i18n.resolvedLanguage ?? i18n.language;
-  const { format } = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-  });
-  const [probability, setProbability] = useState(0.5);
-  const [days, setDays] = useState(90);
-  const now = DateTime.now().setZone(zone);
-  const period = {
-    from: now.toISODate() ?? "",
-    until: now.plus({ days }).toISODate() ?? "",
-  };
-  const forecast = useQuery(
-    forecastQuery(
-      actor,
-      period,
-      probability,
-      Boolean(period.from && period.until),
-    ),
-  );
-  const months = forecast.data?.months.filter(
-    (month) => month.currency === currency,
-  );
-  const unknown =
-    months?.reduce(
-      (sum, row) => sum + row.pipeline_cost_unknown_positions,
-      0,
-    ) ?? 0;
-  const labels = (months ?? []).map(({ month }) =>
-    new Intl.DateTimeFormat(locale, {
-      month: "short",
-      year: "2-digit",
-      timeZone: "UTC",
-    }).format(new Date(`${month}T00:00:00Z`)),
-  );
-  const series: ChartSeries[] = [
-    {
-      name: t("scenarioFees"),
-      tone: "future",
-      values: (months ?? []).map((row) =>
-        probability === 0 ? 0 : row.pipeline_lecturer_cost_known,
-      ),
-    },
-    ...(forecast.data?.gross_authorized
-      ? [
-          {
-            name: t("scenarioGross"),
-            tone: "open" as const,
-            values: (months ?? []).map((row) => row.pipeline_gross_known),
-          },
-        ]
-      : []),
-  ];
-
-  return (
-    <section className="panel">
-      <h2>{t("scenario")}</h2>
-      <p className="analytics-muted">{t("scenarioBasis")}</p>
-      <div className="analytics-filters">
-        <ScenarioProbability value={probability} onChange={setProbability} />
-        <Field id="analytics-forecast-window" label={t("forecastWindow")}>
-          <select
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
-          >
-            {[30, 60, 90].map((count) => (
-              <option value={count} key={count}>
-                {t("forecastDays", { count })}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      {forecast.isPending && <Loading />}
-      {forecast.isError && <ErrorState retry={() => void forecast.refetch()} />}
-      {forecast.isSuccess &&
-        (labels.length ? (
-          <>
-            <Totals
-              items={series.map(({ name, values }) => ({
-                label: name,
-                value: values.some((value) => value === null)
-                  ? t("notAvailable")
-                  : format(
-                      values.reduce<number>(
-                        (sum, value) => sum + (value ?? 0),
-                        0,
-                      ),
-                    ),
-              }))}
-            />
-            <ChartKey series={series} />
-            <LineChart labels={labels} series={series} format={format} />
-            <ChartTable
-              title={t("data")}
-              month={t("month")}
-              labels={labels}
-              series={series}
-              format={format}
-            />
-          </>
-        ) : (
-          <p className="analytics-muted">{t("emptyScenario")}</p>
-        ))}
-      {probability > 0 && unknown > 0 && (
-        <p className="analytics-muted">
-          {t("unknownPipeline", { count: unknown })}
-        </p>
-      )}
-    </section>
   );
 }
 

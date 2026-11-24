@@ -102,6 +102,21 @@ export function ReportPanels({
       : availableSeries.filter(({ tone }) => tone === activePhase);
   const formatActivity = showingHours ? hours : numbers.format;
 
+  const cashSeries: ChartSeries[] = (
+    [
+      ["customerPaymentsIn", "past", "customer_cash"],
+      ["lecturerPaymentsOut", "open", "lecturer_cash"],
+    ] as const
+  )
+    .map(([name, tone, field]) => ({
+      name: t(name),
+      tone,
+      values: report.months.map((month) =>
+        month.history ? (month.currencies[currency]?.[field] ?? null) : null,
+      ),
+    }))
+    .filter(({ values }) => values.some((value) => value !== null));
+
   return (
     <>
       <div className="analytics-figures">
@@ -200,6 +215,24 @@ export function ReportPanels({
         format={money.format}
         table={table}
       />
+      {staff && cashSeries.length > 0 && (
+        <section className="panel">
+          <h2>{t("recordedPaymentsTrend")}</h2>
+          <p className="analytics-muted">{t("cashNote")}</p>
+          <ChartKey series={cashSeries} />
+          <LineChart
+            labels={labels}
+            series={cashSeries}
+            format={money.format}
+          />
+          <ChartTable
+            {...table}
+            title={t("cashTable")}
+            series={cashSeries}
+            format={money.format}
+          />
+        </section>
+      )}
       {scenario}
     </>
   );

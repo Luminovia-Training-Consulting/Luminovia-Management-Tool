@@ -4,7 +4,7 @@
  */
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -80,6 +80,8 @@ import { resolveInvoiceDueDate } from "./invoice-submission";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
+
+const RevenueForecast = lazy(() => import("../analytics/revenue-forecast"));
 
 /** Refresh live invoice projections after a confirmed financial mutation. */
 async function refreshInvoiceViews(client: QueryClient, actor: string) {
@@ -1171,6 +1173,11 @@ export function FinancePage({
         }
       />
       <div className="section-stack finance-overview">
+        {manager && (
+          <Suspense fallback={<Loading />}>
+            <RevenueForecast actor={actor} zone={zone} compact />
+          </Suspense>
+        )}
         {scope === "staff" && <RevenuePanel />}
         {mayRead && trendQuery.isSuccess && (
           <FinanceTrendChart

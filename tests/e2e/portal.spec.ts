@@ -133,13 +133,20 @@ test("staff analytics filters and forecast charts work across viewport sizes", a
     await expect(financial.getByText("Kumulierte Werte als Tabelle")).toBeVisible();
     const forecast = page.locator("section").filter({has: page.getByRole("heading", {name: "Vorschau für offene Aufträge", exact: true})});
     await forecast.getByLabel("Vorschauzeitraum").selectOption("30");
-    await expect(forecast.getByText("Monatswerte als Tabelle")).toBeVisible();
-    await expect(forecast.locator("canvas")).toBeVisible();
+    await expect(forecast.getByRole("heading", {name: "Erwarteter Umsatz", exact: true})).toBeVisible();
+    await expect(forecast.getByRole("heading", {name: "Dozentenkosten im Monatsverlauf", exact: true})).toBeVisible();
+    const revenue = forecast.getByRole("heading", {name: "Erwarteter Umsatz", exact: true}).locator("..");
+    await expect(revenue.getByText("Monatswerte als Tabelle")).toBeVisible();
+    await expect(revenue.locator("canvas")).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Erfasste Zahlungen im Monatsverlauf"})).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         await page.evaluate(() => document.documentElement.clientWidth + 1),
     );
     await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
     await expect(page.getByLabel("Zeitraum", {exact: true})).toHaveValue("around");
+    await page.goto("/admin/finance");
+    await expect(page.getByRole("heading", {name: "Erwarteter Umsatz", exact: true})).toBeVisible();
+    await expect(page.getByRole("link", {name: "Umsatz-Analytics öffnen"})).toHaveAttribute("href", "/admin/finance/analytics");
 });
 
 test("dual-role finance keeps personal and platform reports separate", async ({page}) => {
