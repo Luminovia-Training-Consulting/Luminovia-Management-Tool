@@ -265,15 +265,14 @@
   font-size: 13px;
 }
 
-.operations-course .operations-actions {
+.operations-course > :is(.operations-actions, .course-card-actions) {
   border-top: 1px solid var(--line);
   margin-top: 19px;
   padding-top: 13px;
 }
 
 .operations-course .button-ghost {
-  padding: 8px;
-  font-size: 11px;
+  padding-inline: 10px;
 }
 
 .operations-course .course-run-job-link {
@@ -592,4 +591,24 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.course-card-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.course-pagination > p {
+  margin: 0;
+}
+
+:is(
+    .operations-actions,
+    .operations-header-actions,
+    .company-detail-header .section-heading
+  )
+  > .button {
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

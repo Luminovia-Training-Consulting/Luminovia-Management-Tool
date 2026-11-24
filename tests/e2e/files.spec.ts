@@ -77,7 +77,7 @@ test("real private upload exposes authorized scan and current-version details, d
         .click();
     await expect(page.getByRole("dialog").getByText(/Version 1/)).toBeVisible();
     await page.getByRole("button", {name: "Schließen", exact: true}).click();
-    await row.getByLabel(`Dateiname: ${name}`, {exact: true}).click();
+    await row.getByLabel(`Weitere Aktionen für ${name}`, {exact: true}).click();
     await row.getByRole("button", {name: "Umbenennen", exact: true}).click();
     const renamed = `Kurs-${name}`;
     await page.getByLabel("Dateiname", {exact: true}).fill(renamed);
@@ -167,7 +167,7 @@ test("real private upload exposes authorized scan and current-version details, d
     const renamedRow = page
         .getByRole("listitem")
         .filter({has: page.getByText(renamed, {exact: true})});
-    await renamedRow.getByLabel(`Dateiname: ${renamed}`, {exact: true}).click();
+    await renamedRow.getByLabel(`Weitere Aktionen für ${renamed}`, {exact: true}).click();
     await renamedRow
         .getByRole("button", {name: "Archivieren", exact: true})
         .click();

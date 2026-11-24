@@ -341,7 +341,7 @@
 /* Existing scoped shortcuts become action tiles rather than another text-heavy toolbar. */
 .dashboard-page .dashboard-shortcuts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: 10px;
   align-items: stretch;
 }
@@ -371,18 +371,6 @@
   background: #0758e8;
   border-color: #0758e8;
   color: #fff;
-}
-
-@media (max-width: 760px) {
-  .dashboard-page .dashboard-shortcuts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 380px) {
-  .dashboard-page .dashboard-shortcuts {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* Keep operational summaries visible before secondary offers and finance on real accounts. */
@@ -549,4 +537,17 @@
 
 .dashboard-offers .job-meta {
   gap: 8px;
+}
+
+.dashboard-destination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.dashboard-destination-actions > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

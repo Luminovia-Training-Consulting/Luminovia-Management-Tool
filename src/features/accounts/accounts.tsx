@@ -38,6 +38,7 @@ import {
 } from "./api";
 import { ManagedProfileEditor } from "./managed-profile-editor";
 import "./i18n";
+import "./accounts.css";
 
 const ownEditableRoles: readonly AccountRole[] = [
   "admin",
@@ -383,30 +384,30 @@ function AccountsDirectory({
   if (accounts.isError)
     return <ErrorState retry={() => void accounts.refetch()} />;
   return (
-    <>
-      {canAssign && (
-        <div className="page-actions">
-          <Button
-            disabled={!online || !catalog.isSuccess}
-            onClick={() => setCreateOpen(true)}
-          >
-            {t("createTitle")}
-          </Button>
-        </div>
-      )}
+    <div className="section-stack">
       <section className="panel">
-        <Field id="account-search" label={t("search")}>
-          <input
-            id="account-search"
-            type="search"
-            maxLength={120}
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setOffset(0);
-            }}
-          />
-        </Field>
+        <div className="account-directory-toolbar">
+          <Field id="account-search" label={t("search")}>
+            <input
+              id="account-search"
+              type="search"
+              maxLength={120}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setOffset(0);
+              }}
+            />
+          </Field>
+          {canAssign && (
+            <Button
+              disabled={!online || !catalog.isSuccess}
+              onClick={() => setCreateOpen(true)}
+            >
+              {t("createTitle")}
+            </Button>
+          )}
+        </div>
         <p>{t("count", { count: accounts.data.total })}</p>
         <ul className="account-list">
           {accounts.data.items.map((person) => (
@@ -670,7 +671,7 @@ function AccountsDirectory({
           </Button>
         </div>
       </Dialog>
-    </>
+    </div>
   );
 }
 

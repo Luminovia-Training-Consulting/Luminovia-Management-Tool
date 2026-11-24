@@ -6,6 +6,7 @@ import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
+import "./account-settings.css";
 
 /** Change only the authenticated actor's email through Supabase Auth. */
 export function AccountSettings({
@@ -55,7 +56,7 @@ export function AccountSettings({
   }
 
   return (
-    <section className="panel">
+    <section className="panel account-settings-panel">
       <h2>{t("accountSettings")}</h2>
       <p>
         {t("currentEmail")}: {email}
@@ -78,7 +79,12 @@ export function AccountSettings({
             aria-invalid={result === "invalid"}
           />
         </Field>
-        <Button disabled={!online || busy}>{t("changeEmail")}</Button>
+        <div className="form-actions account-settings-actions">
+          <Button disabled={!online || busy}>{t("changeEmail")}</Button>
+          <Button asChild variant="secondary">
+            <Link to="/auth/password">{t("setPassword")}</Link>
+          </Button>
+        </div>
         {result && (
           <Notice
             kind={
@@ -97,12 +103,9 @@ export function AccountSettings({
           </Notice>
         )}
       </form>
-      <p>
-        <Link className="text-link" to="/auth/password">
-          {t("setPassword")}
-        </Link>
-      </p>
-      {separateProfile && <p>{t("accountNameHelp")}</p>}
+      {separateProfile && (
+        <p className="muted account-settings-help">{t("accountNameHelp")}</p>
+      )}
     </section>
   );
 }

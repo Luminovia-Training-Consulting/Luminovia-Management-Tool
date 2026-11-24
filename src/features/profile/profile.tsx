@@ -230,28 +230,32 @@ export function ProfilePage() {
           <strong>{t("luminoviaUserId")}:</strong>{" "}
           <code>{profile.data.luminovia_user_id}</code>
         </p>
-        {guestOnly && <ProfileForm profile={profile.data} />}
-        {participantOnly && (
-          <DisplayNameEditor
-            key={`name:${session!.user.id}`}
-            initial={profile.data.display_name}
-            save={async (display_name) => {
-              const { error } = await db().rpc("save_profile_display_name", {
-                p_display_name: display_name,
-              });
-              if (error) throw error;
-              await client.invalidateQueries({
-                queryKey: ["profile", session!.user.id],
-              });
-            }}
-          />
-        )}
-        <ProfileLanguage
-          key={session!.user.id}
-          actor={session!.user.id}
-          locale={profile.data.locale}
-        />
-        <AccountSettings email={session!.user.email ?? ""} />
+        <div className="section-stack profile-sections">
+          {guestOnly && <ProfileForm profile={profile.data} />}
+          {participantOnly && (
+            <DisplayNameEditor
+              key={`name:${session!.user.id}`}
+              initial={profile.data.display_name}
+              save={async (display_name) => {
+                const { error } = await db().rpc("save_profile_display_name", {
+                  p_display_name: display_name,
+                });
+                if (error) throw error;
+                await client.invalidateQueries({
+                  queryKey: ["profile", session!.user.id],
+                });
+              }}
+            />
+          )}
+          <div className="profile-account-grid">
+            <ProfileLanguage
+              key={session!.user.id}
+              actor={session!.user.id}
+              locale={profile.data.locale}
+            />
+            <AccountSettings email={session!.user.email ?? ""} />
+          </div>
+        </div>
         {participantOnly && (
           <Link className="text-link" to="/api/docs">
             {t("apiDocumentation")}
@@ -277,78 +281,89 @@ export function ProfilePage() {
         <strong>{t("luminoviaUserId")}:</strong>{" "}
         <code>{profile.data.luminovia_user_id}</code>
       </p>
-      <AvatarEditor name={profile.data.display_name} />
-      <ProfileLanguage
-        key={session!.user.id}
-        actor={session!.user.id}
-        locale={profile.data.locale}
-      />
-      <AccountSettings email={session!.user.email ?? ""} />
-      <div className="profile-layout">
-        <ProfileForm profile={profile.data} />
-        <section className="panel profile-expertise">
-          <h2 id="profile-expertise-heading">{t("expertise")}</h2>
-          <p>{t("expertiseHelp")}</p>
-          {permissions.data?.includes("taxonomy.manage") && (
-            <Button asChild variant="secondary">
-              <Link to="/topics">{t("manageExpertise")}</Link>
-            </Button>
+      <div className="section-stack profile-sections">
+        <AvatarEditor name={profile.data.display_name} />
+        <div className="profile-account-grid">
+          <ProfileLanguage
+            key={session!.user.id}
+            actor={session!.user.id}
+            locale={profile.data.locale}
+          />
+          <AccountSettings email={session!.user.email ?? ""} />
+        </div>
+        <div className="profile-layout">
+          <ProfileForm profile={profile.data} />
+          <section className="panel profile-expertise">
+            <h2 id="profile-expertise-heading">{t("expertise")}</h2>
+            <p>{t("expertiseHelp")}</p>
+            {permissions.data?.includes("taxonomy.manage") && (
+              <Button asChild variant="secondary">
+                <Link to="/topics">{t("manageExpertise")}</Link>
+              </Button>
+            )}
+            <div
+              className="expertise-list"
+              role="region"
+              aria-labelledby="profile-expertise-heading"
+              tabIndex={0}
+            >
+              {selectableTopics(topics.data ?? [], [...selectedTopicIds])
+                .sort(
+                  (a, b) =>
+                    Number(isTeachingSubject(b.id)) -
+                    Number(isTeachingSubject(a.id)),
+                )
+                .map((topic) => {
+                  const selected = selectedTopicIds.has(topic.id);
+                  return (
+                    <label className="expertise-option" key={topic.id}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={!online || edit.isPending}
+                        onChange={(e) =>
+                          edit.mutate({
+                            topic: topic.id,
+                            add: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        <strong>
+                          {i18n.language.startsWith("de")
+                            ? topic.label_de
+                            : topic.label_en}
+                          {topic.archived_at && (
+                            <> ({t("taxonomy:archived")})</>
+                          )}
+                        </strong>
+                        {selected && (
+                          <small>{t("selfDeclaredExpertise")}</small>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+            </div>
+            {edit.isError && <Notice kind="error">{t("error")}</Notice>}
+          </section>
+        </div>
+        <OwnProfileDetails />
+        <div className="profile-privacy-grid">
+          <OwnContactVisibility actor={session!.user.id} />
+          <OwnTopicVisibility actor={session!.user.id} />
+        </div>
+        <OwnQualificationPassport
+          key={session!.user.id}
+          actor={session!.user.id}
+        />
+        <ProfileEvidence ownerId={session!.user.id} />
+        <OwnQualificationEvidence
+          topics={(topics.data ?? []).filter(({ id }) =>
+            selectedTopicIds.has(id),
           )}
-          <div
-            className="expertise-list"
-            role="region"
-            aria-labelledby="profile-expertise-heading"
-            tabIndex={0}
-          >
-            {selectableTopics(topics.data ?? [], [...selectedTopicIds])
-              .sort(
-                (a, b) =>
-                  Number(isTeachingSubject(b.id)) -
-                  Number(isTeachingSubject(a.id)),
-              )
-              .map((topic) => {
-                const selected = selectedTopicIds.has(topic.id);
-                return (
-                  <label className="expertise-option" key={topic.id}>
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      disabled={!online || edit.isPending}
-                      onChange={(e) =>
-                        edit.mutate({ topic: topic.id, add: e.target.checked })
-                      }
-                    />
-                    <span>
-                      <strong>
-                        {i18n.language.startsWith("de")
-                          ? topic.label_de
-                          : topic.label_en}
-                        {topic.archived_at && <> ({t("taxonomy:archived")})</>}
-                      </strong>
-                      {selected && <small>{t("selfDeclaredExpertise")}</small>}
-                    </span>
-                  </label>
-                );
-              })}
-          </div>
-          {edit.isError && <Notice kind="error">{t("error")}</Notice>}
-        </section>
+        />
       </div>
-      <OwnProfileDetails />
-      <div className="profile-privacy-grid">
-        <OwnContactVisibility actor={session!.user.id} />
-        <OwnTopicVisibility actor={session!.user.id} />
-      </div>
-      <OwnQualificationPassport
-        key={session!.user.id}
-        actor={session!.user.id}
-      />
-      <ProfileEvidence ownerId={session!.user.id} />
-      <OwnQualificationEvidence
-        topics={(topics.data ?? []).filter(({ id }) =>
-          selectedTopicIds.has(id),
-        )}
-      />
     </>
   );
 }

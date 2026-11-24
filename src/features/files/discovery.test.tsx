@@ -512,7 +512,7 @@ it("restores only the open menu ID when its authorized row returns after the rea
       target: { value: "visible-filter" },
     });
     const summary = screen.getByLabelText(
-      `Dateiname: ${fixture.initial.original_name}`,
+      `Weitere Aktionen für ${fixture.initial.original_name}`,
     );
     fireEvent.click(summary);
     expect(summary.closest("details")).toHaveAttribute("open");
@@ -535,7 +535,7 @@ it("restores only the open menu ID when its authorized row returns after the rea
     });
     await drainTargetQueries();
     const returnedSummary = screen.getByLabelText(
-      `Dateiname: ${fixture.initial.original_name}`,
+      `Weitere Aktionen für ${fixture.initial.original_name}`,
     );
     expect(returnedSummary).not.toBe(summary);
     expect(returnedSummary.closest("details")).toHaveAttribute("open");
@@ -675,8 +675,12 @@ it("keeps only one menu open and ignores delayed native toggle events from the p
   );
   mount();
   await screen.findByText(item().original_name);
-  const first = screen.getByLabelText(`Dateiname: ${item().original_name}`);
-  const second = screen.getByLabelText(`Dateiname: ${item(1).original_name}`);
+  const first = screen.getByLabelText(
+    `Weitere Aktionen für ${item().original_name}`,
+  );
+  const second = screen.getByLabelText(
+    `Weitere Aktionen für ${item(1).original_name}`,
+  );
   fireEvent.click(first);
   expect(first.closest("details")).toHaveAttribute("open");
   fireEvent.click(second);
@@ -715,7 +719,9 @@ it("discards a denied target's open menu before a genuinely renewed list grant r
   const { client } = mount();
   await screen.findByText(item().original_name);
   const user = userEvent.setup();
-  await user.click(screen.getByLabelText(`Dateiname: ${item().original_name}`));
+  await user.click(
+    screen.getByLabelText(`Weitere Aktionen für ${item().original_name}`),
+  );
   await user.click(screen.getByRole("button", { name: "Archivieren" }));
   const confirm = within(await screen.findByRole("dialog")).getByRole(
     "button",
@@ -731,7 +737,7 @@ it("discards a denied target's open menu before a genuinely renewed list grant r
   });
   await act(() => client.invalidateQueries({ queryKey: ["documents"] }));
   const restored = await screen.findByLabelText(
-    `Dateiname: ${item().original_name}`,
+    `Weitere Aktionen für ${item().original_name}`,
   );
   expect(restored.closest("details")).not.toHaveAttribute("open");
   expect(
@@ -753,7 +759,9 @@ it("keeps the identical archive confirmation across pending and empty filter res
       target: { value: "visible-filter" },
     });
     fireEvent.click(
-      screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+      screen.getByLabelText(
+        `Weitere Aktionen für ${fixture.initial.original_name}`,
+      ),
     );
     fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
     const dialog = screen.getByRole("dialog");
@@ -904,7 +912,9 @@ it.each(["archive", "organise"] as const)(
       });
       if (mode === "archive") {
         fireEvent.click(
-          screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+          screen.getByLabelText(
+            `Weitere Aktionen für ${fixture.initial.original_name}`,
+          ),
         );
         fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
       } else {
@@ -949,7 +959,9 @@ it("hides the held archive dialog on a malformed filtered response without sendi
       target: { value: "visible-filter" },
     });
     fireEvent.click(
-      screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+      screen.getByLabelText(
+        `Weitere Aktionen für ${fixture.initial.original_name}`,
+      ),
     );
     fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
     await advanceFilter();
@@ -975,7 +987,7 @@ it("hides the held archive dialog on a malformed filtered response without sendi
 
 function openCaptured(mode: "archive" | "organise", filename: string) {
   if (mode === "archive") {
-    fireEvent.click(screen.getByLabelText(`Dateiname: ${filename}`));
+    fireEvent.click(screen.getByLabelText(`Weitere Aktionen für ${filename}`));
     const row = screen.getByText(filename).closest("li")!;
     fireEvent.click(within(row).getByRole("button", { name: "Archivieren" }));
   } else {
@@ -1388,7 +1400,7 @@ it.each(["denied", "confirmed"] as const)(
       await drainTargetQueries();
       fireEvent.click(within(old).getByRole("button", { name: "Schließen" }));
       fireEvent.click(
-        screen.getByLabelText(`Dateiname: ${second.original_name}`),
+        screen.getByLabelText(`Weitere Aktionen für ${second.original_name}`),
       );
       const row = screen.getByText(second.original_name).closest("li")!;
       fireEvent.click(within(row).getByRole("button", { name: "Umbenennen" }));
