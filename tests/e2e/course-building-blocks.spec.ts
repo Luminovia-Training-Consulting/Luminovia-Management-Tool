@@ -177,9 +177,11 @@ test("Course source template plans ten real sessions and one linked net-only tea
     expect(run.template_id).toBe(block.default_template_id);
     expect(run.course_sessions).toHaveLength(10);
     expect(run.organisation_id).toBeNull();
+    await page.getByRole("searchbox", {name: "Suchen", exact: true}).fill(venue);
     const courseCard = page.locator("article").filter({
         has: page.getByRole("heading", {name: /LPC3/}),
     });
+    await courseCard.getByText("Weitere Aktionen", {exact: true}).click();
     await courseCard.getByRole("button", {name: "Unternehmen für Ausschreibung zuordnen", exact: true}).click();
     const companyDialog = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
     await expect(companyDialog.getByLabel("Organisation", {exact: true})).toBeFocused();

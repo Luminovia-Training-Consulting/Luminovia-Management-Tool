@@ -11,7 +11,11 @@ import {
   calendarColorsQuery,
   defaultCalendarColors,
 } from "./calendar-color-api";
-import { orgQuery, runsQuery, templatesQuery } from "../operations/data";
+import {
+  calendarCourseRunsQuery,
+  orgQuery,
+  templatesQuery,
+} from "../operations/data";
 import {
   memo,
   useCallback,
@@ -625,12 +629,6 @@ export function CalendarPage() {
   );
   const jobs = useQuery(jobOptions);
   const [global, setGlobal] = useState(false);
-  const publicRuns = useQuery({
-    ...runsQuery(session!.user.id),
-    enabled: global,
-    refetchOnWindowFocus: "always",
-    refetchInterval: 15000,
-  });
   const templates = useQuery({
     ...templatesQuery(session!.user.id),
     enabled: global,
@@ -645,6 +643,12 @@ export function CalendarPage() {
   const [range, setRange] = useState(() => {
     const start = DateTime.utc().startOf("month").minus({ days: 7 });
     return { from: start.toISO()!, to: start.plus({ days: 49 }).toISO()! };
+  });
+  const publicRuns = useQuery({
+    ...calendarCourseRunsQuery(actor, range.from, range.to),
+    enabled: global,
+    refetchOnWindowFocus: "always",
+    refetchInterval: 15000,
   });
   const globals = useInfiniteQuery({
     ...globalEventsQuery(session!.user.id, range.from, range.to),
@@ -826,51 +830,49 @@ export function CalendarPage() {
             ...(publicRuns.isError || templates.isError
               ? []
               : (publicRuns.data ?? [])
-            )
-              .filter((run) => run.published && !run.archived_at)
-              .flatMap((run) => {
-                const template = templatesById.get(run.template_id);
-                const customerCreated = Boolean(run.organisation_id);
-                const customerName =
-                  !organisations.isError && run.organisation_id
-                    ? (organisationsById.get(run.organisation_id) ?? "")
-                    : "";
-                const courseTopics = topics.isError
-                  ? []
-                  : (template?.course_template_topics ?? []).flatMap(
-                      ({ topic_id }) => {
-                        const topic = topicsById.get(topic_id);
-                        return topic
-                          ? [
-                              {
-                                id: topic.id,
-                                label_de: topic.label_de,
-                                label_en: topic.label_en,
-                              },
-                            ]
-                          : [];
-                      },
-                    );
-                return run.course_sessions.map((s) => ({
-                  id: `course-${s.id}`,
-                  title: template?.title ?? t("courses"),
-                  start: s.starts_at,
-                  end: s.ends_at,
-                  display: "block",
-                  color: customerCreated
-                    ? colors.customer_event_color
-                    : "#326c58",
-                  textColor: customerCreated ? "#17283a" : "#ffffff",
-                  url: `/courses?run=${run.id}`,
-                  extendedProps: {
-                    kind: "course",
-                    customerCreated,
-                    customerKey: run.organisation_id ?? "",
-                    customerName,
-                    topics: courseTopics,
-                  },
-                }));
-              }),
+            ).flatMap((run) => {
+              const template = templatesById.get(run.template_id);
+              const customerCreated = Boolean(run.organisation_id);
+              const customerName =
+                !organisations.isError && run.organisation_id
+                  ? (organisationsById.get(run.organisation_id) ?? "")
+                  : "";
+              const courseTopics = topics.isError
+                ? []
+                : (template?.course_template_topics ?? []).flatMap(
+                    ({ topic_id }) => {
+                      const topic = topicsById.get(topic_id);
+                      return topic
+                        ? [
+                            {
+                              id: topic.id,
+                              label_de: topic.label_de,
+                              label_en: topic.label_en,
+                            },
+                          ]
+                        : [];
+                    },
+                  );
+              return run.course_sessions.map((s) => ({
+                id: `course-${s.id}`,
+                title: template?.title ?? t("courses"),
+                start: s.starts_at,
+                end: s.ends_at,
+                display: "block",
+                color: customerCreated
+                  ? colors.customer_event_color
+                  : "#326c58",
+                textColor: customerCreated ? "#17283a" : "#ffffff",
+                url: `/courses?run=${run.id}`,
+                extendedProps: {
+                  kind: "course",
+                  customerCreated,
+                  customerKey: run.organisation_id ?? "",
+                  customerName,
+                  topics: courseTopics,
+                },
+              }));
+            }),
           ]
         : [
             ...(personal.data ?? []).map((e) => ({

@@ -22,6 +22,7 @@ import { CoursesPage } from "./courses";
 import type { ChangeCandidate } from "../changes/api";
 import type { JobLifecycle } from "../jobs/lifecycle-api";
 import {
+  buildingBlockPlanningQuery,
   runsQuery,
   type BuildingBlock,
   type CourseRun,
@@ -148,9 +149,10 @@ function renderCourses({
   for (const [name, value] of [
     ["templates", templates],
     ["organisations", organisations],
-    ["building-blocks", blocks],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
+  if (blocks.length)
+    client.setQueryData(buildingBlockPlanningQuery(actor).queryKey, blocks);
   if (!coldStart) {
     client.setQueryData(
       runsQuery(
@@ -245,6 +247,7 @@ beforeEach(async () => {
     const query = {
       select: () => query,
       order: () => query,
+      limit: () => query,
       eq: () => query,
       range: (from: number, to: number) => ({
         abortSignal: async () => ({
@@ -1695,18 +1698,10 @@ describe("course form failure and confirmation boundaries", () => {
       blocks: [
         {
           id: blockId,
-          provider: "Fictional",
           code: "DEMO",
-          title: "Fictional block",
-          description: "Fictional curriculum",
-          syllabus: "Fictional content",
-          prerequisites: "",
           duration_days: 1,
           duration_hours: 1,
-          theory_percent: null,
-          practice_percent: null,
           notes: "",
-          default_template_id: templateId,
           building_block_sources: [],
         },
       ],
@@ -1769,6 +1764,7 @@ it("waits for permissions before requesting the selected course projection", asy
 
   expect(state.rpc).toHaveBeenCalledWith("get_my_permissions");
   expect(state.from).not.toHaveBeenCalledWith("course_runs");
+  expect(state.from).not.toHaveBeenCalledWith("building_blocks");
 
   await act(async () => {
     finishPermissions({
@@ -1784,6 +1780,30 @@ it("waits for permissions before requesting the selected course projection", asy
   ).toHaveLength(1);
   expect(client.getQueryData(runsQuery(actor, false).queryKey)).toBeUndefined();
   expect(client.getQueryData(runsQuery(actor, true).queryKey)).toEqual([run]);
+  expect(state.from).not.toHaveBeenCalledWith("building_blocks");
+});
+
+it("loads the active course tab without fetching the other catalogue", async () => {
+  state.rpc.mockResolvedValueOnce({ data: ["courses.manage"], error: null });
+  renderCourses({
+    path: "/courses?tab=templates",
+    coldStart: true,
+    runs: [run],
+  });
+
+  expect(
+    await screen.findByRole("heading", { name: template.title }),
+  ).toBeVisible();
+  expect(state.from).toHaveBeenCalledWith("building_blocks");
+  expect(state.from).not.toHaveBeenCalledWith("course_runs");
+
+  await userEvent.click(
+    screen.getByRole("button", { name: /^Durchführungen$/ }),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Kurs ansehen" }),
+  ).toBeVisible();
+  expect(state.from).toHaveBeenCalledWith("course_runs");
 });
 
 it("appends batches and still searches the entire course catalogue", async () => {

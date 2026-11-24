@@ -85,8 +85,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import {
-  type BuildingBlock,
-  buildingBlocksQuery,
+  buildingBlockPlanningQuery,
   type CourseRun,
   type Organisation,
   orgQuery,
@@ -94,7 +93,7 @@ import {
   type Template,
   templatesQuery,
 } from "./data";
-import { BuildingBlockSources, CourseRunOfferLink } from "./building-blocks";
+import { BuildingBlockReference, CourseRunOfferLink } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
 import { CourseSeriesForm } from "./course-series";
 
@@ -352,8 +351,8 @@ function RunForm({
   initialTemplateId,
   companyOnly,
   focusTarget,
-  blocks,
   canPrepareOffer,
+  canReadBlockPlanning,
   onDone,
   onBusy,
 }: {
@@ -363,8 +362,8 @@ function RunForm({
   initialTemplateId?: string;
   companyOnly: boolean;
   focusTarget?: "schedule" | "organisation";
-  blocks: BuildingBlock[];
   canPrepareOffer: boolean;
+  canReadBlockPlanning: boolean;
   onDone: (
     result: "template" | "run",
     offerRun?: string,
@@ -477,9 +476,16 @@ function RunForm({
   const currentOrganisation = organisations.find(
     (item) => item.id === original?.organisation_id,
   );
-  const selectedBlock = blocks.find(
-    (item) => item.id === selectedTemplate?.building_block_id,
-  );
+  const blockPlanning = useQuery({
+    ...buildingBlockPlanningQuery(actor),
+    enabled:
+      canReadBlockPlanning && Boolean(selectedTemplate?.building_block_id),
+  });
+  const selectedBlock = canReadBlockPlanning
+    ? blockPlanning.data?.find(
+        (item) => item.id === selectedTemplate?.building_block_id,
+      )
+    : undefined;
   const needsContent = !original && !selectedTemplateId;
   const linkedJobs = original?.jobs ?? [];
   const linked = linkedJobs.length > 0;
@@ -912,6 +918,11 @@ function RunForm({
               selectedTopicIds={topicIds}
             />
           ))}
+        {canReadBlockPlanning &&
+          selectedTemplate?.building_block_id &&
+          blockPlanning.isError && (
+            <ErrorState retry={() => void blockPlanning.refetch()} />
+          )}
         {selectedBlock && canEditSchedule && (
           <fieldset className="operations-schedule-planner">
             <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
@@ -1218,14 +1229,10 @@ function RunForm({
 function courseOfferState(run: CourseRun, now: number) {
   const liveOffers =
     run.jobs?.filter(
-      ({ status, claim_deadline, job_sessions }) =>
+      ({ status, claim_deadline, first_session }) =>
         status === "published" &&
         (!claim_deadline || Date.parse(claim_deadline) > now) &&
-        (!job_sessions ||
-          (job_sessions.length > 0 &&
-            job_sessions.every(
-              ({ starts_at }) => Date.parse(starts_at) > now,
-            ))),
+        (!first_session || Date.parse(first_session[0]?.starts_at ?? "") > now),
     ) ?? [];
   const jobs = run.jobs ?? [];
   const closedReason = jobs.some(({ status }) => status === "filled")
@@ -1238,11 +1245,9 @@ function courseOfferState(run: CourseRun, now: number) {
         )
       ? "marketplaceExpired"
       : jobs.some(
-            ({ status, job_sessions }) =>
+            ({ status, first_session }) =>
               status === "published" &&
-              job_sessions?.some(
-                ({ starts_at }) => Date.parse(starts_at) <= now,
-              ),
+              Date.parse(first_session?.[0]?.starts_at ?? "") <= now,
           )
         ? "marketplaceStarted"
         : jobs.some(({ status }) => status === "draft")
@@ -1299,17 +1304,8 @@ export function CoursesPage() {
     ...clientOrganisationsQuery(actor),
     enabled: Boolean(companyViewer),
   });
-  const runs = useQuery({
-    ...runsQuery(actor, canPrepareOffer),
-    // Choose the projection once permissions resolve. Otherwise staff first
-    // download the basic catalogue and then request it again with assignments.
-    enabled: permissions.isSuccess,
-    refetchInterval: manage ? false : 10000,
-    refetchOnMount: manage ? true : "always",
-  });
   const orgs = useQuery(orgQuery(actor));
   const topics = useQuery(topicsQuery);
-  const blocks = useQuery({ ...buildingBlocksQuery(actor), enabled: manage });
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
@@ -1335,6 +1331,20 @@ export function CoursesPage() {
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
       : "runs";
+  const needsRuns =
+    tab === "runs" || params.has("run") || params.has("template");
+  const runs = useQuery({
+    ...runsQuery(actor, canPrepareOffer),
+    // Choose the projection once permissions resolve. Otherwise staff first
+    // download the basic catalogue and then request it again with assignments.
+    enabled: permissions.isSuccess && needsRuns,
+    refetchInterval: manage ? false : 10000,
+    refetchOnMount: manage ? true : "always",
+  });
+  const blockPlanning = useQuery({
+    ...buildingBlockPlanningQuery(actor),
+    enabled: manage && tab === "templates",
+  });
   const batchSize = 24;
   const listKey = JSON.stringify(
     tab === "runs"
@@ -1608,8 +1618,8 @@ export function CoursesPage() {
     [templates.data, canManageTemplate],
   );
   const blockCodes = useMemo(
-    () => new Map(blocks.data?.map((block) => [block.id, block.code])),
-    [blocks.data],
+    () => new Map(blockPlanning.data?.map((block) => [block.id, block.code])),
+    [blockPlanning.data],
   );
   const filteredTemplates = useMemo(
     () =>
@@ -1630,40 +1640,37 @@ export function CoursesPage() {
   );
   if (
     templates.isError ||
-    runs.isError ||
+    (needsRuns && runs.isError) ||
     orgs.isError ||
     topics.isError ||
-    permissions.isError ||
-    (manage && blocks.isError)
+    permissions.isError
   )
     return (
       <ErrorState
         retry={() => {
           void templates.refetch();
-          if (permissions.isSuccess) void runs.refetch();
+          if (needsRuns && permissions.isSuccess) void runs.refetch();
           void orgs.refetch();
           void topics.refetch();
           void permissions.refetch();
-          if (manage) void blocks.refetch();
         }}
       />
     );
   if (
     templates.isPending ||
-    runs.isPending ||
+    (needsRuns && runs.isPending) ||
     orgs.isPending ||
     topics.isPending ||
-    permissions.isPending ||
-    (manage && blocks.isPending)
+    permissions.isPending
   )
     return <Loading />;
   const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
-  const offerStatus = (run: CourseRun, compact = false) => {
-    const { liveOffers, closedReason } = courseOfferState(
-      run,
-      runs.dataUpdatedAt,
-    );
+  const offerStatus = (
+    run: CourseRun,
+    { liveOffers, closedReason }: ReturnType<typeof courseOfferState>,
+    compact = false,
+  ) => {
     const lecturerNames = canPrepareOffer
       ? Array.from(
           new Set(
@@ -1775,9 +1782,6 @@ export function CoursesPage() {
       </Button>
     );
   };
-  const templateBlock = blocks.data?.find(
-    (block) => block.id === templateDetail?.building_block_id,
-  );
   const total = tab === "runs" ? filteredRuns.length : filteredTemplates.length;
   const shownCount = Math.min(visibleList.count, total);
   const canPlanSeries =
@@ -2091,10 +2095,13 @@ export function CoursesPage() {
           </details>
         )}
       </section>
+      {manage && tab === "templates" && blockPlanning.isError && (
+        <ErrorState retry={() => void blockPlanning.refetch()} />
+      )}
       {message && (
         <Notice>
           {message}
-          {savedRun && runs.data.some(({ id }) => id === savedRun) && (
+          {savedRun && runs.data?.some(({ id }) => id === savedRun) && (
             <>
               {" "}
               <Link to={`/courses?run=${encodeURIComponent(savedRun)}`}>
@@ -2126,10 +2133,8 @@ export function CoursesPage() {
           {filteredRuns.slice(0, shownCount).map(({ run, status }) => {
             const template = findTemplate(run);
             const jobs = run.jobs ?? [];
-            const { liveOffers, closedReason } = courseOfferState(
-              run,
-              runs.dataUpdatedAt,
-            );
+            const offers = courseOfferState(run, runs.dataUpdatedAt);
+            const { liveOffers, closedReason } = offers;
             const customer =
               organisationName(run.organisation_id) ?? t("noCustomer");
             return (
@@ -2183,7 +2188,7 @@ export function CoursesPage() {
                   </div>
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
-                {manage && offerStatus(run, true)}
+                {manage && offerStatus(run, offers, true)}
                 {canPrepareOffer &&
                   assignmentsByRun
                     .get(run.id)
@@ -2482,8 +2487,8 @@ export function CoursesPage() {
           initialTemplateId={initialTemplateId}
           companyOnly={!manage}
           focusTarget={focusTarget}
-          blocks={blocks.data ?? []}
           canPrepareOffer={canPrepareOffer}
+          canReadBlockPlanning={manage}
           onBusy={setRunSaving}
           onDone={(result, offerRun, savedId) => {
             setRunEdit(undefined);
@@ -2551,7 +2556,7 @@ export function CoursesPage() {
                     kind="course_template"
                     id={templateDetail.id}
                     label={templateDetail.title}
-                    linkedRuns={runs.data
+                    linkedRuns={(runs.data ?? [])
                       .filter((run) => run.template_id === templateDetail.id)
                       .map((run) => ({
                         id: run.id,
@@ -2567,9 +2572,9 @@ export function CoursesPage() {
                 )}
               </div>
             )}
-            {manage && templateBlock && (
-              <BuildingBlockSources
-                block={templateBlock}
+            {manage && templateDetail.building_block_id && (
+              <BuildingBlockReference
+                buildingBlockId={templateDetail.building_block_id}
                 sourceId={templateDetail.building_block_source_id}
               />
             )}
@@ -2675,7 +2680,10 @@ export function CoursesPage() {
             </div>
             {manage && (
               <div className="course-marketplace-state">
-                {offerStatus(detail)}
+                {offerStatus(
+                  detail,
+                  courseOfferState(detail, runs.dataUpdatedAt),
+                )}
                 {marketplaceAction(detail)}
               </div>
             )}

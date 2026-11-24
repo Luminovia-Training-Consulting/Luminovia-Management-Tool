@@ -439,6 +439,8 @@ try {
             let record = (await rows(a, "invoice_records"))[0];
             assert.equal(Number(record.total_amount), 300);
             assert.equal(record.currency, "EUR");
+            assert.equal(Number(record.paid_amount), 0);
+            assert.equal(record.paid_at, null);
             await assert.rejects(
                 value(a, "submit_invoice", [
                     "Duplicate",
@@ -505,6 +507,7 @@ try {
                 "aal1",
             );
             const paidAt = new Date(Date.now() - 1000).toISOString(),
+                earlierPaidAt = new Date(Date.parse(paidAt) - 60000).toISOString(),
                 key = randomUUID();
             const payment = await value(
                 admin,
@@ -523,6 +526,7 @@ try {
             );
             let record = (await rows(a, "invoice_records"))[0];
             assert.equal(Number(record.paid_amount), 100);
+            assert.equal(Date.parse(record.paid_at), Date.parse(paidAt));
             assert.equal(record.status, "approved");
             await assert.rejects(
                 value(
@@ -545,12 +549,13 @@ try {
             await value(
                 admin,
                 "record_invoice_payment",
-                [invoice, 200, paidAt, "Final payment", randomUUID()],
+                [invoice, 200, earlierPaidAt, "Final payment", randomUUID()],
                 "aal1",
             );
             record = (await rows(a, "invoice_records"))[0];
             assert.equal(record.status, "paid");
             assert.equal(Number(record.paid_amount), 300);
+            assert.equal(Date.parse(record.paid_at), Date.parse(paidAt));
             assert.equal(
                 (await rows(a, "finance_earnings")).find((r) => r.claim_id === claim1)
                     .stage,
@@ -569,6 +574,7 @@ try {
             record = (await rows(a, "invoice_records"))[0];
             assert.equal(record.status, "approved");
             assert.equal(Number(record.paid_amount), 200);
+            assert.equal(Date.parse(record.paid_at), Date.parse(earlierPaidAt));
             assert.equal(
                 (await rows(a, "invoice_payments", [invoice])).filter(
                     (r) => r.voided_at,

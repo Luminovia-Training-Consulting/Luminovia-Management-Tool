@@ -5,7 +5,14 @@
 import { FinanceRows } from "./finance-rows";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
-import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useDeferredValue,
+  useMemo,
+  useState,
+} from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -784,17 +791,19 @@ function ReviewInvoice({
 }
 
 /** Combine the confirmed invoice, exact PDF version, review state and applicable payment actions. */
-function InvoiceCard({
+const InvoiceCard = memo(function InvoiceCard({
   actor,
   invoice,
   manager,
   zone,
+  today,
   series,
 }: {
   actor: string;
   invoice: InvoiceRecord;
   manager: boolean;
   zone: string;
+  today: string;
   series?: InvoiceSeriesRecord;
 }) {
   const { t, i18n } = useTranslation("commercial");
@@ -804,7 +813,6 @@ function InvoiceCard({
   const [showHistory, setShowHistory] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const today = DateTime.now().setZone(zone).toISODate()!;
   const dueState = invoiceDueState(invoice, today);
   const fullyCredited =
     series && invoice.status === "paid" && Number(invoice.total_amount) === 0;
@@ -979,7 +987,7 @@ function InvoiceCard({
       </Dialog>
     </article>
   );
-}
+});
 
 /** Render authorized fee records with original currency and confirmed billing state. */
 function EarningsTable({
@@ -1496,18 +1504,33 @@ export function FinancePage({
               </Field>
             </div>
             {visibleInvoices.length ? (
-              <div className="commercial-contract-grid">
-                {visibleInvoices.map((invoice) => (
-                  <InvoiceCard
-                    key={invoice.id}
-                    actor={actor}
-                    invoice={invoice}
-                    manager={manager}
-                    zone={zone}
-                    series={seriesByInvoice.get(invoice.id)}
-                  />
-                ))}
-              </div>
+              <FinanceRows
+                key={JSON.stringify([
+                  needle,
+                  invoiceStatus,
+                  invoiceLabel,
+                  invoiceCurrency,
+                ])}
+                label={t("invoices")}
+                total={visibleInvoices.length}
+                scroll={false}
+              >
+                {(shown) => (
+                  <div className="commercial-contract-grid">
+                    {visibleInvoices.slice(0, shown).map((invoice) => (
+                      <InvoiceCard
+                        key={invoice.id}
+                        actor={actor}
+                        invoice={invoice}
+                        manager={manager}
+                        zone={zone}
+                        today={today}
+                        series={seriesByInvoice.get(invoice.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </FinanceRows>
             ) : (
               <div className="panel commercial-empty">
                 <Receipt size={34} />

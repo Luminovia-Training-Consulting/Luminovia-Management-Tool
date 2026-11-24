@@ -17,7 +17,7 @@ import { ErrorState, Loading, Notice } from "../../components/common";
 import {
   type BuildingBlock,
   type BuildingBlockSource,
-  buildingBlocksQuery,
+  buildingBlockQuery,
 } from "./data";
 import "./i18n";
 import "./building-blocks.css";
@@ -46,11 +46,12 @@ export function BuildingBlockReference({
       templateId,
     ],
     enabled: Boolean(templateId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const { data, error } = await db()
         .from("course_templates")
         .select("building_block_id,building_block_source_id")
         .eq("id", templateId!)
+        .abortSignal(signal)
         .maybeSingle();
       if (error) throw error;
       return data as {
@@ -61,20 +62,18 @@ export function BuildingBlockReference({
   });
   const selectedBlockId = buildingBlockId ?? reference.data?.building_block_id;
   const selectedSourceId = sourceId ?? reference.data?.building_block_source_id;
-  const blocks = useQuery({
-    ...buildingBlocksQuery(session!.user.id),
-    enabled: Boolean(selectedBlockId),
-  });
+  const block = useQuery(
+    buildingBlockQuery(session!.user.id, selectedBlockId ?? undefined),
+  );
   if (templateId && reference.isPending) return <Loading />;
   if (templateId && reference.isError)
     return <ErrorState retry={() => void reference.refetch()} />;
   if (!selectedBlockId) return null;
-  if (blocks.isPending) return <Loading />;
-  if (blocks.isError) return <ErrorState retry={() => void blocks.refetch()} />;
-  const block = blocks.data.find((row) => row.id === selectedBlockId);
-  return block ? (
+  if (block.isPending) return <Loading />;
+  if (block.isError) return <ErrorState retry={() => void block.refetch()} />;
+  return block.data ? (
     <BuildingBlockSources
-      block={block}
+      block={block.data}
       sourceId={selectedSourceId}
       jobId={jobId}
       canManageJobSource={canManageJobSource}
@@ -106,7 +105,7 @@ export function JobBuildingBlockReference({
 }
 
 /** Show distinct original revisions with provenance metadata without copying source files. */
-export function BuildingBlockSources({
+function BuildingBlockSources({
   block,
   sourceId,
   jobId,

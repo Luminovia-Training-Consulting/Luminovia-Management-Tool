@@ -40,6 +40,7 @@ const state = vi.hoisted(() => ({
   mutate: vi.fn(),
   upload: vi.fn(),
   download: vi.fn(),
+  exportCsv: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
 vi.mock("../auth/auth-context", () => ({
@@ -48,6 +49,10 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../files/api", () => ({
   uploadDocument: state.upload,
   saveDownload: state.download,
+}));
+vi.mock("../../lib/csv", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/csv")>()),
+  downloadCsv: state.exportCsv,
 }));
 const actor = "fictional-lecturer";
 const clients: QueryClient[] = [];
@@ -136,6 +141,7 @@ beforeEach(async () => {
     status: "clean",
   });
   state.download.mockReset().mockResolvedValue(undefined);
+  state.exportCsv.mockReset();
   state.rpc.mockImplementation((name: string, payload?: unknown) => {
     if (name === "commercial_access")
       return Promise.resolve({ data: access, error: null });
@@ -261,6 +267,51 @@ it("formats only the latest twelve months per currency and reuses the history ca
     />,
   );
   expect(grouped).toHaveBeenCalledOnce();
+});
+
+it("limits mounted invoices while searches and exports include unmounted records", async () => {
+  const template = invoice();
+  invoices = Array.from({ length: 25 }, (_, index) => ({
+    ...template,
+    id: `batch-invoice-${index + 1}`,
+    number: `FICT-INVOICE-${String(index + 1).padStart(2, "0")}`,
+  }));
+  view();
+  const region = () =>
+    within(screen.getByRole("region", { name: "Rechnungen" }));
+  await screen.findByRole("heading", { name: "FICT-INVOICE-01" });
+  expect(screen.getAllByRole("article")).toHaveLength(12);
+  expect(region().queryByText("FICT-INVOICE-25")).not.toBeInTheDocument();
+  const exportButton = screen.getByRole("button", {
+    name: "Rechnungen als CSV",
+  });
+  await userEvent.click(exportButton);
+  expect(state.exportCsv).toHaveBeenCalledWith(
+    "luminovia-invoices.csv",
+    expect.arrayContaining([expect.arrayContaining(["FICT-INVOICE-25"])]),
+  );
+  expect(state.exportCsv.mock.calls[0][1]).toHaveLength(26);
+
+  await userEvent.click(
+    region().getByRole("button", { name: "Weitere Einträge laden" }),
+  );
+  expect(region().getAllByRole("article")).toHaveLength(24);
+  const search = screen.getByRole("searchbox", {
+    name: "Rechnungen durchsuchen",
+  });
+  await userEvent.type(search, "FICT-INVOICE-25");
+  expect(
+    await region().findByRole("heading", { name: "FICT-INVOICE-25" }),
+  ).toBeVisible();
+  expect(region().getAllByRole("article")).toHaveLength(1);
+  expect(exportButton).toBeEnabled();
+  await userEvent.click(exportButton);
+  expect(state.exportCsv.mock.calls[1][1]).toHaveLength(2);
+  await userEvent.clear(search);
+  await waitFor(() =>
+    expect(region().getAllByRole("article")).toHaveLength(12),
+  );
+  expect(calls("invoice_records")).toHaveLength(1);
 });
 
 it("hides cached monthly earnings when the server no longer permits the read", async () => {

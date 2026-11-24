@@ -198,14 +198,18 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 {key: "filled", status: "filled", start: "2060-06-07T08:00:00Z", topics: []},
                 {key: "archived", status: "archived", start: "2060-06-08T08:00:00Z", topics: []},
                 {key: "past", status: "filled", start: "2020-06-01T08:00:00Z", topics: []},
+                {key: "unscheduled", status: "published", start: null, topics: []},
             ].map((item) => ({...item, id: randomUUID()}));
             for (const item of cases) {
                 await sql(
                     `insert into public.jobs(id, title, customer_name, delivery_type, status, amount, total_amount, currency, rate_unit, terms, requires_contract, created_at, created_by, claim_deadline)
-                     values ('${item.id}', 'Fictional ${item.key}', '${marker}', 'online', '${item.status}', 100, 100, 'EUR', 'fixed_total', 'Fictional history terms', false, now()-interval '30 days', '${manager}', ${item.deadline ? `'${item.deadline}'` : "null"});
-                    insert into public.job_sessions(job_id, starts_at, ends_at)
-                    values ('${item.id}', '${item.start}'::timestamptz, '${item.start}'::timestamptz+interval '1 hour')`,
+                     values ('${item.id}', 'Fictional ${item.key}', '${marker}', 'online', '${item.status}', 100, 100, 'EUR', 'fixed_total', 'Fictional history terms', false, now()-interval '30 days', '${manager}', ${item.deadline ? `'${item.deadline}'` : "null"})`,
                 );
+                if (item.start)
+                    await sql(
+                        `insert into public.job_sessions(job_id, starts_at, ends_at)
+                         values ('${item.id}', '${item.start}'::timestamptz, '${item.start}'::timestamptz+interval '1 hour')`,
+                    );
                 if (item.topics.length)
                     await sql(
                         `insert into public.job_requirements(job_id, topic_id) values ${item.topics.map((id) => `('${item.id}','${id}')`).join(",")}`,
@@ -235,9 +239,21 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             assert.equal(history.filters.include_history, true);
             assert.ok(history.items.some((item) => item.title === "Fictional archived"));
             assert.ok(history.items.some((item) => item.title === "Fictional expired"));
+            assert.equal(history.items.at(-1).title, "Fictional unscheduled");
             assert.equal(
                 (await rpc(manager, {customer: marker, include_history: true, topic_ids: [topicA, topicB]})).items.length,
                 4,
+            );
+            const availabilityOverridesHistory = await rpc(manager, {
+                customer: marker,
+                include_history: true,
+                available_only: true,
+                sort: "total_asc",
+                currency: "EUR",
+            });
+            assert.deepEqual(
+                availabilityOverridesHistory.items.map((item) => item.id).sort(),
+                open.items.map((item) => item.id).sort(),
             );
         },
     );

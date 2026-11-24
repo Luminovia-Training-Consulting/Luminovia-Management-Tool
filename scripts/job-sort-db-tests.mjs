@@ -80,7 +80,7 @@ await withTestDatabase("job_text_sort", async ({sql, actor}) => {
     await assert.rejects(
         actor(
             outsider,
-            "select private.job_discovery_candidates_before_text_sort('{}'::jsonb)",
+            "select private.job_discovery_candidates('{}'::jsonb)",
         ),
         /42501/,
     );

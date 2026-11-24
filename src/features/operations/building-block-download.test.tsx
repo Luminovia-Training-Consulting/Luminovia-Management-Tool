@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import "../../lib/i18n";
-import { BuildingBlockSources } from "./building-blocks";
+import { BuildingBlockReference } from "./building-blocks";
 import type { BuildingBlock } from "./data";
 
 const {
@@ -34,7 +34,6 @@ vi.mock("../files/api", async (importOriginal) => ({
 
 const source = {
   id: "source",
-  building_block_id: "block",
   file_name: "Source.pdf",
   sha256: "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
   page_count: 2,
@@ -45,18 +44,10 @@ const source = {
 };
 const block: BuildingBlock = {
   id: "block",
-  provider: "Example",
   code: "COURSE",
-  title: "Example training",
-  description: "",
-  syllabus: "",
-  prerequisites: "",
   duration_days: 1,
   duration_hours: 8,
-  theory_percent: null,
-  practice_percent: null,
   notes: "",
-  default_template_id: "template",
   building_block_sources: [source],
 };
 
@@ -82,7 +73,15 @@ function mount(
     abortSignal: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
   };
-  from.mockReturnValue(query);
+  const sourceQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: block, error: null }),
+  };
+  from.mockImplementation((table: string) =>
+    table === "building_blocks" ? sourceQuery : query,
+  );
   jobSourceAvailable.mockResolvedValue(sourceInLibrary);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -91,8 +90,8 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/jobs/job-a"]}>
-        <BuildingBlockSources
-          block={block}
+        <BuildingBlockReference
+          buildingBlockId={block.id}
           sourceId={source.id}
           jobId={jobId}
           canManageJobSource={canManageJobSource}
@@ -100,11 +99,11 @@ function mount(
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  return query;
+  return { query, sourceQuery };
 }
 
 it("downloads the exact scanned PDF version attached to this job", async () => {
-  const query = mount(
+  const { query } = mount(
     { id: "version-original", document_id: "attachment" },
     "job-a",
   );
@@ -135,14 +134,15 @@ it("links to the attachments when the source is metadata only", async () => {
   ).toBeNull();
 });
 
-it("does not look up private job files from a catalogue reference", () => {
-  mount(null);
-  expect(screen.getByText("Source.pdf")).toBeVisible();
-  expect(from).not.toHaveBeenCalled();
+it("loads only the requested catalogue source and skips private job files", async () => {
+  const { sourceQuery } = mount(null);
+  expect(await screen.findByText("Source.pdf")).toBeVisible();
+  expect(from).toHaveBeenCalledExactlyOnceWith("building_blocks");
+  expect(sourceQuery.eq).toHaveBeenCalledExactlyOnceWith("id", block.id);
 });
 
 it("lets job managers attach only bytes matching the referenced original", async () => {
-  const query = mount(null, "job-a", true);
+  const { query } = mount(null, "job-a", true);
   const user = userEvent.setup();
   await user.click(
     await screen.findByText(/Original-PDF anhängen|Attach original PDF/),

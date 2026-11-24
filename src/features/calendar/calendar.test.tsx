@@ -130,8 +130,8 @@ vi.mock("../../lib/queries", () => ({
 }));
 vi.mock("../operations/data", () => ({
   orgQuery: () => ({ queryKey: ["organisations"], queryFn: async () => [] }),
-  runsQuery: () => ({
-    queryKey: ["runs"],
+  calendarCourseRunsQuery: (_actor: string, from: string, to: string) => ({
+    queryKey: ["runs", from, to],
     queryFn: async () => [
       {
         id: "specific-course",

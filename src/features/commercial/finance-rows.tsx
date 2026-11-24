@@ -11,11 +11,13 @@ export function FinanceRows({
   total,
   children,
   panel = false,
+  scroll = true,
 }: {
   label: string;
   total: number;
   children: (count: number) => ReactNode;
   panel?: boolean;
+  scroll?: boolean;
 }) {
   const { t } = useTranslation("commercial");
   const [limit, setLimit] = useState(batchSize);
@@ -24,10 +26,12 @@ export function FinanceRows({
   return (
     <div className={panel ? "panel finance-rows" : "finance-rows"}>
       <div
-        className="commercial-table-scroll finance-rows-scroll"
+        className={
+          scroll ? "commercial-table-scroll finance-rows-scroll" : undefined
+        }
         role="region"
         aria-label={label}
-        tabIndex={0}
+        tabIndex={scroll ? 0 : undefined}
       >
         {children(shown)}
         {shown < total && (

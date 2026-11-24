@@ -297,7 +297,7 @@ Assigned lecturers can choose **Neue Kursdatei freigeben / Share a new course fi
 
 **Meine Finanzen / My finances** in the sidebar opens the lecturer's own fees, invoices, exports and analytics. **Verwaltung → Plattformfinanzen / Administration → Platform finances** contains the platform overview, invoice reviews, accounting, exports and platform analytics for authorised management and administration. Company accounts open their scoped invoices and analytics through **Unternehmensfinanzen / Company finances**. Combined roles retain separate views.
 
-The platform revenue and accepted earnings lists scroll independently and reveal more rows in batches. Totals and exports cover the complete authorised result set.
+The platform revenue and accepted earnings lists scroll independently and reveal more rows in batches. Invoice cards load more cards in the main page as you scroll or select **Weitere Einträge laden / Load more entries**. Invoice search and CSV include every loaded invoice that matches the active filters, including cards outside the displayed batch.
 
 In **Plattformfinanzen → Analysen / Platform finances → Analytics**, management and administration can search the company selector when the list is long, choose the year to date or last completed quarter, and focus the assignment chart on past work, upcoming work or open positions. The financial chart can show running totals and compare confirmed contract fees with lecturer compensation when both amounts are authorised. The all-company scenario chart uses a separate 30-, 60- or 90-day window and the selected acceptance probability. Charts provide a data table and keep missing amounts distinct from zero.
 
@@ -841,6 +841,8 @@ The file/chat job selectors use a [dedicated purpose-bound paginated search](GUI
 
 The original API, public invoker wrappers, saved-view table and discovery indexes come from [20261116080735_job_discovery_and_saved_views.sql](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql). The later [20261116080748_role_aware_job_discovery.sql](../supabase/migrations/20261116080748_role_aware_job_discovery.sql) owns the current private quote/context helpers and replaces `job_discovery_candidates`, `job_discovery_item` and `job_discovery`. It preserves the public signatures
 and saved-view operations. Existing `job_detail` and `job_dashboard` implementations call the replaced item helper, so their prices and consent versions follow the same projection.
+
+[The marketplace candidate migration](../supabase/migrations/20261124164736_optimize_job_discovery_candidates.sql) applies the active-offer and filter conditions before checking visibility and pricing. It looks up the first session for the open or earliest-start view and calculates total teaching time only when the sort or filters require it. The public response, cursor format and existing visibility and pricing rules are preserved.
 
 | Public RPC                                                | Purpose                                                                                                     |
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|

@@ -212,3 +212,63 @@ test("password-only authentication global publication, descriptions/HTTPS links,
         }
     }
 });
+
+test("global calendar only transfers published course sessions in the visible range", async ({page}) => {
+    const admin = await actor("Fictional calendar range administrator", "admin");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const [template, published, draft, archived] = Array.from({length: 4}, randomUUID);
+    const title = `Fictional range course ${template.slice(0, 8)}`;
+    const session = (course_run_id: string, offsetDays: number) => {
+        const start = new Date();
+        start.setUTCHours(11, 0, 0, 0);
+        start.setUTCDate(start.getUTCDate() + offsetDays);
+        return {
+            id: randomUUID(),
+            course_run_id,
+            starts_at: start.toISOString(),
+            ends_at: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+        };
+    };
+    const current = session(published, 0);
+    await checked(service.from("course_templates").insert({id: template, title}));
+    try {
+        await checked(service.from("course_runs").insert([
+            {id: published, template_id: template, published: true, archived_at: null},
+            {id: draft, template_id: template, published: false, archived_at: null},
+            {id: archived, template_id: template, published: true, archived_at: new Date().toISOString()},
+        ]));
+        await checked(service.from("course_sessions").insert([
+            current,
+            session(published, -180),
+            session(published, 180),
+            session(draft, 0),
+            session(archived, 0),
+        ]));
+        await adminLogin(page, admin);
+        await page.goto("/calendar");
+        const courses = page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return url.pathname.endsWith("/rest/v1/course_runs") &&
+                url.searchParams.has("course_sessions.starts_at");
+        });
+        await page.getByRole("button", {name: "Globale Termine", exact: true}).click();
+        const response = await courses;
+        expect(response.ok()).toBe(true);
+        const range = new URL(response.url()).searchParams;
+        expect(range.get("course_sessions.starts_at")).toMatch(/^lt\./);
+        expect(range.get("course_sessions.ends_at")).toMatch(/^gt\./);
+        const scopedRows = (await response.json()).filter(
+            (row: {template_id: string}) => row.template_id === template,
+        );
+        expect(scopedRows).toEqual([expect.objectContaining({
+            id: published,
+            course_sessions: [expect.objectContaining({id: current.id})],
+        })]);
+        await expect(page.locator(".calendar-panel").getByText(title, {exact: true})).toBeVisible();
+    } finally {
+        await checked(service.from("course_sessions").delete().in("course_run_id", [published, draft, archived]));
+        await checked(service.from("course_runs").delete().in("id", [published, draft, archived]));
+        await checked(service.from("course_templates").delete().eq("id", template));
+        await checked(service.auth.admin.deleteUser(admin.id));
+    }
+});

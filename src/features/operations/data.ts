@@ -78,7 +78,6 @@ export interface Template {
 /** Exact original course revision with hash and provenance metadata. */
 export interface BuildingBlockSource {
   id: string;
-  building_block_id: string;
   file_name: string;
   sha256: string;
   page_count: number;
@@ -91,18 +90,10 @@ export interface BuildingBlockSource {
 /** Canonical course curriculum with separately retained original source revisions. */
 export interface BuildingBlock {
   id: string;
-  provider: string;
   code: string;
-  title: string;
-  description: string;
-  syllabus: string;
-  prerequisites: string;
   duration_days: number;
   duration_hours: number;
-  theory_percent: number | null;
-  practice_percent: number | null;
   notes: string;
-  default_template_id: string;
   building_block_sources: BuildingBlockSource[];
 }
 
@@ -127,20 +118,41 @@ async function readDirectoryPages<T>(
   }
 }
 
-/** Read building_blocks through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
-export const buildingBlocksQuery = (actor: string) =>
+/** Lightweight course codes and durations for template search and schedule planning. */
+export const buildingBlockPlanningQuery = (actor: string) =>
   queryOptions({
-    queryKey: ["operations", "building-blocks", actor],
+    queryKey: ["operations", "building-block-planning", actor],
     queryFn: ({ signal }) =>
-      readDirectoryPages<BuildingBlock>((from, to) =>
+      readDirectoryPages<
+        Pick<BuildingBlock, "id" | "code" | "duration_days" | "duration_hours">
+      >((from, to) =>
         db()
           .from("building_blocks")
-          .select("*,building_block_sources(*)")
+          .select("id,code,duration_days,duration_hours")
           .order("code")
           .order("id")
           .range(from, to)
           .abortSignal(signal),
       ),
+  });
+
+/** Read provenance only for the requested course source. */
+export const buildingBlockQuery = (actor: string, id: string | undefined) =>
+  queryOptions({
+    queryKey: ["operations", "building-block", actor, id],
+    enabled: Boolean(id),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("building_blocks")
+        .select(
+          "id,code,duration_days,duration_hours,notes,building_block_sources(id,file_name,sha256,page_count,content_pages,created_on,revision_on,is_primary)",
+        )
+        .eq("id", id!)
+        .abortSignal(signal)
+        .maybeSingle<BuildingBlock>();
+      if (error) throw error;
+      return data;
+    },
   });
 
 /** Actual run with customer, zone and concrete sessions, separate from its content template. */
@@ -162,7 +174,7 @@ export interface CourseRun {
     status: string;
     company_internal?: boolean;
     claim_deadline?: string | null;
-    job_sessions?: { starts_at: string }[];
+    first_session?: { starts_at: string }[];
     capacity?: number;
     job_claims?: {
       status: string;
@@ -249,15 +261,47 @@ export const runsQuery = (actor: string, withAssignments = false) =>
         const query = db()
           .from("course_runs")
           .select(
-            `*,course_sessions(*),jobs(id,title,status,company_internal,claim_deadline,job_sessions(starts_at)${
+            `id,template_id,organisation_id,time_zone,delivery_type,venue,published,creation_origin,own_lecturers_only,archived_at,course_sessions(id,starts_at,ends_at),jobs(id,title,status,company_internal,claim_deadline,first_session:job_sessions(starts_at)${
               withAssignments
                 ? ",capacity,job_claims(status,lecturer_id,profiles!job_claims_lecturer_id_fkey(display_name))"
                 : ""
             })`,
           )
           .order("created_at", { ascending: false })
-          .order("id");
+          .order("id")
+          .order("starts_at", { referencedTable: "jobs.first_session" })
+          .limit(1, { referencedTable: "jobs.first_session" });
         if (withAssignments) query.eq("jobs.job_claims.status", "confirmed");
         return query.range(from, to).abortSignal(signal);
       }),
+  });
+
+/** Only published course sessions that overlap the current calendar range. */
+export const calendarCourseRunsQuery = (
+  actor: string,
+  from: string,
+  to: string,
+) =>
+  queryOptions({
+    queryKey: ["operations", "calendar-runs", actor, from, to],
+    queryFn: ({ signal }) =>
+      readDirectoryPages<
+        Pick<
+          CourseRun,
+          "id" | "template_id" | "organisation_id" | "course_sessions"
+        >
+      >((start, end) =>
+        db()
+          .from("course_runs")
+          .select(
+            "id,template_id,organisation_id,course_sessions!inner(id,starts_at,ends_at)",
+          )
+          .eq("published", true)
+          .is("archived_at", null)
+          .lt("course_sessions.starts_at", to)
+          .gt("course_sessions.ends_at", from)
+          .order("id")
+          .range(start, end)
+          .abortSignal(signal),
+      ),
   });
