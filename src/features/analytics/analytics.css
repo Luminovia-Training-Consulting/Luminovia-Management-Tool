@@ -283,3 +283,25 @@
     color: var(--ink);
   }
 }
+
+.analytics-filter-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-block-start: 0.75rem;
+}
+
+.analytics-filter-footer p {
+  margin: 0;
+}
+
+.analytics-filters :is(select, input, button),
+.analytics-filter-footer button {
+  min-block-size: 44px;
+}
+
+.analytics-section-heading > .analytics-filters {
+  flex: 1 1 min(100%, 22rem);
+}

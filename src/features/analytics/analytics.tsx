@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { currencyCodes } from "../../lib/currencies";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,10 +17,11 @@ import { forecastQuery } from "../workbench/finance-api";
 import { analyticsAccessQuery, analyticsReportQuery } from "./api";
 import {
   analyticsPreset,
+  type AnalyticsPreset,
   analyticsUntil,
   type AnalyticsPeriod,
-  type AnalyticsPreset,
 } from "./period";
+import { ChartKey, ChartTable, LineChart, type ChartSeries } from "./charts";
 import { ReportPanels } from "./report-panels";
 import {
   analyticsScopes,
@@ -52,6 +54,8 @@ function AnalyticsView({
   const requestedScope = searchParams.get("scope");
   const [companyId, setCompanyId] = useState("");
   const [staffCompanyId, setStaffCompanyId] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [dateFormVersion, resetDateForm] = useState(0);
   const [preset, setPreset] = useState<AnalyticsPreset>("around");
   const [customPeriod, setCustomPeriod] = useState<AnalyticsPeriod | null>(
     null,
@@ -66,6 +70,12 @@ function AnalyticsView({
   const company = companies.find(({ id }) => id === companyId) ?? companies[0];
   const staffCompany = access.organisations.find(
     ({ id }) => id === staffCompanyId,
+  );
+  const companyNeedle = companySearch.trim().toLocaleLowerCase();
+  const staffOptions = access.organisations.filter(
+    ({ id, name }) =>
+      id === staffCompany?.id ||
+      name.toLocaleLowerCase().includes(companyNeedle),
   );
   const zone =
     (scope === "company" ? company?.time_zone : access.time_zone) ?? "UTC";
@@ -87,6 +97,23 @@ function AnalyticsView({
     enabled: Boolean(scope && analyticsUntil(period)),
   });
   if (!scope) return <p className="panel">{t("unavailable")}</p>;
+  const selectedCurrency = query.data?.months.some(
+    (month) => month.currencies[currency],
+  )
+    ? currency
+    : (currencyCodes.find((code) =>
+        query.data?.months.some((month) => month.currencies[code]),
+      ) ?? currency);
+
+  function resetFilters() {
+    setCompanyId("");
+    setStaffCompanyId("");
+    setCompanySearch("");
+    setPreset("around");
+    setCustomPeriod(null);
+    setCurrency("EUR");
+    resetDateForm((version) => version + 1);
+  }
 
   return (
     <>
@@ -96,7 +123,10 @@ function AnalyticsView({
             <Field id="analytics-scope" label={t("scope")}>
               <select
                 value={scope}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setPreset("around");
+                  setCustomPeriod(null);
+                  resetDateForm((version) => version + 1);
                   setSearchParams(
                     (previous) => {
                       const next = new URLSearchParams(previous);
@@ -104,8 +134,8 @@ function AnalyticsView({
                       return next;
                     },
                     { replace: true },
-                  )
-                }
+                  );
+                }}
               >
                 {scopes.map((item) => (
                   <option key={item} value={item}>
@@ -129,6 +159,16 @@ function AnalyticsView({
               </select>
             </Field>
           )}
+          {scope === "staff" && access.organisations.length > 8 && (
+            <Field id="analytics-company-search" label={t("companySearch")}>
+              <input
+                type="search"
+                value={companySearch}
+                maxLength={120}
+                onChange={(event) => setCompanySearch(event.target.value)}
+              />
+            </Field>
+          )}
           {scope === "staff" && access.organisations.length > 0 && (
             <Field id="analytics-staff-company" label={t("organisation")}>
               <select
@@ -136,7 +176,10 @@ function AnalyticsView({
                 onChange={(event) => setStaffCompanyId(event.target.value)}
               >
                 <option value="">{t("allOrganisations")}</option>
-                {access.organisations.map(({ id, name }) => (
+                {staffOptions.length === 0 && (
+                  <option disabled>{t("noCompanyMatches")}</option>
+                )}
+                {staffOptions.map(({ id, name }) => (
                   <option key={id} value={id}>
                     {name}
                   </option>
@@ -147,36 +190,48 @@ function AnalyticsView({
           <ReportingPeriodSelect
             preset={preset}
             custom={Boolean(customPeriod)}
+            staff={scope === "staff"}
             onChange={(value) => {
               setPreset(value);
               setCustomPeriod(null);
             }}
           />
         </div>
-        <PeriodForm
-          key={`${period.from}/${period.through}`}
-          period={period}
-          onApply={setCustomPeriod}
-        />
-        <p className="analytics-muted">{t("timeZone", { zone })}</p>
+        <details className="analytics-data">
+          <summary>{t("customDates")}</summary>
+          <PeriodForm
+            key={`${period.from}/${period.through}/${dateFormVersion}`}
+            period={period}
+            onApply={setCustomPeriod}
+          />
+        </details>
+        <div className="analytics-filter-footer">
+          <p className="analytics-muted">{t("timeZone", { zone })}</p>
+          <Button type="button" variant="ghost" onClick={resetFilters}>
+            {t("resetFilters")}
+          </Button>
+        </div>
       </section>
       {query.isPending && <Loading />}
       {query.isError && <ErrorState retry={() => void query.refetch()} />}
       {query.isSuccess && (
         <ReportPanels
+          key={dateFormVersion}
           scenario={
+            scope === "staff" &&
             query.data.can_model_pipeline &&
-            !(scope === "staff" && organisation) && (
+            !organisation && (
               <ScenarioPanel
                 actor={actor}
                 zone={query.data.time_zone}
-                currency={currency}
+                currency={selectedCurrency}
               />
             )
           }
           report={query.data}
+          staff={scope === "staff"}
           companyFiltered={scope === "staff" && Boolean(organisation)}
-          currency={currency}
+          currency={selectedCurrency}
           setCurrency={setCurrency}
         />
       )}
@@ -194,18 +249,17 @@ function ScenarioPanel({
   currency: AnalyticsCurrency;
 }) {
   const { t, i18n } = useTranslation("analytics");
-  const { format } = new Intl.NumberFormat(
-    i18n.resolvedLanguage ?? i18n.language,
-    {
-      style: "currency",
-      currency,
-    },
-  );
+  const locale = i18n.resolvedLanguage ?? i18n.language;
+  const { format } = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  });
   const [probability, setProbability] = useState(0.5);
+  const [days, setDays] = useState(90);
   const now = DateTime.now().setZone(zone);
   const period = {
     from: now.toISODate() ?? "",
-    until: now.plus({ days: 90 }).toISODate() ?? "",
+    until: now.plus({ days }).toISODate() ?? "",
   };
   const forecast = useQuery(
     forecastQuery(
@@ -223,39 +277,83 @@ function ScenarioPanel({
       (sum, row) => sum + row.pipeline_cost_unknown_positions,
       0,
     ) ?? 0;
-  const cost = months?.reduce(
-    (sum, row) => sum + (row.pipeline_lecturer_cost_known ?? 0),
-    0,
+  const labels = (months ?? []).map(({ month }) =>
+    new Intl.DateTimeFormat(locale, {
+      month: "short",
+      year: "2-digit",
+      timeZone: "UTC",
+    }).format(new Date(`${month}T00:00:00Z`)),
   );
-  const gross = months?.reduce(
-    (sum, row) => sum + (row.pipeline_gross_known ?? 0),
-    0,
-  );
+  const series: ChartSeries[] = [
+    {
+      name: t("scenarioFees"),
+      tone: "future",
+      values: (months ?? []).map((row) =>
+        probability === 0 ? 0 : row.pipeline_lecturer_cost_known,
+      ),
+    },
+    ...(forecast.data?.gross_authorized
+      ? [
+          {
+            name: t("scenarioGross"),
+            tone: "open" as const,
+            values: (months ?? []).map((row) => row.pipeline_gross_known),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <section className="panel">
       <h2>{t("scenario")}</h2>
       <p className="analytics-muted">{t("scenarioBasis")}</p>
-      <ScenarioProbability value={probability} onChange={setProbability} />
+      <div className="analytics-filters">
+        <ScenarioProbability value={probability} onChange={setProbability} />
+        <Field id="analytics-forecast-window" label={t("forecastWindow")}>
+          <select
+            value={days}
+            onChange={(event) => setDays(Number(event.target.value))}
+          >
+            {[30, 60, 90].map((count) => (
+              <option value={count} key={count}>
+                {t("forecastDays", { count })}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       {forecast.isPending && <Loading />}
       {forecast.isError && <ErrorState retry={() => void forecast.refetch()} />}
-      {forecast.isSuccess && (
-        <Totals
-          items={[
-            {
-              label: t("scenarioFees"),
-              value:
-                unknown && probability > 0
+      {forecast.isSuccess &&
+        (labels.length ? (
+          <>
+            <Totals
+              items={series.map(({ name, values }) => ({
+                label: name,
+                value: values.some((value) => value === null)
                   ? t("notAvailable")
-                  : format(cost ?? 0),
-            },
-            ...(forecast.data.gross_authorized
-              ? [{ label: t("scenarioGross"), value: format(gross ?? 0) }]
-              : []),
-          ]}
-        />
-      )}
-      {unknown > 0 && (
+                  : format(
+                      values.reduce<number>(
+                        (sum, value) => sum + (value ?? 0),
+                        0,
+                      ),
+                    ),
+              }))}
+            />
+            <ChartKey series={series} />
+            <LineChart labels={labels} series={series} format={format} />
+            <ChartTable
+              title={t("data")}
+              month={t("month")}
+              labels={labels}
+              series={series}
+              format={format}
+            />
+          </>
+        ) : (
+          <p className="analytics-muted">{t("emptyScenario")}</p>
+        ))}
+      {probability > 0 && unknown > 0 && (
         <p className="analytics-muted">
           {t("unknownPipeline", { count: unknown })}
         </p>

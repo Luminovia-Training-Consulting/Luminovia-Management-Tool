@@ -115,6 +115,29 @@ test("administration navigation keeps shared workflows together on desktop and m
     await expect(page).toHaveURL(/\/changes$/);
 });
 
+test("staff analytics filters and forecast charts work across viewport sizes", async ({page}) => {
+    await login(page, process.env.E2E_ADMIN_EMAIL!);
+    await page.goto("/finance/analytics");
+    await expect(page.getByRole("heading", {name: "Analysen", exact: true})).toBeVisible();
+    await page.getByLabel("Zeitraum", {exact: true}).selectOption("previousQuarter");
+    const timeline = page.locator("section").filter({has: page.getByRole("heading", {name: "Bestätigte Aufträge", exact: true})});
+    await timeline.getByLabel("Zeige im Auftragsdiagramm").selectOption("past");
+    await expect(timeline.locator(".analytics-key").getByText("Vergangen", {exact: true})).toBeVisible();
+    await expect(timeline.locator(".analytics-key").getByText("Bevorstehend", {exact: true})).toHaveCount(0);
+    const financial = page.locator("section").filter({has: page.getByRole("heading", {name: "Finanzverlauf", exact: true})});
+    await financial.getByLabel("Darstellung").selectOption("cumulative");
+    await expect(financial.getByText("Kumulierte Werte als Tabelle")).toBeVisible();
+    const forecast = page.locator("section").filter({has: page.getByRole("heading", {name: "Vorschau für offene Aufträge", exact: true})});
+    await forecast.getByLabel("Vorschauzeitraum").selectOption("30");
+    await expect(forecast.getByText("Monatswerte als Tabelle")).toBeVisible();
+    await expect(forecast.locator("canvas")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth + 1),
+    );
+    await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
+    await expect(page.getByLabel("Zeitraum", {exact: true})).toHaveValue("around");
+});
+
 test("private routes require real authentication and login is accessible", async ({
                                                                                       page,
                                                                                   }, testInfo) => {

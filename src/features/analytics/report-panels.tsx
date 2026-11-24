@@ -15,12 +15,14 @@ import { Totals } from "./report-ui";
 
 export function ReportPanels({
   report,
+  staff,
   scenario,
   companyFiltered,
   currency,
   setCurrency,
 }: {
   report: AnalyticsReport;
+  staff: boolean;
   scenario?: ReactNode;
   companyFiltered: boolean;
   currency: AnalyticsCurrency;
@@ -30,6 +32,7 @@ export function ReportPanels({
   const [activity, setActivity] = useState<"assignments" | "monthlyHours">(
     "assignments",
   );
+  const [phase, setPhase] = useState<ChartSeries["tone"] | "all">("all");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const numbers = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const percentages = new Intl.NumberFormat(locale, { style: "percent" });
@@ -90,7 +93,13 @@ export function ReportPanels({
   ];
 
   const showingHours = activity === "monthlyHours";
-  const activitySeries = showingHours ? teaching : assignments;
+  const availableSeries = showingHours ? teaching : assignments;
+  const activePhase =
+    staff && availableSeries.some(({ tone }) => tone === phase) ? phase : "all";
+  const activitySeries =
+    activePhase === "all"
+      ? availableSeries
+      : availableSeries.filter(({ tone }) => tone === activePhase);
   const formatActivity = showingHours ? hours : numbers.format;
 
   return (
@@ -99,26 +108,53 @@ export function ReportPanels({
         <section className="panel">
           <div className="analytics-section-heading">
             <h2>{t(activity)}</h2>
-            <Field id="analytics-activity" label={t("monthlyMetric")}>
-              <select
-                value={activity}
-                onChange={(event) =>
-                  setActivity(
-                    event.target.value === "monthlyHours"
-                      ? "monthlyHours"
-                      : "assignments",
-                  )
-                }
-              >
-                <option value="assignments">{t("assignments")}</option>
-                <option value="monthlyHours">{t("monthlyHours")}</option>
-              </select>
-            </Field>
+            <div className="analytics-filters">
+              <Field id="analytics-activity" label={t("monthlyMetric")}>
+                <select
+                  value={activity}
+                  onChange={(event) =>
+                    setActivity(
+                      event.target.value === "monthlyHours"
+                        ? "monthlyHours"
+                        : "assignments",
+                    )
+                  }
+                >
+                  <option value="assignments">{t("assignments")}</option>
+                  <option value="monthlyHours">{t("monthlyHours")}</option>
+                </select>
+              </Field>
+              {staff && (
+                <Field
+                  id="analytics-timeline-phase"
+                  label={t("timelineFilter")}
+                >
+                  <select
+                    value={activePhase}
+                    onChange={(event) => {
+                      const selection = availableSeries.find(
+                        ({ tone }) => tone === event.target.value,
+                      );
+                      setPhase(selection?.tone ?? "all");
+                    }}
+                  >
+                    <option value="all">{t("allSeries")}</option>
+                    {availableSeries.map(({ tone, name }) => (
+                      <option key={tone} value={tone}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+            </div>
           </div>
           <Totals
             items={activitySeries.map(({ name, values }) => ({
               label: name,
-              value: formatActivity(sum(values)),
+              value: values.some((value) => value !== null)
+                ? formatActivity(sum(values))
+                : "—",
             }))}
           />
           <ChartKey series={activitySeries} />
@@ -130,9 +166,10 @@ export function ReportPanels({
           {!showingHours && (
             <p className="analytics-muted">{t("allocationNote")}</p>
           )}
-          {!showingHours && assignments.length > 2 && (
-            <p className="analytics-muted">{t("openNote")}</p>
-          )}
+          {!showingHours &&
+            activitySeries.some(({ tone }) => tone === "open") && (
+              <p className="analytics-muted">{t("openNote")}</p>
+            )}
           <ChartTable
             {...table}
             series={activitySeries}
@@ -156,6 +193,7 @@ export function ReportPanels({
       </div>
       <MoneyPanel
         report={report}
+        staff={staff}
         companyFiltered={companyFiltered}
         currency={currency}
         setCurrency={setCurrency}
@@ -168,7 +206,7 @@ export function ReportPanels({
 }
 
 const metrics = ["fees", "gross", "lecturerCash", "customerCash"] as const;
-type Metric = (typeof metrics)[number];
+type Metric = (typeof metrics)[number] | "comparison";
 const keyByMetric = {
   fees: ["past_net", "future_net"],
   gross: ["past_gross", "future_gross"],
@@ -178,6 +216,7 @@ const keyByMetric = {
 
 function MoneyPanel({
   report,
+  staff,
   companyFiltered,
   currency,
   setCurrency,
@@ -185,6 +224,7 @@ function MoneyPanel({
   table,
 }: {
   report: AnalyticsReport;
+  staff: boolean;
   companyFiltered: boolean;
   currency: AnalyticsCurrency;
   setCurrency: (currency: AnalyticsCurrency) => void;
@@ -193,38 +233,73 @@ function MoneyPanel({
 }) {
   const { t } = useTranslation("analytics");
   const [selected, setSelected] = useState<Metric | null>(null);
+  const [cumulative, setCumulative] = useState(false);
+  const showCumulative = staff && cumulative;
   const currencies = currencyCodes.filter((code) =>
     report.months.some((month) => month.currencies[code] !== undefined),
   );
   const first = report.months.find((month) => month.currencies[currency])
     ?.currencies[currency];
   if (!first) return null;
-  const available = metrics.filter(
+  const available: Metric[] = metrics.filter(
     (metric) => first[keyByMetric[metric][0]] !== null,
   );
+  if (staff && available.includes("fees") && available.includes("gross"))
+    available.push("comparison");
   const metric =
     selected && available.includes(selected) ? selected : available[0];
   if (!metric) return null;
-  const [pastKey, futureKey] = keyByMetric[metric];
-  const series: ChartSeries[] = [
-    {
+  const series: ChartSeries[] = [];
+  let note = "commitmentNote";
+  if (metric === "comparison") {
+    for (const [key, tone] of [
+      ["fees", "past"],
+      ["gross", "open"],
+    ] as const) {
+      const [past, future] = keyByMetric[key];
+      series.push({
+        name: t(key),
+        tone,
+        values: report.months.map((month) => {
+          const amounts = month.currencies[currency];
+          const before = amounts?.[past];
+          const after = amounts?.[future];
+          if (before == null || after == null) return null;
+          return (month.history ? before : 0) + (month.forecast ? after : 0);
+        }),
+      });
+    }
+  } else {
+    const [pastKey, futureKey] = keyByMetric[metric];
+    if (!futureKey) note = "cashNote";
+    series.push({
       name: t(futureKey ? "pastConfirmed" : "cash"),
       tone: "past",
       values: report.months.map((month) =>
         month.history ? (month.currencies[currency]?.[pastKey] ?? null) : null,
       ),
-    },
-  ];
-  if (futureKey)
-    series.push({
-      name: t("futureConfirmed"),
-      tone: "future",
-      values: report.months.map((month) =>
-        month.forecast
-          ? (month.currencies[currency]?.[futureKey] ?? null)
-          : null,
-      ),
     });
+    if (futureKey)
+      series.push({
+        name: t("futureConfirmed"),
+        tone: "future",
+        values: report.months.map((month) =>
+          month.forecast
+            ? (month.currencies[currency]?.[futureKey] ?? null)
+            : null,
+        ),
+      });
+  }
+  const chartSeries = showCumulative
+    ? series.map((item) => {
+        let running = 0;
+        const values = item.values.map((value) =>
+          value === null ? null : (running += value),
+        );
+        return { ...item, values };
+      })
+    : series;
+
   const unknown = report.months.reduce(
     (total, month) => total + (month.currencies[currency]?.missing_gross ?? 0),
     0,
@@ -261,6 +336,19 @@ function MoneyPanel({
               ))}
             </select>
           </Field>
+          {staff && (
+            <Field id="analytics-finance-display" label={t("financeView")}>
+              <select
+                value={showCumulative ? "cumulative" : "monthly"}
+                onChange={(event) =>
+                  setCumulative(event.target.value === "cumulative")
+                }
+              >
+                <option value="monthly">{t("monthly")}</option>
+                <option value="cumulative">{t("cumulative")}</option>
+              </select>
+            </Field>
+          )}
         </div>
       </div>
       <Totals
@@ -274,11 +362,9 @@ function MoneyPanel({
         }))}
       />
       <ChartKey series={series} />
-      <LineChart labels={table.labels} series={series} format={format} />
-      <p className="analytics-muted">
-        {t(futureKey ? "commitmentNote" : "cashNote")}
-      </p>
-      {metric === "gross" && unknown > 0 && (
+      <LineChart labels={table.labels} series={chartSeries} format={format} />
+      <p className="analytics-muted">{t(note)}</p>
+      {(metric === "gross" || metric === "comparison") && unknown > 0 && (
         <p className="analytics-muted">
           {t("unknownGross", { count: unknown })}
         </p>
@@ -286,7 +372,12 @@ function MoneyPanel({
       {companyFiltered && first.past_net !== null && (
         <p className="analytics-muted">{t("cashScope")}</p>
       )}
-      <ChartTable {...table} series={series} format={format} />
+      <ChartTable
+        {...table}
+        title={showCumulative ? t("cumulativeData") : table.title}
+        series={chartSeries}
+        format={format}
+      />
     </section>
   );
 }

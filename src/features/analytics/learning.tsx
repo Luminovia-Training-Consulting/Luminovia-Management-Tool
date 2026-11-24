@@ -282,6 +282,8 @@ function LearningAnalyticsView({
   const [periodOverride, setPeriod] = useState<AnalyticsPeriod>();
   const [status, setStatus] = useState<LearningReportStatus>("all");
   const [search, setSearch] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [dateFormVersion, resetDateForm] = useState(0);
   const [page, setPage] = useState(1);
 
   const companies = access.organisations.filter(({ company }) => company);
@@ -323,9 +325,19 @@ function LearningAnalyticsView({
 
   function searchCourses(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = new FormData(event.currentTarget).get("search");
-    setSearch(typeof value === "string" ? value.trim() : "");
+    setSearch(searchDraft.trim());
     setPage(1);
+  }
+
+  function resetFilters() {
+    setOrganisation("");
+    setPreset("around");
+    setPeriod(undefined);
+    setStatus("all");
+    setSearch("");
+    setSearchDraft("");
+    setPage(1);
+    resetDateForm((version) => version + 1);
   }
 
   return (
@@ -405,7 +417,7 @@ function LearningAnalyticsView({
         </div>
         <PeriodForm
           idPrefix="learning-dates"
-          key={`${period.from}/${period.through}`}
+          key={`${period.from}/${period.through}/${dateFormVersion}`}
           period={period}
           onApply={(next) => {
             setPeriod(next);
@@ -417,13 +429,24 @@ function LearningAnalyticsView({
           onSubmit={searchCourses}
         >
           <Field id="learning-search" label={t("search")}>
-            <input type="search" name="search" maxLength={120} />
+            <input
+              type="search"
+              name="search"
+              maxLength={120}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+            />
           </Field>
           <Button type="submit" variant="secondary">
             {t("applySearch")}
           </Button>
         </form>
-        <p className="analytics-muted">{t("zone", { zone })}</p>
+        <div className="analytics-filter-footer">
+          <p className="analytics-muted">{t("zone", { zone })}</p>
+          <Button type="button" variant="ghost" onClick={resetFilters}>
+            {t("resetFilters")}
+          </Button>
+        </div>
         <p className="analytics-muted">{t("cohortBasis")}</p>
       </section>
       {query.isPending ? (
