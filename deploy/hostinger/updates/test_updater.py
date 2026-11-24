@@ -203,6 +203,24 @@ class ArchiveTests(unittest.TestCase):
             with self.assertRaisesRegex(u.UpdateError, "archive_hash"):
                 u.unpack_verified(archive, bad, Path(directory) / "archive-out")
 
+    def test_manifest_paths_obey_the_package_builder_length_boundary(self):
+        # The fixture isolates the updater parser; no archive extraction or installation writes occur.
+        with tempfile.TemporaryDirectory() as directory:
+            _, manifest, _ = fixture(directory)
+            maximum = copy.deepcopy(manifest)
+            valid_path = "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/"))
+            maximum["files"].append({"path": valid_path, "size": 0, "sha256": sha(b"")})
+            u.validate_manifest(maximum)
+
+            for suffix in ("a", "a" * 64 * 1024):
+                with self.subTest(extra_characters=len(suffix)):
+                    oversized = copy.deepcopy(manifest)
+                    oversized["files"][0]["path"] = (
+                        "site/" + "a" * (u.MAX_RELEASE_PATH - len("site/")) + suffix
+                    )
+                    with self.assertRaisesRegex(u.UpdateError, "unsafe_release_path"):
+                        u.validate_manifest(oversized)
+
     def test_package_binds_only_the_known_external_relay_source(self):
         with tempfile.TemporaryDirectory() as directory:
             extra = {"scripts/mail-relay.py": b"print('fictional relay fixture')"}

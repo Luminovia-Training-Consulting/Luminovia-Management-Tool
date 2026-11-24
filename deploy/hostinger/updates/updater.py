@@ -38,6 +38,8 @@ WRITERS = ["auth", "rest", "realtime", "storage", "api-gw", "functions"]
 MAX_ARCHIVE = 64 * 1024 * 1024
 MAX_UNPACKED = 512 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
+# Match package.mjs so the updater rejects overlong names before touching disk.
+MAX_RELEASE_PATH = 250
 MIN_FREE = 2 * 1024 * 1024 * 1024
 CONTROLLER = "deploy/hostinger/updates/updater.py"
 REBOOT_PENDING = Path("/run/luminovia-reboot-pending")
@@ -118,7 +120,13 @@ def read_environment(path):
 
 # Limit archive targets to the known app tree; reject private paths and traversal.
 def allowed_path(name):
-    if not isinstance(name, str) or not name or "\\" in name or "\x00" in name:
+    if (
+        not isinstance(name, str)
+        or not name
+        or len(name) > MAX_RELEASE_PATH
+        or "\\" in name
+        or "\x00" in name
+    ):
         return False
     path = PurePosixPath(name)
     if path.is_absolute() or any(part in ("", ".", "..") for part in name.split("/")):
