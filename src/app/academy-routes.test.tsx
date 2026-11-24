@@ -503,7 +503,7 @@ beforeEach(async () => {
           break;
         case "academy_personal_settings":
           data = {
-            username: { username: "practice-learner", version: 1 },
+            display_name: "Practice learner",
             appearance: {
               language: fake.language,
               theme: "system",
@@ -1001,7 +1001,7 @@ it("opens the current learner's settings from its academy navigation", async () 
   expect(
     await screen.findByRole("heading", { name: "My settings" }),
   ).toBeVisible();
-  expect(screen.getByDisplayValue("practice-learner")).toBeVisible();
+  expect(screen.getByDisplayValue("Practice learner")).toBeVisible();
 });
 
 it("opens local user administration only after the authority is confirmed", async () => {

@@ -75,7 +75,7 @@ test("the API explorer executes a documented read only after authorization", asy
     paths: {
       "/functions/v1/accounts/v1/me": { get: {} },
       "/functions/v1/accounts/v1/deletions/confirm": { delete: {} },
-      "/functions/v1/portal-api/v1/account_username": { get: {} },
+      "/functions/v1/portal-api/v1/ui_preferences": { get: {} },
       "/functions/v1/portal-api/v1/save_job_view": { put: {} },
       "/functions/v1/portal-api/v1/remove_job_view": { delete: {} },
       "/rest/v1/rpc/portal_access": {
@@ -214,21 +214,22 @@ test("an authenticated participant can run an own-account RPC through the API ex
   await page
     .getByRole("button", { name: "Mit meinem Konto autorisieren" })
     .click();
-  await (
-    await operation(page, "post", "/rest/v1/rpc/account_username")
-  ).click();
+  await (await operation(page, "post", "/rest/v1/rpc/ui_preferences")).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const response = page.waitForResponse(
     (item) =>
       item.request().method() === "POST" &&
-      new URL(item.url()).pathname.endsWith("/rpc/account_username"),
+      new URL(item.url()).pathname.endsWith("/rpc/ui_preferences"),
   );
   await page.getByRole("button", { name: "Execute", exact: true }).click();
   const result = await response;
   expect(result.status()).toBe(200);
-  expect(await result.json()).toEqual({ username: null, version: 0 });
+  expect(await result.json()).toMatchObject({
+    theme: expect.any(String),
+    language: expect.any(String),
+  });
 
-  const alias = "/functions/v1/portal-api/v1/account_username";
+  const alias = "/functions/v1/portal-api/v1/ui_preferences";
   await (await operation(page, "get", alias)).click();
   await page.getByRole("button", { name: "Try it out", exact: true }).click();
   const throughGateway = page.waitForResponse(
@@ -239,7 +240,10 @@ test("an authenticated participant can run an own-account RPC through the API ex
   await page.getByRole("button", { name: "Execute", exact: true }).click();
   const get = await throughGateway;
   expect(get.status()).toBe(200);
-  expect(await get.json()).toEqual({ username: null, version: 0 });
+  expect(await get.json()).toMatchObject({
+    theme: expect.any(String),
+    language: expect.any(String),
+  });
 });
 
 const explorerCopy = {

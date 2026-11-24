@@ -168,17 +168,6 @@ await checked(
   "Set the lecturer's first password.",
 );
 const alias = "fixture-" + randomUUID().slice(0, 12);
-const personal = await checked(
-  lecturer.rpc("academy_personal_settings"),
-  "Read current login alias.",
-);
-await checked(
-  lecturer.rpc("academy_save_username", {
-    p_username: alias,
-    p_expected_version: personal.username.version,
-  }),
-  "Set the normalized Academy username.",
-);
 const login = (identifier, password) =>
   post("/functions/v1/human-login", { identifier, password });
 for (const identifier of [email, email.toUpperCase()]) {
@@ -196,16 +185,15 @@ assert.equal((await login(alias, selectedPassword)).status, 401);
 
 const verifier = randomBytes(42).toString("base64url");
 const challenge = createHash("sha256").update(verifier).digest("base64url");
-const requested = await post("/functions/v1/human-recovery", {
-  username: alias,
+const requested = await post("/auth/v1/recover?redirect_to=" + encodeURIComponent(origin + "/auth/callback"), {
+  email,
   code_challenge: challenge,
   code_challenge_method: "s256",
-  redirect_to: origin + "/auth/callback",
 });
 assert.equal(
   requested.status,
-  202,
-  "Request the captured recovery through the username facade.",
+  200,
+  "Request native email recovery.",
 );
 const recovery = await mail(email, received.id);
 assert.equal(recovery.href.origin, base);
@@ -264,7 +252,7 @@ console.log(
       "invite_callback",
       "first_password",
       "email_login_and_username_rejection",
-      "username_recovery",
+      "email_recovery",
       "recovery_callback",
       "one_time_pkce",
       "recovered_password",

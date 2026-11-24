@@ -76,7 +76,6 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         ${request(`/rpc/${operation}`, method)} ${statement};commit;`);
     const loginOperations = [
       "reserve_login_attempt",
-      "login_email_for_alias",
       "human_login_profile_active",
     ];
     const assertLoginGate = async (enabled) => {
@@ -297,14 +296,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     }
     const statements = [
       "select public.reserve_login_attempt(repeat('f',64))",
-      "select public.login_email_for_alias('training.lead')",
       lookup(confirmed),
     ];
     assert.equal(await serviceRequest(loginOperations[0], statements[0]), "t");
-    assert.equal(
-      await serviceRequest(loginOperations[1], statements[1]),
-      "confirmed@example.invalid",
-    );
+    assert.equal(await serviceRequest(loginOperations[1], statements[1]), "t");
     for (const [index, operation] of loginOperations.entries()) {
       for (const method of ["GET", "HEAD", "PATCH"]) {
         await assert.rejects(

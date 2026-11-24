@@ -3,8 +3,6 @@ import {
   academyAppearancePatchSchema,
   academyAppearanceSchema,
   academyPersonalSettingsSchema,
-  academyUsernameRequestSchema,
-  academyUsernameSchema,
 } from "../accounts/academy-personal-settings-schema.ts";
 
 const noArguments = z.strictObject({});
@@ -58,35 +56,22 @@ function operation(
   };
 }
 
-const usernameSave = operation(
-  "saveOwnAcademyUsername",
-  "Set or clear your academy username",
-  "Use the current username version. Submit null to clear the alias. The server trims and lowercases the value. The normalized name must be 3–32 characters, start with a letter and end with a letter or digit. Letters, digits, periods, underscores and hyphens are accepted. Reserved names are refused. The same native Auth account continues to accept its email and password.",
-  academyUsernameRequestSchema,
-  academyUsernameSchema,
-);
-
 export const academyPersonalSettingsPaths = {
   "/rest/v1/rpc/academy_personal_settings": operation(
     "readOwnAcademyPersonalSettings",
-    "Read your academy username and appearance",
-    "Requires a confirmed eligible academy account and the current operator-enabled academy profile. Licence grace permits this read. An unset alias is null with version zero for a new account. Appearance includes the current profile locale and the saved theme.",
+    "Read your academy display name and appearance",
+    "Requires a confirmed eligible academy account and the current operator-enabled academy profile. Licence grace permits this read. Appearance includes the current profile locale and the saved theme.",
     noArguments,
     academyPersonalSettingsSchema,
     true,
   ),
-  "/rest/v1/rpc/academy_save_username": {
-    post: {
-      ...usernameSave.post,
-      responses: {
-        ...usernameSave.post.responses,
-        "409": failure(
-          "The username is unavailable or the expected version is stale.",
-          nativeError.extend({ code: z.enum(["23505", "PT409"]) }),
-        ),
-      },
-    },
-  },
+  "/rest/v1/rpc/academy_save_display_name": operation(
+    "saveOwnAcademyDisplayName",
+    "Save your academy display name",
+    "Updates the current account's display name only. Requires active Academy access.",
+    z.strictObject({ p_display_name: z.string().trim().min(1).max(120) }),
+    z.string(),
+  ),
   "/rest/v1/rpc/academy_save_appearance": operation(
     "saveOwnAcademyAppearance",
     "Save your academy language or theme",

@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation, useOutletContext } from "react-router-dom";
 import {
   ErrorState,
-  Field,
   Loading,
   Notice,
   PageHeading,
 } from "../../components/common";
 import { Preferences } from "../../components/preferences";
-import { Button } from "../../components/ui/button";
 import { installationBrand } from "../../lib/installation-brand";
 import { isAccountLanguage } from "../../lib/account-languages";
 import { useOnline } from "../../lib/online";
@@ -23,14 +21,15 @@ import {
 import type { UiPreferencesPatch } from "../../lib/ui-preferences-schema";
 import { useAuth } from "../auth/auth-context";
 import { AuthenticatorSettings } from "../auth/authenticator";
+import { AccountSettings } from "../profile/account-settings";
+import { DisplayNameEditor } from "../profile/display-name-editor";
 import { DeliverySettings } from "../notifications/delivery-settings";
 import {
   academyPersonalSettingsQuery,
   saveAcademyAppearance,
-  saveAcademyUsername,
+  saveAcademyDisplayName,
 } from "./academy-personal-settings-api";
 import {
-  usernamePattern,
   type AcademyAppearancePatch,
   type AcademyPersonalSettings,
 } from "./academy-personal-settings-schema";
@@ -139,12 +138,6 @@ export function AcademyAppearancePreferences({
   );
 }
 
-function errorCode(error: unknown) {
-  return error && typeof error === "object" && "code" in error
-    ? error.code
-    : null;
-}
-
 export function AcademyPersonalSettingsPage() {
   const { session } = useAuth();
   const { t, i18n } = useTranslation();
@@ -155,13 +148,6 @@ export function AcademyPersonalSettingsPage() {
   const query = useQuery({ ...request, enabled: Boolean(actor && online) });
   const cache = useQueryClient();
   const saveAppearance = useSaveAppearance(actor);
-  const [draft, setDraft] = useState<{ value: string; version: number } | null>(
-    null,
-  );
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<
-    "saved" | "invalid" | "unavailable" | "stale" | "error" | null
-  >(null);
   const word = (de: string, en: string) =>
     i18n.language.startsWith("de") ? de : en;
 
@@ -178,67 +164,11 @@ export function AcademyPersonalSettingsPage() {
   if (query.isError || !query.data)
     return <ErrorState retry={() => void query.refetch()} />;
 
-  const { username, appearance } = query.data;
+  const { display_name: displayName, appearance } = query.data;
   const writable = access === "active";
   const display = appearance.version
     ? appearance
     : browserAppearance(i18n.language);
-  const value = draft?.value ?? username.username ?? "";
-  const message =
-    result &&
-    {
-      saved: t("usernameSaved"),
-      invalid: t("usernameInvalid"),
-      unavailable: t("usernameUnavailable"),
-      stale: word(
-        "Der Benutzername wurde geändert. Prüfe den aktuellen Stand und versuche es erneut.",
-        "The username changed. Review its current value before trying again.",
-      ),
-      error: t("error"),
-    }[result];
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!writable || !draft || busy) return;
-    const normalized = draft.value.trim().toLowerCase();
-    if (normalized && !usernamePattern.test(normalized)) {
-      setResult("invalid");
-      return;
-    }
-    setBusy(true);
-    setResult(null);
-    try {
-      const current = await saveAcademyUsername(
-        actor,
-        normalized || null,
-        draft.version,
-      );
-      cache.setQueryData<AcademyPersonalSettings>(
-        request.queryKey,
-        (previous) => previous && { ...previous, username: current },
-      );
-      setDraft(null);
-      setResult("saved");
-    } catch (error) {
-      const code = errorCode(error);
-      if (code === "PT409" || code === "40001") {
-        const refreshed = await query.refetch();
-        if (refreshed.isSuccess) setDraft(null);
-        setResult("stale");
-      } else {
-        setResult(
-          code === "23505"
-            ? "unavailable"
-            : code === "22023"
-              ? "invalid"
-              : "error",
-        );
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <>
       <PageHeading title={word("Meine Einstellungen", "My settings")} />
@@ -250,46 +180,35 @@ export function AcademyPersonalSettingsPage() {
           )}
         </Notice>
       )}
-      <section className="panel">
-        <h2>{t("accountSettings")}</h2>
-        {writable ? (
-          <form onSubmit={(event) => void submit(event)}>
-            <Field
-              id="academy-personal-username"
-              label={t("username")}
-              hint={t("usernameHelp")}
-              error={result === "invalid" || result === "unavailable"}
-            >
-              <input
-                autoComplete="username"
-                value={value}
-                maxLength={64}
-                disabled={busy}
-                onChange={(event) => {
-                  setDraft({
-                    value: event.target.value,
-                    version: draft?.version ?? username.version,
-                  });
-                  setResult(null);
-                }}
-              />
-            </Field>
-            <Button type="submit" disabled={!draft || busy}>
-              {t("usernameSave")}
-            </Button>
-            {message && (
-              <Notice kind={result === "saved" ? "success" : "error"}>
-                {message}
-              </Notice>
-            )}
-          </form>
-        ) : (
+      {writable ? (
+        <>
+          <DisplayNameEditor
+            key={`name:${actor}`}
+            initial={displayName}
+            save={async (name) => {
+              const display_name = await saveAcademyDisplayName(actor, name);
+              cache.setQueryData<AcademyPersonalSettings>(
+                request.queryKey,
+                (previous) => previous && { ...previous, display_name },
+              );
+            }}
+          />
+          <AccountSettings
+            key={`email:${actor}`}
+            email={session?.user.email ?? ""}
+            separateProfile={false}
+          />
+        </>
+      ) : (
+        <section className="panel">
           <p>
-            {t("username")} ·{" "}
-            {username.username ?? word("Nicht festgelegt", "Unset")}
+            {t("displayName")}: {displayName}
           </p>
-        )}
-      </section>
+          <p>
+            {t("currentEmail")}: {session?.user.email}
+          </p>
+        </section>
+      )}
       {writable && <AuthenticatorSettings actor={actor} />}
       {writable && <DeliverySettings actor={actor} />}
       <section className="panel">

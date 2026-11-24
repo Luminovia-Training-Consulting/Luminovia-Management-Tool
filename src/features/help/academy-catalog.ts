@@ -40,8 +40,7 @@ const academyGuides: GuideModule[] = [
       "Passwort",
       "password",
       "login",
-      "username",
-      "Benutzername",
+
       "Sprache",
       "language",
       "Dunkel",

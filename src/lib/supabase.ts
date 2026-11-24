@@ -3,7 +3,6 @@
  * explicitly; server secret/service-role keys never belong in this module.
  */
 import { createClient } from "@supabase/supabase-js";
-import { recoveryFetch } from "./recovery-fetch";
 
 /** Public backend address from the browser configuration validated at build time. */
 const url = import.meta.env.VITE_SUPABASE_URL;
@@ -14,7 +13,6 @@ export const isConfigured = Boolean(url && key);
 /** One native client using PKCE, session persistence and token refresh across the browser tree. */
 export const supabase = isConfigured
   ? createClient(url, key, {
-      global: { fetch: recoveryFetch(url, globalThis.fetch.bind(globalThis)) },
       auth: {
         flowType: "pkce",
         persistSession: true,

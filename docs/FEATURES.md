@@ -26,8 +26,8 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 
 ## Konten, Unternehmen und Berechtigungen
 
-- Anmeldung mit Benutzername oder bestätigter E-Mail und Passwort, Einladungen mit persönlicher Passwortvergabe, Passwortwiederherstellung, Passwortänderung und Sitzungsschutz. Eine installierte Academy kann für privilegierte Konten TOTP verlangen.
-- Konten einzeln anlegen oder einladen, Benutzername und Rollen verwalten, Konten sperren und reaktivieren. Zuständigkeiten können kombiniert werden. Unternehmensrollen sind an Mitgliedschaften gebunden. Schutzregeln erhalten die letzte erforderliche Administratorzuständigkeit.
+- Anmeldung mit bestätigter E-Mail und Passwort, Einladungen mit persönlicher Passwortvergabe, Passwortwiederherstellung, Passwortänderung und Sitzungsschutz. Eine installierte Academy kann für privilegierte Konten TOTP verlangen.
+- Konten einzeln anlegen oder einladen, Anzeigenamen und Rollen verwalten, Konten sperren und reaktivieren. Zuständigkeiten können kombiniert werden. Unternehmensrollen sind an Mitgliedschaften gebunden. Schutzregeln erhalten die letzte erforderliche Administratorzuständigkeit.
 - Rollen für Administration, Verwaltung, Dozierende, Unternehmen und Teilnehmende. Das interne Portal ergänzt Plattform-Eigentümerschaft, Senior-Dozierende, Gastzugang und delegierte Finanz- und Verwaltungsbefugnisse. Academy-Rollen gelten innerhalb der jeweiligen Installation.
 - Unternehmensverzeichnis, Organisationsdetails, Kontaktverzeichnis, Mehrfachmitgliedschaften und Unternehmensverlauf. Zuständige Kontakte verwalten die eigenen Teilnehmenden und sehen die zugeordneten Kurse und Dokumente. Mit Premium lassen sich geeignete Personen in einem Vorgang für mehrere veröffentlichte Kurse anmelden.
 - Lehrkräfte nach Unternehmen und Kurszuordnung anzeigen. Berechtigte Stellen können unternehmensbezogene Lehrkraftsperren setzen und aufheben. Die Sperre begrenzt aktuelle Zugriffe und neue Zuweisungen im betroffenen Bereich, während historische Nachweise und unabhängige Rollen erhalten bleiben.

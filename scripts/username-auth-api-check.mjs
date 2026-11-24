@@ -4,16 +4,9 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
-  const user = await actor("username-login", "lecturer");
+await withApiFixture(async ({ actor, url, recoveryEndpoints }) => {
+  const user = await actor("email-login", "lecturer");
   const alias = "course-" + randomUUID().slice(0, 8);
-  await checked(
-    user.client.rpc("save_account_username", {
-      p_username: alias,
-      p_expected_version: 0,
-    }),
-    "Set the fictional login alias",
-  );
   const key = process.env.SUPABASE_ANON_KEY;
   if (!key) throw new Error("Disposable publishable key required");
   const signIn = (identifier, password) =>
@@ -48,16 +41,10 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
     assert.equal(
       data.user?.id,
       user.id,
-      "Alias and email must reach the same Auth identity",
+      "Email login must reach the original Auth identity",
     );
-    const { data: own, error: aliasError } =
-      await client.rpc("account_username");
-    assert.equal(
-      Boolean(aliasError),
-      false,
-      "The token must authorize the caller's own RPC",
-    );
-    assert.equal(own?.username, alias);
+    const retired = await client.rpc("account_username");
+    assert.ok(retired.error, "The old alias endpoint must be inaccessible");
   }
   assert.equal((await signIn(alias, process.env.E2E_PASSWORD)).status, 401);
   for (const identifier of [alias, "missing-" + randomUUID().slice(0, 8)]) {
@@ -73,8 +60,10 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
   assert.equal(mailpit.href, new URL(recoveryEndpoints.mailpitOrigin).href);
   const verifier = randomBytes(42).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const recoverUrl = new URL("auth/v1/recover", url + "/");
+  recoverUrl.searchParams.set("redirect_to", origin + "/auth/callback");
   const submitted = await fetch(
-    new URL("functions/v1/human-recovery", url + "/"),
+    recoverUrl,
     {
       method: "POST",
       headers: {
@@ -83,14 +72,13 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        username: alias,
+        email: user.email,
         code_challenge: challenge,
         code_challenge_method: "s256",
-        redirect_to: origin + "/auth/callback",
       }),
     },
   );
-  assert.equal(submitted.status, 202);
+  assert.equal(submitted.status, 200);
   let captured;
   for (let index = 0; index < 40 && !captured; index++) {
     const response = await fetch(new URL("/api/v1/messages", mailpit));
@@ -136,7 +124,7 @@ await withApiFixture(async ({ actor, checked, url, recoveryEndpoints }) => {
   const recovery = await exchange.json();
   assert.equal(recovery.user?.id, user.id);
   console.log(
-    "PASS one-time username recovery through native Auth, PKCE and fictional Mailpit delivery",
+    "PASS one-time email recovery through native Auth, PKCE and fictional Mailpit delivery",
   );
 
   console.log(

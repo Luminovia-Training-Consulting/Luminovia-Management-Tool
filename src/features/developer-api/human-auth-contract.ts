@@ -69,35 +69,4 @@ export const humanAuthPaths = {
       },
     },
   },
-  "/functions/v1/human-recovery": {
-    post: {
-      operationId: "humanRecovery",
-      tags: ["Authentication"],
-      summary: "Request username recovery using native PKCE",
-      description:
-        "A browser must supply an allowed Origin and that origin's exact /auth/callback URL. The client keeps the PKCE verifier.",
-      security: [],
-      requestBody: {
-        required: true,
-        content: json(
-          object({
-            username: { ...text, pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$" },
-            code_challenge: { ...text, pattern: "^[A-Za-z0-9_-]{43}$" },
-            code_challenge_method: { const: "s256" },
-            redirect_to: { ...text, format: "uri" },
-          }),
-        ),
-      },
-      responses: {
-        "202": {
-          description:
-            "Request accepted without revealing the account or delivery status",
-          content: json(object({})),
-        },
-        "400": error("Invalid alias, challenge or callback", "invalid_request"),
-        "403": error("Browser origin denied", "invalid_request"),
-        "415": error("JSON body required", "invalid_request"),
-      },
-    },
-  },
 };

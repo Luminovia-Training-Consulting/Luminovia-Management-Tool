@@ -86,9 +86,9 @@ async function openDraft() {
   expect(await screen.findByLabelText("Legal company name")).toHaveValue(
     company.name,
   );
+  expect(screen.queryByLabelText(/academy username/i)).not.toBeInTheDocument();
   for (const [label, value] of [
     ["Company account email", email],
-    ["Academy username (optional)", "coordinator"],
     ["Academy name", "Fictional Academy"],
     ["Short name", "Academy"],
     ["Approved logo and icon reference", "FICTIONAL-ASSET-1"],
@@ -135,7 +135,7 @@ it("saves company settings and restores them after reopening without a download"
         name: "Fictional Academy",
         theme: "dark",
       }),
-      initial_administrator: { email, username: "coordinator" },
+      initial_administrator: { email, username: null },
       licence: expect.objectContaining({
         limits: expect.objectContaining({ seat_count: 50 }),
       }),

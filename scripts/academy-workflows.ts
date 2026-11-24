@@ -11,7 +11,7 @@ const groups = {
   ],
   authentication: [
     ["Anmeldung und Wiederherstellung", "Sign-in and recovery"],
-    "humanLogin humanRecovery checkPortalAccess checkAuthenticatorSettingsAvailability",
+    "humanLogin checkPortalAccess checkAuthenticatorSettingsAvailability",
   ],
   accounts: [
     ["Konten, Rollen und Organisationen", "Accounts, roles and organisations"],
@@ -19,7 +19,7 @@ const groups = {
   ],
   settings: [
     ["Persönliche Einstellungen", "Personal settings"],
-    "readOwnAcademyPersonalSettings saveOwnAcademyUsername saveOwnAcademyAppearance",
+    "readOwnAcademyPersonalSettings saveOwnAcademyDisplayName saveOwnAcademyAppearance",
   ],
   administration: [
     [
@@ -113,7 +113,6 @@ const exceptions = [
     },
     relatedOperations: [
       "humanLogin",
-      "humanRecovery",
       "checkAuthenticatorSettingsAvailability",
     ],
   },

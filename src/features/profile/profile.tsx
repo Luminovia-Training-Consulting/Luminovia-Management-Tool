@@ -13,6 +13,7 @@ import { OwnContactVisibility } from "./contact-visibility";
 import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
+import { DisplayNameEditor } from "./display-name-editor";
 import { AccountSettings } from "./account-settings";
 import { ProfileLanguage } from "./profile-language";
 import { ProfileEvidence } from "../files/profile-evidence";
@@ -230,6 +231,21 @@ export function ProfilePage() {
           <code>{profile.data.luminovia_user_id}</code>
         </p>
         {guestOnly && <ProfileForm profile={profile.data} />}
+        {participantOnly && (
+          <DisplayNameEditor
+            key={`name:${session!.user.id}`}
+            initial={profile.data.display_name}
+            save={async (display_name) => {
+              const { error } = await db().rpc("save_profile_display_name", {
+                p_display_name: display_name,
+              });
+              if (error) throw error;
+              await client.invalidateQueries({
+                queryKey: ["profile", session!.user.id],
+              });
+            }}
+          />
+        )}
         <ProfileLanguage
           key={session!.user.id}
           actor={session!.user.id}

@@ -1,87 +1,43 @@
-/** Username aliases retain Auth UUIDs and are writable only by the current actor. */
+/** Upgraded installations keep their identities and expose no account alias operations. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
-await withTestDatabase("username_auth", async ({sql}) => {
-    const first = randomUUID();
-    const second = randomUUID();
-    const guest = randomUUID();
-    const participant = randomUUID();
+await withTestDatabase("retired_account_alias", async ({sql, actor}) => {
+    const user = randomUUID();
+    const other = randomUUID();
     await sql(`insert into auth.users(id,email,email_confirmed_at) values
-        (${q(first)},'first@example.invalid',now()),
-        (${q(second)},'second@example.invalid',now()),
-        (${q(guest)},'guest@example.invalid',now()),
-        (${q(participant)},'participant@example.invalid',now());
-        insert into public.user_roles(user_id,role) values
-        (${q(first)},'lecturer'),(${q(second)},'lecturer'),
-        (${q(guest)},'guest'),(${q(participant)},'participant');`);
-    const as = (id, statement) =>
-        sql(`begin; set local role authenticated;
-        set local request.jwt.claims=${q(JSON.stringify({sub: id, role: "authenticated", aal: "aal1"}))};
-        ${statement}; commit;`);
-    assert.deepEqual(
-        JSON.parse(await as(first, "select public.account_username()")),
-        {username: null, version: 0},
-    );
-    const saved = JSON.parse(
-        await as(first, "select public.save_account_username('Course.Lead',0)"),
-    );
-    assert.deepEqual(saved, {username: "course.lead", version: 1});
-    assert.equal(
-        await sql("select public.login_email_for_alias('course.lead')"),
-        "first@example.invalid",
-    );
-    assert.deepEqual(
-        JSON.parse(await as(second, "select public.account_username()")),
-        {username: null, version: 0},
-    );
-    await assert.rejects(
-        as(second, "select public.save_account_username('course.lead',0)"),
-        /Username unavailable/,
-    );
-    await assert.rejects(
-        as(first, "select public.save_account_username('other.name',0)"),
-        /Username changed/,
-    );
-    await assert.rejects(
-        as(first, "select public.save_account_username('admin',1)"),
-        /Invalid username/,
-    );
-    await as(
-        first,
-        "set local request.path='/rpc/account_username'; select public.require_portal_access()",
-    );
-    for (const [id, alias] of [[guest, "course.guest"], [participant, "course.learner"]]) {
-        assert.deepEqual(JSON.parse(await as(id, "set local request.path='/rpc/account_username'; select public.require_portal_access(); select public.account_username()").then((value) => value.trim())), {username: null, version: 0});
-        await as(id, `set local request.path='/rpc/save_account_username'; select public.require_portal_access(); select public.save_account_username(${q(alias)},0)`);
+      (${q(user)},'course@example.invalid',now()),
+      (${q(other)},'other@example.invalid',now());
+      insert into public.user_roles(user_id,role) values
+        (${q(user)},'lecturer'),(${q(other)},'participant');
+      insert into private.user_login_aliases(user_id,username) values(${q(user)},'legacy.lecturer');`);
+    for (const signature of [
+        "public.account_username()",
+        "public.save_account_username(text,integer)",
+        "public.academy_save_username(text,integer)",
+        "public.login_email_for_alias(text)",
+    ]) {
+        assert.equal(await sql(`select to_regprocedure(${q(signature)}) is null`), "t");
     }
-    await sql(`update public.profiles set active=false where id=${q(first)}`);
-    assert.equal(
-        await sql("select public.login_email_for_alias('course.lead')"),
-        "",
-    );
-    await assert.rejects(as(first, "select public.account_username()"));
-    assert.equal(
-        await sql(
-            "select has_function_privilege('authenticated','public.login_email_for_alias(text)','EXECUTE')",
-        ),
-        "f",
-    );
-    assert.equal(
-        await sql(
-            "select has_function_privilege('anon','public.account_username()','EXECUTE')",
-        ),
-        "f",
-    );
-    assert.equal(
-        await sql("select public.reserve_login_attempt(repeat('a',64))"),
-        "t",
-    );
+    await assert.rejects(actor(user, "select private.save_account_username('blocked.alias',1)"), /42501/);
+    assert.equal(await sql("select has_function_privilege('service_role','private.login_email_for_alias(text)','execute')"), "f");
+    const profile = JSON.parse(await actor(user,
+        `select public.save_account_profile('{"display_name":"Display Name"}'::jsonb);`));
+    assert.equal(profile.profile.display_name, "Display Name");
+    assert.equal(profile.profile.email, "course@example.invalid");
+    await assert.rejects(actor(user,
+        `select public.save_account_profile('{"username":"new.alias"}'::jsonb);`), /22023/);
+
+    assert.equal(await actor(other, `set local request.path='/rpc/save_profile_display_name';
+        select public.require_portal_access();
+        select public.save_profile_display_name('  Participant Name  ');`), "Participant Name");
+    assert.equal(await sql(`select display_name from public.profiles where id=${q(user)}`), "Display Name");
+    await assert.rejects(actor(other, "select public.save_profile_display_name(null)"), /22023/);
+
+    assert.equal(await sql("select public.reserve_login_attempt(repeat('a',64))"), "t");
     for (let i = 1; i < 10; i++)
         await sql("select public.reserve_login_attempt(repeat('a',64))");
-    assert.equal(
-        await sql("select public.reserve_login_attempt(repeat('a',64))"),
-        "f",
-    );
+    assert.equal(await sql("select public.reserve_login_attempt(repeat('a',64))"), "f");
+    console.log("PASS retired username operations, own display name and retained login throttling");
 });

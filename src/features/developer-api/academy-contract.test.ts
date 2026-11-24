@@ -76,7 +76,7 @@ const administrationPaths = [
 ] as const;
 const personalPaths = [
   "/rest/v1/rpc/academy_personal_settings",
-  "/rest/v1/rpc/academy_save_username",
+  "/rest/v1/rpc/academy_save_display_name",
   "/rest/v1/rpc/academy_save_appearance",
 ] as const;
 const academyParityPaths = [
@@ -98,7 +98,6 @@ const academyParityPaths = [
   "/rest/v1/rpc/academy_member_roles",
   "/rest/v1/rpc/academy_set_member_role",
   "/functions/v1/human-login",
-  "/functions/v1/human-recovery",
 ] as const;
 const draftPaths = [
   "/rest/v1/rpc/academy_course_draft_options",
@@ -360,10 +359,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       ).toEqual({ const: "PT428" });
       const explorer = portalOpenApi(backend, false, brand);
       const internal = portalOpenApi(backend);
-      for (const path of [
-        "/functions/v1/human-login",
-        "/functions/v1/human-recovery",
-      ] as const) {
+      for (const path of ["/functions/v1/human-login"] as const) {
         const operation = humanAuthPaths[path].post;
         expect(internal.paths[path].post).toEqual(operation);
         const { responses, ...shared } = operation;

@@ -86,11 +86,13 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   expect(screen.queryByText("Fachgebiete & Expertise")).not.toBeInTheDocument();
   expect(document.querySelector(".profile-privacy-grid")).toBeNull();
   expect(fake.from).not.toHaveBeenCalled();
-  expect(await screen.findByDisplayValue("fictional-guest")).toBeVisible();
+  expect(
+    screen.queryByRole("textbox", { name: "Benutzername" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("combobox", { name: "Standardsprache" })).toHaveValue(
     "de",
   );
-  expect(fake.rpc.mock.calls).toEqual([["account_username"]]);
+  expect(fake.rpc).not.toHaveBeenCalled();
   await act(() => i18n.changeLanguage("en"));
   expect(
     within(timeZone).getByRole("group", { name: "Common time zones" }),

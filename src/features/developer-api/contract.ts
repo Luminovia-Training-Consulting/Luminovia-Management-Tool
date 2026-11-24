@@ -222,12 +222,6 @@ const operationsPeriod = { p_from: date, p_until: date };
 const organisation = { p_organisation_id: uuid };
 const idempotency = { p_request_id: uuid };
 const course = { p_run_id: uuid };
-const optionalUsername = {
-  type: ["null", "string"],
-  minLength: 3,
-  maxLength: 32,
-  pattern: "^[a-z][a-z0-9._-]{1,30}[a-z0-9]$",
-};
 const nullableUuid = { type: ["string", "null"], format: "uuid" };
 const nullableDateTime = { type: ["string", "null"], format: "date-time" };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
@@ -2833,21 +2827,13 @@ const nativePaths = {
       properties: { status: text, claim_id: uuid },
     },
   ),
-  "/rest/v1/rpc/account_username": rpc(
-    "accountUsername",
+  "/rest/v1/rpc/save_profile_display_name": rpc(
+    "native_save_profile_display_name",
     "Accounts",
-    "Read your username",
-    "Returns the current actor's username and version. An unset username is null.",
-    {},
-    object({ username: optionalUsername, version }),
-  ),
-  "/rest/v1/rpc/save_account_username": rpc(
-    "saveAccountUsername",
-    "Accounts",
-    "Change or clear your username",
-    "The username is normalized to lowercase. Clearing an alias does not change the account email, password, roles or UUID.",
-    { p_username: optionalUsername, p_expected_version: version },
-    object({ username: optionalUsername, version }),
+    "Update your display name",
+    "Updates only the current actor’s display name.",
+    { p_display_name: { ...text, minLength: 1, maxLength: 120 } },
+    text,
   ),
   "/rest/v1/rpc/course_welcome_content": rpc(
     "courseWelcomeContent",

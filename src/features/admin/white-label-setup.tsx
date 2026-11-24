@@ -245,7 +245,6 @@ function WhiteLabelSettingsForm({
       },
       initial_administrator: {
         email: field("initial_administrator.email"),
-        username: field("initial_administrator.username") || null,
       },
       target: {
         edition: field("target.edition"),
@@ -330,30 +329,17 @@ function WhiteLabelSettingsForm({
               defaultValue={saved?.legal_customer_name ?? company.name}
             />
           </Field>
-          <div className="form-row">
-            <DraftField
-              name="initial_administrator.email"
-              defaultValue={saved?.initial_administrator.email}
-              label={word("E-Mail des Firmenkontos", "Company account email")}
-              type="email"
-              hint={word(
-                "Der Betreiber verwendet diese aktive Firmenadresse für das erste Administratorkonto.",
-                "The operator uses this active company email for the first administrator.",
-              )}
-              errors={errors}
-            />
-            <DraftField
-              name="initial_administrator.username"
-              defaultValue={saved?.initial_administrator.username ?? undefined}
-              label={word(
-                "Benutzername in der Akademie (optional)",
-                "Academy username (optional)",
-              )}
-              required={false}
-              maxLength={32}
-              errors={errors}
-            />
-          </div>
+          <DraftField
+            name="initial_administrator.email"
+            defaultValue={saved?.initial_administrator.email}
+            label={word("E-Mail des Firmenkontos", "Company account email")}
+            type="email"
+            hint={word(
+              "Der Betreiber verwendet diese aktive Firmenadresse für das erste Administratorkonto.",
+              "The operator uses this active company email for the first administrator.",
+            )}
+            errors={errors}
+          />
           <div className="form-row">
             <DraftField
               name="branding.name"

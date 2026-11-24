@@ -28,11 +28,7 @@ await withTestDatabase("account_onboarding", async ({ sql, actor }) => {
     await sql(
       `select username from private.user_login_aliases where user_id=${q(invited)}`,
     ),
-    alias,
-  );
-  assert.equal(
-    await sql(`select private.login_email_for_alias(${q(alias)})`),
-    "new@example.invalid",
+    "",
   );
   assert.equal(await actor(ordinary, "select public.portal_access()"), "t");
   await sql(
@@ -75,9 +71,9 @@ await withTestDatabase("account_onboarding", async ({ sql, actor }) => {
     await sql(
       `select username from private.user_login_aliases where user_id=${q(invited)}`,
     ),
-    alias,
+    "",
   );
   console.log(
-    "PASS trusted password bootstrap, immutable provisional state, Auth password transition, own alias and role gates",
+    "PASS trusted password bootstrap, immutable provisional state, Auth password transition, retired alias and role gates",
   );
 });

@@ -957,7 +957,6 @@ test("an approved handoff creates exactly its independently confirmed private ru
       entry.legal_customer_name,
       entry.branding.name,
       entry.initial_administrator.email,
-      entry.initial_administrator.username,
       entry.support.contact_email,
       entry.support.agreement_reference,
     ]) {

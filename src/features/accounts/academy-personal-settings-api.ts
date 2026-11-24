@@ -5,7 +5,6 @@ import { db } from "../../lib/supabase";
 import {
   academyAppearanceSchema,
   academyPersonalSettingsSchema,
-  academyUsernameSchema,
   type AcademyAppearancePatch,
 } from "./academy-personal-settings-schema";
 
@@ -42,21 +41,18 @@ export function academyPersonalSettingsQuery(actor: string) {
   });
 }
 
-export async function saveAcademyUsername(
+export async function saveAcademyDisplayName(
   actor: string,
-  value: string | null,
-  version: number,
+  displayName: string,
 ) {
   requireOnline();
   const { client, authorization } = await currentAcademySession(actor);
   const { data, error } = await client
-    .rpc("academy_save_username", {
-      p_username: value,
-      p_expected_version: version,
-    })
+    .rpc("academy_save_display_name", { p_display_name: displayName })
     .setHeader("Authorization", authorization);
   if (error) throw error;
-  return academyUsernameSchema.parse(data);
+  if (typeof data !== "string") throw new Error("name_not_saved");
+  return data;
 }
 
 export async function saveAcademyAppearance(

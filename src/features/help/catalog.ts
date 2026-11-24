@@ -128,8 +128,6 @@ export const guideModules: GuideModule[] = [
     },
     keywords: [
       "login",
-      "benutzername",
-      "username",
       "passwort",
       "password",
       "einladung",

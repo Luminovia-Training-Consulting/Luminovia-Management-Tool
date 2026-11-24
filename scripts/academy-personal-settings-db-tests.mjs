@@ -58,7 +58,7 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         set local request.path=${q("/rpc/" + name)};
         set local request.method='POST';
         select public.require_portal_access();
-        select public.${name}(${args.join(",")});`,
+        select to_json(public.${name}(${args.join(",")}));`,
           ),
         );
         const schema =
@@ -69,15 +69,11 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         return result;
       };
       const read = (id) => rpc(id, "academy_personal_settings");
-      const username = (id, value, version) =>
-        rpc(id, "academy_save_username", [
-          value === null ? "null" : q(value),
-          version,
-        ]);
+      const saveName = (id, name) => rpc(id, "academy_save_display_name", [q(name)]);
       const appearance = (id, patch) =>
         rpc(id, "academy_save_appearance", [q(JSON.stringify(patch))]);
       assert.deepEqual(await read(learner), {
-        username: { username: null, version: 0 },
+        display_name: (await sql(`select display_name from public.profiles where id=${q(learner)}`)),
         appearance: { language: "de", theme: "system", version: 0 },
       });
       assert.deepEqual((await read(teacher)).appearance, {
@@ -85,17 +81,11 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         theme: "dark",
         version: 7,
       });
-      assert.deepEqual(await username(learner, "  Classroom.Learner   ", 0), {
-        username: "classroom.learner",
-        version: 1,
-      });
-      assert.deepEqual((await read(admin)).username, {
-        username: null,
-        version: 0,
-      });
-      await assert.rejects(username(learner, "new.alias", 0), /PT409/);
-      await assert.rejects(username(teacher, "Classroom.Learner", 0), /23505/);
-      await assert.rejects(username(learner, "Admin", 1), /22023/);
+      const adminName = (await read(admin)).display_name;
+      assert.equal(await saveName(learner, "  Classroom Learner  "), "Classroom Learner");
+      assert.equal((await read(learner)).display_name, "Classroom Learner");
+      assert.equal((await read(admin)).display_name, adminName);
+      await assert.rejects(saveName(learner, " "), /22023/);
       assert.deepEqual(
         await appearance(learner, { language: "en", theme: "light" }),
         {
@@ -126,28 +116,16 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         await sql(`select locale from public.profiles where id=${q(learner)}`),
         "en",
       );
-      assert.equal(
-        await sql("select public.login_email_for_alias('classroom.learner')"),
-        learner + "@example.invalid",
-      );
-      assert.deepEqual(await username(learner, null, 1), {
-        username: null,
-        version: 2,
-      });
-      assert.equal(
-        await sql("select public.login_email_for_alias('classroom.learner')"),
-        "",
-      );
+      assert.equal(await sql("select to_regprocedure('public.account_username()') is null"), "t");
+      assert.equal(await sql("select to_regprocedure('public.academy_save_username(text,integer)') is null"), "t");
       for (const id of [guest, inactive, unconfirmed]) {
         await assert.rejects(read(id), /42501/);
-        await assert.rejects(username(id, "must-deny", 0), /42501/);
+        await assert.rejects(saveName(id, "Must deny"), /42501/);
         await assert.rejects(appearance(id, { theme: "light" }), /42501/);
       }
       for (const name of [
         "account_me",
-        "account_username",
         "ui_preferences",
-        "login_email_for_alias",
       ])
         await assert.rejects(rpc(admin, name), /42501/);
       assert.equal(
@@ -172,13 +150,13 @@ for (const edition of ["customer-managed", "customer-self-hosted"]) {
         theme: "dark",
         version: 2,
       });
-      await assert.rejects(username(learner, "grace.refused", 2), /42501/);
+      await assert.rejects(saveName(learner, "Grace refused"), /42501/);
       await assert.rejects(appearance(learner, { theme: "system" }), /42501/);
 
       await configureAcademyCourseAccess({ ...provision, enabled: false }, sql);
       await assert.rejects(read(learner), /42501/);
       console.log(
-        `PASS ${edition} exact own settings, canonical alias and appearance, legacy retention, private scope, read-only grace, profile closure and stable stale handling`,
+        `PASS ${edition} exact own settings, display name and appearance, legacy retention, private scope, read-only grace, profile closure and removed alias endpoints`,
       );
     },
   );

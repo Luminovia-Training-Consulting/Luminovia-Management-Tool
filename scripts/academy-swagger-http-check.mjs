@@ -102,13 +102,13 @@ const signIn = (identifier) =>
   });
 const initial = await checked(await signIn(email), 200, "Email sign-in");
 await checked(
-  await request("/rest/v1/rpc/academy_save_username", {
+  await request("/rest/v1/rpc/academy_save_display_name", {
     method: "POST",
     token: initial.access_token,
-    body: { p_username: alias, p_expected_version: 0 },
+    body: { p_display_name: "Fictional Swagger lecturer" },
   }),
   200,
-  "Create own alias",
+  "Save own display name",
 );
 assert.equal((await signIn(alias.toUpperCase())).status, 401);
 const aliased = await checked(

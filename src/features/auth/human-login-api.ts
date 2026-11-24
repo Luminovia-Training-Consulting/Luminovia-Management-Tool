@@ -1,6 +1,6 @@
 import { db } from "../../lib/supabase";
 
-/** Exchange either login alias or email for one native Supabase Auth session. */
+/** Exchange an email and password for one native Supabase Auth session. */
 export async function signInHuman(identifier: string, password: string) {
   const { data, error } = await db().functions.invoke("human-login", {
     body: { identifier, password },

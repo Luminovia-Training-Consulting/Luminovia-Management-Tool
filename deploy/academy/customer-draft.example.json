@@ -11,8 +11,7 @@
     "approved_assets_reference": "BRAND-FICTIONAL-42"
   },
   "initial_administrator": {
-    "email": "admin@academy.example.invalid",
-    "username": "practice-admin"
+    "email": "admin@academy.example.invalid"
   },
   "target": {
     "edition": "customer-self-hosted",

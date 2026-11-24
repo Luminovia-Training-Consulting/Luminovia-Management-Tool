@@ -106,17 +106,7 @@ export async function localCredentials() {
     }
     if (login.user?.email !== email || !login.access_token)
       throw new Error("Local Auth returned an unexpected identity.");
-    const alias = await fetch(new URL("/rest/v1/rpc/account_username", url), {
-      method: "POST",
-      headers: { ...headers, Authorization: `Bearer ${login.access_token}` },
-      body: "{}",
-      redirect: "error",
-      signal: AbortSignal.timeout(5000),
-    });
-    const username = alias.ok ? (await alias.json())?.username : undefined;
-    rows.push(
-      `${label} | ${email}${username ? ` | Username: ${username}` : ""} | Password: ${password}`,
-    );
+    rows.push(`${label} | ${email} | Password: ${password}`);
   }
 
   const output = `${snapshotHeading}${new Date().toISOString()} (fictional, local only).\n\n${rows.join("\n")}\n\nMailpit: http://127.0.0.1:${config.mail}\n`;

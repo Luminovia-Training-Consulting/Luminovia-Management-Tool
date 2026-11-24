@@ -30,7 +30,7 @@ vi.mock("./academy-personal-settings-api", () => ({
     queryFn: read,
     retry: false,
   }),
-  saveAcademyUsername: saveName,
+  saveAcademyDisplayName: saveName,
   saveAcademyAppearance: saveAppearance,
 }));
 vi.mock("../notifications/delivery-api", async (load) => {
@@ -46,7 +46,7 @@ vi.mock("../notifications/delivery-api", async (load) => {
 });
 
 const current = {
-  username: { username: "saved.learner", version: 2 },
+  display_name: "Saved Learner",
   appearance: { language: "en", theme: "system", version: 0 },
 };
 const delivery = {
@@ -132,20 +132,21 @@ function setup({
   return userEvent.setup();
 }
 
-it("refreshes the current version after a stale username without overwriting the new alias", async () => {
-  saveName.mockRejectedValueOnce({ code: "PT409" });
+it("changes the display name while providing email settings and no username field", async () => {
+  saveName.mockResolvedValue("Updated Learner");
   const user = setup();
-  const input = await screen.findByRole("textbox", { name: "Username" });
+  const input = await screen.findByRole("textbox", { name: "Display name" });
+  expect(
+    screen.queryByRole("textbox", { name: "Username" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("textbox", { name: "New email address" }),
+  ).toBeVisible();
   await user.clear(input);
-  await user.type(input, " Another.Name ");
-  read.mockResolvedValue({
-    ...current,
-    username: { username: "newer.alias", version: 3 },
-  });
-  await user.click(screen.getByRole("button", { name: "Save username" }));
-  expect(saveName).toHaveBeenCalledWith("learner", "another.name", 2);
-  expect(await screen.findByText(/username changed/i)).toBeVisible();
-  expect(input).toHaveValue("newer.alias");
+  await user.type(input, "Updated Learner");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(saveName).toHaveBeenCalledWith("learner", "Updated Learner");
+  expect(await screen.findByText("Saved.")).toBeVisible();
 });
 
 it("uses one accessible settings control and preserves the account language on a first theme save", async () => {
@@ -180,7 +181,7 @@ it("applies the saved account appearance on entry and leaves grace read-only", a
   expect(
     screen.getByText("Deine Einstellungen sind derzeit nur lesbar."),
   ).toBeVisible();
-  expect(screen.getByText(/saved\.learner/)).toBeVisible();
+  expect(screen.getByText(/Saved Learner/)).toBeVisible();
   expect(
     screen.queryByRole("textbox", { name: "Benutzername" }),
   ).not.toBeInTheDocument();

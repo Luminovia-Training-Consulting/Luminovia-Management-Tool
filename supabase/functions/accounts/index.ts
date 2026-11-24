@@ -193,10 +193,9 @@ Deno.serve(
             if (result.error) throw new Error("creation_cleanup_failed");
         },
         sendInvitation: async (invitation, redirectTo) => {
-            const username = "member-" + crypto.randomUUID().replaceAll("-", "").slice(0, 24);
             const result = await service.auth.admin.inviteUserByEmail(
                 invitation.email,
-                {redirectTo, data: {portal_invitation_username: username}},
+                {redirectTo},
             );
             if (result.error || !result.data.user) {
                 throw new Error("invitation_unavailable");
