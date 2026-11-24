@@ -35,6 +35,20 @@ if (candidateOwner) {
         Number(url.port) <= 1024
     )
         throw Error("Only confirmed owned native enquiry backend");
+} else if (Deno.env.get("PORTAL_TEST_RANDOM_SERVICE_PORTS") === "1") {
+    const api = /\[api\]([\s\S]*?)(?=\n\[|$)/.exec(config)?.[1] ?? "";
+    const port = /^port\s*=\s*(\d+)/m.exec(api)?.[1];
+    // The parent already verified the bound gateway and Mailpit against Docker.
+    // Require that same project and its configured API port at the listener.
+    if (
+        !/^luminovia-portal-test-[a-f0-9]{8}$/.test(project) ||
+        Deno.env.get("PORTAL_DB_CONTAINER") !== `supabase_db_${project}` ||
+        url.protocol !== "http:" ||
+        url.hostname !== "127.0.0.1" ||
+        !port ||
+        url.port !== port
+    )
+        throw Error("Only confirmed owned random-port enquiry backend");
 } else if (url.protocol !== "http:" || url.port !== "55321") {
     throw Error("Only canonical loopback enquiry backend");
 }

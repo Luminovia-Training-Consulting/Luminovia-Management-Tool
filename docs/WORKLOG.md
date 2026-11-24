@@ -6,6 +6,8 @@ A database index now supports template-to-run lookups during course access check
 
 Updated browser assertions to exercise the current labels, routes, protected file actions and dated register selections. Expanded the application browser time budget after desktop hit the old aggregate limit. The existing test inventory and built PWA stage remain. Focused Mobile Chromium confirmed the original assignment cancellation and briefing visibility paths.
 
+Matching notices now validate only the addressed lecturer during insert. In an isolated publication with five sessions and 200 synthetic lecturers, the same 198 recipients were produced in about 0.3 seconds after the change, compared with 11.9 seconds before. The enquiry fixture also accepts its explicitly enabled and ownership-verified random loopback port. Its listener rejects mismatched ports and containers while retaining the existing canonical HTTP and native HTTPS checks.
+
 # 23 November 2026 — Consistent scrollable schedules
 
 The shared schedule box keeps long dates inside job details, assignment history, course details, course rooms, offer previews and company requests. The editable date rows in course, offer and company request forms use the same scroll limit. The surrounding date range and time-zone information remains visible where shown by each view.

@@ -55,7 +55,7 @@ async function listenerFixture(t, changes = {}, options = {}) {
     };
     await writeFile(
         join(directory, "supabase/config.toml"),
-        `project_id = "${environment.configProject ?? environment.PORTAL_ENQUIRY_TEST_PROJECT}"\n`,
+        `project_id = "${environment.configProject ?? environment.PORTAL_ENQUIRY_TEST_PROJECT}"\n[api]\nport = ${options.apiPort ?? 55321}\n`,
     );
     delete environment.configProject;
     const child = spawn(
@@ -124,6 +124,27 @@ test("enquiry listener accepts the already ownership-verified native candidate e
         PORTAL_DB_CONTAINER: "supabase_db_" + candidateProject,
     });
     assert.ok(result.port, "Native candidate listener reaches actual readiness");
+});
+
+test("enquiry listener accepts a verified random port only for its own project", async (t) => {
+    const changes = {
+        SUPABASE_URL: "http://127.0.0.1:44777",
+        PORTAL_ENQUIRY_TEST_API_ORIGIN: "http://127.0.0.1:44777",
+        PORTAL_TEST_RANDOM_SERVICE_PORTS: "1",
+        PORTAL_DB_CONTAINER: `supabase_db_${canonicalProject}`,
+    };
+    const accepted = await listenerFixture(t, changes, {apiPort: 44777});
+    assert.ok(accepted.port);
+    const mismatched = await listenerFixture(t, changes, {apiPort: 44778});
+    assert.notEqual(mismatched.code, 0);
+    assert.equal(mismatched.port, undefined);
+    const unrelated = await listenerFixture(
+        t,
+        {...changes, PORTAL_DB_CONTAINER: "supabase_db_unrelated"},
+        {apiPort: 44777},
+    );
+    assert.notEqual(unrelated.code, 0);
+    assert.equal(unrelated.port, undefined);
 });
 
 test("enquiry listener rejects unowned, mismatched, ordinary, remote and missing-test contexts before readiness", async (t) => {
