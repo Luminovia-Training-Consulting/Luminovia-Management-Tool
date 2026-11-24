@@ -104,9 +104,9 @@ test("bounded server discovery, saved-view persistence and private actor boundar
         await expect(page.locator(".jobs-grid>.job-card").first()).toContainText(
             `${prefix} 064`,
         );
-        await page
-            .getByRole("button", {name: "Weitere Aufträge laden", exact: true})
-            .click();
+        await page.locator(".jobs-grid>.job-card").last().evaluate((card) => {
+            card.scrollIntoView({block: "start"});
+        });
         await expect(
             page.getByText("65 Aufträge geladen", {exact: true}),
         ).toBeVisible();

@@ -5,13 +5,13 @@
 import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
-  courseListPages: ["Kursliste blättern", "Course list pages"],
-  courseListRange: [
-    "{{from}}–{{to}} von {{total}} Einträgen",
-    "{{from}}–{{to}} of {{total}} entries",
+  courseListCount: [
+    "{{count}} von {{total}} Einträgen angezeigt",
+    "{{count}} of {{total}} entries shown",
   ],
-  courseListPrevious: ["Vorherige Seite", "Previous page"],
-  courseListNext: ["Nächste Seite", "Next page"],
+  loadMoreRuns: ["Weitere Kurse laden", "Load more courses"],
+  loadMoreTemplates: ["Weitere Vorlagen laden", "Load more templates"],
+  courseDraftCount: ["Entwürfe ({{count}})", "Drafts ({{count}})"],
   companyLecturers: ["Eigene Dozierende", "Company lecturers"],
   companyLecturerChoose: ["Dozent:in auswählen", "Choose lecturer"],
   companyLecturerAdd: ["Dozent:in zuordnen", "Assign lecturer"],
@@ -813,7 +813,6 @@ const pairs: Record<string, [string, string]> = {
   allCourseCompanies: ["Alle Unternehmen", "All companies"],
   courseRunStatusFilter: ["Planungsstatus", "Planning status"],
   allCourseRunStatuses: ["Alle Status", "All statuses"],
-  planningCourseRuns: ["In Planung", "In planning"],
   noCoursesWithStatus: [
     "Keine Kurse mit diesem Status gefunden.",
     "No courses found with this status.",

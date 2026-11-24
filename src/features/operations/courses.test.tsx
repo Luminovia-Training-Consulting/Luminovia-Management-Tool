@@ -1752,7 +1752,7 @@ it("loads a course beyond the first thousand results within the actor scope", as
   expect(state.from).toHaveBeenCalledTimes(5);
 });
 
-it("limits large course lists to one page while search still reaches the last course", async () => {
+it("appends batches and still searches the entire course catalogue", async () => {
   const templates = Array.from({ length: 1001 }, (_, index) => ({
     ...template,
     id: `template-${index}`,
@@ -1768,15 +1768,20 @@ it("limits large course lists to one page while search still reaches the last co
   expect(screen.getAllByRole("button", { name: "Kurs ansehen" })).toHaveLength(
     24,
   );
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
   expect(
     screen.queryByRole("heading", { name: "Catalogue course 25" }),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Nächste Seite" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Weitere Kurse laden" }),
+  );
   expect(
     screen.getByRole("heading", { name: "Catalogue course 25" }),
   ).toBeVisible();
-  expect(screen.getByText("25–48 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("48 von 1001 Einträgen angezeigt")).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Catalogue course 1" }),
+  ).toBeVisible();
 
   fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
     target: { value: "Catalogue course 1001" },
@@ -1791,10 +1796,69 @@ it("limits large course lists to one page while search still reaches the last co
   fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
     target: { value: "" },
   });
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
   await userEvent.click(screen.getByRole("button", { name: "Vorlagen" }));
   expect(screen.getAllByRole("button", { name: "Ansehen" })).toHaveLength(24);
-  expect(screen.getByText("1–24 von 1001 Einträgen")).toBeVisible();
+  expect(screen.getByText("24 von 1001 Einträgen angezeigt")).toBeVisible();
+});
+
+it("prioritizes published courses and makes dated drafts separately filterable", async () => {
+  const past = {
+    ...template,
+    id: "past-template",
+    title: "Past fictional draft",
+  };
+  const live = {
+    ...template,
+    id: "live-template",
+    title: "Published fictional course",
+  };
+  state.accountRequest.mockResolvedValue({
+    can_admin: true,
+    kinds: ["course_run"],
+  });
+  renderCourses({
+    templates: [past, live, template],
+    runs: [
+      {
+        ...run,
+        id: "past-draft",
+        template_id: past.id,
+        course_sessions: [
+          {
+            id: "past-session",
+            starts_at: "2001-01-02T08:00:00Z",
+            ends_at: "2001-01-02T09:00:00Z",
+          },
+        ],
+      },
+      { ...run, id: "live-run", template_id: live.id, published: true },
+      run,
+    ],
+  });
+  const headings = () =>
+    screen
+      .getAllByRole("article")
+      .map(
+        (entry) => within(entry).getByRole("heading", { level: 2 }).textContent,
+      );
+  expect(headings()).toEqual([live.title, template.title, past.title]);
+  expect(screen.getByRole("option", { name: "Entwürfe (2)" })).toBeVisible();
+  await userEvent.selectOptions(
+    screen.getByLabelText("Planungsstatus"),
+    "planning",
+  );
+  expect(headings()).toEqual([template.title, past.title]);
+  const card = screen.getAllByRole("article")[0];
+  const remove = within(card).getByRole("button", {
+    name: `Löschen: ${template.title}`,
+  });
+  const archive = within(card).getByRole("button", {
+    name: "Archivieren",
+  });
+  expect(
+    remove.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });
 
 it("still opens a course detail from a bookmark outside the first page", async () => {
@@ -1995,14 +2059,14 @@ it("shows all company and internal course statuses with distinct company and cre
   const courses = screen
     .getAllByRole("article")
     .map((article) => within(article));
-  expect(courses[0].getByText("Entwurf", { exact: true })).toBeVisible();
-  expect(courses[0].getByText("Vom Unternehmen erstellt")).toBeVisible();
-  expect(courses[1].getByText("Veröffentlicht", { exact: true })).toBeVisible();
+  expect(courses[1].getByText("Entwurf", { exact: true })).toBeVisible();
+  expect(courses[1].getByText("Vom Unternehmen erstellt")).toBeVisible();
+  expect(courses[0].getByText("Veröffentlicht", { exact: true })).toBeVisible();
   expect(
-    courses[1].getByText(organisation.name, { exact: true }),
+    courses[0].getByText(organisation.name, { exact: true }),
   ).toBeVisible();
   expect(
-    courses[1].getByText("Von Admin oder Management erstellt"),
+    courses[0].getByText("Von Admin oder Management erstellt"),
   ).toBeVisible();
   expect(courses[2].getByText("Archiviert", { exact: true })).toBeVisible();
   expect(courses[2].getByText("Herkunft unbekannt")).toBeVisible();

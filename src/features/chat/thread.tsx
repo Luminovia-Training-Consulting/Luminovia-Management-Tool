@@ -7,8 +7,10 @@ import { canRetryNextPage } from "../../lib/paged-read";
 import { orderedCursorRows } from "../../lib/cursor-rows";
 import {
   Fragment,
+  useCallback,
   useEffect,
   useEffectEvent,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -54,6 +56,8 @@ import { useChatRealtime } from "./realtime";
 import type { ChatRoom } from "./types";
 import "./i18n";
 
+const olderHistoryThreshold = 120;
+
 /** Bind history, read state, search, Realtime and attachments to one active room. */
 export function ChatThread({
   actor,
@@ -97,6 +101,14 @@ export function ChatThread({
   const [jumpFailed, setJumpFailed] = useState(false);
   const [jumpId, setJumpId] = useState<string | null>(null);
   const threadElement = useRef<HTMLElement>(null);
+  const historyElement = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
+  const olderAnchor = useRef<{
+    message: HTMLElement;
+    contentTop: number;
+    pageCount: number;
+    search: string;
+  } | null>(null);
   const [following, setFollowing] = useState(true);
   const [linkedTarget, setLinkedTarget] = useState<string | null>(null);
   const [newMessages, setNewMessages] = useState(false);
@@ -106,6 +118,67 @@ export function ChatThread({
   });
   const retryOlder = canRetryNextPage(messages);
   const historyUnavailable = messages.isError && !retryOlder;
+  const pageCount = messages.data?.pages.length ?? 0;
+  const canLoadOlder =
+    online &&
+    !revoked &&
+    !jumping &&
+    !historyUnavailable &&
+    !messages.isFetchingNextPage &&
+    messages.hasNextPage;
+  const loadOlder = async () => {
+    const pane = historyElement.current;
+    const message = pane?.querySelector<HTMLElement>("[data-message-id]");
+    if (!canLoadOlder || olderAnchor.current || !pane || !message) return;
+    const anchor = {
+      message,
+      contentTop:
+        message.getBoundingClientRect().top -
+        pane.getBoundingClientRect().top +
+        pane.scrollTop,
+      pageCount,
+      search,
+    };
+    olderAnchor.current = anchor;
+    setFollowing(false);
+    let result = await messages.fetchNextPage({ cancelRefetch: false });
+    // A Realtime refresh can replace this request or already be in progress.
+    // Continue once from the refreshed cursor if no older page was appended.
+    if (
+      olderAnchor.current === anchor &&
+      historyElement.current === pane &&
+      result.isSuccess &&
+      result.hasNextPage &&
+      result.data.pages.length === pageCount
+    ) {
+      result = await result.fetchNextPage({ cancelRefetch: false });
+    }
+    if (
+      olderAnchor.current === anchor &&
+      (result.isError || (result.data?.pages.length ?? 0) <= pageCount)
+    )
+      olderAnchor.current = null;
+  };
+  useLayoutEffect(() => {
+    const anchor = olderAnchor.current;
+    if (!anchor) return;
+    if (anchor.search !== search) {
+      olderAnchor.current = null;
+      return;
+    }
+    if (pageCount <= anchor.pageCount) return;
+    olderAnchor.current = null;
+    const pane = historyElement.current;
+    if (pane?.contains(anchor.message)) {
+      // Preserve the current viewport even if the reader moved during the request.
+      const contentTop =
+        anchor.message.getBoundingClientRect().top -
+        pane.getBoundingClientRect().top +
+        pane.scrollTop;
+      pane.scrollTop += contentTop - anchor.contentTop;
+      lastScrollTop.current = pane.scrollTop;
+    }
+  }, [pageCount, search]);
   const ordered = useMemo(
     () => orderedCursorRows(messages.data?.pages, "ascending"),
     [messages.data?.pages],
@@ -168,7 +241,8 @@ export function ChatThread({
     ].find((element) => element.dataset.messageId === jumpId);
     if (item) {
       item.scrollIntoView({ block: "center" });
-      item.focus();
+      lastScrollTop.current = historyElement.current?.scrollTop ?? 0;
+      item.focus({ preventScroll: true });
       setJumpId(null);
     }
   }, [jumpId, ordered]);
@@ -181,7 +255,6 @@ export function ChatThread({
     return () => clearTimeout(request);
   }, [messageId, messages.isSuccess, online, revoked]);
   const marked = useRef("");
-  const end = useRef<HTMLDivElement>(null);
   // Room management is not a blanket administrator read bypass for private DMs.
   // The UI follows distinct room types; the server checks each action again.
   const canManage =
@@ -250,14 +323,20 @@ export function ChatThread({
     mark,
   ]);
   const previousLatest = useRef("");
+  const showLatest = useCallback(() => {
+    const pane = historyElement.current;
+    if (pane) {
+      pane.scrollTop = pane.scrollHeight;
+      lastScrollTop.current = pane.scrollTop;
+    }
+  }, []);
   useEffect(() => {
     if (!latest || latest.id === previousLatest.current || search) return;
     const initial = !previousLatest.current;
     previousLatest.current = latest.id;
-    if (following && (!initial || !messageId))
-      end.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
+    if (following && (!initial || !messageId)) showLatest();
     else if (!initial) setNewMessages(true);
-  }, [latest, search, following, messageId]);
+  }, [latest, search, following, messageId, showLatest]);
   const mute = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -436,12 +515,20 @@ export function ChatThread({
       )}
       <div
         className="chat-message-scroll"
+        ref={historyElement}
+        role="region"
+        aria-label={t("messageHistory")}
+        tabIndex={0}
         onScroll={(event) => {
           const area = event.currentTarget;
+          const movedUp = area.scrollTop < lastScrollTop.current;
+          lastScrollTop.current = area.scrollTop;
           const isAtEnd =
             area.scrollHeight - area.scrollTop - area.clientHeight <= 12;
           setFollowing(isAtEnd);
           if (isAtEnd) setNewMessages(false);
+          if (movedUp && area.scrollTop <= olderHistoryThreshold && !retryOlder)
+            void loadOlder();
         }}
         aria-busy={messages.isFetching && !messages.isFetchingNextPage}
       >
@@ -451,26 +538,28 @@ export function ChatThread({
           <ErrorState retry={() => void messages.refetch()} />
         ) : (
           <>
-            {retryOlder ? (
-              <NextPageError
-                retry={() =>
-                  void messages.fetchNextPage({ cancelRefetch: false })
-                }
-                disabled={!online || messages.isFetching}
-              />
-            ) : (
-              messages.hasNextPage && (
-                <div className="chat-load-older">
+            {(retryOlder || messages.hasNextPage) && (
+              <div className="chat-load-older">
+                {retryOlder ? (
+                  <NextPageError
+                    retry={() => void loadOlder()}
+                    disabled={!canLoadOlder}
+                  />
+                ) : (
                   <Button
+                    type="button"
                     variant="secondary"
                     size="sm"
-                    disabled={messages.isFetchingNextPage || !online}
-                    onClick={() => void messages.fetchNextPage()}
+                    aria-disabled={!canLoadOlder}
+                    onClick={() => void loadOlder()}
                   >
                     {t("loadOlder")}
                   </Button>
-                </div>
-              )
+                )}
+                <span className="sr-only" role="status">
+                  {messages.isFetchingNextPage ? t("loadingOlder") : ""}
+                </span>
+              </div>
             )}
             {ordered.length === 0 ? (
               <div className="chat-thread-empty">
@@ -524,7 +613,6 @@ export function ChatThread({
                 ))}
               </ol>
             )}
-            <div ref={end} />
           </>
         )}
       </div>
@@ -546,7 +634,7 @@ export function ChatThread({
         <Button
           variant="secondary"
           onClick={() => {
-            end.current?.scrollIntoView({ block: "nearest" });
+            showLatest();
             setFollowing(true);
             setNewMessages(false);
           }}

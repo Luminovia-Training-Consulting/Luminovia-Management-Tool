@@ -1,3 +1,4 @@
+import { LoadMore } from "../../components/load-more";
 import { SessionScroll } from "../../components/session-scroll";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
@@ -1277,8 +1278,6 @@ export function CoursesPage() {
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
-  const [pages, setPages] = useState({ runs: 0, templates: 0 });
-  const resetPages = () => setPages({ runs: 0, templates: 0 });
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [runStatus, setRunStatus] = useState("all");
   const [lecturer, setLecturer] = useState("");
@@ -1293,12 +1292,25 @@ export function CoursesPage() {
   const company = manage ? (params.get("company") ?? "") : "";
   const setCourseView = (view: Record<string, string>, replace = false) =>
     setParams(company ? { ...view, company } : view, { replace });
-  const selectedRunStatus = manage ? runStatus : "all";
+  const selectedRunStatus =
+    manage && (runStatus !== "assigned" || canPrepareOffer) ? runStatus : "all";
   const onlyAssignedRuns = canPrepareOffer && selectedRunStatus === "assigned";
   const tab =
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
       : "runs";
+  const batchSize = 24;
+  const listKey = JSON.stringify(
+    tab === "runs"
+      ? [actor, tab, search, company, phase, selectedRunStatus, lecturer]
+      : [actor, tab, search],
+  );
+  const [visibleList, setVisibleList] = useState({
+    key: listKey,
+    count: batchSize,
+  });
+  if (visibleList.key !== listKey)
+    setVisibleList({ key: listKey, count: batchSize });
   const setTab = (next: "runs" | "templates") => {
     setCourseView(next === "templates" ? { tab: next } : {});
   };
@@ -1483,16 +1495,13 @@ export function CoursesPage() {
     );
   const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
   const needle = search.toLowerCase();
-  const filteredRuns =
+  const matchingRuns =
     tab === "runs"
       ? runs.data.filter((run) => {
           const assignments = assignmentsByRun.get(run.id) ?? [];
           if (
             (!manage && run.archived_at) ||
             (company && run.organisation_id !== company) ||
-            (selectedRunStatus !== "all" &&
-              selectedRunStatus !== "assigned" &&
-              courseRunStatus(run) !== selectedRunStatus) ||
             (onlyAssignedRuns && !assignments.length) ||
             (canPrepareOffer &&
               lecturer &&
@@ -1522,6 +1531,27 @@ export function CoursesPage() {
             .includes(needle);
         })
       : [];
+  const courseStatusRank = { published: 0, planning: 1, archived: 3 };
+  const rankedRuns = matchingRuns.map((run) => {
+    const status = courseRunStatus(run);
+    const pastDraft =
+      status === "planning" &&
+      scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) ===
+        "completed";
+    return { run, status, rank: courseStatusRank[status] + Number(pastDraft) };
+  });
+  const draftCount = rankedRuns.filter(
+    ({ status }) => status === "planning",
+  ).length;
+  const filteredRuns = rankedRuns
+    .filter(
+      ({ status }) =>
+        selectedRunStatus === "all" ||
+        onlyAssignedRuns ||
+        status === selectedRunStatus,
+    )
+    .sort((first, second) => first.rank - second.rank)
+    .map(({ run }) => run);
   const visibleTemplates = templates.data.filter(canManageTemplate);
   const planningOrganisations = manage ? orgs.data : companyOrganisations;
   const offerStatus = (run: CourseRun, compact = false) => {
@@ -1660,13 +1690,8 @@ export function CoursesPage() {
             .includes(needle),
         )
       : visibleTemplates;
-  const pageSize = 24;
   const total = tab === "runs" ? filteredRuns.length : filteredTemplates.length;
-  const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
-  const page = Math.min(pages[tab], lastPage);
-  const start = page * pageSize;
-  const end = Math.min(start + pageSize, total);
-  const goToPage = (next: number) => setPages({ ...pages, [tab]: next });
+  const shownCount = Math.min(visibleList.count, total);
   return (
     <>
       <PageHeading
@@ -1860,7 +1885,6 @@ export function CoursesPage() {
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
-                resetPages();
               }}
             />
           </Field>
@@ -1868,10 +1892,7 @@ export function CoursesPage() {
             <CoursePhaseFilter
               id="catalogue-course-phase"
               value={phase}
-              onChange={(next) => {
-                setPhase(next);
-                setPages({ ...pages, runs: 0 });
-              }}
+              onChange={setPhase}
             />
           )}
           {manage && tab === "runs" && (
@@ -1889,7 +1910,6 @@ export function CoursesPage() {
                       next.set("company", event.target.value);
                     else next.delete("company");
                     setParams(next, { replace: true });
-                    resetPages();
                   }}
                 >
                   <option value="">{t("allCourseCompanies")}</option>
@@ -1910,7 +1930,6 @@ export function CoursesPage() {
                     value={lecturer}
                     onChange={(event) => {
                       setLecturer(event.target.value);
-                      resetPages();
                     }}
                   >
                     <option value="">{t("allCourseLecturers")}</option>
@@ -1931,11 +1950,12 @@ export function CoursesPage() {
                   value={runStatus}
                   onChange={(event) => {
                     setRunStatus(event.target.value);
-                    resetPages();
                   }}
                 >
                   <option value="all">{t("allCourseRunStatuses")}</option>
-                  <option value="planning">{t("planningCourseRuns")}</option>
+                  <option value="planning">
+                    {t("courseDraftCount", { count: draftCount })}
+                  </option>
                   <option value="published">{t("published")}</option>
                   <option value="archived">{t("archive")}</option>
                   {canPrepareOffer && (
@@ -1965,30 +1985,6 @@ export function CoursesPage() {
           {t(archiveRun.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
-      {lastPage > 0 && (
-        <nav
-          className="page-actions course-pagination"
-          aria-label={t("courseListPages")}
-        >
-          <p role="status">
-            {t("courseListRange", { from: start + 1, to: end, total })}
-          </p>
-          <Button
-            variant="secondary"
-            disabled={page === 0}
-            onClick={() => goToPage(page - 1)}
-          >
-            {t("courseListPrevious")}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={page === lastPage}
-            onClick={() => goToPage(page + 1)}
-          >
-            {t("courseListNext")}
-          </Button>
-        </nav>
-      )}
       {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
@@ -2003,7 +1999,7 @@ export function CoursesPage() {
         </div>
       ) : tab === "runs" ? (
         <div className="operations-courses-grid">
-          {filteredRuns.slice(start, end).map((run) => {
+          {filteredRuns.slice(0, shownCount).map((run) => {
             const template = findTemplate(run);
             const jobs = run.jobs ?? [];
             const { liveOffers, closedReason } = courseOfferState(
@@ -2127,18 +2123,6 @@ export function CoursesPage() {
                       {marketplaceAction(run, true)}
                       <Button
                         variant="ghost"
-                        disabled={!online || archiveRun.isPending}
-                        onClick={() =>
-                          archiveRun.mutate({
-                            run,
-                            archived: !run.archived_at,
-                          })
-                        }
-                      >
-                        {t(run.archived_at ? "restore" : "archiveAction")}
-                      </Button>
-                      <Button
-                        variant="ghost"
                         disabled={!online}
                         onClick={() => {
                           duplicate.reset();
@@ -2160,6 +2144,18 @@ export function CoursesPage() {
                         linkedJobs={run.jobs}
                         onReviewSessions={() => reviewSchedule(run)}
                       />
+                      <Button
+                        variant="ghost"
+                        disabled={!online || archiveRun.isPending}
+                        onClick={() =>
+                          archiveRun.mutate({
+                            run,
+                            archived: !run.archived_at,
+                          })
+                        }
+                      >
+                        {t(run.archived_at ? "restore" : "archiveAction")}
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -2175,7 +2171,7 @@ export function CoursesPage() {
         <div className="empty-state">{t("noCourseTemplates")}</div>
       ) : (
         <div className="operations-courses-grid">
-          {filteredTemplates.slice(start, end).map((template) => (
+          {filteredTemplates.slice(0, shownCount).map((template) => (
             <article className="panel operations-course" key={template.id}>
               <h2>{template.title}</h2>
               {template.building_block_id &&
@@ -2250,6 +2246,23 @@ export function CoursesPage() {
               </div>
             </article>
           ))}
+        </div>
+      )}
+      {total > batchSize && (
+        <div className="page-actions course-list-footer">
+          <p role="status">
+            {t("courseListCount", { count: shownCount, total })}
+          </p>
+          {shownCount < total && (
+            <LoadMore
+              pageKey={`${listKey}:${shownCount}`}
+              onLoad={() =>
+                setVisibleList({ key: listKey, count: shownCount + batchSize })
+              }
+            >
+              {t(tab === "runs" ? "loadMoreRuns" : "loadMoreTemplates")}
+            </LoadMore>
+          )}
         </div>
       )}
       <Dialog
@@ -2345,7 +2358,6 @@ export function CoursesPage() {
             if (initialTemplateId && !runEdit) {
               setSearch("");
               setPhase("all");
-              resetPages();
               setMessage(t("courseDraftCreated"));
             } else {
               setMessage(t("saved"));
@@ -2488,29 +2500,15 @@ export function CoursesPage() {
           <>
             <div className="page-actions course-record-actions">
               {manage && (
-                <>
-                  <Button
-                    disabled={!online}
-                    onClick={() => {
-                      setCourseView({}, true);
-                      editRun(detail);
-                    }}
-                  >
-                    {t("edit")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={!online || archiveRun.isPending}
-                    onClick={() =>
-                      archiveRun.mutate({
-                        run: detail,
-                        archived: !detail.archived_at,
-                      })
-                    }
-                  >
-                    {t(detail.archived_at ? "restore" : "archiveAction")}
-                  </Button>
-                </>
+                <Button
+                  disabled={!online}
+                  onClick={() => {
+                    setCourseView({}, true);
+                    editRun(detail);
+                  }}
+                >
+                  {t("edit")}
+                </Button>
               )}
               <PermanentDeleteAction
                 shortLabel
@@ -2522,6 +2520,20 @@ export function CoursesPage() {
                   manage ? () => reviewSchedule(detail) : undefined
                 }
               />
+              {manage && (
+                <Button
+                  variant="secondary"
+                  disabled={!online || archiveRun.isPending}
+                  onClick={() =>
+                    archiveRun.mutate({
+                      run: detail,
+                      archived: !detail.archived_at,
+                    })
+                  }
+                >
+                  {t(detail.archived_at ? "restore" : "archiveAction")}
+                </Button>
+              )}
             </div>
             {manage && (
               <div className="course-marketplace-state">

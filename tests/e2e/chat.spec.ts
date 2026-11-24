@@ -123,6 +123,62 @@ async function secondPage(context: BrowserContext, user: Account) {
     return page;
 }
 
+test("long chat history loads on upward scroll without moving the visible message", async ({
+    page,
+}) => {
+    const owner = await account("HistoryOwner");
+    const member = await account("HistoryMember");
+    const ownerApi = localClient(process.env.SUPABASE_ANON_KEY!);
+    expect((await ownerApi.auth.signInWithPassword({
+        email: owner.email,
+        password: process.env.E2E_PASSWORD!,
+    })).error).toBeNull();
+    const created = await ownerApi.rpc("create_chat_group", {
+        p_title: `Fictional long chat ${randomUUID().slice(0, 8)}`,
+        p_member_ids: [member.id],
+    });
+    expect(created.error).toBeNull();
+
+    const timestamp = Date.now() - 3_600_000;
+    const messages = Array.from({length: 82}, (_, index) => ({
+        id: randomUUID(),
+        room_id: created.data,
+        sender_id: member.id,
+        client_id: randomUUID(),
+        request_hash: randomUUID(),
+        created_at: new Date(timestamp + index * 1_000).toISOString(),
+        body: `Fictional history message ${index + 1}`,
+    }));
+    expect((await service().from("messages").insert(messages)).error).toBeNull();
+    await login(page, owner);
+    await page.goto(`/chats?room=${created.data}`);
+    const history = page.getByRole("region", {name: "Nachrichtenverlauf"});
+    const rows = history.locator("[data-message-id]");
+    await expect(rows).toHaveCount(40);
+    await expect(rows.last()).toContainText("Fictional history message 82");
+    await expect.poll(() => history.evaluate(
+        (pane) => pane.scrollHeight - pane.scrollTop - pane.clientHeight,
+    )).toBeLessThanOrEqual(12);
+    await expect(history.getByText("Fictional history message 42", {exact: true})).toHaveCount(0);
+
+    const anchorId = messages[42]!.id;
+    const anchorTop = await history.evaluate((pane, id) => {
+        pane.scrollTop = 0;
+        return pane.querySelector(`[data-message-id="${id}"]`)!.getBoundingClientRect().top -
+            pane.getBoundingClientRect().top;
+    }, anchorId);
+    await expect(rows).toHaveCount(80);
+    const after = await history.evaluate((pane, id) =>
+        pane.querySelector(`[data-message-id="${id}"]`)!.getBoundingClientRect().top -
+            pane.getBoundingClientRect().top,
+    anchorId);
+    expect(Math.abs(after - anchorTop)).toBeLessThanOrEqual(2);
+    await expect(history.getByText("Fictional history message 1", {exact: true})).toHaveCount(0);
+    await history.evaluate((pane) => { pane.scrollTop = 0; });
+    await expect(rows).toHaveCount(82);
+    await expect(rows.first()).toContainText("Fictional history message 1");
+});
+
 test("real private DM persists, delivers realtime, edits/deletes safely and denies a third lecturer", async ({
                                                                                                                  browser,
                                                                                                                  page,

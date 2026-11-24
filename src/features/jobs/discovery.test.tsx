@@ -350,6 +350,41 @@ it("matches any selected subject, combines other filters, and keeps history opt-
   expect(params.getAll("topic")).toEqual(topics.map((topic) => topic.id));
   expect(params.get("history")).toBe("1");
 });
+it("keeps confirmed offers during a transient continuation failure and retries the same cursor", async () => {
+  setup();
+  const original = state.rpc.getMockImplementation()!;
+  let failContinuation = true;
+  state.rpc.mockImplementation(
+    (name: string, args: Record<string, unknown>) => {
+      if (name === "job_discovery" && args.p_cursor && failContinuation) {
+        const result = Promise.resolve({
+          data: null,
+          error: { message: "Temporary failure" },
+          status: 503,
+        });
+        return Object.assign(result, { abortSignal: () => result });
+      }
+      return original(name, args);
+    },
+  );
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Fictional discovery 1" });
+  await user.click(
+    screen.getByRole("button", { name: "Weitere Aufträge laden" }),
+  );
+  const alert = await screen.findByRole("alert");
+  expect(
+    screen.getByRole("link", { name: "Fictional discovery 1" }),
+  ).toBeVisible();
+  failContinuation = false;
+  await user.click(within(alert).getByRole("button"));
+  await screen.findByRole("link", { name: "Fictional discovery 2" });
+  const requests = state.rpc.mock.calls.filter(
+    ([name]) => name === "job_discovery",
+  );
+  expect(requests[1][1].p_cursor).toEqual(requests[2][1].p_cursor);
+});
+
 it("hides old quote pages immediately after an observed role change and starts without their cursor", async () => {
   const client = setup();
   const user = userEvent.setup();

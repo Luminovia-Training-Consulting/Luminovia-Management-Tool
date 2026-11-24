@@ -1,4 +1,6 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { LoadMore } from "../../components/load-more";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist } from "./lifecycle-extra";
@@ -28,6 +30,7 @@ import {
   ErrorState,
   Field,
   Loading,
+  NextPageError,
   Notice,
   PageHeading,
 } from "../../components/common";
@@ -547,6 +550,10 @@ export function JobDiscovery() {
       resetDraft((revision) => revision + 1);
     else setParams(nextParams, { preventScrollReset: true });
   };
+  const retryNextPage = canRetryNextPage(query);
+  const loadNextPage = () => {
+    if (!query.isFetching) void query.fetchNextPage({ cancelRefetch: false });
+  };
   const items = [
     ...new Map(
       (query.data?.pages ?? [])
@@ -600,7 +607,7 @@ export function JobDiscovery() {
         </Notice>
       ) : query.isPending ? (
         <Loading />
-      ) : query.isError ? (
+      ) : query.isError && !retryNextPage ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : (
         <>
@@ -617,13 +624,16 @@ export function JobDiscovery() {
               <p>{common("noJobsHint")}</p>
             </div>
           )}
-          {query.hasNextPage ? (
-            <Button
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
+          {retryNextPage ? (
+            <NextPageError retry={loadNextPage} disabled={query.isFetching} />
+          ) : query.hasNextPage ? (
+            <LoadMore
+              disabled={query.isFetching}
+              onLoad={loadNextPage}
+              pageKey={search}
             >
               {t("more")}
-            </Button>
+            </LoadMore>
           ) : (
             items.length > 0 && <p>{t("complete")}</p>
           )}

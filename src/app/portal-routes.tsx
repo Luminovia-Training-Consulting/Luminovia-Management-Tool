@@ -41,13 +41,18 @@ import { Dashboard } from "../features/dashboard/dashboard";
 import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { ChangeRequestsPage } from "../features/changes/changes";
 import { JobDetail } from "../features/jobs/jobs";
-import { JobDiscovery } from "../features/jobs/discovery";
 import { ProfilePage } from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
+
+const JobDiscovery = lazy(() =>
+  import("../features/jobs/discovery").then((module) => ({
+    default: module.JobDiscovery,
+  })),
+);
 
 const StandaloneSwagger = lazy(() =>
   import("../features/developer-api/standalone-swagger").then((module) => ({
