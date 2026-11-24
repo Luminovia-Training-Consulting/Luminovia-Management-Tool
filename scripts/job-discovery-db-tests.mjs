@@ -564,6 +564,48 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
         },
     );
     await check(
+        "Dashboard counts only open offers while retaining draft, expired and near-term management counts",
+        async () => {
+            const snapshot = async (who) =>
+                JSON.parse(await actor(who, "select public.job_dashboard()"));
+            const teacherBefore = await snapshot(teacher);
+            const managerBefore = await snapshot(manager);
+            await sql(`
+                insert into public.jobs (
+                    title, customer_name, delivery_type, status, claim_deadline, amount,
+                    total_amount, currency, rate_unit, terms
+                ) values
+                    ('Dashboard future', 'Fictional academy', 'online', 'published', null, 100, 100, 'EUR', 'fixed_total', 'Fixture'),
+                    ('Dashboard started', 'Fictional academy', 'online', 'published', null, 100, 100, 'EUR', 'fixed_total', 'Fixture'),
+                    ('Dashboard expired', 'Fictional academy', 'online', 'published', now() - interval '1 day', 100, 100, 'EUR', 'fixed_total', 'Fixture'),
+                    ('Dashboard unscheduled', 'Fictional academy', 'online', 'published', null, 100, 100, 'EUR', 'fixed_total', 'Fixture'),
+                    ('Dashboard draft', 'Fictional academy', 'online', 'draft', null, 100, 100, 'EUR', 'fixed_total', 'Fixture'),
+                    ('Dashboard archived', 'Fictional academy', 'online', 'archived', null, 100, 100, 'EUR', 'fixed_total', 'Fixture');
+                insert into public.job_sessions(job_id, starts_at, ends_at)
+                    select id, now() + interval '2 days', now() + interval '2 days 1 hour'
+                    from public.jobs
+                    where title in ('Dashboard future', 'Dashboard started', 'Dashboard expired', 'Dashboard archived');
+                insert into public.job_sessions(job_id, starts_at, ends_at)
+                    select id, now() - interval '1 day', now() - interval '23 hours'
+                    from public.jobs where title = 'Dashboard started';
+            `);
+            const teaching = await snapshot(teacher);
+            const management = await snapshot(manager);
+            assert.equal(teaching.open_count, teacherBefore.open_count + 1);
+            assert.equal(teaching.management, null);
+            assert.equal(teaching.next_session_count, teacherBefore.next_session_count);
+            assert.deepEqual(teaching.next_assignments, teacherBefore.next_assignments);
+            assert.equal(management.open_count, managerBefore.open_count + 1);
+            assert.deepEqual(management.management, {
+                drafts: managerBefore.management.drafts + 1,
+                expired: managerBefore.management.expired + 1,
+                upcoming: managerBefore.management.upcoming + 3,
+            });
+            for (const who of [client, learner])
+                await assert.rejects(snapshot(who), /42501/);
+        },
+    );
+    await check(
         "Existing-token revocation and complete anonymous/helper grants remain authoritative",
         async () => {
             await sql(`delete from public.user_roles where user_id='${teacher}'`);

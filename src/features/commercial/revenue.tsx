@@ -4,7 +4,7 @@
  */
 import { FinanceRows } from "./finance-rows";
 import { currencyCodes } from "../../lib/currencies.ts";
-import { useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -35,30 +35,42 @@ export function RevenuePanel() {
   });
   const [search, setSearch] = useState("");
   const [currency, setCurrency] = useState("");
+  const language = i18n.language;
+  const deferredSearch = useDeferredValue(search);
+  const rows = useMemo(() => {
+    const needle = deferredSearch.toLocaleLowerCase(language);
+    return (report.data ?? []).filter(
+      (row) =>
+        (!currency || row.currency === currency) &&
+        (!needle ||
+          `${row.title} ${row.organisation_name} ${row.lecturer_name ?? ""}`
+            .toLocaleLowerCase(language)
+            .includes(needle)),
+    );
+  }, [report.data, currency, deferredSearch, language]);
+  const { totals, hasAccepted } = useMemo(
+    () => ({
+      totals: revenueTotals(rows),
+      hasAccepted: rows.some((row) => row.claim_id),
+    }),
+    [rows],
+  );
   if (!access.data?.can_manage_gross) return null;
   if (report.isPending) return <Loading />;
   if (report.isError) return <ErrorState retry={() => void report.refetch()} />;
-  const rows = report.data.filter(
-    (row) =>
-      (!currency || row.currency === currency) &&
-      `${row.title} ${row.organisation_name} ${row.lecturer_name ?? ""}`
-        .toLocaleLowerCase(i18n.language)
-        .includes(search.toLocaleLowerCase(i18n.language)),
-  );
-  const totals = revenueTotals(rows);
   return (
     <section className="platform-revenue">
       <div className="commercial-section-heading">
         <div>
           <h2>{t("revenue")}</h2>
           <p className="muted commercial-small">{t("revenueHint")}</p>
-          {rows.some((row) => row.claim_id) && (
+          {hasAccepted && (
             <p className="muted commercial-small">{t("acceptedImmutable")}</p>
           )}
         </div>
         <Button
           variant="secondary"
-          disabled={!rows.length}
+          disabled={!rows.length || search !== deferredSearch}
           onClick={() =>
             downloadCsv("luminovia-platform-revenue.csv", [
               [
@@ -143,7 +155,7 @@ export function RevenuePanel() {
       )}
       {rows.length > 0 && (
         <FinanceRows
-          key={JSON.stringify([search, currency])}
+          key={JSON.stringify([deferredSearch, currency])}
           label={t("revenue")}
           total={rows.length}
           panel

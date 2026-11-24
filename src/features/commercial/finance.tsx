@@ -5,7 +5,7 @@
 import { FinanceRows } from "./finance-rows";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { useRequestKey } from "../../lib/request-key";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -1115,11 +1115,18 @@ export function FinancePage({
     ...invoiceSeriesRecordsQuery(actor, effectiveAll),
     enabled: online && (effectiveAll || canSubmit),
   });
-  const seriesEntries = seriesRecords.data ?? [];
-  const seriesClaims = new Set(seriesEntries.map((entry) => entry.claim_id));
-  const seriesByInvoice = new Map(
-    seriesEntries.map((entry) => [entry.invoice_id, entry]),
+  const seriesEntries = useMemo(
+    () => seriesRecords.data ?? [],
+    [seriesRecords.data],
   );
+  const { seriesClaims, seriesByInvoice } = useMemo(() => {
+    return {
+      seriesClaims: new Set(seriesEntries.map((entry) => entry.claim_id)),
+      seriesByInvoice: new Map(
+        seriesEntries.map((entry) => [entry.invoice_id, entry]),
+      ),
+    };
+  }, [seriesEntries]);
   const selectedSeries =
     selectedException && "kind" in selectedException ? selectedException : null;
   const submitting = Boolean(
@@ -1131,19 +1138,44 @@ export function FinancePage({
   const [invoiceLabel, setInvoiceLabel] = useState("");
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const today = DateTime.now().setZone(zone).toISODate()!;
-  const invoiceLabels = [
-    ...new Set((invoices.data ?? []).flatMap((row) => row.labels ?? [])),
-  ].sort((a, b) => a.localeCompare(b, i18n.language));
-  const visibleInvoices = invoicesDueFirst(invoices.data ?? [], today).filter(
-    (row) =>
-      (!invoiceStatus || row.status === invoiceStatus) &&
-      (!invoiceLabel || (row.labels ?? []).includes(invoiceLabel)) &&
-      (!invoiceCurrency || row.currency === invoiceCurrency) &&
-      `${row.number} ${row.user_name} ${row.note ?? ""}`
-        .toLocaleLowerCase(i18n.language)
-        .includes(invoiceSearch.toLocaleLowerCase(i18n.language)),
+  const orderedInvoices = useMemo(
+    () => invoicesDueFirst(invoices.data ?? [], today),
+    [invoices.data, today],
   );
-  const summaries = groupedEarnings(earnings.data ?? []);
+  const language = i18n.language;
+  const invoiceLabels = useMemo(
+    () =>
+      [
+        ...new Set((invoices.data ?? []).flatMap((row) => row.labels ?? [])),
+      ].sort((a, b) => a.localeCompare(b, language)),
+    [invoices.data, language],
+  );
+  const needle = useDeferredValue(invoiceSearch).toLocaleLowerCase(language);
+  const visibleInvoices = useMemo(
+    () =>
+      orderedInvoices.filter(
+        (row) =>
+          (!invoiceStatus || row.status === invoiceStatus) &&
+          (!invoiceLabel || (row.labels ?? []).includes(invoiceLabel)) &&
+          (!invoiceCurrency || row.currency === invoiceCurrency) &&
+          (!needle ||
+            `${row.number} ${row.user_name} ${row.note ?? ""}`
+              .toLocaleLowerCase(language)
+              .includes(needle)),
+      ),
+    [
+      orderedInvoices,
+      invoiceStatus,
+      invoiceLabel,
+      invoiceCurrency,
+      needle,
+      language,
+    ],
+  );
+  const summaries = useMemo(
+    () => groupedEarnings(earnings.data ?? []),
+    [earnings.data],
+  );
   const trendSource = manager || canSubmit ? "earnings" : "invoices";
   const trendQuery = trendSource === "earnings" ? earnings : invoices;
   return (
@@ -1354,7 +1386,10 @@ export function FinancePage({
               </h2>
               <Button
                 variant="ghost"
-                disabled={!visibleInvoices.length}
+                disabled={
+                  !visibleInvoices.length ||
+                  invoiceSearch.toLocaleLowerCase(language) !== needle
+                }
                 onClick={() =>
                   downloadCsv("luminovia-invoices.csv", [
                     [

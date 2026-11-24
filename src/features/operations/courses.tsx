@@ -11,6 +11,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -1312,6 +1313,7 @@ export function CoursesPage() {
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
+  const needle = useDeferredValue(search).toLowerCase();
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [runStatus, setRunStatus] = useState("all");
   const [lecturer, setLecturer] = useState("");
@@ -1336,8 +1338,8 @@ export function CoursesPage() {
   const batchSize = 24;
   const listKey = JSON.stringify(
     tab === "runs"
-      ? [actor, tab, search, company, phase, selectedRunStatus, lecturer]
-      : [actor, tab, search],
+      ? [actor, tab, needle, company, phase, selectedRunStatus, lecturer]
+      : [actor, tab, needle],
   );
   const [visibleList, setVisibleList] = useState({
     key: listKey,
@@ -1505,7 +1507,6 @@ export function CoursesPage() {
       setMessage(t("copied"));
     },
   });
-  const needle = search.toLowerCase();
   const indexedRuns = useMemo(
     () =>
       (runs.data ?? []).map((run) => ({
@@ -1515,6 +1516,41 @@ export function CoursesPage() {
       })),
     [runs.data, runs.dataUpdatedAt],
   );
+  const searchingRuns = tab === "runs" && Boolean(needle);
+  const runSearchText = useMemo(() => {
+    if (!searchingRuns) return null;
+    return new Map(
+      (runs.data ?? []).map((run) => {
+        const template = templatesById.get(run.template_id);
+        const lecturers = canPrepareOffer
+          ? (assignmentsByRun
+              .get(run.id)
+              ?.flatMap((assignment) =>
+                assignment.lecturers.map(({ name }) => name),
+              ) ?? [])
+          : [];
+        return [
+          run.id,
+          [
+            template?.title,
+            template?.description,
+            organisationName(run.organisation_id),
+            run.venue,
+            ...lecturers,
+          ]
+            .join(" ")
+            .toLowerCase(),
+        ];
+      }),
+    );
+  }, [
+    searchingRuns,
+    runs.data,
+    templatesById,
+    organisationName,
+    canPrepareOffer,
+    assignmentsByRun,
+  ]);
   const { filteredRuns, draftCount } = useMemo(() => {
     if (tab !== "runs") return { filteredRuns: [], draftCount: 0 };
     let draftCount = 0;
@@ -1534,21 +1570,7 @@ export function CoursesPage() {
         (phase !== "all" && entry.phase !== phase)
       )
         continue;
-      if (needle) {
-        const template = templatesById.get(run.template_id);
-        const searchText = [
-          template?.title,
-          template?.description,
-          organisationName(run.organisation_id),
-          run.venue,
-          ...(canPrepareOffer
-            ? assignments.flatMap(({ lecturers }) =>
-                lecturers.map(({ name }) => name),
-              )
-            : []),
-        ];
-        if (!searchText.join(" ").toLowerCase().includes(needle)) continue;
-      }
+      if (needle && !runSearchText?.get(run.id)?.includes(needle)) continue;
       if (status === "planning") draftCount++;
       if (
         selectedRunStatus !== "all" &&
@@ -1578,8 +1600,7 @@ export function CoursesPage() {
     lecturer,
     phase,
     needle,
-    templatesById,
-    organisationName,
+    runSearchText,
     selectedRunStatus,
   ]);
   const visibleTemplates = useMemo(
