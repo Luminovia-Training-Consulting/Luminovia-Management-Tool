@@ -54,6 +54,18 @@ it("lists typed learning programme operations and separates Academy write entitl
         },
       },
     });
+    for (const rpc of [
+      "enrol_learning_program",
+      "start_learning_program_course",
+      "set_company_participant_class",
+    ]) {
+      const operation = paths[base + rpc].post as {
+        responses: Record<string, { content?: unknown }>;
+      };
+      expect(operation.responses["204"]).toBeDefined();
+      expect(operation.responses["204"].content).toBeUndefined();
+      expect(operation.responses["200"]).toBeUndefined();
+    }
   }
 });
 

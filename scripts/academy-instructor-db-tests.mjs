@@ -37,7 +37,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   });
   const responseSchemas = new Map(
     // These response fixtures invoke canonical SQL endpoints without HTTP.
-    // Authoring, material, submissions, attendance and exams have their own fixtures.
+    // Separate fixtures cover authoring, material, submissions, attendance,
+    // exams, course series, learning programmes and mail delivery recovery.
     Object.entries(paths)
       .filter(([path]) => !path.startsWith(portalHttpAliasPrefix))
       .filter(
@@ -47,6 +48,7 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/functions/v1/course-documents",
             "/functions/v1/accounts/v1/academy/users",
             "/functions/v1/accounts/v1/academy/company-invitations",
+            "/functions/v1/accounts/v1/academy/invitations/{id}/retry",
             "/functions/v1/mail-admin",
             "/functions/v1/human-login",
             "/rest/v1/rpc/academy_administration",
@@ -86,6 +88,8 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/get_mail_configuration",
             "/rest/v1/rpc/save_mail_configuration",
             "/rest/v1/rpc/queue_mail_connection_test",
+            "/rest/v1/rpc/mail_delivery_failures",
+            "/rest/v1/rpc/retry_course_mail_delivery",
             "/rest/v1/rpc/academy_create_organisation",
             "/rest/v1/rpc/academy_set_member_active",
             "/rest/v1/rpc/academy_personal_settings",
@@ -122,6 +126,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
             "/rest/v1/rpc/academy_publish_course",
             "/rest/v1/rpc/academy_set_course_capacity",
             "/rest/v1/rpc/academy_learning_action",
+            "/rest/v1/rpc/course_series_classes",
+            "/rest/v1/rpc/plan_course_series",
+            "/rest/v1/rpc/learning_programs",
+            "/rest/v1/rpc/learning_program_class_progress",
+            "/rest/v1/rpc/set_company_participant_class",
+            "/rest/v1/rpc/save_learning_program",
+            "/rest/v1/rpc/enrol_learning_program",
+            "/rest/v1/rpc/start_learning_program_course",
             "/rest/v1/rpc/academy_timetable",
             "/rest/v1/rpc/notification_inbox",
             "/rest/v1/rpc/mark_notifications",
@@ -131,12 +143,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       )
       .map(([path, operations]) => {
         const operation = operations.get ?? operations.post;
-        return [
-          path.split("/").at(-1),
-          z.fromJSONSchema(
-            operation.responses["200"].content["application/json"].schema,
-          ),
-        ];
+        const schema =
+          operation?.responses["200"]?.content?.["application/json"]?.schema;
+        assert.ok(schema, `Expected a documented SQL JSON response for ${path}`);
+        return [path.split("/").at(-1), z.fromJSONSchema(schema)];
       }),
   );
   const testedContracts = new Set();
