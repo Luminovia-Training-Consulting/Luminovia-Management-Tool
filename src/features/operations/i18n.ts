@@ -660,10 +660,6 @@ const pairs: Record<string, [string, string]> = {
     "Contacts and internal notes are visible only to authorised management.",
   ],
   archive: ["Archiviert", "Archived"],
-  showArchivedRuns: [
-    "Archivierte Durchführungen anzeigen",
-    "Show archived course runs",
-  ],
   deleteLastRunSession: [
     "Um den letzten Termin zu entfernen, lösche die Durchführung. Die Löschvorschau zeigt die Termine und zugehörigen Aufträge.",
     "To remove the last session, delete the course run. The preview shows the sessions and linked offers.",
@@ -830,16 +826,26 @@ const pairs: Record<string, [string, string]> = {
   marketplaceClosed: ["Keine offene Ausschreibung", "No open offer"],
   marketplaceAssigned: ["Auftrag besetzt", "Offer filled"],
   courseRunAssigned: ["Besetzt", "Filled"],
+  closedCourseOffer: ["Ausschreibung geschlossen", "Offer closed"],
   companyCourses: ["Kurse des Unternehmens", "Company courses"],
   courseCompanyFilter: ["Unternehmen", "Company"],
   allCourseCompanies: ["Alle Unternehmen", "All companies"],
   courseRunStatusFilter: ["Planungsstatus", "Planning status"],
   allCourseRunStatuses: ["Alle Status", "All statuses"],
   planningCourseRuns: ["In Planung", "In planning"],
-  noPlanningCourseRuns: [
-    "Keine Kurse in Planung gefunden.",
-    "No courses in planning found.",
+  noCoursesWithStatus: [
+    "Keine Kurse mit diesem Status gefunden.",
+    "No courses found with this status.",
   ],
+  "courseCreationOrigin.staff": [
+    "Von Admin oder Management erstellt",
+    "Created by admin or management",
+  ],
+  "courseCreationOrigin.company": [
+    "Vom Unternehmen erstellt",
+    "Created by the company",
+  ],
+  "courseCreationOrigin.unknown": ["Herkunft unbekannt", "Origin unknown"],
   searchCoursesAndLecturers: [
     "Kurs, Unternehmen oder Dozierende",
     "Course, company or lecturer",
@@ -856,7 +862,6 @@ const pairs: Record<string, [string, string]> = {
     "{{count}} von {{capacity}} besetzt",
     "{{count}} of {{capacity}} filled",
   ],
-  courseRunClosed: ["Geschlossen", "Closed"],
   openMarketplaceDraft: ["Entwurf öffnen: {{title}}", "Open draft: {{title}}"],
   openListedOffer: ["Ausschreibung öffnen: {{title}}", "Open offer: {{title}}"],
   publishedHint: [

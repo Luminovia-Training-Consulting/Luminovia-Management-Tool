@@ -265,6 +265,11 @@
   padding: 4px 9px;
 }
 
+.operations-course .course-run-badges .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .operations-course .section-heading > svg {
   box-sizing: content-box;
   padding: 9px;

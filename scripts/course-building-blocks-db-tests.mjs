@@ -87,11 +87,11 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
     );
     await rpc("admin", "set_company_premium", [org, true, 0, randomUUID()]);
     /** Plans a real course run from the referenced template rather than merely setting a screen state. */
-    const createRun = async (templateId = template, offset = 0) => {
+    const createRun = async (templateId = template, offset = 0, author = "admin") => {
         const start = new Date(Date.now() + (100 + offset) * 86400000);
         start.setUTCHours(8, 0, 0, 0);
         return rpc(
-            "admin",
+            author,
             "save_course_run",
             [
                 null,
@@ -500,6 +500,15 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         assert.equal(await readDraft(ids.management), "1");
         assert.equal(await readDraft(ids.client), "1");
         assert.equal(await readDraft(otherClient), "0");
+        const companyRun = await createRun(own, 15, "client");
+        const readOrigin = (user, course) =>
+            actor(user, `select creation_origin from public.course_runs where id=${q(course)}`);
+        assert.equal(await readOrigin(ids.management, plannedRun), "staff");
+        assert.equal(await readOrigin(ids.management, companyRun), "company");
+        assert.equal(await readOrigin(ids.admin, companyRun), "company");
+        assert.equal(await readOrigin(otherClient, companyRun), "");
+        await sql(`update public.course_runs set creation_origin='staff' where id=${q(companyRun)}`);
+        assert.equal(await readOrigin(ids.admin, companyRun), "company");
         await assert.rejects(
             sql(`insert into public.course_runs(template_id,organisation_id) values(${q(own)},${q(otherOrg)})`),
             /belongs to another company/,

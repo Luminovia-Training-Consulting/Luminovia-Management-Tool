@@ -563,9 +563,14 @@ it("links a saved offer draft from the course card without marking it as listed"
   ).not.toBeInTheDocument();
 });
 
-it("treats an independently visible legacy run as a draft without a marketplace offer", async () => {
+it("distinguishes a published course from a missing marketplace offer", async () => {
   renderCourses({ runs: [{ ...run, published: true }] });
-  expect(await screen.findByText("Entwurf", { exact: true })).toBeVisible();
+  expect(
+    within(screen.getByRole("article")).getByText("Veröffentlicht", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("In der Stellenbörse")).not.toBeInTheDocument();
   expect(screen.queryByText(/Kurskatalog/)).not.toBeInTheDocument();
 });
 
@@ -640,7 +645,9 @@ it("does not present an expired published offer as open in the marketplace", asy
       },
     ],
   });
-  expect(await screen.findByText("Geschlossen", { exact: true })).toBeVisible();
+  expect(
+    await screen.findByText("Ausschreibung geschlossen", { exact: true }),
+  ).toBeVisible();
   expect(screen.getByText("Übernahmefrist abgelaufen")).toBeVisible();
   expect(
     screen.queryByRole("link", { name: /Ausschreibung öffnen/ }),
@@ -1892,4 +1899,66 @@ it("opens company-scoped planning and keeps drafts with no published offer visib
   expect(screen.getByTestId("course-route")).toHaveTextContent(
     `company=${companyId}`,
   );
+});
+
+it("shows all company and internal course statuses with distinct company and creator badges", async () => {
+  const internalTemplate = {
+    ...template,
+    id: "internal-template",
+    title: "Internal release",
+  };
+  const archivedTemplate = {
+    ...template,
+    id: "archived-template",
+    title: "Archived course",
+  };
+  renderCourses({
+    permissions: ["courses.manage", "jobs.manage"],
+    organisations: [organisation],
+    templates: [template, internalTemplate, archivedTemplate],
+    runs: [
+      { ...run, organisation_id: companyId, creation_origin: "company" },
+      {
+        ...run,
+        id: "internal-run",
+        template_id: internalTemplate.id,
+        organisation_id: companyId,
+        published: true,
+        creation_origin: "staff",
+      },
+      {
+        ...run,
+        id: "archived-run",
+        template_id: archivedTemplate.id,
+        archived_at: "2026-11-22T09:00:00Z",
+      },
+    ],
+  });
+
+  const courses = screen
+    .getAllByRole("article")
+    .map((article) => within(article));
+  expect(courses[0].getByText("Entwurf", { exact: true })).toBeVisible();
+  expect(courses[0].getByText("Vom Unternehmen erstellt")).toBeVisible();
+  expect(courses[1].getByText("Veröffentlicht", { exact: true })).toBeVisible();
+  expect(
+    courses[1].getByText(organisation.name, { exact: true }),
+  ).toBeVisible();
+  expect(
+    courses[1].getByText("Von Admin oder Management erstellt"),
+  ).toBeVisible();
+  expect(courses[2].getByText("Archiviert", { exact: true })).toBeVisible();
+  expect(courses[2].getByText("Herkunft unbekannt")).toBeVisible();
+
+  const filter = screen.getByRole("combobox", { name: "Planungsstatus" });
+  await userEvent.selectOptions(filter, "archived");
+  expect(screen.getAllByRole("article")).toHaveLength(1);
+  expect(
+    screen.getByRole("heading", { name: archivedTemplate.title }),
+  ).toBeVisible();
+  await userEvent.selectOptions(filter, "published");
+  expect(screen.getAllByRole("article")).toHaveLength(1);
+  expect(
+    screen.getByRole("heading", { name: internalTemplate.title }),
+  ).toBeVisible();
 });

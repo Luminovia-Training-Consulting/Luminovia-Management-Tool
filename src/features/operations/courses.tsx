@@ -1234,6 +1234,22 @@ function courseOfferState(run: CourseRun, now: number) {
   return { liveOffers, closedReason };
 }
 
+/** Classify the course separately from the availability of individual offers. */
+function courseRunStatus(run: CourseRun) {
+  if (run.archived_at) return "archived";
+  if (
+    run.published ||
+    run.jobs?.some(
+      (job) =>
+        job.status === "published" ||
+        job.status === "filled" ||
+        job.job_claims?.some(({ status }) => status === "confirmed"),
+    )
+  )
+    return "published";
+  return "planning";
+}
+
 /** Combine templates/runs with explicitly requested publication/copy actions. */
 export function CoursesPage() {
   const { t, i18n } = useTranslation(["operations", "courseSeries"]);
@@ -1264,7 +1280,6 @@ export function CoursesPage() {
   const [pages, setPages] = useState({ runs: 0, templates: 0 });
   const resetPages = () => setPages({ runs: 0, templates: 0 });
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
-  const [showArchivedRuns, setShowArchivedRuns] = useState(false);
   const [runStatus, setRunStatus] = useState("all");
   const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
@@ -1277,8 +1292,8 @@ export function CoursesPage() {
   const company = manage ? (params.get("company") ?? "") : "";
   const setCourseView = (view: Record<string, string>, replace = false) =>
     setParams(company ? { ...view, company } : view, { replace });
-  const onlyPlanningRuns = manage && runStatus === "planning";
-  const onlyAssignedRuns = canPrepareOffer && runStatus === "assigned";
+  const selectedRunStatus = manage ? runStatus : "all";
+  const onlyAssignedRuns = canPrepareOffer && selectedRunStatus === "assigned";
   const tab =
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
@@ -1455,15 +1470,11 @@ export function CoursesPage() {
       ? runs.data.filter((run) => {
           const assignments = assignmentsByRun.get(run.id) ?? [];
           if (
-            (run.archived_at && !(manage && showArchivedRuns)) ||
+            (!manage && run.archived_at) ||
             (company && run.organisation_id !== company) ||
-            (onlyPlanningRuns &&
-              (run.archived_at ||
-                run.published ||
-                assignments.length > 0 ||
-                run.jobs?.some(
-                  ({ status }) => status === "published" || status === "filled",
-                ))) ||
+            (selectedRunStatus !== "all" &&
+              selectedRunStatus !== "assigned" &&
+              courseRunStatus(run) !== selectedRunStatus) ||
             (onlyAssignedRuns && !assignments.length) ||
             (phase !== "all" &&
               scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt) !==
@@ -1805,25 +1816,14 @@ export function CoursesPage() {
               >
                 <option value="all">{t("allCourseRunStatuses")}</option>
                 <option value="planning">{t("planningCourseRuns")}</option>
+                <option value="published">{t("published")}</option>
+                <option value="archived">{t("archive")}</option>
                 {canPrepareOffer && (
                   <option value="assigned">{t("onlyAssignedRuns")}</option>
                 )}
               </select>
             </Field>
           </>
-        )}
-        {manage && tab === "runs" && (
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={showArchivedRuns}
-              onChange={(event) => {
-                setShowArchivedRuns(event.target.checked);
-                setPages({ ...pages, runs: 0 });
-              }}
-            />
-            {t("showArchivedRuns")}
-          </label>
         )}
         <div className="segmented" role="group" aria-label={t("catalogue")}>
           <Button
@@ -1893,10 +1893,10 @@ export function CoursesPage() {
       {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
-            onlyPlanningRuns
-              ? "noPlanningCourseRuns"
-              : onlyAssignedRuns
-                ? "noAssignedRuns"
+            onlyAssignedRuns
+              ? "noAssignedRuns"
+              : selectedRunStatus !== "all"
+                ? "noCoursesWithStatus"
                 : phase === "all"
                   ? "learning:noCourses"
                   : "learning:noCoursesInPhase",
@@ -1910,30 +1910,57 @@ export function CoursesPage() {
               run,
               runs.dataUpdatedAt,
             );
+            const status = courseRunStatus(run);
+            const customer =
+              organisationName(run.organisation_id) ?? t("noCustomer");
             return (
               <article className="panel operations-course" key={run.id}>
                 <div className="section-heading">
                   <BookOpen className="blue" />
-                  <span className="badge">
-                    {t(
-                      run.archived_at
-                        ? "archive"
-                        : liveOffers.length > 0
-                          ? liveOffers.every(
-                              (offer) =>
-                                offer.company_internal ||
-                                run.own_lecturers_only,
-                            )
-                            ? "listedCompany"
-                            : "listedMarketplace"
-                          : closedReason === "marketplaceDraft" ||
-                              closedReason === "marketplaceMissing"
-                            ? "draft"
-                            : closedReason === "marketplaceAssigned"
-                              ? "courseRunAssigned"
-                              : "courseRunClosed",
+                  <div className="tags course-run-badges">
+                    <span className="badge">
+                      {t(
+                        status === "archived"
+                          ? "archive"
+                          : status === "published"
+                            ? "published"
+                            : "draft",
+                      )}
+                    </span>
+                    {manage && (
+                      <>
+                        <span className="badge">{customer}</span>
+                        <span className="badge">
+                          {t(
+                            `courseCreationOrigin.${run.creation_origin ?? "unknown"}`,
+                          )}
+                        </span>
+                      </>
                     )}
-                  </span>
+                    {status !== "archived" && liveOffers.length > 0 && (
+                      <span className="badge">
+                        {t(
+                          liveOffers.every(
+                            (offer) =>
+                              offer.company_internal || run.own_lecturers_only,
+                          )
+                            ? "listedCompany"
+                            : "listedMarketplace",
+                        )}
+                      </span>
+                    )}
+                    {status === "published" &&
+                      closedReason === "marketplaceAssigned" && (
+                        <span className="badge">{t("courseRunAssigned")}</span>
+                      )}
+                    {status !== "archived" &&
+                      liveOffers.length === 0 &&
+                      (closedReason === "marketplaceExpired" ||
+                        closedReason === "marketplaceStarted" ||
+                        closedReason === "marketplaceClosed") && (
+                        <span className="badge">{t("closedCourseOffer")}</span>
+                      )}
+                  </div>
                 </div>
                 <h2>{template?.title ?? t("template")}</h2>
                 {manage && (
@@ -1954,7 +1981,7 @@ export function CoursesPage() {
                     </p>
                   ))}
                 <p className="muted">
-                  {organisationName(run.organisation_id) ?? t("noCustomer")} ·{" "}
+                  {!manage && `${customer} · `}
                   {t(run.delivery_type)}
                 </p>
                 <p>{template?.description}</p>

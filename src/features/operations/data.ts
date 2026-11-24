@@ -152,6 +152,7 @@ export interface CourseRun {
   delivery_type: "online" | "onsite";
   venue: string;
   published: boolean;
+  creation_origin?: "staff" | "company" | "unknown";
   own_lecturers_only?: boolean;
   archived_at: string | null;
   course_sessions: { id: string; starts_at: string; ends_at: string }[];
