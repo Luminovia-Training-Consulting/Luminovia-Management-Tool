@@ -85,3 +85,8 @@ root owns the complete suite evidence. Targeted ESLint and TypeScript build pass
 The final native run exited0, confirmed all six mobile categories visible and dark primary labels white, and removed only its own fictional fixtures. No P0/P1/P2 remains in the reviewed scope. Empty support/invoice states were reviewed; populated finance event delivery/SQL permissions are separate root-owned evidence. This scoped review does not certify all application workflows or pixel-identical reproduction of illustrative mock records.
 
 Final result: passed (scoped chat/profile/notification/support/guest revision; limitations above).
+## 2026-11-24 — Company directory spacing
+
+The company detail header separates tags from the course link. The settings and contact import use consistent disclosures, and the contact grid adapts to the available width.
+
+Playwright Chromium passed spacing, overflow, keyboard and scoped axe checks with fictional data at 390, 768 and 1440 px in German and English, each in both themes. The narrow header clearance measured 14 px, the wider clearance measured 24 px, and the import-to-contact gap measured 16 px. Nineteen related component tests, TypeScript, ESLint and Prettier passed.

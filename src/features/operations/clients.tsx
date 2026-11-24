@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Building2, Mail, Phone, Plus } from "lucide-react";
+import { ArrowRight, Building2, Mail, Phone, Plus } from "lucide-react";
 import "./i18n";
 import "./styles.css";
 import { useAuth } from "../auth/auth-context";
@@ -415,48 +415,60 @@ function ClientWorkspace({
           {!visible.length && <p>{t("empty")}</p>}
         </section>
         {organisation && (
-          <section key={organisation.id} className="panel operations-detail">
-            <div className="section-heading">
-              <h2>{organisation.name}</h2>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setSaved(false);
-                  setOrgEdit(organisation);
-                }}
-                disabled={!online}
-              >
-                {t("editClient")}
-              </Button>
-            </div>
-            <p className="muted">
-              {[
-                organisation.industry,
-                organisation.city,
-                organisation.country,
-                organisation.time_zone,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <div className="tags">
-              {organisation.tags.map((tag) => (
-                <span className="badge" key={tag}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-            {canManageCourses && (
-              <div className="operations-actions">
-                <Button asChild variant="secondary">
-                  <Link
-                    to={`/courses?company=${encodeURIComponent(organisation.id)}`}
-                  >
-                    {t("companyCourses")}
-                  </Link>
+          <section
+            key={organisation.id}
+            className="panel company-directory-detail"
+          >
+            <header className="company-detail-header">
+              <div className="section-heading">
+                <div className="company-identity">
+                  <h2>{organisation.name}</h2>
+                  <p className="muted">
+                    {[
+                      organisation.industry,
+                      organisation.city,
+                      organisation.country,
+                      organisation.time_zone,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSaved(false);
+                    setOrgEdit(organisation);
+                  }}
+                  disabled={!online}
+                >
+                  {t("editClient")}
                 </Button>
               </div>
-            )}
+              {(organisation.tags.length > 0 || canManageCourses) && (
+                <div className="company-header-actions">
+                  {organisation.tags.length > 0 && (
+                    <div className="tags">
+                      {organisation.tags.map((tag) => (
+                        <span className="badge" key={tag}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {canManageCourses && (
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/courses?company=${encodeURIComponent(organisation.id)}`}
+                      >
+                        {t("companyCourses")}
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </header>
             <div className="section-stack company-operation-sections">
               {/* Each panel resets for a new organisation with its own sibling key. */}
               {premiumSetting && (
@@ -510,109 +522,123 @@ function ClientWorkspace({
                 />
               )}
             </div>
-            <h3>{t("notes")}</h3>
-            {notes.isPending ? (
-              <Loading />
-            ) : notes.isError ? (
-              <ErrorState retry={() => void notes.refetch()} />
-            ) : (
-              <p className="preserve-text">{notes.data || "—"}</p>
-            )}
-            <small className="muted">{t("privateHint")}</small>
-            <div className="section-heading">
-              <h3>{t("contacts")}</h3>
-              <Button
-                variant="secondary"
-                onClick={() => setContactEdit(null)}
-                disabled={!online}
-              >
-                {t("newContact")}
-              </Button>
-            </div>
-            <TableImport
-              key={organisation.id}
-              label={
-                de
-                  ? "Kontakte dieser Firma importieren"
-                  : "Import contacts for this company"
-              }
-              filename="company-contacts"
-              columns={["name", "position", "email", "phone", "notes"]}
-              example={[
-                "Alex Example",
-                "Training",
-                "alex@example.invalid",
-                "",
-                "",
-              ]}
-              parse={(row) => contactSchema.parse({ ...row, archived: false })}
-              save={(row, key) =>
-                importTableRow(key, "contact", row, organisation.id)
-              }
-              refresh={async () => {
-                await Promise.all([
-                  refresh(),
-                  client.invalidateQueries({
-                    queryKey: [
-                      "company-class-directory",
-                      actor,
-                      organisation.id,
-                    ],
-                  }),
-                ]);
-              }}
-            />
-            <div className="operations-contact-list">
-              {contacts.isPending && <Loading />}
-              {contacts.isError && (
-                <ErrorState retry={() => void contacts.refetch()} />
+            <section className="company-detail-group">
+              <h3>{t("notes")}</h3>
+              {notes.isPending ? (
+                <Loading />
+              ) : notes.isError ? (
+                <ErrorState retry={() => void notes.refetch()} />
+              ) : (
+                <p className="preserve-text">{notes.data || "—"}</p>
               )}
-              {contacts.data?.map((contact) => (
-                <article className="operations-contact" key={contact.id}>
-                  <div className="section-heading">
-                    <h3>{contact.name}</h3>
-                    {contact.archived_at && (
-                      <span className="badge">{t("archive")}</span>
+              <small className="muted">{t("privateHint")}</small>
+            </section>
+            <section className="company-detail-group company-contacts">
+              <div className="section-heading">
+                <h3>{t("contacts")}</h3>
+                <Button
+                  variant="secondary"
+                  onClick={() => setContactEdit(null)}
+                  disabled={!online}
+                >
+                  {t("newContact")}
+                </Button>
+              </div>
+              <TableImport
+                key={organisation.id}
+                label={
+                  de
+                    ? "Kontakte dieser Firma importieren"
+                    : "Import contacts for this company"
+                }
+                filename="company-contacts"
+                columns={["name", "position", "email", "phone", "notes"]}
+                example={[
+                  "Alex Example",
+                  "Training",
+                  "alex@example.invalid",
+                  "",
+                  "",
+                ]}
+                parse={(row) =>
+                  contactSchema.parse({ ...row, archived: false })
+                }
+                save={(row, key) =>
+                  importTableRow(key, "contact", row, organisation.id)
+                }
+                refresh={async () => {
+                  await Promise.all([
+                    refresh(),
+                    client.invalidateQueries({
+                      queryKey: [
+                        "company-class-directory",
+                        actor,
+                        organisation.id,
+                      ],
+                    }),
+                  ]);
+                }}
+              />
+              <div className="operations-contact-list">
+                {contacts.isPending && <Loading />}
+                {contacts.isError && (
+                  <ErrorState retry={() => void contacts.refetch()} />
+                )}
+                {contacts.data?.map((contact) => (
+                  <article className="operations-contact" key={contact.id}>
+                    <div className="section-heading">
+                      <h3>{contact.name}</h3>
+                      {contact.archived_at && (
+                        <span className="badge">{t("archive")}</span>
+                      )}
+                    </div>
+                    {contact.position && (
+                      <p className="muted">{contact.position}</p>
                     )}
-                  </div>
-                  <p>{contact.position}</p>
-                  {contact.email && (
-                    <a
-                      className="text-link"
-                      href={`mailto:${encodeURIComponent(contact.email)}`}
-                    >
-                      <Mail size={16} />
-                      {contact.email}
-                    </a>
-                  )}
-                  {contact.phone && (
-                    <a
-                      className="text-link"
-                      href={`tel:${contact.phone.replace(/[^+0-9]/g, "")}`}
-                    >
-                      <Phone size={16} />
-                      {contact.phone}
-                    </a>
-                  )}
-                  <p className="preserve-text">{contact.notes}</p>
-                  <div className="operations-actions">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setContactEdit(contact)}
-                      disabled={!online}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <PermanentDeleteAction
-                      shortLabel
-                      kind="organisation_contact"
-                      id={contact.id}
-                      label={contact.name}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
+                    {(contact.email || contact.phone) && (
+                      <div className="company-contact-methods">
+                        {contact.email && (
+                          <a
+                            className="text-link"
+                            href={`mailto:${encodeURIComponent(contact.email)}`}
+                          >
+                            <Mail size={16} />
+                            {contact.email}
+                          </a>
+                        )}
+                        {contact.phone && (
+                          <a
+                            className="text-link"
+                            href={`tel:${contact.phone.replace(/[^+0-9]/g, "")}`}
+                          >
+                            <Phone size={16} />
+                            {contact.phone}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {contact.notes && (
+                      <p className="preserve-text">{contact.notes}</p>
+                    )}
+                    <div className="operations-actions">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setContactEdit(contact)}
+                        disabled={!online}
+                      >
+                        {t("edit")}
+                      </Button>
+                      <PermanentDeleteAction
+                        shortLabel
+                        kind="organisation_contact"
+                        id={contact.id}
+                        label={contact.name}
+                      />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           </section>
         )}
       </div>
