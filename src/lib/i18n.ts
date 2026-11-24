@@ -642,27 +642,16 @@ const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
 const saved = readPreference("language");
 const language = isAccountLanguage(saved)
   ? saved
-  : installationBrand.defaultLanguage;
-
-// Derive the Swiss spelling from static UI resources before interpolation so
-// names, authored content and other application data are preserved verbatim.
-function swissSpelling(value: unknown): unknown {
-  if (typeof value === "string")
-    return value.replaceAll("ß", "ss").replaceAll("ẞ", "SS");
-  if (Array.isArray(value)) return value.map(swissSpelling);
-  if (value && typeof value === "object")
-    return Object.fromEntries(
-      Object.entries(value).map(([key, text]) => [key, swissSpelling(text)]),
-    );
-  return value;
-}
+  : saved === "de-CH"
+    ? "de"
+    : installationBrand.defaultLanguage;
+if (saved === "de-CH") writePreference("language", language);
 
 document.documentElement.lang = language;
 void i18n.use(initReactI18next).init({
   resources: {
     de: { translation: de },
     en: { translation: en },
-    "de-CH": { translation: swissSpelling(de) as typeof de },
   },
   lng: language,
   fallbackLng: "de",
@@ -670,16 +659,6 @@ void i18n.use(initReactI18next).init({
     escapeValue: false,
     defaultVariables: { academy: installationBrand.name },
   },
-});
-i18n.store.on("added", (language, namespace) => {
-  if (language !== "de") return;
-  i18n.addResourceBundle(
-    "de-CH",
-    namespace,
-    swissSpelling(i18n.getResourceBundle("de", namespace)),
-    true,
-    true,
-  );
 });
 i18n.on("languageChanged", (language) => {
   writePreference("language", language);

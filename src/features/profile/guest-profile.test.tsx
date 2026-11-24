@@ -104,7 +104,7 @@ it("keeps a guest's own profile usable without loading expertise, permissions or
   );
 });
 
-it("saves Swiss German as the account language and applies it only after confirmation", async () => {
+it("saves English as the account language and applies it only after confirmation", async () => {
   await i18n.changeLanguage("de");
   let confirmSave!: (response: { data: unknown; error: null }) => void;
   fake.rpc.mockImplementation((name: string) =>
@@ -135,11 +135,14 @@ it("saves Swiss German as the account language and applies it only after confirm
   );
   const user = userEvent.setup();
   const select = screen.getByRole("combobox", { name: "Standardsprache" });
-  await user.selectOptions(select, "de-CH");
+  expect(
+    Array.from(select.querySelectorAll("option"), ({ value }) => value),
+  ).toEqual(["de", "en"]);
+  await user.selectOptions(select, "en");
   await user.click(screen.getByRole("button", { name: "Sprache speichern" }));
   await waitFor(() =>
     expect(fake.rpc).toHaveBeenCalledWith("save_ui_preferences", {
-      p_patch: { language: "de-CH" },
+      p_patch: { language: "en" },
     }),
   );
   expect(i18n.language).toBe("de");
@@ -147,7 +150,7 @@ it("saves Swiss German as the account language and applies it only after confirm
   await act(async () =>
     confirmSave({
       data: {
-        language: "de-CH",
+        language: "en",
         theme: "system",
         sidebar_collapsed: false,
         version: 1,
@@ -156,16 +159,10 @@ it("saves Swiss German as the account language and applies it only after confirm
     }),
   );
   expect(
-    await screen.findByText("Standardsprache im Konto gespeichert."),
+    await screen.findByText("Default language saved to your account."),
   ).toBeVisible();
-  expect(document.documentElement).toHaveAttribute("lang", "de-CH");
-  expect(client.getQueryData(profileKey)).toMatchObject({ locale: "de-CH" });
-  i18n.addResourceBundle("de", "fictional-spelling", {
-    street: "Straße von {{name}}",
-  });
-  expect(i18n.t("fictional-spelling:street", { name: "Groß" })).toBe(
-    "Strasse von Groß",
-  );
+  expect(document.documentElement).toHaveAttribute("lang", "en");
+  expect(client.getQueryData(profileKey)).toMatchObject({ locale: "en" });
   await i18n.changeLanguage("de");
 });
 

@@ -164,7 +164,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
     "Agreed course teaching terms",
   );
   await user.selectOptions(screen.getByLabelText("Einheit"), "fixed_total");
-  await user.selectOptions(screen.getByLabelText("Währung"), "USD");
+  await user.selectOptions(screen.getByLabelText("Währung"), "CHF");
   const total = screen.getByLabelText("Voller Auftragspreis gesamt");
   await user.clear(total);
   await user.type(total, "1000");
@@ -207,7 +207,7 @@ it("creates two per-position allocations sharing the trusted schedule and a sing
       status: "draft",
       gross_amount: 1000,
       gross_total_amount: 1000,
-      currency: "USD",
+      currency: "CHF",
       capacity: 2,
     },
   });

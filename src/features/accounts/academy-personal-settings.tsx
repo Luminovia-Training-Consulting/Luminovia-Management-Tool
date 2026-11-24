@@ -219,11 +219,9 @@ export function AcademyPersonalSettingsPage() {
           <dl>
             <dt>{t("language")}</dt>
             <dd>
-              {display.language === "de-CH"
-                ? word("Deutsch (Schweiz)", "German (Switzerland)")
-                : display.language === "de"
-                  ? word("Deutsch", "German")
-                  : word("Englisch", "English")}
+              {display.language === "de"
+                ? word("Deutsch", "German")
+                : word("Englisch", "English")}
             </dd>
             <dt>{t("theme")}</dt>
             <dd>{t(display.theme)}</dd>

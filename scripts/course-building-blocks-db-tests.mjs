@@ -705,12 +705,12 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
                 ),
                 "0",
             );
-            const usdOffer = await rpc("admin", "create_course_run_job", [
-                invalidRun, {...base, currency: "USD", status: "draft"}, null, randomUUID(),
+            const chfOffer = await rpc("admin", "create_course_run_job", [
+                invalidRun, {...base, currency: "CHF", status: "draft"}, null, randomUUID(),
             ], "aal1");
             assert.equal(
-                await sql(`select currency from public.jobs where id=${q(usdOffer)}`),
-                "USD",
+                await sql(`select currency from public.jobs where id=${q(chfOffer)}`),
+                "CHF",
             );
         },
     );

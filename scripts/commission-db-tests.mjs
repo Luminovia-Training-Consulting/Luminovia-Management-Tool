@@ -850,18 +850,18 @@ try {
         },
     );
     await check(
-        "Client requests and individual compensation preserve USD",
+        "Client requests and individual compensation preserve CHF",
         async () => {
-            const submitted = await request(client, org, payload(48, 123.45, "USD"));
+            const submitted = await request(client, org, payload(48, 123.45, "CHF"));
             assert.equal(
                 (await rows(client, "client_requests")).find((row) => row.id === submitted)?.currency,
-                "USD",
+                "CHF",
             );
             await value(admin, "save_lecturer_compensation", [
-                lecturer, "daily", 50, 123.45, "USD", 1,
+                lecturer, "daily", 50, 123.45, "CHF", 1,
             ]);
             const compensation = JSON.parse(await value(admin, "lecturer_compensation", [lecturer]));
-            assert.equal(compensation.currency, "USD");
+            assert.equal(compensation.currency, "CHF");
         },
     );
     await check(

@@ -151,7 +151,7 @@ describe("shared amendments and internal exceptional invoices", () => {
               additionalProperties: false,
               properties: {
                 due_on: { format: "date" },
-                currency: { enum: ["EUR", "AUD", "USD"] },
+                currency: { enum: ["EUR", "AUD", "USD", "CHF"] },
               },
             },
           },
@@ -702,7 +702,7 @@ describe("finance and operations contracts", () => {
                       items: {
                         additionalProperties: false,
                         properties: {
-                          currency: { enum: ["EUR", "AUD", "USD"] },
+                          currency: { enum: ["EUR", "AUD", "USD", "CHF"] },
                           accepted_gross_known: {
                             type: ["number", "null"],
                           },

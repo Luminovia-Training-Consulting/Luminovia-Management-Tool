@@ -3,7 +3,6 @@ import { accountLanguages } from "../lib/account-languages";
 const languageLabels = {
   de: ["Deutsch", "DE"],
   en: ["English", "EN"],
-  "de-CH": ["Deutsch (Schweiz)", "DE-CH"],
 } as const;
 
 export function LanguageOptions({ compact = false }: { compact?: boolean }) {

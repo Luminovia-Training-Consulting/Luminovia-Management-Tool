@@ -88,6 +88,10 @@ describe("restricted contract and finance record schemas", () => {
     expect(
       response("invoice_records").safeParse([{ ...record, currency: "CHF" }])
         .success,
+    ).toBe(true);
+    expect(
+      response("invoice_records").safeParse([{ ...record, currency: "JPY" }])
+        .success,
     ).toBe(false);
     expect(
       response("invoice_records").safeParse([{ ...record, paid_amount: -1 }])

@@ -60,14 +60,14 @@ await withTestDatabase("ui_preferences", async ({sql}) => {
     assert.equal(patch.language, "en");
     assert.equal(patch.sidebar_collapsed, true);
     assert.equal(patch.version, 2);
-    const swiss = JSON.parse(await as(lecturer,
-        `select public.save_ui_preferences('{"language":"de-CH"}'::jsonb)`));
-    assertLmsResponse("save_ui_preferences", swiss);
+    const german = JSON.parse(await as(lecturer,
+        `select public.save_ui_preferences('{"language":"de"}'::jsonb)`));
+    assertLmsResponse("save_ui_preferences", german);
     assert.deepEqual(await read(lecturer), {
-        language: "de-CH", theme: "light", sidebar_collapsed: true, version: 3,
+        language: "de", theme: "light", sidebar_collapsed: true, version: 3,
     });
     assert.equal(JSON.parse(await as(lecturer,
-        `select public.save_account_profile('{"display_name":"Fictional lecturer"}'::jsonb)`)).profile.locale, "de-CH");
+        `select public.save_account_profile('{"display_name":"Fictional lecturer"}'::jsonb)`)).profile.locale, "de");
     assert.equal((await read(peer)).language, "de");
     await sql(`update private.delivery_preferences set email_enabled=true where user_id=${q(lecturer)};
         insert into public.notifications(user_id,kind,resource_id)
@@ -105,6 +105,7 @@ await withTestDatabase("ui_preferences", async ({sql}) => {
         "{}",
         '{"user_id":"' + peer + '"}',
         '{"theme":"other"}',
+        '{"language":"de-CH"}',
         '{"sidebar_collapsed":"yes"}',
     ]) {
         await assert.rejects(
@@ -230,4 +231,38 @@ await withTestDatabase(
         );
     },
     {migrationsThrough: "20261122010600"},
+);
+
+await withTestDatabase(
+    "ui_preferences_locale_upgrade",
+    async ({sql, actor}) => {
+        const [former, english] = Array.from({length: 2}, randomUUID);
+        const q = quoteSql;
+        await sql(`insert into auth.users(id,email) values
+          (${q(former)},'former@example.invalid'),(${q(english)},'english@example.invalid');
+          insert into public.user_roles(user_id,role) values
+          (${q(former)},'lecturer'),(${q(english)},'lecturer');`);
+        const save = async (id, language) => JSON.parse(
+            await actor(id, `select public.save_ui_preferences(${q(JSON.stringify({
+                language, theme: "dark", sidebar_collapsed: true,
+            }))}::jsonb)`),
+        );
+        const read = async (id) =>
+            JSON.parse(await actor(id, "select public.ui_preferences()"));
+        const previous = await save(former, "de-CH");
+        assert.equal(previous.language, "de-CH");
+        const preferred = await save(english, "en");
+
+        await sql(await readFile(new URL(
+            "../supabase/migrations/20261124055542_restore_bilingual_account_locale.sql",
+            import.meta.url,
+        ), "utf8"));
+
+        assert.deepEqual(await read(former), {...previous, language: "de"});
+        assert.deepEqual(await read(english), preferred);
+        await assert.rejects(save(former, "de-CH"), /Invalid UI preferences/);
+        assert.equal((await save(former, "en")).language, "en");
+        console.log("PASS UI locale upgrade preserves settings, maps Swiss German to German, and retains English");
+    },
+    {migrationsThrough: "20261124051201"},
 );

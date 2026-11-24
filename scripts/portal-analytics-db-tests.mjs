@@ -59,7 +59,10 @@ await withTestDatabase("portal_analytics", async ({ sql, actor }) => {
     starts: "2060-04-10T08:00:00Z", ends: "2060-04-10T10:00:00Z", net: 150, gross: 250, currency: "AUD",
   });
   await makeAssignment({
-    starts: "2060-04-15T08:00:00Z", ends: "2060-04-15T09:00:00Z", net: 90, gross: 180, currency: "USD",
+    starts: "2060-04-15T08:00:00Z", ends: "2060-04-15T09:00:00Z", net: 90, gross: 180, currency: "CHF",
+  });
+  await makeAssignment({
+    starts: "2060-04-16T08:00:00Z", ends: "2060-04-16T09:00:00Z", net: 70, gross: 160, currency: "USD",
   });
   await sql(`with offer as (
     insert into public.jobs(course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms,capacity,capacity_basis)
@@ -144,13 +147,15 @@ await withTestDatabase("portal_analytics", async ({ sql, actor }) => {
 
   const future = await report(administrator, "staff", org, "2060-04-01", "2060-05-01");
   assert.equal(future.months[0].open_positions, 3);
-  assert.equal(future.months[0].future_minutes, 180);
-  assert.equal(future.months[0].future_assignments, 2);
+  assert.equal(future.months[0].future_minutes, 240);
+  assert.equal(future.months[0].future_assignments, 3);
   assert.equal(future.months[0].currencies.AUD.future_net, 150);
   assert.equal(future.months[0].currencies.AUD.future_gross, 250);
   assert.equal(future.months[0].currencies.EUR.future_gross, 0);
-  assert.equal(future.months[0].currencies.USD.future_net, 90);
-  assert.equal(future.months[0].currencies.USD.future_gross, 180);
+  assert.equal(future.months[0].currencies.CHF.future_net, 90);
+  assert.equal(future.months[0].currencies.CHF.future_gross, 180);
+  assert.equal(future.months[0].currencies.USD.future_net, 70);
+  assert.equal(future.months[0].currencies.USD.future_gross, 160);
 
   await sql("delete from public.role_permissions where role='management' and permission in ('finance.manage','finance.gross.read')");
   const operational = await report(manager, "staff");

@@ -97,7 +97,6 @@ import {
 import { privateMeetingHref } from "./personal-details";
 
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
-const swissGermanLocale = { ...deLocale, code: "de-CH" };
 
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -1155,13 +1154,7 @@ export function CalendarPage() {
               interactionPlugin,
               luxonPlugin,
             ]}
-            locale={
-              i18n.language === "de-CH"
-                ? swissGermanLocale
-                : i18n.language.startsWith("de")
-                  ? deLocale
-                  : enLocale
-            }
+            locale={i18n.language.startsWith("de") ? deLocale : enLocale}
             timeZone={zone}
             ref={calendarRef}
             initialView={calendarView}

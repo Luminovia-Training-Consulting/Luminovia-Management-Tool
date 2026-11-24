@@ -150,7 +150,7 @@ it("restores the account language even if the browser theme changed while loadin
   access.roles = ["lecturer"];
   await i18n.changeLanguage("de");
   let finishLoad!: (value: {
-    language: "de-CH";
+    language: "en";
     theme: "dark";
     sidebar_collapsed: false;
     version: number;
@@ -167,18 +167,14 @@ it("restores the account language even if the browser theme changed while loadin
   );
   await act(async () =>
     finishLoad({
-      language: "de-CH",
+      language: "en",
       theme: "dark",
       sidebar_collapsed: false,
       version: 2,
     }),
   );
-  expect(screen.getByRole("combobox", { name: "Sprache" })).toHaveValue(
-    "de-CH",
-  );
-  expect(screen.getByRole("combobox", { name: "Farbschema" })).toHaveValue(
-    "light",
-  );
+  expect(screen.getByRole("combobox", { name: "Language" })).toHaveValue("en");
+  expect(screen.getByRole("combobox", { name: "Theme" })).toHaveValue("light");
   await i18n.changeLanguage("de");
 });
 

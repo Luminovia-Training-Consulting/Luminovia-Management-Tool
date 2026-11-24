@@ -80,7 +80,7 @@ await withTestDatabase("web_push_test", async ({sql, actor}) => {
         /permission denied/,
     );
     const notice = randomUUID();
-    await sql(`update public.profiles set locale='de-CH' where id=${q(owner)}`);
+    await sql(`update public.profiles set locale='en' where id=${q(owner)}`);
     await sql(
         `begin;insert into public.notifications(id,user_id,kind,resource_id) values(${q(notice)},${q(owner)},'claim_cancelled',${q(randomUUID())});rollback`,
     );
@@ -106,7 +106,7 @@ await withTestDatabase("web_push_test", async ({sql, actor}) => {
         `${q(lease.id)},${q(lease.lease_token)}`,
     );
     assert.equal(row.subscription.endpoint, subscription.endpoint);
-    assert.equal(row.locale, "de");
+    assert.equal(row.locale, "en");
     assert.equal("title" in row, false);
     assert.equal("body" in row, false);
     assert.equal(

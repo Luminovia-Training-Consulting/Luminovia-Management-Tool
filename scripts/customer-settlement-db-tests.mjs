@@ -566,15 +566,17 @@ await withTestDatabase("customer_settlement", async ({ sql, actor }) => {
   const unchanged = await rpc(finance, "accounting_export", [q(paidExport.id)]);
   assert.deepEqual(unchanged, paidExport);
 
-  const usd = await invoice("Fictional USD invoice", "USD");
-  const usdCredit = await note("Fictional USD credit", "10.00", usd.id, "USD");
-  await apply(finance, usdCredit.id, randomUUID(), usd.id);
-  await payment("21.25", "Fictional USD payment", usd.id);
-  const usdBalance = await read(finance, usd.id);
-  assert.equal(usdBalance.currency, "USD");
-  assert.equal(usdBalance.credit_total, "10.00");
-  assert.equal(usdBalance.received_total, "21.25");
-  assert.equal(usdBalance.outstanding_total, "68.75");
+  for (const currency of ["USD", "CHF"]) {
+    const entry = await invoice(`Fictional ${currency} invoice`, currency);
+    const credit = await note(`Fictional ${currency} credit`, "10.00", entry.id, currency);
+    await apply(finance, credit.id, randomUUID(), entry.id);
+    await payment("21.25", `Fictional ${currency} payment`, entry.id);
+    const balance = await read(finance, entry.id);
+    assert.equal(balance.currency, currency);
+    assert.equal(balance.credit_total, "10.00");
+    assert.equal(balance.received_total, "21.25");
+    assert.equal(balance.outstanding_total, "68.75");
+  }
 
   // Saturate an independent fixture date to verify the cap without silently discarding rows.
   await sql(`
