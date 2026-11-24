@@ -1644,6 +1644,10 @@ legend {
 }
 
 /* Public sign-in shell with brand narrative and a separate form panel. */
+.login-page {
+  position: relative;
+}
+
 .login-layout {
   min-height: 100vh;
   display: grid;
@@ -1786,6 +1790,15 @@ legend {
   right: 35px;
   top: 22px;
   z-index: 5;
+}
+
+.login-preferences .preferences select {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border-color: var(--input-border);
 }
 
 @media (max-width: 1250px) {
@@ -2165,20 +2178,15 @@ legend {
   }
 
   .login-preferences {
-    right: 13px;
-    top: 20px;
+    position: static;
+    display: flex;
+    justify-content: end;
+    padding: 0.625rem 1rem;
+    background: var(--surface);
   }
 
   .login-preferences .preferences select {
-    color: #14233b;
-    color-scheme: light;
-    font-size: 10px;
-    max-width: 85px;
-  }
-
-  .login-preferences .preferences option {
-    color: #14233b;
-    background: #fffdf8;
+    font-size: 1rem;
   }
 }
 

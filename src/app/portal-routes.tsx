@@ -280,12 +280,12 @@ export default function PortalRoutes() {
       <Route
         path="/login"
         element={
-          <>
+          <div className="login-page">
             <div className="login-preferences">
               <Preferences />
             </div>
             <Login />
-          </>
+          </div>
         }
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
