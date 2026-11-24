@@ -68,6 +68,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
             .select("*,building_block_sources(*)")
             .eq("code", "LPC3")
             .single(),
+        {requireData: true},
     );
     const primary = block.building_block_sources.find(
         (row: { is_primary: boolean }) => row.is_primary,
@@ -171,6 +172,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
             .select("id,template_id,organisation_id,course_sessions(*)")
             .eq("venue", venue)
             .single(),
+        {requireData: true},
     );
     expect(run.template_id).toBe(block.default_template_id);
     expect(run.course_sessions).toHaveLength(10);
@@ -217,6 +219,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
             .select("id,course_run_id,title,description,status,total_amount,job_sessions(*)")
             .eq("course_run_id", run.id)
             .single(),
+        {requireData: true},
     );
     expect(created.course_run_id).toBe(run.id);
     expect(created).toMatchObject({title: listingTitle, description: listingDescription, status: "published"});
@@ -274,6 +277,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
                 .from("job_claims")
                 .select("id,total_amount,assignment_sessions(*)")
                 .eq("job_id", created.id),
+            {requireData: true},
         );
         expect(claims).toHaveLength(1);
         expect(claims[0].total_amount).toBe(310);

@@ -101,6 +101,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
             .select("display_name")
             .eq("id", teacher.id)
             .single(),
+        {requireData: true},
     );
     expect(profile.display_name).toBe(teacher.name);
     expect(

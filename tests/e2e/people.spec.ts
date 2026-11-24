@@ -237,17 +237,15 @@ test("authored staff profiles connect real course history, company reviews and a
             .getByRole("button", {name: "Speichern", exact: true})
             .click();
         await expect(editDialog).toBeHidden();
-        expect(
-            (
-                await checked(
-                    service
-                        .from("profiles")
-                        .select("time_zone")
-                        .eq("id", teacher.id)
-                        .single(),
-                )
-            ).time_zone,
-        ).toBe("Australia/Brisbane");
+        const updatedProfile = await checked(
+            service
+                .from("profiles")
+                .select("time_zone")
+                .eq("id", teacher.id)
+                .single(),
+            {requireData: true},
+        );
+        expect(updatedProfile.time_zone).toBe("Australia/Brisbane");
         await manager
             .getByRole("button", {name: "Zugang sperren", exact: true})
             .click();
@@ -264,17 +262,15 @@ test("authored staff profiles connect real course history, company reviews and a
             .getByRole("button", {name: "Kontostatus bestätigen", exact: true})
             .click();
         await expect(manager.getByRole("dialog")).toBeHidden();
-        expect(
-            (
-                await checked(
-                    service
-                        .from("profiles")
-                        .select("active")
-                        .eq("id", teacher.id)
-                        .single(),
-                )
-            ).active,
-        ).toBe(true);
+        const reactivatedProfile = await checked(
+            service
+                .from("profiles")
+                .select("active")
+                .eq("id", teacher.id)
+                .single(),
+            {requireData: true},
+        );
+        expect(reactivatedProfile.active).toBe(true);
         const company = await companyContext.newPage();
         await login(company, customer.email);
         await company.goto("/my-reviews");

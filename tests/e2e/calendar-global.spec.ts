@@ -192,6 +192,7 @@ test("password-only authentication global publication, descriptions/HTTPS links,
         await viewerContext.close();
         const own = await checked(
             service.from("global_events").select("id").like("title", `${prefix}%`),
+            {requireData: true},
         );
         if (own.length)
             await checked(

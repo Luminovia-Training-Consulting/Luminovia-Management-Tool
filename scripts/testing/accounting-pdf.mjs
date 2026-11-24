@@ -1,4 +1,7 @@
-/** Small structurally valid PDF containing fictional test data only. */
+/** Build a structurally valid PDF containing fictional test data only.
+ * @param {string} [label]
+ * @returns {Buffer}
+ */
 export function accountingTestPdf(
   label = "Fictional accounting evidence - no real invoice.",
 ) {
