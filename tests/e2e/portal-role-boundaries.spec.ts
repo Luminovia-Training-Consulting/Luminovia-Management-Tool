@@ -229,7 +229,7 @@ for (const role of actors) {
             .click();
         }
         await expect(page).toHaveURL(
-          teaching ? /\/finance\?claim=/ : /\/admin\/finance\?claim=/,
+          teaching ? /\/finance$/ : /\/admin\/finance\?claim=/,
         );
         await expect(
           page.getByRole("heading", {
