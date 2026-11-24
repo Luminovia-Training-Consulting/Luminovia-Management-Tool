@@ -107,7 +107,17 @@ await withTestDatabase("client_request_brief", async ({sql, actor}) => {
             const requestBody = z.fromJSONSchema(
                 operation("create_client_request_with_brief").requestBody.content["application/json"].schema,
             );
-            requestBody.parse({p_organisation_id: org, p_client_id: key, p_payload: payload, p_brief: brief});
+            const validatePayload = (requestPayload) =>
+                requestBody.safeParse({
+                    p_organisation_id: org, p_client_id: key, p_payload: requestPayload, p_brief: brief,
+                }).success;
+            const {title, delivery_type, sessions} = payload;
+            const withoutBilling = {title, delivery_type, sessions};
+            assert.ok(validatePayload(payload));
+            assert.ok(validatePayload({...withoutBilling, own_lecturers_only: true}));
+            assert.ok(!validatePayload(withoutBilling));
+            assert.ok(!validatePayload({...withoutBilling, own_lecturers_only: false}));
+            assert.ok(!validatePayload({...payload, gross_total_amount: 0}));
             request = await create(client, brief, key);
             assert.equal(await create(client, brief, key), request);
             await assert.rejects(

@@ -704,29 +704,34 @@ const companyLecturerOnlyInput = {
   description:
     "Restrict a new request to the organisation’s active assigned lecturers. The resulting internal assignment has no portal compensation, commission, contract requirement or invoices.",
 };
+const clientRequestRequiredFields = ["title", "delivery_type", "sessions"];
 const clientRequestInput = {
-  ...object({
-    ...clientRequestFields,
-    own_lecturers_only: companyLecturerOnlyInput,
-  }),
-  required: ["title", "delivery_type", "sessions"],
-  if: {
-    required: ["own_lecturers_only"],
-    properties: { own_lecturers_only: { const: true } },
-  },
-  then: {
-    properties: {
-      gross_amount: { type: "number", minimum: 0 },
-      gross_total_amount: { type: "number", minimum: 0 },
+  oneOf: [
+    {
+      title: "Company lecturers",
+      ...object({
+        ...clientRequestFields,
+        own_lecturers_only: { ...companyLecturerOnlyInput, const: true },
+      }),
+      required: [...clientRequestRequiredFields, "own_lecturers_only"],
     },
-  },
-  else: {
-    required: ["gross_amount", "gross_total_amount", "currency", "rate_unit"],
-    properties: {
-      gross_amount: proposedAmount,
-      gross_total_amount: proposedAmount,
+    {
+      title: "Marketplace",
+      ...object({
+        ...clientRequestFields,
+        gross_amount: proposedAmount,
+        gross_total_amount: proposedAmount,
+        own_lecturers_only: { ...companyLecturerOnlyInput, const: false },
+      }),
+      required: [
+        ...clientRequestRequiredFields,
+        "gross_amount",
+        "gross_total_amount",
+        "currency",
+        "rate_unit",
+      ],
     },
-  },
+  ],
 };
 const clientRequestDocument = {
   version_id: uuid,
