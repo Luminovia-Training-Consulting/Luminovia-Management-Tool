@@ -199,28 +199,25 @@ export function JobDetail() {
   return (
     <>
       <BackLink companyDispatchOnly={companyDispatchOnly} />
-      <PageHeading
-        eyebrow={job.customer_name}
-        title={job.title}
-        action={
-          <div className="page-actions">
-            <span className={`status status-${job.status}`}>
-              {job.urgent_reopened_at && job.status === "published"
-                ? t("sickDay:urgent")
-                : t(job.status)}
-            </span>
-            <div ref={setEditButtonTarget} />
-          </div>
-        }
-      />
+      <PageHeading eyebrow={job.customer_name} title={job.title} />
       {permissions.data?.includes("jobs.manage") && (
         <div id="job-pricing">
           <JobPricingPanel job={job} />
         </div>
       )}
-      {!companyDispatchOnly && (
-        <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
-      )}
+      <div className="job-detail-toolbar">
+        {!companyDispatchOnly && (
+          <>
+            <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
+            <div ref={setEditButtonTarget} />
+          </>
+        )}
+        <span className={`status status-${job.status} job-detail-status`}>
+          {job.urgent_reopened_at && job.status === "published"
+            ? t("sickDay:urgent")
+            : t(job.status)}
+        </span>
+      </div>
       {!companyDispatchOnly && teaching && ownClaim?.status === "confirmed" && (
         <div className="form-actions">
           <JobSickDay key={ownClaim.id} claim={ownClaim} zone={job.time_zone} />
