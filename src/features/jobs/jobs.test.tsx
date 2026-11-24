@@ -212,6 +212,12 @@ it("opens description and coordinated course dates from the course action row", 
   ).toHaveValue("Example");
   expect(await dialog.findByLabelText("Erster Tag")).toHaveValue("2027-01-01");
   expect(dialog.getByLabelText("Letzter Tag")).toHaveValue("2027-01-10");
+  await userEvent.click(
+    dialog.getByRole("link", { name: "Klasse und Dozentenzuweisung" }),
+  );
+  await waitFor(() =>
+    expect(document.getElementById("job-allocation")).toHaveFocus(),
+  );
 });
 
 describe("safe marketplace interactions", () => {

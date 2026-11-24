@@ -1,0 +1,42 @@
+.calendar-subscription-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+.calendar-subscription-list > li,
+.calendar-subscription-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-subscription-list > li {
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.calendar-subscription-summary {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.calendar-subscription-summary > p {
+  margin: 4px 0 0;
+}
+
+.calendar-subscription-actions > .button {
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.calendar-subscription-secret {
+  margin-block-start: 16px;
+}

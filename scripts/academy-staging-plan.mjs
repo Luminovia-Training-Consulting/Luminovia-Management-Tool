@@ -78,7 +78,7 @@ const configSchema = z.strictObject({
         (host) =>
           !/\.(localhost|local|internal|test|invalid|onion)$/.test(host),
       ),
-      port: z.union([z.literal(465), z.literal(587)]),
+      port: z.number().int().min(1).max(65535),
       security: z.enum(["implicit_tls", "starttls"]),
     }),
   ]),

@@ -79,11 +79,11 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
     const smtp = {
         enabled: true,
         host: "smtp.example.com",
-        port: 465,
-        security: "implicit_tls",
+        port: 2525,
+        security: "starttls",
         sender_email: "no-reply@example.com",
         sender_name: "Fictional Portal",
-        username: "no-reply@example.com",
+        username: "fictional-smtp-account",
         password: "Fictional-Provider-Password-123!",
     };
     const imap = {
@@ -102,6 +102,8 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
             const saved = await rpc(admin, "save_mail_configuration", [0, smtp, imap]);
             assert.equal(saved.version, 1);
             assert.equal(saved.smtp.enabled, true);
+            assert.equal(saved.smtp.port, 2525);
+            assert.equal(saved.smtp.security, "starttls");
             assert.equal(saved.smtp.credentials_configured, true);
             assert.equal("username" in saved.smtp, false);
             assert.equal("password" in saved.smtp, false);
@@ -134,7 +136,7 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
                 rpc(
                     admin,
                     "save_mail_configuration",
-                    [1, {...smtp, port: 587}, imap],
+                    [1, {...smtp, port: 65536}, imap],
                 ),
                 /22023/,
             );
