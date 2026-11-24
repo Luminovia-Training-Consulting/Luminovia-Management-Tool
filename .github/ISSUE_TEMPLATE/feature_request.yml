@@ -7,8 +7,7 @@ body:
     attributes:
       value: |
         Start with the problem and the actual workflow.
-        Check the [product roadmap](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/ROADMAP.md)
-        and existing issues. A suggestion does not promise implementation or authorize a production release.
+        Check existing issues. A suggestion does not promise implementation or authorize a production release.
   - type: textarea
     id: problem
     attributes:

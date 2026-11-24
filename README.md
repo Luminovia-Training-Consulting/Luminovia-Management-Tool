@@ -6,7 +6,7 @@ This repository contains the application and its local/self-hosted tooling. The 
 
 ## Run locally
 
-Use Linux, the Node version in [.node-version](.node-version), npm, Docker Engine and Docker Compose. Complete acceptance also requires Python 3, util-linux `flock`, and `age`/`age-keygen`. See [prerequisites and troubleshooting](docs/DEVELOPMENT.md#section-local-development) before the first start.
+Use Linux, the Node version in [.node-version](.node-version), npm, Docker Engine and Docker Compose. Complete acceptance also requires Python 3, util-linux `flock`, and `age`/`age-keygen`.
 
 ```sh
 git clone https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git
@@ -33,11 +33,11 @@ The development API uses port `54321`. Private runtime state and credentials sta
 ./portal github stop
 ```
 
-Open [the separate preview](http://127.0.0.1:5373); its API uses `56321`. It preserves its own accounts and files and leaves normal development data alone. `./portal github test` checks freshly fetched main in a separate QA checkout. Fetch failures and migrations requiring review stop explicitly. See [preview ownership and updates](docs/DEVELOPMENT.md#section-github-local-preview).
+Open [the separate preview](http://127.0.0.1:5373); its API uses `56321`. It preserves its own accounts and files and leaves normal development data alone. `./portal github test` checks freshly fetched main in a separate QA checkout. Fetch failures and migrations requiring review stop explicitly.
 
 ## What the application covers
 
-See the [feature catalogue](docs/FEATURES.md) for the full inventory across editions and the [White-Label roadmap](WHITELABEL_ROADMAP.md) for remaining customer-release work.
+See the [feature catalogue](docs/FEATURES.md) for the full inventory across editions.
 
 | Workflow                                                                           | Guide                                                                                                                                                                                                                                         |
 |------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -60,28 +60,28 @@ npm ci
 ./portal test         # Complete isolated local acceptance of this checkout
 ```
 
-The complete command uses its own fictional data, credentials, ports and cleanup. Coordinate shared QA ownership; never stop another checkout's services. Unit tests and builds alone do not prove Auth, Storage, concurrency, browser, retained-data or physical-device behavior. [Testing](docs/DEVELOPMENT.md#section-test-plan), [CI profiles](docs/DEVELOPMENT.md#section-ci-quality), [functional acceptance](docs/DEVELOPMENT.md#section-functional-acceptance) and recorded QA describe the separate evidence.
+The complete command uses its own fictional data, credentials, ports and cleanup. Coordinate shared QA ownership; never stop another checkout's services. Unit tests and builds alone do not prove Auth, Storage, concurrency, browser, retained-data or physical-device behavior.
 
 The lifecycle and notification client APIs have 100% file-specific coverage gates; whole-source coverage is measured separately. The native merge controller binds all required checks, actual system/browser/native execution, current-source security and independent review before its native merge request. It never rewrites the main ref or bypasses repository rules.
 
-For a frontend build, set the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values; [developer setup](docs/DEVELOPMENT.md#section-developer-guide) explains configuration. Synthetic values verify compilation only.
+For a frontend build, set the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values. Synthetic values verify compilation only.
 
-The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Router, TanStack Query, React Hook Form/Zod and i18next. Supabase supplies Auth, PostgreSQL, Storage, Realtime and Edge Functions; no separate business application server is required. See [architecture](docs/DEVELOPMENT.md#section-architecture), [data model](docs/DEVELOPMENT.md#section-erd), [API reference](API_REFERENCE.md) and [migration guide](docs/DEVELOPMENT.md#section-migration-guide).
+The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Router, TanStack Query, React Hook Form/Zod and i18next. Supabase supplies Auth, PostgreSQL, Storage, Realtime and Edge Functions; no separate business application server is required.
 
 ## Documentation
 
-- [Product requirements](docs/PRODUCT.md) and [original brief](PRODUCT_BRIEF.txt)
+- [Product requirements](docs/PRODUCT.md)
 - [User guide](docs/GUIDE.md) and [feature catalogue](docs/FEATURES.md)
-- [Development, architecture and tests](docs/DEVELOPMENT.md) and [design QA notes](docs/design-qa.md)
-- [Operations and deployment](OPERATIONS.md)
+- [Design QA notes](docs/design-qa.md)
+- [Hosted CMS](deploy/hostinger/README.md) and [customer Academy](deploy/academy/README.md)
 - [API reference](API_REFERENCE.md)
 
 ## Scope, contribution and operation
 
-The [product specification](docs/PRODUCT.md#section-product-spec), original [master brief](PRODUCT_BRIEF.txt) and [roadmap](ROADMAP.md) retain the full target and remaining requirements. Feature guides describe source behavior; exact PR checks establish acceptance of a particular revision. This README deliberately carries no rolling test totals or hosted-installation claim.
+The [product specification](docs/PRODUCT.md#section-product-spec) describes the target. Feature guides describe source behavior. Acceptance evidence applies to the revision tested.
 
-Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. The [contributor list](CONTRIBUTORS.md) records verified attribution; the [pull request guide](docs/DEVELOPMENT.md#section-pull-request-guide) explains the shared type/area/risk labels and current merge gates. Application UI changes need German and English. Report vulnerabilities through the private channel in [SECURITY](SECURITY.md). Use fictional data and customer-neutral examples throughout.
+Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. Application UI changes need German and English. [Report vulnerabilities privately](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new). Use fictional data and customer-neutral examples throughout.
 
-A merge does not publish a hosted PR deployment record. A push to `main` can trigger an automatic **development CMS** release only after the exact-main application and security runs pass; a separate manual exact-SHA dispatch is also available. See [the runbook](OPERATIONS.md#section-deployment-runbook) and [CI guide](docs/DEVELOPMENT.md#section-ci-quality). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
+A merge does not publish a hosted PR deployment record. A push to `main` can trigger an automatic **development CMS** release only after the exact-main application and security runs pass; a separate manual exact-SHA dispatch is also available. See the [hosted CMS guide](deploy/hostinger/README.md). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
 
-The current release is under the proprietary source-available terms in [LICENSE](LICENSE). Earlier GPLv3 releases and separately licensed bundled assets retain their respective terms and notices; see [brand provenance](docs/DEVELOPMENT.md#section-brand-design-system).
+The current release is under the proprietary source-available terms in [LICENSE](LICENSE). Earlier GPLv3 releases and separately licensed bundled assets retain their respective terms and notices.

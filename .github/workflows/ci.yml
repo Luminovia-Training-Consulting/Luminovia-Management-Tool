@@ -354,7 +354,7 @@ jobs:
             echo
             echo "[Download preview package]($ARTIFACT_URL). This is a complete local application source package, not a hosted website."
             echo
-            echo 'Review the contributor source, unpack portal-source.tar.gz and run node preview.mjs start on Linux with Node and Docker. This wrapper uses separate data volumes and ports. Read README.txt and portal/docs/DEVELOPMENT.md first.'
+            echo 'Review the contributor source, unpack portal-source.tar.gz and run node preview.mjs start on Linux with Node and Docker. This wrapper uses separate data volumes and ports. Read README.txt and portal/README.md first.'
           } >> "$GITHUB_STEP_SUMMARY"
   release-cms:
     # Explicit development release with an immutable commit tag. Main pushes,

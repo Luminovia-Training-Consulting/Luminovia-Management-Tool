@@ -101,7 +101,7 @@ await withTestDatabase("api_reference", async ({sql}) => {
 
 This reference describes the current repository API. It is generated from a disposable replay of **${migrations.length} migration files** through version **${sources.at(-1).version}**, containing **${rows.length} application public functions** and **${restRows.length} authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): \`${fingerprint}\`.
 
-Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs\`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](docs/DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](docs/DEVELOPMENT.md#section-functional-acceptance) and [QA results](docs/DEVELOPMENT.md#section-test-plan) define that evidence.
+Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs\`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local setup](README.md#run-locally). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Validation workflow](CONTRIBUTING.md#set-up-and-check) and current QA results define that evidence.
 
 ## Base URLs and authentication
 
@@ -177,7 +177,7 @@ Keep a retry's operation UUID and reviewed payload stable. Version/cursor confli
 
 ## Implemented feature and configuration entry points
 
-The same account JWT can call the listed public RPCs, the account facade, and RLS-protected REST tables where the owning feature uses them. These are representative entry points, not an assertion that every target requirement is implemented. Function signatures and effective grants appear below; the current actor's permission, membership, version and business result must still be checked. The [roadmap](ROADMAP.md) records missing product capabilities.
+The same account JWT can call the listed public RPCs, the account facade, and RLS-protected REST tables where the owning feature uses them. These are representative entry points, not an assertion that every target requirement is implemented. Function signatures and effective grants appear below; the current actor's permission, membership, version and business result must still be checked. The [feature catalogue](docs/FEATURES.md) records missing product capabilities.
 
 | Product area | Read / action API | Configuration API or current limit |
 | --- | --- | --- |
@@ -296,7 +296,7 @@ Enrolment and reports require Premium LMS enabled for the internal company or an
 
 ## Company course webhooks
 
-The [worker and receiver contract](OPERATIONS.md#company-course-webhooks) describes scoped subscriptions, exact signed JSON, timestamp validation, delivery attempts and deduplication. The downloadable OpenAPI document includes the webhook receiver contract. Subscription creation returns a signing key once and is excluded from interactive Swagger requests.
+The [worker and receiver contract](scripts/examples/README.md) describes scoped subscriptions, exact signed JSON, timestamp validation, delivery attempts and deduplication. The downloadable OpenAPI document includes the webhook receiver contract. Subscription creation returns a signing key once and is excluded from interactive Swagger requests.
 
 The internal download also includes the customer accounting receiver contract and the explicitly authorised \`company_accounting_webhook_subscribe\` operation. Each accounting event carries its customer invoice ID, occurrence time, version and event ID. Amounts and documents remain available through authorised portal accounting views.
 
@@ -312,7 +312,7 @@ Internal finance can call \`accounting_settlement_journal\` with inclusive ISO c
 
 \`GET /functions/v1/calendar-feed?token=<private-token>\` is a distinct token-authorised iCalendar subscription, not a bearer-authenticated account endpoint. The high-entropy secret grants the selected private feed; store/share it accordingly. SQL stores its hash and the gateway repeats revocation checks. [Calendar connections](docs/GUIDE.md#section-calendar-connections) owns scope, expiry and revocation details.
 
-Course-run job publication binds a trusted source revision and exact session references. A stale preview returns an error. The optional listing title and description override the template text in the marketplace. Company, sessions and source references come from the reviewed course. A current draft blocks another creation with HTTP 409 and course_run_draft_exists; the details field carries the existing draft UUID. An exact retry still returns its original job ID. [Course building blocks](docs/GUIDE.md#section-course-building-blocks) and [staff comments](docs/GUIDE.md#section-resource-comments) explain their separate resource rights. Client or learner access does not grant staff discussion access. [Architecture](docs/DEVELOPMENT.md#section-architecture) records the explicit opt-in minimal own offline teaching snapshot; generic authenticated responses and private file bytes are not cached offline.
+Course-run job publication binds a trusted source revision and exact session references. A stale preview returns an error. The optional listing title and description override the template text in the marketplace. Company, sessions and source references come from the reviewed course. A current draft blocks another creation with HTTP 409 and course_run_draft_exists; the details field carries the existing draft UUID. An exact retry still returns its original job ID. [Course building blocks](docs/GUIDE.md#section-course-building-blocks) and [staff comments](docs/GUIDE.md#section-resource-comments) explain their separate resource rights. Client or learner access does not grant staff discussion access. [Repository layout](AGENTS.md) records the explicit opt-in minimal own offline teaching snapshot; generic authenticated responses and private file bytes are not cached offline.
 `;
     // Use the pinned repository formatter so regeneration reproduces the committed bytes.
     await writeFile(

@@ -13,7 +13,7 @@ import {assertLocalPortalPortAvailable, assertNoRunningProject, removeLoopbackNe
 const action = process.argv[2] ?? "start";
 if (process.platform !== "linux" && !["help", "--help", "-h"].includes(action))
     throw new Error(
-        "The local launcher is currently tested on Linux. See docs/DEVELOPMENT.md.",
+        "The local launcher is currently tested on Linux. See README.md.",
     );
 
 /** Serialises this checkout's runtime mutations and releases its own lock on failure as well. */

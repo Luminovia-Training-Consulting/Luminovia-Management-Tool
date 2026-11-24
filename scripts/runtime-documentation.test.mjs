@@ -43,11 +43,7 @@ test("repository documentation links and heading fragments resolve", async () =>
         "README.md",
         "AGENTS.md",
         "CONTRIBUTING.md",
-        "SECURITY.md",
-        "ROADMAP.md",
-        "OPERATIONS.md",
         "API_REFERENCE.md",
-        "CONTRIBUTORS.md",
     ];
 
     /** Collects delivered Markdown documents recursively for local link validation. */
@@ -64,7 +60,8 @@ test("repository documentation links and heading fragments resolve", async () =>
 
     await walk(".github");
     await walk("docs");
-    await walk("deploy/hostinger");
+    await walk("deploy");
+    await walk("scripts/examples");
     await walk("supabase/functions/course-documents/assets");
     assert.ok(files.length >= 24, "Include maintained project Markdown records");
     const broken = [];
@@ -142,14 +139,10 @@ test("public guidance and current catalogue contain no historical customer ident
         "README.md",
         "CONTRIBUTING.md",
         "AGENTS.md",
-        "SECURITY.md",
         "data/course-building-blocks.json",
-        "ROADMAP.md",
         "docs/PRODUCT.md",
         "docs/FEATURES.md",
         "docs/design-qa.md",
-        "docs/DEVELOPMENT.md",
-        "OPERATIONS.md",
         "docs/GUIDE.md",
         "API_REFERENCE.md",
     ];
@@ -186,20 +179,10 @@ test("public guidance and current catalogue contain no historical customer ident
 // explicit inventory of project records and published materials under docs/.
 test("documentation retains the approved project records and published materials", async () => {
     const requiredRecords = new Set([
-        "CONTRIBUTOR_RIGHTS_AGREEMENT_DRAFT.md",
         "PRODUCT.md",
-        "DEVELOPMENT.md",
         "GUIDE.md",
         "FEATURES.md",
         "design-qa.md",
-        "IMPLEMENTATION_PLAN.md",
-        "QOL_FEATURE_MATRIX.md",
-        "QOL_MASTER_PROMPT.txt",
-        "QOL_PROGRAMME_STATUS.md",
-        "RELICENSING_STATUS.md",
-        "UNIVERSAL_MASTER_PROMPT.txt",
-        "UI_ACCEPTANCE_20261117.md",
-        "WORKLOG.md",
         "customer-handoff",
         "sales",
     ]);

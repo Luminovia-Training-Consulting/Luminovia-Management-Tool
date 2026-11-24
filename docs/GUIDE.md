@@ -55,14 +55,14 @@ Course preparation is available from the course workspace. Urgent teaching cover
 This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists, urgent teaching cover, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
 feature or that native/device/hosting acceptance has passed.
 
-Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](DEVELOPMENT.md#section-github-local-preview). A fixture result or captured local
+Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](../CONTRIBUTING.md). A fixture result or captured local
 mail is not a real invitation, external delivery, live timer or production approval. The full master scope remains recorded in [PRODUCT_SPEC](PRODUCT.md#section-product-spec), [SMART_OPERATIONS_SPEC](PRODUCT.md#section-smart-operations-spec) and the persistent plan.
 
 In the internal portal, use **Konten → Rollen bearbeiten / Accounts → Edit roles** to grant several roles to one account. Select the organisation when you add the company role. Use the course workspace to enrol a participant or assign a lecturer. In either dedicated academy, open **Akademie verwalten / Academy administration** to grant the local roles and company scope.
 
 On desktop, use the navigation control to expand or collapse the workspace rail; this visual preference is stored in the current browser. Search, notifications and sign-out are available from the rail; language and theme controls remain in the top bar. On mobile, the More menu contains all currently permitted destinations and search, while preferences and sign-out remain in the top bar.
 
-Use `./portal check` for fast local source/coverage/build validation and `./portal test` for complete isolated acceptance. [PR preview packages](DEVELOPMENT.md#section-pr-previews) are downloadable local runtimes after the required checks; they are not continuously hosted public PR instances.
+Use `./portal check` for fast local source/coverage/build validation and `./portal test` for complete isolated acceptance. [PR preview packages](../CONTRIBUTING.md) are downloadable local runtimes after the required checks; they are not continuously hosted public PR instances.
 
 <a id="section-user-guide-tour-and-help"></a>
 
@@ -487,7 +487,7 @@ At `/settings`, choose future optional chat, forum, job-update and reminder noti
 
 **Fällige Erinnerungen prüfen / Check due reminders** checks your confirmed, unreleased assignment sessions within24hours and own active contracts expiring within30days, at most once a minute unless preferences change. New notices appear in-app. At `/settings`, the separate email form lets you opt into additional email alerts and choose quiet hours in your intended IANA zone. Quiet hours delay email; they do not hide in-app notices. Changes are server-confirmed and version protected. The
 server's separately activated finite mail worker also refreshes due reminders for email-opted-in accounts. Email is not active merely because the form exists: private server configuration, timer activation and provider acceptance remain required. Web Push has a separate explicit device opt-in at `/settings`. If browser/provider support is available, grant permission, register your own labelled device and wait for server confirmation. Review/remove your own devices; another account cannot take
-over the same subscription. Refusal/unavailability is shown honestly. A registered device, headless test or provider fixture does not prove a visible desktop/mobile notification. Real browser/installed-PWA permission and delivery plus worker/VAPID activation require separate evidence. Digests remain separate work. See [Web Push](GUIDE.md#section-web-push), [Notifications](GUIDE.md#section-notifications) and [Mail operations](../OPERATIONS.md#section-notification-mail-operations).
+over the same subscription. Refusal/unavailability is shown honestly. A registered device, headless test or provider fixture does not prove a visible desktop/mobile notification. Real browser/installed-PWA permission and delivery plus worker/VAPID activation require separate evidence. Digests remain separate work. See [Web Push](GUIDE.md#section-web-push), [Notifications](GUIDE.md#section-notifications) and [Mail operations](../deploy/hostinger/README.md).
 
 <a id="section-user-guide-voluntary-staff-contact-sharing"></a>
 
@@ -525,7 +525,7 @@ Entries stop appearing exactly 30 days after the event and are removed from the 
 The shell's **Im Portal suchen / Search the portal** uses server-authorised cursor search across jobs, clean files, permitted wiki/forum/chat, people, courses, client/task and authorised commercial metadata. Enter at least two characters; load another page when available. Private drafts, message/task source access and commercial capabilities remain enforced, and the destination checks access again. A copied UUID, favourite or old notification never becomes a grant.
 
 The full target remains larger than this source. Remaining work includes broader module-specific bulk/recovery and saved filters, partial/started/invoiced replacement amendments, richer quality follow-up, global-event files/invitations, knowledge attachments, and general contract-renewal/retention administration. Computed readiness, open/emergency whole-block replacement, personal calendar subscriptions and teaching delivery already have connected workflows; consult their guides for limits.
-Existing management/course/resource lists retain their documented bounds. Already implemented time/statement/PDF/Push/calendar-source workflows are not relabelled as missing merely because their current full native/device/hosted gate is pending. The [complete feature map](PRODUCT.md#section-smart-operations-spec), [roadmap](../ROADMAP.md) and QA results separate source, tested, untested and external acceptance.
+Existing management/course/resource lists retain their documented bounds. Already implemented time/statement/PDF/Push/calendar-source workflows are not relabelled as missing merely because their current full native/device/hosted gate is pending. The [complete feature map](PRODUCT.md#section-smart-operations-spec), [roadmap](FEATURES.md) and QA results separate source, tested, untested and external acceptance.
 
 <a id="section-user-guide-offline-and-support"></a>
 
@@ -1074,7 +1074,7 @@ mobile/desktop accessibility. Run the supported `./portal test` entry point for
 complete native Auth/API/browser validation; do not point fixtures at development
 or production data.
 
-The complete product checklist remains in `ROADMAP.md`. This module
+This module
 does not declare saved marketplace filters, automatic substitute selection,
 scheduled publication, complete advanced marketplace filtering or all platform
 production acceptance complete.
@@ -1350,7 +1350,7 @@ The approved curriculum catalogue contains **22 distinct building blocks from 24
 
 A building block describes reusable teaching content, not a customer account. Source provenance does not assign an organisation, user membership, contract or commercial agreement. Create the actual customer under **Customers**, select that organisation when planning each course run, and reuse the same teaching template for other customers as needed.
 
-Administration may invite client users and grant explicit organisation memberships. The server checks current membership and permissions for organisation requests and financial projections; client access is not a general catalogue, private-contact or teaching-discussion entitlement. This describes the existing organisation-scoped model, not a claim that every product module has a separate tenant workspace. See [customer/course operations](../OPERATIONS.md#section-operations) and client access.
+Administration may invite client users and grant explicit organisation memberships. The server checks current membership and permissions for organisation requests and financial projections; client access is not a general catalogue, private-contact or teaching-discussion entitlement. This describes the existing organisation-scoped model, not a claim that every product module has a separate tenant workspace. See [customer/course operations](../deploy/hostinger/README.md) and client access.
 
 Public documentation, examples and screenshots must use neutral descriptions or fictional organisations. Actual customer names, contacts and other business records are configured privately in the application and are not included as public provenance or product branding. Historical migration versions remain immutable; review the source hashes in the M4 review rather than rewriting installed history.
 
@@ -1628,7 +1628,7 @@ Select the file to preview the changes. The file stays in the browser and the na
 
 ## Teaching delivery record
 
-The teaching evidence workflow uses the retained records from `20261116121600_attendance_delivery.sql`. The current interface is available through **Leistungsnachweise und Korrekturen / Delivery evidence and corrections** from assignment changes and through notification links. The [functional acceptance contract](DEVELOPMENT.md#section-functional-acceptance) explains the isolated checks for the workflow.
+The teaching evidence workflow uses the retained records from `20261116121600_attendance_delivery.sql`. The current interface is available through **Leistungsnachweise und Korrekturen / Delivery evidence and corrections** from assignment changes and through notification links. The [functional acceptance contract](../CONTRIBUTING.md) explains the isolated checks for the workflow.
 
 <a id="section-teaching-delivery-daily-workflow"></a>
 
@@ -2185,7 +2185,7 @@ Public functions are invoker-only entry points into restricted private functions
 - `save_taxonomy_topic(p_id, p_payload, p_version)` creates with `p_id = null` and version `0`, or updates an observed active version.
 - `set_taxonomy_topic_archived(p_id, p_archived, p_version)` archives or restores an observed version.
 
-Sources are in `src/features/taxonomy/` and the additive migration `20261115203718_taxonomy_catalogue_management.sql`. Existing migrations are not replaced. The meaning and scope of database permissions are documented in [ARCHITECTURE](DEVELOPMENT.md#section-architecture).
+Sources are in `src/features/taxonomy/` and the additive migration `20261115203718_taxonomy_catalogue_management.sql`. Existing migrations are not replaced. The meaning and scope of database permissions are documented in [ARCHITECTURE](../CONTRIBUTING.md).
 
 Focused checks:
 
@@ -2661,7 +2661,7 @@ Error codes: `42501` for missing permissions, `22023` for invalid text/cursor or
 
 ## Implementation and verification
 
-Migration `20261115155038_resource_comments.sql`; frontend `src/features/comments`; actual SQL/API scripts `comments-db-tests.mjs` / `comments-api-check.mjs`; Playwright `comments.spec.ts`. The shared API fixture helper and `defer` cleanup contract are explained in the [developer guide](DEVELOPMENT.md#section-developer-guide).
+Migration `20261115155038_resource_comments.sql`; frontend `src/features/comments`; actual SQL/API scripts `comments-db-tests.mjs` / `comments-api-check.mjs`; Playwright `comments.spec.ts`. The shared API fixture helper and `defer` cleanup contract are explained in the [developer guide](../CONTRIBUTING.md).
 
 The complete local M4-03 run passed eleven actual temporary PostgreSQL checks covering boundaries, ten concurrent identical writes producing one record, cursors, author/moderator versions, withdrawal, role revocation and suspension; three component checks covering the access gate, separate drafts and uncertain retry/server confirmation; actual Auth/TOTP/RPC calls and separate desktop/mobile browser journeys for writing, reloading, editing, moderating and withdrawing. Additional acceptance after
 integration with hosting code is documented separately in the relevant pull request checks. The private history is not a completed statutory retention/deletion policy.
@@ -2847,7 +2847,7 @@ Matching jobs are determined after the publication transaction completes, using 
 
 The explicit reminder-refresh action creates idempotent notices for the actor's own confirmed, unreleased sessions within 24 hours and own active contracts expiring within 30 days. A server-side limit prevents repeated calculation within one minute. A changed preference permits immediate recalculation. Released historical allocations and revoked contracts do not produce current reminders.
 
-The [email extension](../OPERATIONS.md#section-notification-delivery-database) adds explicit per-account consent, IANA-zone quiet hours and a transactional outbox. The versioned settings are stored server-side. The [finite Hostinger mail worker](../OPERATIONS.md#section-notification-mail-operations) generates due reminders for opted-in active accounts and processes newly queued events; manual reminder refresh can also queue a new email. Existing inbox history is never replayed.
+The [email extension](../deploy/hostinger/README.md) adds explicit per-account consent, IANA-zone quiet hours and a transactional outbox. The versioned settings are stored server-side. The [finite Hostinger mail worker](../deploy/hostinger/README.md) generates due reminders for opted-in active accounts and processes newly queued events; manual reminder refresh can also queue a new email. Existing inbox history is never replayed.
 
 [Web Push](GUIDE.md#section-web-push) adds explicit per-device consent, private subscriptions and a finite encrypted delivery worker. The in-app attention settings below remain independent of external delivery quiet hours. Committed task, assignment, course, finance and qualification events resolve their current resource permissions again before dispatch. Generic external payloads contain no private message bodies or document links.
 
@@ -3310,7 +3310,7 @@ npx --no-install vitest run src/features/jobs/discovery-api.test.ts src/features
 node --test scripts/runtime-documentation.test.mjs
 ```
 
-Run mutating [delegated-pricing SQL checks](../scripts/delegated-pricing-db-tests.mjs), [commission API checks](../scripts/commission-api-check.mjs) and [role/pricing browser journeys](../tests/e2e/roles-pricing.spec.ts) only through the owned isolated acceptance environment described in [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development), normally `./portal test`. The SQL, actual Auth/REST/browser and native retained-data stages are distinct evidence. This documentation lists their entry
+Run mutating [delegated-pricing SQL checks](../scripts/delegated-pricing-db-tests.mjs), [commission API checks](../scripts/commission-api-check.mjs) and [role/pricing browser journeys](../tests/e2e/roles-pricing.spec.ts) only through the owned isolated acceptance environment described in [LOCAL_DEVELOPMENT](../CONTRIBUTING.md), normally `./portal test`. The SQL, actual Auth/REST/browser and native retained-data stages are distinct evidence. This documentation lists their entry
 points without asserting a new execution, operational policy setup, deployment or complete security/legal certification.
 
 The current [job-discovery SQL suite](../scripts/job-discovery-db-tests.mjs) checks authorised search and paging; [delegated-pricing SQL tests](../scripts/delegated-pricing-db-tests.mjs) check individual quotes, privacy and immutable claim snapshots. The older [role-percentage discovery probe](../scripts/role-aware-job-discovery.archived.mjs) documents the superseded model and is not part of current acceptance. [Discovery DTO regressions](../src/features/jobs/discovery-api.test.ts)

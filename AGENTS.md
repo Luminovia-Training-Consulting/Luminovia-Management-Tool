@@ -9,11 +9,9 @@ Agent assistance does not transfer that responsibility.
 
 ## Ground rules
 
-1. Read [README](README.md), [PRODUCT.md](docs/PRODUCT.md), [ROADMAP.md](ROADMAP.md)
-   and [PRODUCT_BRIEF.txt](PRODUCT_BRIEF.txt), the complete original product specification.
+1. Read [README](README.md) and [PRODUCT.md](docs/PRODUCT.md).
    Later explicit user decisions take precedence. Do not reduce the target to an MVP.
-2. Read [DEVELOPMENT.md](docs/DEVELOPMENT.md), [GUIDE.md](docs/GUIDE.md) and
-   [OPERATIONS.md](OPERATIONS.md) for the relevant source and operating boundaries.
+2. Read the [user guide](docs/GUIDE.md) and the relevant deployment README.
 3. Inspect `git status --short --branch`, `git remote -v` and `git worktree list`.
    Read the actual owning source, migrations and tests. Historical QA evidence
    does not establish current behavior or deployment state.
@@ -41,7 +39,7 @@ Agent assistance does not transfer that responsibility.
 | `src/features/dashboard/`, `src/features/notifications/`, `src/features/audit/` | Personal summaries, own inbox/preferences and reduced administrative audit projection.                          |
 | `src/lib/`                                                                      | Types, query keys, browser client, dates/time zones and localisation.                                           |
 | `src/components/`, `src/styles.css`                                             | UI primitives, shared fields/states and global styles; feature styles live beside their modules.                |
-| `supabase/migrations/`                                                          | Released SQL history: schema, constraints, RLS, grants, transactions and RPCs. [Reading guide](docs/DEVELOPMENT.md). |
+| `supabase/migrations/`                                                          | Released SQL history: schema, constraints, RLS, grants, transactions and RPCs. |
 | `supabase/functions/`                                                           | File/avatar gateway, account HTTP API and invitation handling.                                                  |
 | `supabase/config.toml`, `supabase/templates/`                                   | Local service/Auth configuration and bilingual authentication emails.                                           |
 | `portal`, `scripts/runtime-*.mjs`                                               | Local startup, process/network ownership, persistent GitHub preview and isolated verification.                  |
@@ -97,8 +95,7 @@ source versions and preservation contract.
   query clearing and router remount on identity change. Dispose realtime channels,
   timers and Blob URLs with their owner. Refreshing the same actor's token must
   not unnecessarily erase form drafts.
-- Preserve the seven brand colours, official logo and provenance in
-  [BRAND_DESIGN_SYSTEM](docs/DEVELOPMENT.md). Check DE/EN, light/dark,
+- Preserve the seven brand colours, official logo and provenance in `public/brand/`. Check DE/EN, light/dark,
   desktop/mobile, keyboard use and visible loading/error/empty states.
 
 ## Comments are part of the source
@@ -121,8 +118,7 @@ Carina requests comprehensive code comments. Maintain them with every change:
   or binary assets. Explain their contract in the owning documentation. Update
   third-party source only through a deliberate upstream maintenance change.
 - Released SQL migrations remain **byte-identical**, even during a comment pass.
-  Their hashes participate in preview/update verification. Use
-  [MIGRATION_GUIDE](docs/DEVELOPMENT.md) for historical explanations. Business
+  Their hashes participate in preview/update verification. Business
   changes require a new additive migration created with the installed CLI.
 
 ## Build and check
@@ -134,8 +130,7 @@ latest `main` locally, and `./portal github` for its persistent local preview.
 These commands need no GitHub-hosted deployment or self-hosted Actions runner.
 Keep automatic GitHub quality/security checks; do not publish deployments or
 CMS releases merely to test a change. Publication requires an explicit user
-request and the manual workflow controls described in
-[PR_PREVIEWS](docs/DEVELOPMENT.md) and [CI_QUALITY](docs/DEVELOPMENT.md).
+request and the controls in the relevant workflow under `.github/workflows/`.
 
 Complete each agent's bounded feature in its own worktree, test it locally with
 the relevant unit, integration and actual functional checks, then sign, commit,
@@ -144,8 +139,7 @@ integration branch or a blanket source freeze. Merge finished PRs sequentially
 after their current required CI succeeds; coordinate actual main-merge collisions
 while preserving independent feature development and all existing gates.
 
-[LOCAL_DEVELOPMENT](docs/DEVELOPMENT.md) documents prerequisites, ports and
-ownership rules. Use the Node version in `.node-version` and exact
+[Local setup](README.md#run-locally) lists prerequisites. Use the Node version in `.node-version` and exact
 `package-lock.json` dependencies through `npm ci`. Full operating/recovery checks
 also require Docker/Compose, Python 3, Linux `flock` and `age`/`age-keygen`.
 
@@ -184,8 +178,7 @@ Correct the cause; do not replace it with weaker assertions, removed gates,
 silent retries or arbitrary sleeps. Record commands, results, checked revision
 and stages not reached. Unit/AST/build passes do not prove native data upgrades,
 physical PWA installation, mail delivery or production readiness.
-[TEST_PLAN](docs/DEVELOPMENT.md), [the relevant pull request checks](docs/DEVELOPMENT.md) and
-[CI_QUALITY](docs/DEVELOPMENT.md) explain the separate evidence.
+[Contribution checks](CONTRIBUTING.md#set-up-and-check) describe the validation entry points.
 
 ## Git, parallel agents and delivery
 
@@ -197,9 +190,7 @@ physical PWA installation, mail delivery or production readiness.
   foreign processes, reset files or stage unrelated changes. Recheck branch, diff
   and remote before committing and pushing.
 - Sign commits. Describe the change and purpose plainly; preserve published tags
-  and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/DEVELOPMENT.md)
-  explains labels and PR content; [GITHUB_WORKFLOW](docs/DEVELOPMENT.md) records
-  actual server-side rules. A prepared ruleset is not necessarily active.
+  and release/maintenance gates. See [pull request requirements](CONTRIBUTING.md#prepare-the-pull-request) and check the live GitHub rules.
 - **Every requested repository change must be committed, pushed and delivered
   through a fully prepared pull request targeting `main`.** Include the relevant
   description, current catalogue labels and actual validation results. Do not stop

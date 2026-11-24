@@ -2,7 +2,7 @@
 
 Read and follow the root [AGENTS.md](../AGENTS.md) before changing this repository. It is the canonical agent handbook; read any applicable nested instructions as well.
 
-Start with [README](../README.md), the [project guides](../README.md#documentation), [roadmap](../ROADMAP.md) and complete [master specification](../PRODUCT_BRIEF.txt). Preserve unrelated work and use a separate worktree when other work is in progress.
+Start with [README](../README.md), the [project guides](../README.md#documentation) and the [product specification](../docs/PRODUCT.md). Preserve unrelated work and use a separate worktree when other work is in progress.
 
 Keep the documented React/TypeScript/Vite/Supabase architecture. Database permissions, active-account status and current actor membership are authoritative; the current source disables MFA factors and AAL gates. Never put server keys or private data in browser code, Git, logs or screenshots. Use fictional, isolated test data.
 

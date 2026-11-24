@@ -956,7 +956,7 @@ if (
       if (licenceState !== "active") process.exitCode = 2;
     } else {
       throw new Error(
-        "Use build, verify, sign-release or verify-release as documented in docs/DEVELOPMENT.md.",
+        "Use build, verify, sign-release or verify-release as documented in deploy/academy/README.md.",
       );
     }
   } catch (error) {
