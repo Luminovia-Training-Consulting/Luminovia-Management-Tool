@@ -64,6 +64,7 @@ function openAnalytics(
   access: AnalyticsAccess,
   canModel = false,
   path = "/analytics",
+  scope?: "personal" | "staff",
 ) {
   rpc.mockImplementation(
     (
@@ -131,7 +132,7 @@ function openAnalytics(
   render(
     <QueryClientProvider client={cache}>
       <MemoryRouter initialEntries={[path]}>
-        <AnalyticsPage />
+        <AnalyticsPage scope={scope} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -472,6 +473,33 @@ it("disregards a company deep link when the caller has no company membership", a
     "/analytics?scope=company",
   );
   await screen.findByRole("option", { name: "Lecturer compensation" });
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "analytics_report"),
+  ).toEqual([
+    [
+      "analytics_report",
+      expect.objectContaining({ p_scope: "personal", p_organisation_id: null }),
+    ],
+  ]);
+});
+
+it("ignores a platform query parameter in a fixed personal analytics view", async () => {
+  openAnalytics(
+    {
+      staff: true,
+      personal: true,
+      time_zone: "Europe/Berlin",
+      organisations: [],
+    },
+    true,
+    "/finance/analytics?scope=staff",
+    "personal",
+  );
+  await screen.findByRole("heading", { name: "Financial trend" });
+  expect(screen.queryByLabelText("View")).toBeNull();
+  expect(
+    screen.queryByRole("heading", { name: "Open work scenario" }),
+  ).toBeNull();
   expect(
     rpc.mock.calls.filter(([name]) => name === "analytics_report"),
   ).toEqual([

@@ -1,3 +1,4 @@
+import { financeWorkspaceAccess } from "../../app/finance-access";
 import { hasTeachingRole } from "../auth/internal-capabilities";
 
 export const administrationAreas = {
@@ -10,6 +11,11 @@ export const administrationAreas = {
     to: "/admin/directory",
     label: "adminDirectory",
     description: "adminDirectoryDescription",
+  },
+  finance: {
+    to: "/admin/finance",
+    label: "platformFinance",
+    description: "platformFinanceDescription",
   },
   platform: {
     to: "/admin/platform",
@@ -91,6 +97,16 @@ export function administrationLinks(
       label: "adminAccounts",
       area: "directory",
       visible: has("users.manage"),
+    },
+    {
+      to: "/admin/finance",
+      label: "platformFinance",
+      area: "finance",
+      visible:
+        active &&
+        Object.values(financeWorkspaceAccess(roles, permissions).staff).some(
+          Boolean,
+        ),
     },
     {
       to: "/admin/announcements",

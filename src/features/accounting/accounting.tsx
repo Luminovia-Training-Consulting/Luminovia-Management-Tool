@@ -1,3 +1,4 @@
+import type { FinanceScope } from "../../app/finance-access";
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
@@ -513,8 +514,8 @@ function CustomerPaymentForm({
 /** Actor-bound accounting route. Capability changes suppress stale restricted
  * sources; every export and PDF still checks current database permission. */
 export function AccountingPage({
-  preferCustomer = false,
-}: { preferCustomer?: boolean } = {}) {
+  scope = "personal",
+}: { scope?: FinanceScope } = {}) {
   const { session } = useAuth();
   const actor = session!.user.id;
   const { t } = useTranslation("accounting");
@@ -522,9 +523,16 @@ export function AccountingPage({
   const client = useQueryClient();
   const access = useQuery(accountingAccessQuery(actor));
   const [selectedSource, setSource] = useState<AccountingSource>();
+  const sources: AccountingSource[] = [];
+  if (scope === "personal") sources.push("own");
+  if (scope === "staff" && access.data?.can_export_all_lecturers)
+    sources.push("lecturer_all");
+  if (scope !== "personal" && access.data?.can_export_customer)
+    sources.push("customer");
   const source =
-    selectedSource ??
-    (preferCustomer && access.data?.can_export_customer ? "customer" : "own");
+    selectedSource ?? sources[0] ?? (scope === "personal" ? "own" : "customer");
+  const canManageCustomer =
+    scope === "staff" && access.data?.can_manage_customer_invoices === true;
   const [selected, setSelected] = useState<string[]>([]);
   const [register, setRegister] = useState(false);
   const [payment, setPayment] = useState<AccountingInvoice | null>(null);
@@ -536,14 +544,10 @@ export function AccountingPage({
   const [saved, setSaved] = useState(false);
   const [snapshot, setSnapshot] = useState<AccountingExport | null>(null);
   const [denied, setDenied] = useState(false);
-  const sourceAllowed =
-    source === "own" ||
-    (source === "lecturer_all" &&
-      access.data?.can_export_all_lecturers === true) ||
-    (source === "customer" && access.data?.can_export_customer === true);
+  const sourceAllowed = access.isSuccess && sources.includes(source);
   const invoices = useInfiniteQuery({
     ...accountingInvoicesQuery(actor, source),
-    enabled: sourceAllowed && (!preferCustomer || access.isSuccess),
+    enabled: sourceAllowed,
   });
   const rows =
     sourceAllowed && !invoices.isError
@@ -613,7 +617,7 @@ export function AccountingPage({
         title={t("title")}
         description={t("description")}
         action={
-          access.data.can_manage_customer_invoices ? (
+          canManageCustomer ? (
             <Button
               onClick={() => {
                 setRegister(true);
@@ -643,12 +647,16 @@ export function AccountingPage({
             setSaved(false);
           }}
         >
-          <option value="own">{t("own")}</option>
-          {access.data.can_export_all_lecturers && (
-            <option value="lecturer_all">{t("lecturer_all")}</option>
-          )}
-          {access.data.can_export_customer && (
-            <option value="customer">{t("customer")}</option>
+          {(sources.includes(source) ? sources : [source, ...sources]).map(
+            (item) => (
+              <option
+                key={item}
+                value={item}
+                disabled={!sources.includes(item)}
+              >
+                {t(item)}
+              </option>
+            ),
           )}
         </select>
         <div className="accounting-toolbar-actions">
@@ -664,12 +672,12 @@ export function AccountingPage({
           >
             {t("refresh")}
           </Button>
-          {(access.data.can_manage_customer_invoices ||
-            access.data.can_export_all_lecturers) && (
-            <SettlementJournalButton
-              key={`${actor}:${access.data.can_manage_customer_invoices}:${access.data.can_export_all_lecturers}`}
-            />
-          )}
+          {scope === "staff" &&
+            (canManageCustomer || access.data.can_export_all_lecturers) && (
+              <SettlementJournalButton
+                key={`${actor}:${canManageCustomer}:${access.data.can_export_all_lecturers}`}
+              />
+            )}
         </div>
       </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
@@ -806,26 +814,25 @@ export function AccountingPage({
                     {t("customerSettlement")}
                   </Button>
                 )}
-                {i.kind === "customer_invoice" &&
-                  access.data.can_manage_customer_invoices && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setPayment(i);
-                          setSaved(false);
-                        }}
-                      >
-                        {t("payment")}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setCreditInvoice(i)}
-                      >
-                        {t("creditNotes")}
-                      </Button>
-                    </>
-                  )}
+                {i.kind === "customer_invoice" && canManageCustomer && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setPayment(i);
+                        setSaved(false);
+                      }}
+                    >
+                      {t("payment")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCreditInvoice(i)}
+                    >
+                      {t("creditNotes")}
+                    </Button>
+                  </>
+                )}
               </div>
               <small>{i.assignments.map((a) => a.title).join(" · ")}</small>
               {i.kind === "customer_invoice" && i.payments.length > 0 && (
@@ -852,12 +859,12 @@ export function AccountingPage({
         </Button>
       )}
       <Dialog
-        open={register && access.data.can_manage_customer_invoices}
+        open={register && canManageCustomer}
         onOpenChange={setRegister}
         title={t("register")}
         description={t("registerHint")}
       >
-        {access.data.can_manage_customer_invoices && (
+        {canManageCustomer && (
           <CustomerInvoiceForm
             actor={actor}
             onDone={complete}
@@ -883,16 +890,14 @@ export function AccountingPage({
         )}
       </Dialog>
       <Dialog
-        open={
-          Boolean(creditInvoice) && access.data.can_manage_customer_invoices
-        }
+        open={Boolean(creditInvoice) && canManageCustomer}
         onOpenChange={(open) => {
           if (!open) setCreditInvoice(null);
         }}
         title={t("creditNotes")}
         description={t("creditHint")}
       >
-        {creditInvoice && access.data.can_manage_customer_invoices && (
+        {creditInvoice && canManageCustomer && (
           <CustomerCreditNotes
             key={creditInvoice.id}
             actor={actor}
@@ -902,14 +907,14 @@ export function AccountingPage({
         )}
       </Dialog>
       <Dialog
-        open={Boolean(payment) && access.data.can_manage_customer_invoices}
+        open={Boolean(payment) && canManageCustomer}
         onOpenChange={(open) => {
           if (!open) setPayment(null);
         }}
         title={t("payment")}
         description={t("paymentHint")}
       >
-        {payment && access.data.can_manage_customer_invoices && (
+        {payment && canManageCustomer && (
           <CustomerPaymentForm
             invoice={payment}
             actor={actor}

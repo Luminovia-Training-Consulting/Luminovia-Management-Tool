@@ -682,16 +682,13 @@ it("allows a participant's signed-in API explorer route", () => {
   );
 });
 
-it.each(["/jobs/fictional-offer", "/finance?claim=fictional-claim"])(
-  "routes company-only requests for %s back to the company workspace",
-  async (path) => {
-    access.roles = ["client"];
-    setup(path, false);
-    expect(await screen.findByText("Live company route")).toBeVisible();
-    expect(screen.queryByText("Live job detail route")).not.toBeInTheDocument();
-    expect(screen.queryByText("Live finance route")).not.toBeInTheDocument();
-  },
-);
+it("routes a company-only job request back to the company workspace", async () => {
+  access.roles = ["client"];
+  setup("/jobs/fictional-offer", false);
+  expect(await screen.findByText("Live company route")).toBeVisible();
+  expect(screen.queryByText("Live job detail route")).not.toBeInTheDocument();
+  expect(screen.queryByText("Live finance route")).not.toBeInTheDocument();
+});
 
 it("opens a valid job detail ID for the company-scoped server projection", async () => {
   access.roles = ["client"];
@@ -704,8 +701,8 @@ it("uses one finance link for company invoices and analytics", () => {
   setup("/client", false);
   const sidebar = screen.getByRole("complementary", { name: "Menü" });
   expect(
-    within(sidebar).getByRole("link", { name: "Finanzen" }),
-  ).toHaveAttribute("href", "/finance");
+    within(sidebar).getByRole("link", { name: "Unternehmensfinanzen" }),
+  ).toHaveAttribute("href", "/client/finance");
   expect(within(sidebar).queryByRole("link", { name: "Analysen" })).toBeNull();
   expect(
     within(sidebar).queryByRole("link", { name: "Buchhaltung und Exporte" }),

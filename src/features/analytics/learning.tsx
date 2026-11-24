@@ -1,3 +1,4 @@
+import { financeRoots, type FinanceScope } from "../../app/finance-access";
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
@@ -271,9 +272,11 @@ function LearningReport({
 function LearningAnalyticsView({
   actor,
   access,
+  fixedScope,
 }: {
   actor: string;
   access: LearningAnalyticsAccess;
+  fixedScope?: FinanceScope;
 }) {
   const { t } = useTranslation("learningAnalytics");
   const [selectedScope, setScope] = useState<AnalyticsScope>();
@@ -287,13 +290,15 @@ function LearningAnalyticsView({
   const [page, setPage] = useState(1);
 
   const companies = access.organisations.filter(({ company }) => company);
-  const scopes = analyticsScopes.filter((scope) =>
-    scope === "company" ? companies.length > 0 : access[scope],
+  const scopes = analyticsScopes.filter(
+    (scope) =>
+      (!fixedScope || scope === fixedScope) &&
+      (scope === "company" ? companies.length > 0 : access[scope]),
   );
   const scope =
     selectedScope && scopes.includes(selectedScope)
       ? selectedScope
-      : access.staff
+      : scopes.includes("staff")
         ? "staff"
         : scopes[0];
   const organisations = scope === "company" ? companies : access.organisations;
@@ -460,7 +465,9 @@ function LearningAnalyticsView({
   );
 }
 
-export function LearningAnalyticsPage() {
+export function LearningAnalyticsPage({
+  scope,
+}: { scope?: FinanceScope } = {}) {
   const { t } = useTranslation("learningAnalytics");
   const actor = useAuth().session?.user.id ?? "";
   const online = useOnline();
@@ -474,7 +481,9 @@ export function LearningAnalyticsPage() {
       {portalInternalEdition && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/finance/analytics">{t("general")}</Link>
+            <Link to={`${financeRoots[scope ?? "personal"]}/analytics`}>
+              {t("general")}
+            </Link>
           </Button>
         </div>
       )}
@@ -485,7 +494,11 @@ export function LearningAnalyticsPage() {
       ) : access.isError ? (
         <ErrorState retry={() => void access.refetch()} />
       ) : hasLearningAnalytics(access.data) ? (
-        <LearningAnalyticsView actor={actor} access={access.data} />
+        <LearningAnalyticsView
+          actor={actor}
+          access={access.data}
+          fixedScope={scope}
+        />
       ) : (
         <p className="panel">{t("unavailable")}</p>
       )}

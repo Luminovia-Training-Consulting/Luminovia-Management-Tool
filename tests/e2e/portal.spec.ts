@@ -6,7 +6,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {actor, assertPasswordOnly} from "./helpers/accounts-support";
+import {actor, api, assertPasswordOnly, checked} from "./helpers/accounts-support";
 
 const configured = Boolean(
     process.env.SUPABASE_URL &&
@@ -99,7 +99,7 @@ test("administration navigation keeps shared workflows together on desktop and m
     if (mobile) await more.press("Escape");
 
     const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
-    await expect(sections.getByRole("link")).toHaveCount(4);
+    await expect(sections.getByRole("link", {name: "Plattformfinanzen", exact: true})).toBeVisible();
     await sections.getByRole("link", {name: "Unternehmen & Personen", exact: true}).click();
     await expect(page.getByRole("link", {name: "Unternehmen", exact: true})).toBeVisible();
     await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
@@ -121,7 +121,7 @@ test("administration navigation keeps shared workflows together on desktop and m
 
 test("staff analytics filters and forecast charts work across viewport sizes", async ({page}) => {
     await login(page, process.env.E2E_ADMIN_EMAIL!);
-    await page.goto("/finance/analytics");
+    await page.goto("/admin/finance/analytics");
     await expect(page.getByRole("heading", {name: "Analysen", exact: true})).toBeVisible();
     await page.getByLabel("Zeitraum", {exact: true}).selectOption("previousQuarter");
     const timeline = page.locator("section").filter({has: page.getByRole("heading", {name: "Bestätigte Aufträge", exact: true})});
@@ -140,6 +140,39 @@ test("staff analytics filters and forecast charts work across viewport sizes", a
     );
     await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
     await expect(page.getByLabel("Zeitraum", {exact: true})).toHaveValue("around");
+});
+
+test("dual-role finance keeps personal and platform reports separate", async ({page}) => {
+    const manager = await actor("Fictional finance lecturer", "management");
+    const control = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    try {
+        await checked(control.from("user_roles").insert({user_id: manager.id, role: "lecturer"}));
+        await login(page, manager.email);
+        await page.goto("/finance");
+        await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
+        await expect(page.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true})).toHaveCount(0);
+        const personalReport = page.waitForRequest((request) =>
+            new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
+        );
+        await page.getByRole("navigation", {name: "Meine Finanzen", exact: true})
+            .getByRole("link", {name: "Analysen", exact: true}).click();
+        expect((await personalReport).postDataJSON()).toMatchObject({p_scope: "personal"});
+        await page.goto("/admin/finance");
+        await expect(page.getByRole("heading", {name: "Plattformfinanzen", exact: true})).toBeVisible();
+        const finance = page.getByRole("main").getByRole("navigation", {name: "Plattformfinanzen", exact: true});
+        const staffReport = page.waitForRequest((request) =>
+            new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
+        );
+        await finance.getByRole("link", {name: "Analysen", exact: true}).click();
+        expect((await staffReport).postDataJSON()).toMatchObject({p_scope: "staff"});
+        await expect(page.getByLabel("Ansicht", {exact: true})).toHaveCount(0);
+        await finance.getByRole("link", {name: "Buchhaltung und Exporte", exact: true}).click();
+        const source = page.getByLabel("Rechnungsquelle", {exact: true});
+        await expect(source).toHaveValue("lecturer_all");
+        await expect(source.locator('option[value="own"]')).toHaveCount(0);
+    } finally {
+        await checked(control.auth.admin.deleteUser(manager.id));
+    }
 });
 
 test("private routes require real authentication and login is accessible", async ({

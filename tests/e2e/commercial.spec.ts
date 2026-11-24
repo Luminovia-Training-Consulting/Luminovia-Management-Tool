@@ -431,10 +431,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         path: `.local/screenshots/${testInfo.project.name}-finance.png`,
         fullPage: true,
     });
-    await adminPage.goto("/finance");
-    await adminPage
-        .getByLabel("Alle Dozierenden anzeigen", {exact: true})
-        .check();
+    await adminPage.goto("/admin/finance");
     const reviewCard = adminPage.locator("article").filter({
         has: adminPage.getByRole("heading", {name: number, exact: true}),
     });
@@ -563,7 +560,7 @@ test("settlement for a cancelled assignment shares only verified lecturer totals
     try {
         const adminPage = await adminContext.newPage();
         await login(adminPage, administrator);
-        await adminPage.goto("/finance");
+        await adminPage.goto("/admin/finance");
         const financeCase = adminPage.locator("article.invoice-review-row")
             .filter({hasText: job.title});
         await financeCase.getByText("Abrechnung berechnen", {exact: true}).click();
@@ -777,7 +774,7 @@ test("a scanned exceptional invoice can be submitted and downloaded through the 
         await lecturerReview.getByRole("button", {name: "Prüfung anfordern", exact: true}).click();
         await expect(lecturerReview.getByText("Prüfung angefordert", {exact: true})).toBeVisible();
 
-        await financePage.goto("/finance");
+        await financePage.goto("/admin/finance");
         const review = financePage.locator("article.invoice-review-row").filter({hasText: job.title});
         await review.getByRole("button", {name: "Ausnahmeabrechnung vorbereiten"}).click();
         await review.getByLabel("Prüfnotiz (mindestens 10 Zeichen)").fill("Fiktive Vertragsprüfung und Freigabe des Stornobetrags.");
@@ -861,7 +858,6 @@ test("a scanned exceptional invoice can be submitted and downloaded through the 
         expect(items.data).toEqual([{claim_id: job.claimId, active: true}]);
 
         await financePage.reload();
-        await financePage.getByLabel("Alle Dozierenden anzeigen", {exact: true}).check();
         const financeInvoice = financePage.locator("article").filter({
             has: financePage.getByRole("heading", {name: number, exact: true}),
         });
@@ -939,10 +935,7 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
         const job = await acceptedJob(lecturer, "EUR", 300, 16, false, [17]);
         await finishAcceptedJob(job, 7, "2035-05-16T08:00:00Z");
 
-        const finance = async () => {
-            await financePage.goto("/finance");
-            await financePage.getByLabel("Alle Dozierenden anzeigen", {exact: true}).check();
-        };
+        const finance = () => financePage.goto("/admin/finance");
         async function openSeries() {
             await finance();
             await financePage.getByRole("row").filter({hasText: job.title})
@@ -1614,10 +1607,7 @@ test("coordinated commercial amendment preserves the agreement through corrected
             .getByRole("button", {name: "Rechnung einreichen", exact: true})
             .click();
         await expect(form).not.toBeVisible();
-        await review.goto("/finance");
-        await review
-            .getByLabel("Alle Dozierenden anzeigen", {exact: true})
-            .check();
+        await review.goto("/admin/finance");
         const bill = review.locator("article").filter({
             has: review.getByRole("heading", {
                 name: invoiceNumber,

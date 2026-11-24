@@ -1,3 +1,4 @@
+import { financeRoots, type FinanceScope } from "../../app/finance-access";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -45,9 +46,11 @@ import "./learning-i18n";
 function AnalyticsView({
   actor,
   access,
+  fixedScope,
 }: {
   actor: string;
   access: AnalyticsAccess;
+  fixedScope?: FinanceScope;
 }) {
   const { t } = useTranslation("analytics");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,10 +65,12 @@ function AnalyticsView({
   );
   const [currency, setCurrency] = useState<AnalyticsCurrency>("EUR");
   const companies = access.organisations.filter((item) => item.company);
-  const scopes = analyticsScopes.filter((scope) =>
-    scope === "company" ? companies.length > 0 : access[scope],
+  const scopes = analyticsScopes.filter(
+    (scope) =>
+      (!fixedScope || fixedScope === scope) &&
+      (scope === "company" ? companies.length > 0 : access[scope]),
   );
-  const defaultScope = access.staff ? "staff" : scopes[0];
+  const defaultScope = scopes.includes("staff") ? "staff" : scopes[0];
   const scope = scopes.find((item) => item === requestedScope) ?? defaultScope;
   const company = companies.find(({ id }) => id === companyId) ?? companies[0];
   const staffCompany = access.organisations.find(
@@ -362,7 +367,7 @@ function ScenarioPanel({
   );
 }
 
-export function AnalyticsPage() {
+export function AnalyticsPage({ scope }: { scope?: FinanceScope } = {}) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const actor = session?.user.id ?? "";
@@ -375,16 +380,25 @@ export function AnalyticsPage() {
     ...analyticsAccessQuery(actor),
     enabled: Boolean(actor && portalInternalEdition),
   });
+  const canSeeLearning =
+    learning.isSuccess &&
+    (scope === "company"
+      ? learning.data.organisations.some(({ company }) => company)
+      : scope
+        ? learning.data[scope]
+        : hasLearningAnalytics(learning.data));
   return (
     <div className="portal-analytics">
       <PageHeading
         title={t("analytics")}
         description={t("analytics:description")}
       />
-      {online && learning.isSuccess && hasLearningAnalytics(learning.data) && (
+      {online && canSeeLearning && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/finance/analytics/learning">
+            <Link
+              to={`${financeRoots[scope ?? "personal"]}/analytics/learning`}
+            >
               {t("learningAnalytics:title")}
             </Link>
           </Button>
@@ -396,7 +410,12 @@ export function AnalyticsPage() {
         ) : access.isError ? (
           <ErrorState retry={() => void access.refetch()} />
         ) : (
-          <AnalyticsView key={actor} actor={actor} access={access.data} />
+          <AnalyticsView
+            key={actor}
+            actor={actor}
+            access={access.data}
+            fixedScope={scope}
+          />
         )
       ) : (
         <p className="panel">{t("analytics:unavailable")}</p>

@@ -236,7 +236,7 @@ export function FinancialSummaryCards() {
         {revenueTotals(report.data).map((group) => (
           <Link
             className="panel platform-summary"
-            to="/finance"
+            to="/admin/finance"
             key={group.currency}
           >
             <Wallet size={21} />

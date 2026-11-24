@@ -1045,7 +1045,9 @@ function EarningsTable({
 }
 
 /** Combine permissions, fees, invoices, export and payment actions for the current actor. */
-export function FinancePage() {
+export function FinancePage({
+  scope = "personal",
+}: { scope?: "personal" | "staff" } = {}) {
   const { t, i18n } = useTranslation("commercial");
   const platformText = useTranslation("platform").t;
   const { session } = useAuth();
@@ -1055,27 +1057,27 @@ export function FinancePage() {
   const online = useOnline();
   const access = useQuery(commercialAccessQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
+  const teaching =
+    scope === "personal" && roles.isSuccess && hasTeachingRole(roles.data);
   const canSubmit =
-    roles.isSuccess &&
-    hasTeachingRole(roles.data) &&
-    access.isSuccess &&
-    access.data.can_submit_invoice;
+    teaching && access.isSuccess && access.data.can_submit_invoice;
   const profile = useQuery(profileQuery(actor));
-  const manager = access.data?.can_manage_finance ?? false;
-  const [all, setAll] = useState(false);
+  const manager =
+    scope === "staff" && access.isSuccess && access.data.can_manage_finance;
+  const mayRead = access.isSuccess && (manager || teaching);
   const linkedClaim = z.uuid().safeParse(searchParams.get("series"));
   const linkedSeriesId =
     access.isSuccess && manager && linkedClaim.success
       ? linkedClaim.data
       : null;
-  const effectiveAll = manager && (all || linkedSeriesId !== null);
+  const effectiveAll = manager;
   const earnings = useQuery({
     ...earningsQuery(actor, effectiveAll),
-    enabled: !access.isPending,
+    enabled: mayRead,
   });
   const invoices = useQuery({
     ...invoicesQuery(actor, effectiveAll),
-    enabled: !access.isPending,
+    enabled: mayRead,
   });
   const [openedInvoiceForm, setSubmitting] = useState(false);
   const [selectedException, setSelectedException] = useState<
@@ -1133,7 +1135,11 @@ export function FinancePage() {
   return (
     <>
       <PageHeading
-        title={t("finance")}
+        title={
+          scope === "staff"
+            ? t("platformFinance", { ns: "translation" })
+            : t("myFinance", { ns: "translation" })
+        }
         description={t("financeIntro")}
         action={
           canSubmit && (
@@ -1151,8 +1157,8 @@ export function FinancePage() {
         }
       />
       <div className="section-stack finance-overview">
-        <RevenuePanel />
-        {access.isSuccess && trendQuery.isSuccess && (
+        {scope === "staff" && <RevenuePanel />}
+        {mayRead && trendQuery.isSuccess && (
           <FinanceTrendChart
             earnings={earnings.data ?? []}
             invoices={invoices.data ?? []}
@@ -1182,7 +1188,7 @@ export function FinancePage() {
             }}
           />
         )}
-        {seriesRecords.isError && (
+        {(effectiveAll || canSubmit) && seriesRecords.isError && (
           <ErrorState retry={() => void seriesRecords.refetch()} />
         )}
         {manager && (
@@ -1192,26 +1198,13 @@ export function FinancePage() {
           </>
         )}
         {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
-        <div className="finance-scope-controls">
-          {manager && (
-            <label className="checkbox-label finance-scope-toggle">
-              <input
-                type="checkbox"
-                checked={effectiveAll}
-                onChange={(event) => {
-                  setAll(event.target.checked);
-                  if (!event.target.checked && linkedSeriesId) closeSeries();
-                }}
-              />
-              {t("allPeople")}
-            </label>
-          )}
-          <p className="muted commercial-small">
-            {t("originalCurrency")} {t("invoiceBasis")}
-          </p>
-        </div>
+        <p className="muted commercial-small">
+          {t("originalCurrency")} {t("invoiceBasis")}
+        </p>
       </div>
-      {access.isPending || earnings.isPending || invoices.isPending ? (
+      {access.isPending ||
+      roles.isPending ||
+      (mayRead && (earnings.isPending || invoices.isPending)) ? (
         <Loading />
       ) : access.isError || earnings.isError || invoices.isError ? (
         <ErrorState
@@ -1221,7 +1214,7 @@ export function FinancePage() {
             void invoices.refetch();
           }}
         />
-      ) : (
+      ) : mayRead && earnings.isSuccess && invoices.isSuccess ? (
         <>
           {summaries.length ? (
             <div className="commercial-currency-grid">
@@ -1445,7 +1438,7 @@ export function FinancePage() {
             )}
           </section>
         </>
-      )}
+      ) : null}
       {seriesDialog && (
         <ManageInvoiceSeries
           key={seriesDialog.claim_id}

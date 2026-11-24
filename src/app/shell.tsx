@@ -22,7 +22,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
-  ChartNoAxesCombined,
+  DollarSign,
   FileCheck2,
   FolderOpen,
   GraduationCap,
@@ -91,8 +91,8 @@ import {
  */
 const financeNavItem = {
   to: "/finance",
-  icon: ChartNoAxesCombined,
-  label: "finance",
+  icon: DollarSign,
+  label: "myFinance",
 };
 
 export function Shell() {
@@ -270,11 +270,17 @@ export function Shell() {
             permissions.data?.includes("contracts.manage"))
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
             : []),
-          ...(portalInternalEdition &&
-          (financeAccess.overview ||
-            financeAccess.accounting ||
-            financeAccess.analytics)
+          ...(portalInternalEdition && financeAccess.personal.overview
             ? [financeNavItem]
+            : []),
+          ...(portalInternalEdition && financeAccess.company.accounting
+            ? [
+                {
+                  to: "/client/finance",
+                  icon: DollarSign,
+                  label: "companyFinance",
+                },
+              ]
             : []),
           ...(!administration.some(({ to }) => to === "/changes") &&
           (staff || clientPortalAccess)
@@ -335,18 +341,6 @@ export function Shell() {
       /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
     )
       return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
-    if (
-      /^\/finance\/?$/.test(location.pathname) &&
-      ["claim", "series"].some((key) =>
-        new URLSearchParams(location.search).has(key),
-      )
-    ) {
-      if (permissions.isPending) return <Loading />;
-      if (permissions.isError)
-        return <ErrorState retry={() => void permissions.refetch()} />;
-      if (!financeAccess.overview)
-        return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
-    }
   }
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>

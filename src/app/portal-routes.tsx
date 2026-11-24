@@ -16,7 +16,6 @@ import {
   Outlet,
   Route,
   Routes,
-  useOutletContext,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -188,11 +187,6 @@ const AccountingPage = lazy(() =>
   })),
 );
 
-function FinanceAccounting() {
-  const { preferCustomer } = useOutletContext<{ preferCustomer: boolean }>();
-  return <AccountingPage preferCustomer={preferCustomer} />;
-}
-
 const ClientsPage = lazy(() =>
   import("../features/operations/clients").then((module) => ({
     default: module.ClientsPage,
@@ -339,13 +333,38 @@ export default function PortalRoutes() {
             path="courses/:id/workspace"
             element={<CourseWorkspacePage />}
           />
-          <Route path="finance" element={<FinanceWorkspace />}>
+          <Route path="finance" element={<FinanceWorkspace scope="personal" />}>
             <Route index element={<FinancePage />} />
-            <Route path="accounting" element={<FinanceAccounting />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route
+              path="accounting"
+              element={<AccountingPage key="personal" scope="personal" />}
+            />
+            <Route
+              path="analytics"
+              element={<AnalyticsPage key="personal" scope="personal" />}
+            />
             <Route
               path="analytics/learning"
-              element={<LearningAnalyticsPage />}
+              element={
+                <LearningAnalyticsPage key="personal" scope="personal" />
+              }
+            />
+          </Route>
+          <Route
+            path="client/finance"
+            element={<FinanceWorkspace scope="company" />}
+          >
+            <Route
+              path="accounting"
+              element={<AccountingPage key="company" scope="company" />}
+            />
+            <Route
+              path="analytics"
+              element={<AnalyticsPage key="company" scope="company" />}
+            />
+            <Route
+              path="analytics/learning"
+              element={<LearningAnalyticsPage key="company" scope="company" />}
             />
           </Route>
           <Route
@@ -411,6 +430,27 @@ export default function PortalRoutes() {
                 path="platform"
                 element={<AdministrationSection area="platform" />}
               />
+              <Route
+                path="finance"
+                element={<FinanceWorkspace scope="staff" />}
+              >
+                <Route
+                  index
+                  element={<FinancePage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="accounting"
+                  element={<AccountingPage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="analytics"
+                  element={<AnalyticsPage key="staff" scope="staff" />}
+                />
+                <Route
+                  path="analytics/learning"
+                  element={<LearningAnalyticsPage key="staff" scope="staff" />}
+                />
+              </Route>
               <Route path="assignments" element={<AdminPage />} />
               <Route path="people" element={<LegacyLecturersRoute />} />
               <Route path="clients" element={<ClientsPage />} />
