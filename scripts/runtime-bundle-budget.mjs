@@ -6,9 +6,10 @@ import ts from "typescript";
 
 const kib = 1024;
 const budgets = {
-  startup: 525 * kib,
-  // Swagger's standalone renderer carries its own React runtime.
-  explorer: 570 * kib,
+  startup: 420 * kib,
+  // Explorer dependencies previously loaded by the shell now load on demand.
+  explorer: 585 * kib,
+  coldExplorer: 1000 * kib,
   precache: 4352 * kib,
 };
 const swaggerEntry = "src/features/developer-api/swagger-view.tsx";
@@ -133,16 +134,22 @@ export function checkBundleBudget(directory, limits = budgets) {
       incremental.reduce((sum, file) => sum + gzip(file), 0),
     );
   }
+  const startupBytes = [...startup].reduce((sum, file) => sum + gzip(file), 0);
   const results = [
     {
       name: "Startup HTML, JavaScript and CSS (gzip)",
-      bytes: [...startup].reduce((sum, file) => sum + gzip(file), 0),
+      bytes: startupBytes,
       limit: limits.startup,
     },
     {
       name: "API explorer after startup (gzip)",
       bytes: explorerBytes,
       limit: limits.explorer,
+    },
+    {
+      name: "Cold API explorer including startup (gzip)",
+      bytes: startupBytes + explorerBytes,
+      limit: limits.coldExplorer,
     },
     {
       name: "PWA precache assets (uncompressed)",

@@ -789,9 +789,9 @@ export function ClientPortalPage() {
         <Button asChild variant="secondary">
           <Link
             to={
-              access.data?.can_request
-                ? "/analytics?scope=company"
-                : "/analytics"
+              access.data.can_request
+                ? "/client/finance/analytics"
+                : "/admin/finance/analytics"
             }
           >
             {common("analytics")}

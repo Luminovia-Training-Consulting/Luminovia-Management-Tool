@@ -28,7 +28,7 @@ test("reports invitation and relay switches only to current mail administrators"
   );
   await expect(settings).toContainText("Der Mail-Relay fehlt.");
   await expect(settings).toContainText(
-    "Der Verbindungstest prüft TLS und die Anmeldung.",
+    "Der Verbindungstest prüft TLS und die Anmeldung beim Mailanbieter.",
   );
   await expect(settings).toContainText(
     "Eine Testmail geht an die bestätigte E-Mail-Adresse deines Portalkontos.",
@@ -45,16 +45,18 @@ test("reports invitation and relay switches only to current mail administrators"
   expect(denied.response?.status).toBe(403);
   expect(denied.data).toBeNull();
 
-  await page.getByRole("link", { name: "Vollreset" }).click();
+  await page.getByRole("link", { name: /^Plattformbetrieb / }).click();
+  await page.getByRole("link", { name: /^Vollreset(?: |$)/ }).click();
   await expect(
     page.getByRole("heading", { name: "Vollreset" }),
   ).toBeVisible();
   await expect(page.getByText("Dauerhafte Datenlöschung")).toBeVisible();
   await expect(
-    page.getByRole("button", {
-      name: "Alle Daten dieser Installation löschen",
-    }),
-  ).toBeDisabled();
+    page.getByText("Der Browser-Reset ist auf dieser Installation gerade nicht verfügbar."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Alle Daten dieser Installation löschen" }),
+  ).toHaveCount(0);
 });
 
 test("mail administrators can correct a rejected invitation while ambiguous messages stay locked", async ({

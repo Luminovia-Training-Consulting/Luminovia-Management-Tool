@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { ApiNavigation } from "./api-navigation";
 import { ApiCatalogue, type ApiDocument } from "./api-catalogue";
 import { Preferences } from "../../components/preferences";
 import { PageHeading } from "../../components/common";
@@ -46,20 +47,8 @@ export function StandaloneSwagger() {
           }
           action={<Preferences />}
         />
-        <nav
-          className="api-doc-actions"
-          aria-label={de ? "API-Dokumentation" : "API documentation"}
-        >
-          <Button asChild variant="secondary">
-            <Link to="/api/docs">
-              {de ? "Interaktiver API-Explorer" : "Interactive API explorer"}
-            </Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <a href={openApiUrl} download>
-              OpenAPI JSON
-            </a>
-          </Button>
+        <ApiNavigation />
+        <div className="api-doc-actions">
           {!portalInternalEdition && (
             <>
               <Button asChild variant="secondary">
@@ -82,7 +71,7 @@ export function StandaloneSwagger() {
           <Button asChild variant="secondary">
             <Link to="/">{de ? "Zum Portal" : "Back to portal"}</Link>
           </Button>
-        </nav>
+        </div>
         {spec.isPending && (
           <p role="status">
             {de

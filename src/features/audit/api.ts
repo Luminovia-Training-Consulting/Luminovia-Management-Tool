@@ -34,6 +34,7 @@ export interface AuditPage {
   from: string;
   to: string;
   actions: string[];
+  can_clear?: boolean;
 }
 
 /** Applied audit filter; zone preserves the meaning of local calendar days. */
@@ -68,14 +69,18 @@ export function auditRange(from: string, to: string, zone: string) {
   return { from: start.toUTC().toISO()!, to: end.toUTC().toISO()! };
 }
 
-/** Read the admin_audit_events server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
+/** Scope all pages and filters to the actor so a server-confirmed clear can invalidate them together. */
+export const auditEventsKey = (actor: string) =>
+  ["admin-audit", actor] as const;
+
+/** Read the administrative projection and keep cached data scoped to the actor and filter. */
 export const auditEventsQuery = (
   actor: string,
   filter: AuditFilter,
   cursor: AuditCursor | null,
 ) =>
   queryOptions({
-    queryKey: ["admin-audit", actor, filter, cursor],
+    queryKey: [...auditEventsKey(actor), filter, cursor],
     queryFn: async ({ signal }) => {
       requireOnline();
       const { data, error } = await db()
@@ -97,3 +102,13 @@ export const auditEventsQuery = (
     staleTime: 0,
     retry: false,
   });
+
+/** Clear the retained operational log using the current server-confirmed admin session. */
+export async function clearAdministrationActivity() {
+  requireOnline();
+  const { data, error } = await db().rpc("clear_administration_activity", {
+    p_confirm: true,
+  });
+  if (error) throw error;
+  return data as { removed: number };
+}

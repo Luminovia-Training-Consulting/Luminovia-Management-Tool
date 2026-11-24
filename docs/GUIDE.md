@@ -50,7 +50,7 @@ Consolidated reference. Source and tests remain authoritative for current behavi
 At `/enquiries`, authorised organisation management can review private training requests, assign responsibility, link or create the configured customer and convert reviewed dates into a course run. Requests are preferences until management confirms a plan; no commercial quote is invented. The trusted-server endpoint is disabled by default and the public marketing site is unchanged. See [website enquiries](GUIDE.md#section-website-enquiries) for configuration and remaining activation
 requirements.
 
-Course preparation is available from the course workspace. Urgent teaching cover appears at the top of the normal assignment list. Old replacement links open that list. Support lives in Knowledge & Help. See [course readiness](GUIDE.md#section-course-readiness), [urgent teaching cover](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk).
+Open **Kursbereitschaft / Course readiness** from an assigned job or course workspace. The progress ring shows how many applicable checks are complete. Urgent teaching cover appears at the top of the normal assignment list. Old replacement links open that list. Support lives in Knowledge & Help. See [course readiness](GUIDE.md#section-course-readiness), [urgent teaching cover](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk).
 
 This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists, urgent teaching cover, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
 feature or that native/device/hosting acceptance has passed.
@@ -81,7 +81,7 @@ eight characters, including uppercase and lowercase letters, a number and a symb
 
 Creating a login account with a temporary password requests a one-time setup email through the installation’s configured SMTP sender. The message contains the portal address and the sign-in email. If mail cannot be requested, the created account remains available and can use password recovery. Editing an existing profile leaves its access unchanged.
 
-Account invitations and recovery rely on Supabase Auth. A local captured test email is not a message sent to a real lecturer. If sign-in or account setup fails, use the visible error and contact the responsible administrator; do not reuse test credentials outside local development.
+The same account can stay signed in on multiple devices. Signing out ends the current browser session only. Account invitations and recovery rely on Supabase Auth. A local captured test email is not a message sent to a real lecturer. If sign-in or account setup fails, use the visible error and contact the responsible administrator; do not reuse test credentials outside local development.
 
 Account security uses password and recovery controls. Management operations require current database permissions and resource scope. A role label alone does not grant access and a screen cannot override backend denial. Sign out after using a shared device. If the portal reports a sign-out failure, the current session remains open so you can retry before leaving the device.
 
@@ -110,7 +110,9 @@ is not a new verification, public profile link or legal signature. You decide wh
 
 Each person has an individual account, created directly by authorised administration or by invitation, and chooses their own password. The available roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company**, **Kursteilnehmer:in / Course participant** and **Gast / Guest**. An account may hold several roles. Company workflows require an organisation association. Participant workflows require enrolment in the relevant course. An explicit teaching role is required to personally accept an offer or submit a lecturer’s own invoice. The server checks permissions for protected operations, private chat membership and personal calendar ownership.
 
-Signed-in portal workspaces follow the permissions of the current account.
+Signed-in portal workspaces follow the permissions of the current account. **Verwaltung / Administration** has three subpages. **Unternehmen & Personen / Companies & people** links to companies, the lecturer directory, and user accounts. Open a lecturer profile and select **Qualifikationen und Nachweise / Qualifications and evidence** to review or manage their expertise. **Kursbetrieb / Course operations** groups courses and assignments, the Control Center, topics and tools, assignment changes and contracts. **Plattformbetrieb / Platform operations** groups announcements, the audit trail and platform settings. The navigation shows only the sections available with the signed-in account’s permissions. Existing direct links to assignment changes and contracts still work, including each lecturer’s own workflow. Use the profile menu for **Persönliche Einstellungen / Personal settings**, including language, appearance and notifications. Open conversations and the forum from **Chat**.
+
+Under **Kurse / Courses**, switch between **Durchführungen / Runs** and **Vorlagen / Templates**. Search is always available. Open **Filter / Filters** for the period, company, lecturer or planning status where permitted. **Kurswerkzeuge / Course tools** contains imports, series planning and materials. On a course card, open **Weitere Aktionen / More actions** to find secondary actions such as copying, archiving and deletion.
 
 On your first dashboard visit, **Willkommen bei Luminovia / Welcome to Luminovia** introduces permitted areas step by step. Use Next/Back, open an area, pause and resume, or skip. Progress is private to your account and saved only after online server confirmation. Open `/welcome` to restart or continue later. The guide introduces functions; it does not assign roles or upload files. Its server-confirmed progress is separate from the Portal tour's tab-session progress. See
 the [welcome guide](GUIDE.md#section-welcome-guide).
@@ -152,7 +154,7 @@ Participants open their enrolled courses from the learning area and see their ow
 
 ## Personal dashboard
 
-Use **Dashboard anpassen / Customize dashboard** to show/hide and reorder preview cards, then save online. Choices belong to your current account and persist across devices. A concurrent change requires loading the latest saved layout. Hiding a card changes presentation, not resource permissions.
+**Direkt weiter / Quick links** sits immediately below the dashboard metrics. Use **Dashboard anpassen / Customize dashboard** to show/hide and reorder preview cards, then save online. Choices belong to your current account and persist across devices. A concurrent change requires loading the latest saved layout. Hiding a card changes presentation, not resource permissions.
 
 **Mein Unterrichtstag / My teaching day** lists your own current confirmed, unreleased sessions overlapping today in your saved profile zone. It offers the safe teaching link or venue, the deliberately selected course customer contact and safe email/phone actions. No first directory contact or private profile data is substituted when no contact has been selected.
 
@@ -293,7 +295,13 @@ After the deadline, lecturers open **Klausurbewertungen / Exam grades** in the c
 
 Assigned lecturers can choose **Neue Kursdatei freigeben / Share a new course file** under **Materialien / Materials**. Choose the audience before submitting. If scanning finishes but sharing needs another attempt, **Freigabe erneut versuchen / Retry sharing** submits the same reviewed version and audience. Withdrawing a share removes course access to that copy and keeps the private source in the lecturer's files.
 
-Under **Finanzen → Analysen → LMS-Analysen / Finance → Analytics → LMS analytics**, choose a reporting period, course status and optional course or class search. Dedicated Academies open **LMS-Analysen / LMS analytics** from the learning area. Lecturers see their assigned courses, company contacts see their company's courses, and authorised course managers can compare companies. Use **Kennzahlen je Kurs / Metrics by course** for the per-course figures and open a course to continue working there.
+**Meine Finanzen / My finances** in the sidebar opens the lecturer's own fees, invoices, exports and analytics. **Verwaltung → Plattformfinanzen / Administration → Platform finances** contains the platform overview, invoice reviews, accounting, exports and platform analytics for authorised management and administration. Company accounts open their scoped invoices and analytics through **Unternehmensfinanzen / Company finances**. Combined roles retain separate views.
+
+The platform revenue and accepted earnings lists scroll independently and reveal more rows in batches. Totals and exports cover the complete authorised result set.
+
+In **Plattformfinanzen → Analysen / Platform finances → Analytics**, management and administration can search the company selector when the list is long, choose the year to date or last completed quarter, and focus the assignment chart on past work, upcoming work or open positions. The financial chart can show running totals and compare confirmed contract fees with lecturer compensation when both amounts are authorised. The all-company scenario chart uses a separate 30-, 60- or 90-day window and the selected acceptance probability. Charts provide a data table and keep missing amounts distinct from zero.
+
+Under **Analysen → LMS-Analysen / Analytics → LMS analytics**, choose a reporting period, course status and optional course or class search. Reset filters clears both the applied search and any unsent edits and returns to page one. Dedicated Academies open **LMS-Analysen / LMS analytics** from the learning area. Lecturers see their assigned courses, company contacts see their company's courses, and authorised course managers can compare companies. Use **Kennzahlen je Kurs / Metrics by course** for the per-course figures and open a course to continue working there.
 
 Use the bar chart for finished and planned courses, the line chart for enrolments and completions by course start, and the ring chart for recorded attendance. The totals include unique learners, enrolments, completions, valid completion records, scheduled hours and the share of enrolments completed. The date filter uses the first session in your profile time zone or the creation date for a course that has no scheduled sessions. Counts reflect the current enrolment and company membership. Attendance uses confirmed marks for finished sessions. The rate uses present and absent marks. Excused attendance is shown separately.
 
@@ -526,11 +534,11 @@ extension. No scheduler, real email or push is implied. See [Announcements](GUID
 
 ## Administrative audit reader
 
-At `/admin/audit`, Owner/Administration with current `audit.read` can inspect the administrative log. Dedicated Academy admins open **Administrationsprotokoll / Administration audit trail** from **Verwaltung / Administration**. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
+At `/admin/audit`, Owner, Administration and Management with current `audit.read` can inspect the administrative log. Dedicated Academy admins open **Administrationsprotokoll / Administration audit trail** from **Verwaltung / Administration**. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
 
 The view covers reviewed setup changes, temporary support grants, customer enquiries, administrative account changes, deletions, approved file transfers and payment events. File receipts record the action and resource identifier. Payment amounts require the corresponding finance authority. Private messages, file contents, secrets and bank references remain outside the view.
 
-Entries stop appearing exactly 30 days after the event and are removed from the operational journal by a scheduled database cleanup. Accounting records and workflow receipts have their own lifecycles. A resource UUID is not a link or permission grant. See [Administration audit](GUIDE.md#section-admin-audit).
+The log records structured activity such as account creation, invitations, access email requests, mail, push and webhook delivery outcomes for courses and accounting, successful spreadsheet imports, changes to courses and enrolments, attendance, support ticket administration, teaching assignments, billing and company settings. Entries expire from the view after 30 days and the scheduled database cleanup removes expired rows. In the internal installation, an active Owner or Administrator can use **Protokoll leeren / Clear audit trail** and confirm permanent removal of the operational entries. Accounting records and workflow receipts have their own lifecycles. A resource UUID is not a link or permission grant. See [Administration audit](GUIDE.md#section-admin-audit).
 
 <a id="section-user-guide-search-and-remaining-scope"></a>
 
@@ -2998,45 +3006,29 @@ acceptance. This is standards/transport-contract evidence, not a successful exte
 
 # Administrative audit log
 
-`/admin/audit` adds a readable, searchable interface to the existing server-side audit events. The new `audit.read` permission is assigned only to `owner` and `admin`. Every API request checks current database roles, account activation and verified MFA. Ordinary management, senior, lecturer, client, participant and guest roles have no access. An explicitly assigned additional permission is recognised; an assumed role hierarchy or editable Auth metadata cannot replace it.
+Open **Administration → Administration log** at `/admin/audit`. Dedicated Academy installations use `/administration/audit`. Current administrators and management can read the operational log. Management has a separate read permission and cannot clear the log. Administrators and owners can clear it after explicit confirmation. Dedicated editions require an active licence for the clear operation and allow reading during the grace period.
 
 <a id="section-admin-audit-deliberately-reduced-projection"></a>
 
-## Deliberately reduced projection
+## Captured activity and privacy
 
-The source remains `public.audit_events`; no second event copy or new write API is created. The interface is read-only. It returns the event identifier, the acting account's current display name, action identifier, optional resource UUID and timestamp. Display names are current profile names, not purported historical name snapshots. They are displayed as text even when the content resembles HTML.
+The log combines reviewed workflow events with committed changes to selected business tables. It covers accounts and invitations, roles, organisations and contacts, courses and schedules, assignments, learning activity, shared documents, invoices and payment activity, support, announcements, imports, and selected settings. Each event shows a timestamp, an action and an optional resource ID. A display name is the acting account's current display name. Automated events can have no named account.
 
-The exact allowlist `private.admin_audit_actions()` contains the existing actions for account roles/status, invitations, qualification verification, client associations/requests, organisations, course templates/runs/enrolment, job publication/lifecycle/capacity, cancellation and taxonomy management. New or similarly named actions remain invisible until their inclusion is explicitly reviewed. Event details are neither selected nor searched. In particular, private profile changes, calendars and
-availability, chats, documents, contracts, invoice events and personal reviews are excluded. Resource identifiers are not automatically resolved into links and cannot bypass resource permissions.
-
-This migration does not change existing table RLS or administrative table permissions. The reduced view does not replace an independent retention, compliant archival or tamper-protection solution for privileged database operators. Browser accounts cannot append, alter or delete history. Existing server-side writes and operational/test cleanup remain available.
+Mail events distinguish account-mail requests, notification queue outcomes and self-hosted Auth relay outcomes. An accepted SMTP submission means the next server accepted the message. An uncertain outcome is shown separately from a failure. The selected Auth log actions and relay reports carry no email addresses, SMTP content, passwords, token values or private IP details. The log also excludes private messages, personal calendar entries, file contents and protected document payloads. Amount and currency on payment receipts require the corresponding current finance permission.
 
 <a id="section-admin-audit-queries-and-interface"></a>
 
-## Queries and interface
+## Filters and retention
 
-`admin_audit_events(p_from, p_to, p_action, p_search, p_before_at, p_before_id, p_limit)` is a public invoker entry point into a restricted private definer function with an empty search path and explicit execution grants. Without time parameters, the API uses the last 30 days. Each request is limited to a finite window of at most 93 days plus two hours of DST allowance and 1–100 results. There is no unbounded total count or automatic historical fetch.
+The date, action and text filters keep their meaning across pages. Text search covers display names, action IDs and resource IDs. The API uses a timestamp and an ID cursor, with 40 results per page in the portal. Operational entries are hidden after 720 hours and removed by a scheduled database job every 15 minutes. The online API returns only entries in this window, even if physical cleanup is temporarily delayed.
 
-The interface uses 40 results per page, an explicit IANA time-zone field and inclusive local calendar days. Date inputs and the zone are validated before conversion to UTC; skipped local calendar days are rejected. Language changes preserve filter drafts. Search treats characters such as `%` and `_` literally and covers only display name, action identifier and resource identifier. The action filter receives the reviewed choices from the API.
-
-A composite index on `created_at DESC, id DESC` supports bounded time queries and stable keyset navigation. The cursor contains both values, so equal timestamps cause neither omissions nor duplicates. Subsequent pages retain the time bounds. Newer events may appear after returning to the first page or refreshing; no immutable database-wide snapshot across multiple HTTP requests is claimed. Failed current-access checks hide previously loaded rows. There is no persistent offline cache, background
-fetch of every page or complete CSV export.
+**Clear log** removes the entire operational history after confirmation, regardless of the filters. Committed actions continue to create new entries after a clear. The confirmed `clear_administration_activity(p_confirm: true)` call returns the number of removed entries. Durable business, accounting and deletion receipts remain available to the workflows that use them. Database backups have their own configured retention.
 
 <a id="section-admin-audit-verification"></a>
 
 ## Verification
 
-The additive migration, generated by the actually pinned Supabase CLI, is `20261115213550_admin_audit_viewer.sql`. Focused commands:
-
-```bash
-npx vitest run src/features/audit
-PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m6 node scripts/admin-audit-db-tests.mjs
-```
-
-The PostgreSQL check creates and removes only its own temporary database. It covers roles/MFA, the allowlist and detail protection, literal search, time/cursor bounds, actual concurrent events sharing a timestamp, write prohibitions, role revocation and account suspension with existing token identities. Native Auth/TOTP/REST checks are in `scripts/admin-audit-api-check.mjs`; desktop/mobile journeys, DE/EN, dark mode, offline operation, role revocation and axe checks are in
-`tests/e2e/admin-audit.spec.ts`.
-
-Authored API/browser checks do not constitute passed acceptance. The combined checks actually executed are documented in the relevant pull request checks. Operational monitoring, deletion/retention actions, email delivery and production deployment are not claimed here.
+Use `scripts/admin-audit-db-tests.mjs` in the owned SQL fixture for access, expiry, pagination, mail and metadata protection, and confirmed clears. `scripts/admin-audit-api-check.mjs` checks the native HTTP path. `tests/e2e/admin-audit.spec.ts` covers the role-aware portal view in Chromium.
 
 <a id="section-website-enquiries"></a>
 

@@ -31,7 +31,7 @@ it("shows exact authorized destinations and removes retained links on revocation
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <JobRelatedNavigation actor="actor" jobId={job} />
+        <JobRelatedNavigation actor="actor" jobId={job} showReadiness />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -41,6 +41,9 @@ it("shows exact authorized destinations and removes retained links on revocation
   expect(
     screen.getByRole("link", { name: "Dozierenden-Chat öffnen" }),
   ).toHaveAttribute("href", `/chats?room=${room}`);
+  expect(
+    screen.getByRole("link", { name: "Kursbereitschaft" }),
+  ).toHaveAttribute("href", `/readiness/${course}`);
   expect(rpc).toHaveBeenCalledWith("job_related_navigation", { p_job_id: job });
   rpc.mockImplementation(() => ({
     abortSignal: async () => ({ data: null, error: { code: "42501" } }),
@@ -55,6 +58,9 @@ it("shows exact authorized destinations and removes retained links on revocation
   );
   expect(
     screen.queryByRole("link", { name: "Dozierenden-Chat öffnen" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Kursbereitschaft" }),
   ).not.toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Erneut versuchen" }),
@@ -75,7 +81,7 @@ it("does not fabricate links for an unassigned actor and supports English", asyn
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <JobRelatedNavigation actor="actor" jobId={job} />
+        <JobRelatedNavigation actor="actor" jobId={job} showReadiness />
       </MemoryRouter>
     </QueryClientProvider>,
   );

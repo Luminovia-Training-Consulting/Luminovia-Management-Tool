@@ -535,6 +535,11 @@ export function AcademyAdministrationPage() {
         }
       />
       <AcademyLicencePanel actor={actor} />
+      <p>
+        <Link to="/administration/audit">
+          {word("Verwaltungsprotokoll", "Administration log")}
+        </Link>
+      </p>
       {can_create_management && (
         <>
           <p>
@@ -543,11 +548,6 @@ export function AcademyAdministrationPage() {
                 "Befristeten Supportzugriff verwalten",
                 "Manage temporary support access",
               )}
-            </Link>
-          </p>
-          <p>
-            <Link to="/administration/audit">
-              {word("Administrationsprotokoll", "Administration log")}
             </Link>
           </p>
           <AcademyWhiteLabelSetup />

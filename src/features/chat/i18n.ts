@@ -148,6 +148,11 @@ const pairs: Record<string, [string, string]> = {
     "No messages match this search.",
   ],
   loadOlder: ["Ältere Nachrichten laden", "Load older messages"],
+  loadingOlder: [
+    "Ältere Nachrichten werden geladen …",
+    "Loading older messages …",
+  ],
+  messageHistory: ["Nachrichtenverlauf", "Message history"],
   message: ["Deine Nachricht", "Your message"],
   messagePrivate: ["Private Direktnachricht", "Private direct message"],
   participantNote: [

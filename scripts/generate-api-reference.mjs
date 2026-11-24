@@ -195,7 +195,7 @@ The same account JWT can call the listed public RPCs, the account facade, and RL
 | Finance | \`finance_earnings\`, \`invoice_records\`, \`invoice_payments\`, \`finance_statement\`, \`submit_invoice\` | \`lecturer_compensation\`, \`save_lecturer_compensation\`, \`request_invoice_review\`, finance-only \`invoice_review_cases\`/\`resolve_invoice_review_request\`, \`record_invoice_payment\`; no bank transfer or tax engine |
 | Notifications | \`notification_inbox\`, \`attention_preferences\`, \`announcements\` | \`save_notification_preferences\`, \`save_attention_preferences\`, \`manage_announcement\`; external delivery needs separately operated workers |
 | Personal UI | \`ui_preferences\`, \`get_my_calendar_color_preferences\` | \`save_ui_preferences\`, \`save_my_calendar_color_preferences\` changes only the caller's validated event palette with an expected version |
-| Administration | \`admin_audit_events\`, \`control_center\`, deletion facade | Current role, audit and deletion capabilities; brand/permission-matrix/retention configuration is still pending |
+| Administration | \`admin_audit_events\`, \`control_center\`, deletion facade | Current role rules, 30-day operational audit and separate confirmed administrator clear |
 
 ### Recent settings and action contracts
 

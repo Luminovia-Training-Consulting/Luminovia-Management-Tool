@@ -160,11 +160,11 @@ describe("public bilingual help", () => {
       }),
     ).toHaveFocus();
     await userEvent.click(
-      screen.getByRole("button", { name: "Zur Übersicht" }),
+      screen.getByRole("button", { name: /^Zur Übersicht(?: |$)/ }),
     );
     expect(screen.getByRole("searchbox")).toHaveFocus();
     await userEvent.click(
-      screen.getByRole("button", { name: "Probleme lösen" }),
+      screen.getByRole("button", { name: /^Probleme lösen(?: |$)/ }),
     );
     const recovery = screen.getByRole("region", {
       name: "Probleme Schritt für Schritt lösen",

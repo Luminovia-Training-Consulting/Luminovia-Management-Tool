@@ -55,7 +55,7 @@ function fixture(
   return directory;
 }
 
-test("measure shared startup chunks once and budget the incremental explorer and PWA separately", (context) => {
+test("measure shared startup chunks once and budget the incremental and cold explorer and PWA separately", (context) => {
   const directory = fixture(context, {
     precache: ["index.html", "icon.png", "icon.png"],
   });
@@ -71,16 +71,19 @@ test("measure shared startup chunks once and budget the incremental explorer and
     "entry.css",
   ]);
   const explorer = zipBytes(["explorer.js", "schema.js", "swagger.js"]);
+  const coldExplorer = startup + explorer;
   const precache = files["index.html"].length + files["icon.png"].length;
   assert.equal(
-    checkBundleBudget(directory, { startup, explorer, precache }).length,
-    3,
+    checkBundleBudget(directory, { startup, explorer, coldExplorer, precache })
+      .length,
+    4,
   );
   assert.throws(
     () =>
       checkBundleBudget(directory, {
         startup: startup - 1,
         explorer,
+        coldExplorer,
         precache,
       }),
     /Startup.+over budget/,
@@ -90,6 +93,7 @@ test("measure shared startup chunks once and budget the incremental explorer and
       checkBundleBudget(directory, {
         startup,
         explorer: explorer - 1,
+        coldExplorer,
         precache,
       }),
     /API explorer.+over budget/,
@@ -99,6 +103,17 @@ test("measure shared startup chunks once and budget the incremental explorer and
       checkBundleBudget(directory, {
         startup,
         explorer,
+        coldExplorer: coldExplorer - 1,
+        precache,
+      }),
+    /Cold API explorer.+over budget/,
+  );
+  assert.throws(
+    () =>
+      checkBundleBudget(directory, {
+        startup,
+        explorer,
+        coldExplorer,
         precache: precache - 1,
       }),
     /PWA precache.+over budget/,

@@ -8,7 +8,7 @@ export interface LoginDependencies {
     refresh_token: string;
     expires_in: number;
     user_id: string;
-  } | null>;
+  } | "rate_limited" | null>;
   active: (userId: string) => Promise<boolean>;
 }
 
@@ -62,6 +62,7 @@ export function createHumanLoginHandler(
     try {
       if (!await deps.reserve(hash)) return json(429, { error: "rate_limited" });
       const session = await deps.signIn(identifier, input.password);
+      if (session === "rate_limited") return json(429, { error: "rate_limited" });
       if (!session || !uuid.test(session.user_id) || !await deps.active(session.user_id))
         return json(401, failure);
       return json(200, {

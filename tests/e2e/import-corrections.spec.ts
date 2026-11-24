@@ -70,6 +70,7 @@ test("course draft import corrects a rejected row and does not duplicate the fir
   const importName = "Kursentwürfe mit einem Termin importieren";
   const importDialog = page.getByRole("dialog", { name: importName });
   await expect(importDialog).toBeHidden();
+  await page.locator("summary").getByText("Kurswerkzeuge", { exact: true }).click();
   await page.getByRole("button", { name: importName }).click();
   await expect(importDialog).toBeVisible();
   await importDialog.getByLabel("CSV- oder XLSX-Datei").setInputFiles({

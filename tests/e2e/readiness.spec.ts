@@ -198,7 +198,9 @@ test("management preparation and assigned lecturer acknowledgements update actua
             .getByRole("button", {name: "Online speichern", exact: true})
             .click();
         await expect(dialog).not.toBeVisible();
-        await lecturer.goto(`/readiness/${run}`);
+        await lecturer.goto(`/jobs/${job}`);
+        await lecturer.getByRole("link", {name: "Kursbereitschaft", exact: true}).click();
+        await expect(lecturer).toHaveURL(new RegExp(`/readiness/${run}$`));
         await expect(
             lecturer.getByRole("button", {
                 name: "Konfiguration bearbeiten",
@@ -221,13 +223,13 @@ test("management preparation and assigned lecturer acknowledgements update actua
             .getByRole("button", {name: "Als erledigt bestätigen", exact: true})
             .click();
         await expect(
-            lecturer.getByText("100 % bereit", {exact: true}),
-        ).toBeVisible();
+            lecturer.getByRole("progressbar"),
+        ).toHaveAttribute("aria-valuenow", "100");
         await expect(lecturer.locator(".readiness-status")).toHaveText("Bereit");
         await page
             .getByRole("button", {name: "Aktualisieren", exact: true})
             .click();
-        await expect(page.getByText("100 % bereit", {exact: true})).toBeVisible();
+        await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
         await accessible(page);
         await page.getByLabel("Sprache", {exact: true}).selectOption("en");
         await page.getByLabel("Theme", {exact: true}).selectOption("dark");
@@ -257,8 +259,8 @@ test("management preparation and assigned lecturer acknowledgements update actua
             .getByRole("button", {name: "Erledigung zurücknehmen", exact: true})
             .click();
         await expect(
-            lecturer.getByText("100 % bereit", {exact: true}),
-        ).toHaveCount(0);
+            lecturer.getByRole("progressbar"),
+        ).not.toHaveAttribute("aria-valuenow", "100");
         const outsider = await outsiderContext.newPage();
         await login(outsider, peer.email);
         await outsider.goto(`/readiness/${run}`);
@@ -274,6 +276,11 @@ test("management preparation and assigned lecturer acknowledgements update actua
             page.getByRole("link", {name: title, exact: true}),
         ).toBeVisible();
         await accessible(page);
+        await page.goto("/admin/audit");
+        await page.getByLabel("Action", {exact: true})
+            .selectOption("course.preparation.instructions_acknowledged");
+        await page.getByRole("button", {name: "Apply filters", exact: true}).click();
+        await expect(page.getByRole("heading", {name: "Course instructions acknowledged", exact: true}).first()).toBeVisible();
     } finally {
         await lecturerContext.setOffline(false);
         await lecturerContext.close();

@@ -41,6 +41,7 @@ test("course series reviews room collisions and creates independent exact drafts
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/courses");
+  await page.getByText("Kurswerkzeuge", { exact: true }).click();
   await page
     .getByRole("button", { name: "Kursserie planen", exact: true })
     .click();

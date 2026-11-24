@@ -543,7 +543,12 @@ test("calendar navigation and long agenda titles stay usable on narrow phones an
             nav.y + nav.height <= tabs.y + 1 ||
             nav.x + nav.width <= tabs.x + 1
         ), `Calendar controls fit at ${width}px`).toBe(true);
-        await expect(dates.getByRole("button", {name: "Nächster Zeitraum"})).toBeInViewport();
+        const next = dates.getByRole("button", {name: "Nächster Zeitraum"});
+        // Stacked phone filters can put the calendar below the fold.
+        await next.scrollIntoViewIfNeeded();
+        await expect(next).toBeInViewport({ratio: 1});
+        const button = await next.boundingBox();
+        expect(button && button.x >= 0 && button.x + button.width <= width).toBe(true);
         expect(await event.evaluate((element) => {
             const agenda = element.closest(".fc-list")!;
             const table = element.closest("table")!;

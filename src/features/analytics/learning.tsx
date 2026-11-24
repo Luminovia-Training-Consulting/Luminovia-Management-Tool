@@ -1,3 +1,4 @@
+import { financeRoots, type FinanceScope } from "../../app/finance-access";
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
@@ -271,9 +272,11 @@ function LearningReport({
 function LearningAnalyticsView({
   actor,
   access,
+  fixedScope,
 }: {
   actor: string;
   access: LearningAnalyticsAccess;
+  fixedScope?: FinanceScope;
 }) {
   const { t } = useTranslation("learningAnalytics");
   const [selectedScope, setScope] = useState<AnalyticsScope>();
@@ -282,16 +285,20 @@ function LearningAnalyticsView({
   const [periodOverride, setPeriod] = useState<AnalyticsPeriod>();
   const [status, setStatus] = useState<LearningReportStatus>("all");
   const [search, setSearch] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [dateFormVersion, resetDateForm] = useState(0);
   const [page, setPage] = useState(1);
 
   const companies = access.organisations.filter(({ company }) => company);
-  const scopes = analyticsScopes.filter((scope) =>
-    scope === "company" ? companies.length > 0 : access[scope],
+  const scopes = analyticsScopes.filter(
+    (scope) =>
+      (!fixedScope || scope === fixedScope) &&
+      (scope === "company" ? companies.length > 0 : access[scope]),
   );
   const scope =
     selectedScope && scopes.includes(selectedScope)
       ? selectedScope
-      : access.staff
+      : scopes.includes("staff")
         ? "staff"
         : scopes[0];
   const organisations = scope === "company" ? companies : access.organisations;
@@ -323,9 +330,19 @@ function LearningAnalyticsView({
 
   function searchCourses(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = new FormData(event.currentTarget).get("search");
-    setSearch(typeof value === "string" ? value.trim() : "");
+    setSearch(searchDraft.trim());
     setPage(1);
+  }
+
+  function resetFilters() {
+    setOrganisation("");
+    setPreset("around");
+    setPeriod(undefined);
+    setStatus("all");
+    setSearch("");
+    setSearchDraft("");
+    setPage(1);
+    resetDateForm((version) => version + 1);
   }
 
   return (
@@ -405,7 +422,7 @@ function LearningAnalyticsView({
         </div>
         <PeriodForm
           idPrefix="learning-dates"
-          key={`${period.from}/${period.through}`}
+          key={`${period.from}/${period.through}/${dateFormVersion}`}
           period={period}
           onApply={(next) => {
             setPeriod(next);
@@ -417,13 +434,24 @@ function LearningAnalyticsView({
           onSubmit={searchCourses}
         >
           <Field id="learning-search" label={t("search")}>
-            <input type="search" name="search" maxLength={120} />
+            <input
+              type="search"
+              name="search"
+              maxLength={120}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+            />
           </Field>
           <Button type="submit" variant="secondary">
             {t("applySearch")}
           </Button>
         </form>
-        <p className="analytics-muted">{t("zone", { zone })}</p>
+        <div className="analytics-filter-footer">
+          <p className="analytics-muted">{t("zone", { zone })}</p>
+          <Button type="button" variant="ghost" onClick={resetFilters}>
+            {t("resetFilters")}
+          </Button>
+        </div>
         <p className="analytics-muted">{t("cohortBasis")}</p>
       </section>
       {query.isPending ? (
@@ -437,7 +465,9 @@ function LearningAnalyticsView({
   );
 }
 
-export function LearningAnalyticsPage() {
+export function LearningAnalyticsPage({
+  scope,
+}: { scope?: FinanceScope } = {}) {
   const { t } = useTranslation("learningAnalytics");
   const actor = useAuth().session?.user.id ?? "";
   const online = useOnline();
@@ -451,7 +481,9 @@ export function LearningAnalyticsPage() {
       {portalInternalEdition && (
         <div className="form-actions">
           <Button asChild variant="secondary">
-            <Link to="/finance/analytics">{t("general")}</Link>
+            <Link to={`${financeRoots[scope ?? "personal"]}/analytics`}>
+              {t("general")}
+            </Link>
           </Button>
         </div>
       )}
@@ -462,7 +494,11 @@ export function LearningAnalyticsPage() {
       ) : access.isError ? (
         <ErrorState retry={() => void access.refetch()} />
       ) : hasLearningAnalytics(access.data) ? (
-        <LearningAnalyticsView actor={actor} access={access.data} />
+        <LearningAnalyticsView
+          actor={actor}
+          access={access.data}
+          fixedScope={scope}
+        />
       ) : (
         <p className="panel">{t("unavailable")}</p>
       )}

@@ -226,6 +226,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     expect(await dialog.locator("script").count()).toBe(0);
     await expect(dialog.locator(".session-list li")).toHaveCount(2);
     await dialog.getByRole("button", {name: "Schließen", exact: true}).click();
+    await card.locator("summary").getByText("Weitere Aktionen", {exact: true}).click();
     await card
         .getByRole("button", {name: "Sicher kopieren", exact: true})
         .click();

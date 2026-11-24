@@ -1,46 +1,49 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading } from "../components/common";
 import { useAuth } from "../features/auth/auth-context";
-import { financeWorkspaceAccess } from "./finance-access";
+import {
+  financeRoots,
+  financeWorkspaceAccess,
+  type FinanceScope,
+} from "./finance-access";
 import { permissionsQuery, userRolesQuery } from "../lib/queries";
 
 const tabs = [
-  { path: "/finance", key: "overview", label: "financeOverview", end: true },
   {
-    path: "/finance/accounting",
+    suffix: "",
+    key: "overview",
+    label: "financeOverview",
+    personal: "myFinanceOverview",
+    staff: "platformFinanceOverview",
+  },
+  {
+    suffix: "/accounting",
     key: "accounting",
     label: "accountingExports",
-    end: true,
+    personal: "myFinanceExports",
+    staff: "platformFinanceExports",
   },
   {
-    path: "/finance/analytics",
+    suffix: "/analytics",
     key: "analytics",
     label: "analytics",
-    end: false,
+    personal: "myFinanceAnalytics",
+    staff: "platformFinanceAnalytics",
   },
 ] as const;
-type FinanceTab = (typeof tabs)[number]["path"];
 
-function FinanceNavigation({ paths }: { paths: readonly FinanceTab[] }) {
+export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
   const { t } = useTranslation();
-  if (paths.length < 2) return null;
-  return (
-    <nav className="admin-tabs" aria-label={t("finance")}>
-      {tabs
-        .filter(({ path }) => paths.includes(path))
-        .map(({ path, label, end }) => (
-          <NavLink key={path} to={path} end={end}>
-            {t(label)}
-          </NavLink>
-        ))}
-    </nav>
-  );
-}
-
-export function FinanceWorkspace() {
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
+  const [params] = useSearchParams();
   const actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
   const permissions = useQuery(permissionsQuery(actor));
@@ -54,27 +57,111 @@ export function FinanceWorkspace() {
         }}
       />
     );
+
   const access = financeWorkspaceAccess(roles.data, permissions.data);
-  const paths = tabs.filter(({ key }) => access[key]).map(({ path }) => path);
+  const base = financeRoots[scope];
   const selected = pathname.replace(/\/$/, "");
-  if (
-    !paths.some(
-      (path) =>
-        path === selected ||
-        (path === "/finance/analytics" &&
-          selected === "/finance/analytics/learning"),
+  const suffix = selected.slice(base.length);
+  if (scope === "personal") {
+    if (
+      !suffix &&
+      params.has("claim") &&
+      !access.personal.overview &&
+      !access.staff.overview
     )
-  )
-    return <Navigate to={paths[0] ?? "/"} replace />;
+      return (
+        <Navigate to={access.company.accounting ? "/client" : "/"} replace />
+      );
+    // Older links had one URL for all three audiences. Retain explicit
+    // company/management links and management invoice-series notices.
+    const requested = params.get("scope");
+    const legacyScope =
+      suffix.startsWith("/analytics") &&
+      requested === "company" &&
+      access.company.analytics
+        ? "company"
+        : (suffix.startsWith("/analytics") &&
+              requested === "staff" &&
+              (access.staff.analytics || access.staff.learning)) ||
+            (!suffix && params.has("series") && access.staff.overview)
+          ? "staff"
+          : undefined;
+    const fallback =
+      access.staff.overview || access.staff.analytics || access.staff.learning
+        ? "staff"
+        : access.company.accounting
+          ? "company"
+          : undefined;
+    const destination =
+      legacyScope ?? (!access.personal.overview ? fallback : undefined);
+    if (destination)
+      return (
+        <Navigate
+          to={{ pathname: financeRoots[destination] + suffix, search, hash }}
+          replace
+        />
+      );
+  }
+  const current = access[scope];
+  const visible = tabs.filter(({ key }) => current[key]);
+  const isLearning = suffix === "/analytics/learning";
+  if (
+    !(isLearning
+      ? current.learning
+      : visible.some((tab) => tab.suffix === suffix))
+  ) {
+    const next =
+      visible[0]?.suffix ??
+      (current.learning && !isLearning ? "/analytics/learning" : null);
+    return (
+      <Navigate
+        to={
+          next === null
+            ? scope === "company"
+              ? "/client"
+              : "/"
+            : { pathname: base + next, search, hash }
+        }
+        replace
+      />
+    );
+  }
   return (
     <>
-      <FinanceNavigation paths={paths} />
-      <Outlet
-        context={{
-          preferCustomer:
-            !access.overview && (roles.data?.includes("client") ?? false),
-        }}
-      />
+      <nav
+        className={scope === "company" ? "admin-tabs" : "section-navigation"}
+        aria-label={t(
+          scope === "staff"
+            ? "platformFinance"
+            : scope === "company"
+              ? "companyFinance"
+              : "myFinance",
+        )}
+      >
+        {visible.map(({ suffix: path, label, personal, staff }) => (
+          <NavLink key={path} to={base + path} end={path !== "/analytics"}>
+            <strong>
+              {t(
+                scope === "personal" && path === "/accounting"
+                  ? "myInvoiceExports"
+                  : label,
+              )}
+            </strong>
+            {scope !== "company" && (
+              <>
+                {" "}
+                <small>{t(scope === "personal" ? personal : staff)}</small>
+              </>
+            )}
+          </NavLink>
+        ))}
+        {scope === "staff" && current.learning && !current.analytics && (
+          <NavLink to={base + "/analytics/learning"}>
+            {t("learningAnalytics:title")}
+          </NavLink>
+        )}
+      </nav>
+      <Outlet />
     </>
   );
 }

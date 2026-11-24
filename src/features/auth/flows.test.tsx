@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { MemoryRouter } from "react-router-dom";
 import { Login } from "./login";
 import { Password } from "./password";
@@ -194,6 +195,32 @@ describe("recoverable Auth request failures", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("recoverSent");
   });
 
+  it.each([
+    [401, "loginFailed"],
+    [429, "loginRateLimited"],
+    [503, "loginUnavailable"],
+  ])(
+    "explains a %s sign-in response without attempting to install a session",
+    async (status, message) => {
+      fake.invoke.mockResolvedValueOnce({
+        data: null,
+        error: new FunctionsHttpError(new Response(null, { status })),
+      });
+      view(<Login />);
+      await userEvent.type(
+        screen.getByLabelText("email"),
+        "person@example.invalid",
+      );
+      await userEvent.type(
+        screen.getByLabelText("password"),
+        "ExamplePassword42!",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "login" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(message);
+      expect(fake.setSession).not.toHaveBeenCalled();
+    },
+  );
+
   it("turns a rejected sign-in promise into a visible retryable failure", async () => {
     fake.invoke.mockRejectedValueOnce(new Error("Transport unavailable"));
     view(<Login />);
@@ -206,7 +233,9 @@ describe("recoverable Auth request failures", () => {
       "ExamplePassword42!",
     );
     await userEvent.click(screen.getByRole("button", { name: "login" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("loginFailed");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "loginUnavailable",
+    );
     expect(screen.getByRole("button", { name: "login" })).toBeEnabled();
   });
 

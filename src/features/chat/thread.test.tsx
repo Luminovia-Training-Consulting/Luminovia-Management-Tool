@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { ChatThread } from "./thread";
+import * as dates from "../../lib/dates";
 import type { ChatMessage, ChatRoom } from "./types";
 
 const { rpc } = vi.hoisted(() => ({
@@ -107,8 +108,21 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
   }
 });
 
+const latestMessage: ChatMessage = {
+  id: "latest",
+  room_id: "room",
+  sender_id: "peer",
+  sender_name: "Fictional Peer",
+  body: "Confirmed fictional message",
+  created_at: "2026-01-01T08:00:00Z",
+  edited_at: null,
+  deleted_at: null,
+  document_id: null,
+  reactions: [],
+};
+
 /** Create an isolated real thread with fictional history and controlled read receipts. */
-function populatedThread(messageId?: string) {
+function populatedThread(messageId?: string, messageCount = 1) {
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const client = new QueryClient({
     defaultOptions: {
@@ -119,20 +133,18 @@ function populatedThread(messageId?: string) {
   client.setQueryData(["profile", "actor"], { time_zone: "Europe/Berlin" });
   client.setQueryData(["chat-messages", "actor", "room", ""], {
     pages: [
-      [
-        {
-          id: "latest",
-          room_id: "room",
-          sender_id: "peer",
-          sender_name: "Fictional Peer",
-          body: "Confirmed fictional message",
-          created_at: "2026-01-01T08:00:00Z",
-          edited_at: null,
-          deleted_at: null,
-          document_id: null,
-          reactions: [],
-        },
-      ],
+      Array.from({ length: messageCount }, (_, index) =>
+        index === 0
+          ? latestMessage
+          : {
+              ...latestMessage,
+              id: `earlier-${index}`,
+              body: `Fictional message ${index}`,
+              created_at: new Date(
+                Date.parse(latestMessage.created_at) - index * 60_000,
+              ).toISOString(),
+            },
+      ),
     ],
     pageParams: [null],
   });
@@ -162,6 +174,164 @@ function populatedThread(messageId?: string) {
   const view = render(element());
   return { client, view, element };
 }
+
+it("keeps an open transcript stable while editing the search input", () => {
+  const formatMessageTime = vi.spyOn(dates, "dateTime");
+  populatedThread(undefined, 80);
+  expect(screen.getByText("Fictional message 79")).toBeVisible();
+  expect(formatMessageTime.mock.calls.length).toBeGreaterThanOrEqual(80);
+
+  fireEvent.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
+  formatMessageTime.mockClear();
+  const search = screen.getByRole("searchbox", {
+    name: "Nachrichten durchsuchen",
+  });
+  fireEvent.change(search, { target: { value: "Fictional" } });
+  expect(search).toHaveValue("Fictional");
+  expect(screen.getByText("Fictional message 79")).toBeVisible();
+  expect(formatMessageTime).not.toHaveBeenCalled();
+});
+
+const olderMessage = {
+  ...latestMessage,
+  id: "older",
+  body: "An earlier message from the next page",
+  created_at: "2026-01-01T07:01:00Z",
+};
+
+function historyScroller() {
+  const pane = screen.getByRole("region", { name: "Nachrichtenverlauf" });
+  Object.defineProperties(pane, {
+    scrollHeight: { value: 900 },
+    clientHeight: { value: 300 },
+  });
+  const scroll = (top: number) => {
+    pane.scrollTop = top;
+    fireEvent.scroll(pane);
+  };
+  return { pane, scroll };
+}
+
+it("loads older history once on upward scroll and anchors a viewport that moved while loading", async () => {
+  const { client } = populatedThread(undefined, 40);
+  const { pane, scroll } = historyScroller();
+  let finishPage!: () => void;
+  const page = new Promise((resolve) => {
+    finishPage = () => resolve({ data: [olderMessage], error: null });
+  });
+  rpc.mockImplementation(async (name: string) =>
+    name === "chat_messages_with_mentions" ? page : { data: {}, error: null },
+  );
+  const anchor = document.querySelector<HTMLElement>(
+    '[data-message-id="earlier-39"]',
+  )!;
+  let contentTop = 56;
+  vi.spyOn(anchor, "getBoundingClientRect").mockImplementation(
+    () => ({ top: contentTop - pane.scrollTop }) as DOMRect,
+  );
+  const loads = () =>
+    rpc.mock.calls.filter(([name]) => name === "chat_messages_with_mentions");
+  scroll(80);
+  scroll(500);
+  expect(loads()).toHaveLength(0);
+  scroll(100);
+  scroll(82);
+  contentTop += 210;
+  expect(loads()).toEqual([
+    [
+      "chat_messages_with_mentions",
+      expect.objectContaining({
+        p_before_id: "earlier-39",
+        p_before_at: "2026-01-01T07:21:00.000Z",
+        p_limit: 40,
+      }),
+    ],
+  ]);
+  await act(async () => finishPage());
+  expect(await screen.findByText(olderMessage.body)).toBeVisible();
+  expect(pane.scrollTop).toBe(292);
+  client.clear();
+});
+
+it("offers a manual retry after a temporary history error and stops automatic retries", async () => {
+  const { client } = populatedThread(undefined, 40);
+  const { scroll } = historyScroller();
+  let requests = 0;
+  rpc.mockImplementation(async (name: string) => {
+    if (name === "chat_messages_with_mentions") {
+      requests++;
+      return requests === 1
+        ? { data: null, error: { message: "Gateway unavailable" }, status: 503 }
+        : { data: [olderMessage], error: null };
+    }
+    return { data: {}, error: null };
+  });
+  scroll(500);
+  scroll(75);
+  const retry = await screen.findByRole("button", {
+    name: "Weitere Ergebnisse erneut laden",
+  });
+  expect(screen.getByText(latestMessage.body)).toBeVisible();
+  scroll(500);
+  scroll(0);
+  expect(requests).toBe(1);
+  await userEvent.setup().click(retry);
+  expect(await screen.findByText(olderMessage.body)).toBeVisible();
+  expect(requests).toBe(2);
+  client.clear();
+});
+
+it("continues once when a refresh replaces an in-flight request for older history", async () => {
+  const key = ["chat-messages", "actor", "room", ""];
+  const { client } = populatedThread(undefined, 40);
+  const { scroll } = historyScroller();
+  const current = client.getQueryData<{ pages: ChatMessage[][] }>(key)!;
+  let finishFirst!: () => void;
+  let olderRequests = 0;
+  rpc.mockImplementation(
+    async (name: string, params: { p_before_id?: string }) => {
+      if (name !== "chat_messages_with_mentions")
+        return { data: {}, error: null };
+      if (!params.p_before_id) return { data: current.pages[0], error: null };
+      olderRequests++;
+      return olderRequests === 1
+        ? new Promise((resolve) => {
+            finishFirst = () => resolve({ data: [olderMessage], error: null });
+          })
+        : { data: [olderMessage], error: null };
+    },
+  );
+  scroll(500);
+  scroll(0);
+  await waitFor(() => expect(olderRequests).toBe(1));
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: key });
+    finishFirst();
+  });
+  expect(await screen.findByText(olderMessage.body)).toBeVisible();
+  expect(olderRequests).toBe(2);
+  client.clear();
+});
+
+it("removes visible messages when an older history page is denied", async () => {
+  rpc.mockImplementation(async (name: string) =>
+    name === "chat_messages_with_mentions"
+      ? { data: null, error: { code: "42501" }, status: 403 }
+      : { data: null, error: null },
+  );
+  const { client } = populatedThread(undefined, 40);
+  const { scroll } = historyScroller();
+  expect(screen.getByText(latestMessage.body)).toBeVisible();
+  scroll(480);
+  scroll(0);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Du hast keinen Zugriff mehr auf diese Unterhaltung.",
+  );
+  expect(screen.queryByText(latestMessage.body)).not.toBeInTheDocument();
+  client.clear();
+});
 
 it("keeps a failed read receipt retryable without a rerender request loop", async () => {
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
@@ -506,8 +676,6 @@ it("holds the scroll position and read cursor while new messages arrive above th
     clientHeight: { value: 300 },
   });
   fireEvent.scroll(pane);
-  const scroll = vi.mocked(HTMLElement.prototype.scrollIntoView);
-  scroll.mockClear();
   rpc.mockClear();
   const key = ["chat-messages", "actor", "room", ""];
   const data = client.getQueryData<{
@@ -532,7 +700,7 @@ it("holds the scroll position and read cursor while new messages arrive above th
   const jump = await screen.findByRole("button", {
     name: "Zu neuen Nachrichten",
   });
-  expect(scroll).not.toHaveBeenCalled();
+  expect(pane.scrollTop).toBe(0);
   expect(rpc).not.toHaveBeenCalled();
   await userEvent.click(jump);
   await waitFor(() =>
