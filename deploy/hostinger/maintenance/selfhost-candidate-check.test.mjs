@@ -1166,7 +1166,7 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
         );
         writeFileSync(
             join(directory, ".env.test.local"),
-            "SUPABASE_URL=" + url + "\nSUPABASE_SERVICE_ROLE_KEY=fictional-key\n",
+            "SUPABASE_URL=" + url + "\nSUPABASE_SERVICE_ROLE_KEY=fictional-key\nSUPABASE_ANON_KEY=fictional-anon-key\nE2E_PASSWORD=fictional-password\n",
         );
         return spawnSync(
             process.execPath,
