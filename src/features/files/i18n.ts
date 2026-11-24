@@ -78,15 +78,11 @@ const pairs: Record<string, [string, string]> = {
   rejected: ["Gesperrt", "Rejected"],
   empty: ["Noch keine Dateien vorhanden.", "No files yet."],
   search: ["Dateien suchen", "Search files"],
-  discoveryHelp: [
-    "Die Suche und Filter berücksichtigen alle Dateien, die dein Konto aktuell lesen darf. Tags und virtuelle Ordner gehören nur zu deinem Konto.",
-    "Search and filters cover all files your account can currently read. Tags and virtual folders belong to your account only.",
-  ],
   tagFilter: ["Eigenes Tag filtern", "Filter by your tag"],
   folderFilter: ["Eigenen Ordner filtern", "Filter by your folder"],
   exactFilter: [
-    "Vollständige Bezeichnung; Groß-/Kleinschreibung wird ignoriert.",
-    "Exact label; case is ignored.",
+    "Vollständiger Tag oder Ordnername, unabhängig von Groß- und Kleinschreibung.",
+    "Enter the full tag or folder name. Matching ignores case.",
   ],
   unfiledOnly: ["Nur ohne eigenen Ordner", "Only without your folder"],
   refreshFiles: ["Dateiliste aktualisieren", "Refresh file list"],

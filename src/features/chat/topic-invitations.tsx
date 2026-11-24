@@ -59,11 +59,11 @@ export function TopicInvitationInbox({
     },
     onError: () => void client.invalidateQueries({ queryKey: inboxKey(actor) }),
   });
+  if (!inbox.isError && !response.isError && !inbox.data?.length) return null;
   return (
-    <section aria-label={t("inbox")} className="panel">
+    <section aria-label={t("inbox")} className="panel chat-invitation-inbox">
       <strong>{t("inbox")}</strong>
       {inbox.isError && <ErrorState retry={() => void inbox.refetch()} />}
-      {inbox.isSuccess && inbox.data.length === 0 && <p>{t("empty")}</p>}
       {inbox.data?.map((item) => (
         <div key={item.id}>
           <strong>{item.title}</strong>

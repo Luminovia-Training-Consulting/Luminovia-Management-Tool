@@ -25,7 +25,7 @@
 /* Desktop room selection and active history sit side by side without intrinsic horizontal overflow. */
 .chat-workspace {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: clamp(300px, 28%, 370px) minmax(0, 1fr);
   min-height: 540px;
   height: calc(100dvh - 175px);
   border: 1px solid var(--line);
@@ -55,6 +55,29 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 4px 4px 0;
+}
+
+.chat-directory-results > .chat-course-room-toggle {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 42px;
+  margin-bottom: 8px;
+  text-align: left;
+  white-space: normal;
+}
+
+.chat-course-room-toggle > .badge {
+  margin-inline-start: auto;
+}
+
+.chat-course-room-toggle[aria-expanded="true"] > svg:last-child {
+  rotate: 180deg;
+}
+
+.chat-invitation-inbox {
+  padding: 12px;
+  margin-block-end: 8px;
 }
 
 .chat-directory-filters {
@@ -116,19 +139,19 @@
 .chat-lounge {
   display: flex;
   align-items: center;
-  gap: 13px;
-  background: #b8edd9;
-  color: #172b4b;
-  padding: 17px;
-  border: 0;
-  border-radius: 12px 12px 25px 12px;
+  gap: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
   width: 100%;
   text-align: left;
-  margin-bottom: 22px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
 }
 
 .chat-lounge > span:first-child {
-  font-size: 32px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -137,13 +160,6 @@
   font-family: "Space Grotesk";
   font-size: 13px;
   line-height: 1.4;
-}
-
-.chat-lounge small {
-  font-size: 10px;
-  display: block;
-  line-height: 1.5;
-  margin-top: 5px;
 }
 
 /* Keep selection, unread count and room type distinct in each room row. */
@@ -936,23 +952,6 @@
     font-size: 8px;
   }
 
-  .chat-lounge {
-    padding: 14px 11px;
-    gap: 8px;
-  }
-
-  .chat-lounge > span:first-child {
-    font-size: 26px;
-  }
-
-  .chat-lounge strong {
-    font-size: 11px;
-  }
-
-  .chat-lounge small {
-    font-size: 9px;
-  }
-
   .chat-message-avatar {
     display: none;
   }
@@ -1003,23 +1002,6 @@
 
   .chat-directory-heading h2 {
     font-size: 20px;
-  }
-
-  .chat-lounge {
-    padding: 17px;
-    gap: 14px;
-  }
-
-  .chat-lounge strong {
-    font-size: 13px;
-  }
-
-  .chat-lounge small {
-    font-size: 10px;
-  }
-
-  .chat-lounge > span:first-child {
-    font-size: 31px;
   }
 
   .chat-conversation {
@@ -1313,11 +1295,6 @@
   padding-inline: 8px;
 }
 
-.chat-lounge {
-  padding: 13px;
-  margin-bottom: 18px;
-}
-
 .chat-directory {
   padding: 18px 12px;
 }
@@ -1439,7 +1416,6 @@
 }
 
 /* Keep playful category colors, but darken their surfaces and retain high-contrast text in dark mode. */
-[data-theme="dark"] .chat-lounge,
 [data-theme="dark"] .chat-kind-general,
 [data-theme="dark"] .chat-message-own .chat-message-avatar {
   background: var(--status-success-surface);

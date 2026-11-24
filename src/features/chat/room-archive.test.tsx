@@ -86,6 +86,10 @@ it("archives and restores only after server confirmation, retaining course rooms
   await waitFor(() =>
     expect(screen.queryByText("Fictional group")).not.toBeInTheDocument(),
   );
+  expect(screen.queryByText("Fictional course")).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: /Kurschats ohne Nachrichten/ }),
+  );
   expect(screen.getByText("Fictional course")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Archiviert" }));
   await user.click(
@@ -138,7 +142,10 @@ it("retains the active conversation when an archive request fails", async () => 
 it("clears a selected course chat after confirmation and lists it again with a new message", async () => {
   await i18n.changeLanguage("de");
   const course = rooms[1]!;
-  let directoryCourse: typeof course & { personal_deleted?: boolean } = course;
+  let directoryCourse: typeof course & {
+    personal_deleted?: boolean;
+    last_message_at?: string;
+  } = course;
   let finish!: (result: unknown) => void;
   fake.rpc.mockImplementation(async (name: string) => {
     if (name === "chat_rooms_with_manual_unread")
@@ -204,7 +211,7 @@ it("clears a selected course chat after confirmation and lists it again with a n
     screen.queryByText(course.title, { exact: true }),
   ).not.toBeInTheDocument();
 
-  directoryCourse = course;
+  directoryCourse = { ...course, last_message_at: "2026-11-24T08:00:00Z" };
   await client.invalidateQueries({ queryKey: ["chat-rooms", "actor"] });
   await user.click(screen.getByRole("button", { name: "Aktiv" }));
   expect(await screen.findByText(course.title)).toBeVisible();

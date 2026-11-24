@@ -15,12 +15,107 @@
   margin-bottom: 18px;
 }
 
+.file-discovery-toolbar {
+  container-type: inline-size;
+  display: grid;
+  gap: 1rem;
+  padding-block-end: 1rem;
+  margin-block-end: 1rem;
+  border-block-end: 1px solid var(--line);
+}
+
+.file-discovery-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  align-items: center;
+}
+
+.file-discovery-search {
+  position: relative;
+  flex: 1 1 17rem;
+  min-width: 0;
+}
+
+.file-discovery-search svg {
+  position: absolute;
+  inset-inline-start: 0.875rem;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.file-discovery-search input {
+  width: 100%;
+  min-height: 44px;
+  padding-inline-start: 2.625rem;
+}
+
+.file-discovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.file-discovery-actions > .button {
+  min-height: 44px;
+  max-width: 100%;
+}
+
 .file-discovery-filters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-  margin: 18px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 0.375rem 0.875rem;
+}
+
+.file-discovery-filters .field,
+.file-discovery-filters .checkbox-label {
+  margin: 0;
+}
+
+.file-discovery-filters .field input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.file-discovery-filters .checkbox-label {
+  min-height: 44px;
+}
+
+.file-discovery-filters .checkbox-label input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.file-discovery-filters > small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+@container (max-width: 36rem) {
+  .file-discovery-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .file-discovery-filters .checkbox-label {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+@container (max-width: 19rem) {
+  .file-discovery-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .file-discovery-filters .checkbox-label {
+    grid-row: 4;
+  }
 }
 
 .file-discovery-pages {
@@ -59,12 +154,6 @@
   overflow-wrap: anywhere;
   max-width: 100%;
   font-size: 0.85rem;
-}
-
-@media (max-width: 760px) {
-  .file-discovery-filters {
-    grid-template-columns: 1fr;
-  }
 }
 
 .file-drop label {
@@ -454,52 +543,5 @@
   .document-list .file-actions {
     grid-column: 2;
     max-width: 100%;
-  }
-}
-
-.file-discovery-folder {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-.file-discovery-folder .checkbox-label {
-  margin: 0;
-  min-height: 44px;
-}
-
-.file-discovery-folder input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-}
-
-/* Align text inputs by their labels and let variable-length hints wrap below. */
-.file-discovery-filters .field {
-  display: grid;
-  grid-template-rows: minmax(2.5em, auto) 44px auto;
-  margin-bottom: 0;
-}
-
-.file-discovery-filters .field label {
-  align-self: end;
-}
-
-.file-discovery-filters .field input {
-  width: 100%;
-  min-height: 44px;
-}
-
-.file-discovery-filters .field small {
-  overflow-wrap: anywhere;
-}
-
-.file-discovery-filters > .button {
-  align-self: center;
-}
-
-@media (max-width: 760px) {
-  .file-discovery-filters .field {
-    grid-template-rows: auto 44px auto;
   }
 }

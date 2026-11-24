@@ -275,7 +275,7 @@ When editing an unlocked course schedule in the portal or a dedicated Academy, c
 
 For separate drafts from the same template, open **Kursserie planen / Plan a course series**. Enter a first possible start date and use **Starttage wiederholen / Repeat start dates** to fill empty date slots and add more runs, up to 12. Each run keeps its own class, delivery mode and venue. Review the final teaching dates and room/class conflicts before saving the drafts.
 
-In the internal portal, **Kurse & Durchführungen / Courses & delivery** shows up to 24 matching runs or templates per page. Search covers the whole accessible list. Use the page controls to browse, or open a course directly from its existing link.
+In the internal portal, **Kurse & Durchführungen / Courses & delivery** shows up to 24 matching runs or templates per page. Switch views above the filters. Search covers the whole accessible list. To import records, open the import control below the filters in the selected view. Use the page controls to browse, or open a course directly from its existing link.
 
 Open `/learning` and choose a currently permitted course. `/courses/:id/workspace` assembles different authorised views for current course management, confirmed assigned lecturers, enrolled/completed learners and linked customer organisations. A link is not an access grant; cancellation/removal/suspension can make a previously available page or download unavailable.
 
@@ -355,6 +355,8 @@ Archive rather than deleting a used identity. Active children must be archived f
 
 At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. Active owners, administrators and lecturers can open **Dozierenden-Lounge / Lecturer lounge** and join the shared room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
 
+Open **Kurschats ohne Nachrichten / Course chats without messages** to show empty course rooms. Search and direct links from courses can also open these rooms. Chats with activity and pinned chats appear directly in their usual list.
+
 Use **Filtern nach / Filter by** to show conversations by company, staff member, course or lecturer. Choose a specific entry when available. Text search matches names and course or company labels from your accessible rooms. The filters work in both the active list and the archive. On mobile, use the back arrow in a conversation to return to the same filtered list.
 
 Write the message and choose **Nachricht senden / Send message** while connected. A failed request leaves the draft available to retry. A message is shown as sent only after server confirmation. Search the room’s text, load earlier messages, mark it read or mute it through the available controls. Reactions use the displayed emoji choices. Your own messages can be edited within the server’s 15-minute window; deletion asks for confirmation and leaves a tombstone. Safe web links open as links;
@@ -372,7 +374,7 @@ Load more choices**, then choose the real run by title, organization, first date
 
 ## Files and qualification evidence
 
-At `/files`, search authorized documents with literal filename, owner/kind/job and own tag/folder filters. The server returns 40 per page; load further matches explicitly. **Persönlich organisieren / Organise for me** stores your own tags/virtual folder for that currently accessible file. Another account can organize a shared file differently; these fields do not move bytes, rename the shared file or grant access. A stale-edit conflict preserves your draft until you explicitly reload.
+At `/files`, search authorized documents with literal filename, owner/kind/job and own tag/folder filters. Archive and refresh controls sit beside the search. The server returns 40 per page; load further matches explicitly. **Persönlich organisieren / Organise for me** stores your own tags/virtual folder for that currently accessible file. Another account can organize a shared file differently; these fields do not move bytes, rename the shared file or grant access. A stale-edit conflict preserves your draft until you explicitly reload.
 See [Files](GUIDE.md#section-files). Choose **Datei hochladen / Upload file**, select or drop one file, and wait until upload and scanning finish. The current allowlist is PDF, PNG/JPEG/WebP, plain text and modern Office documents (`.docx`, `.xlsx`, `.pptx`), up to 100 MiB per file, subject to the environment's configured owner/global quotas. Archives and large video uploads are not available. This file limit does not establish production capacity acceptance. Unsupported, infected or unscanned
 files are unavailable for download; a scanner outage leaves the upload unapproved.
 
