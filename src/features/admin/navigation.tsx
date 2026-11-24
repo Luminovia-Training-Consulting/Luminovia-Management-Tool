@@ -116,7 +116,7 @@ export function AdministrationSection({ area }: { area?: AdministrationArea }) {
     useOutletContext<AdministrationContext>();
   if (failed) return <ErrorState retry={retry} />;
   if (pending) return <Loading />;
-  const items: { to: string; label: string; description?: string }[] = area
+  const items: { to: string; label: string; description: string }[] = area
     ? links.filter((item) => item.area === area)
     : Object.entries(administrationAreas)
         .filter(([key]) => links.some((item) => item.area === key))
@@ -133,15 +133,25 @@ export function AdministrationSection({ area }: { area?: AdministrationArea }) {
         <ul className="administration-destinations">
           {items.map((item) => (
             <li key={item.to}>
-              <Link to={item.to} className="panel">
+              <Link
+                to={item.to}
+                className="panel"
+                aria-labelledby={`admin-label-${item.label}`}
+                aria-describedby={`admin-description-${item.label}`}
+              >
                 <span>
-                  <strong className="administration-destination-label">
+                  <strong
+                    id={`admin-label-${item.label}`}
+                    className="administration-destination-label"
+                  >
                     {item.to === "/control-center" && (
                       <LayoutDashboard size={20} aria-hidden="true" />
                     )}
                     {t(item.label)}
                   </strong>
-                  {item.description && <small>{t(item.description)}</small>}
+                  <small id={`admin-description-${item.label}`}>
+                    {t(item.description)}
+                  </small>
                 </span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>

@@ -50,6 +50,8 @@ const de = {
     deleted: "{{resource}} gelöscht",
   },
   actions: {
+    course_preparation_instructions_acknowledged: "Kurshinweise bestätigt",
+    course_preparation_sessions_confirmed: "Kurstermine bestätigt",
     account_created: "Konto erstellt",
     account_profile_updated: "Profil geändert",
     account_roles_changed: "Kontorollen geändert",
@@ -260,6 +262,9 @@ const en = {
     deleted: "{{resource}} deleted",
   },
   actions: {
+    course_preparation_instructions_acknowledged:
+      "Course instructions acknowledged",
+    course_preparation_sessions_confirmed: "Course sessions confirmed",
     account_created: "Account created",
     account_profile_updated: "Profile updated",
     account_roles_changed: "Account roles changed",

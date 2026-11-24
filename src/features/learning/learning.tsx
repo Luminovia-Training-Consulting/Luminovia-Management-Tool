@@ -1075,6 +1075,10 @@ function CourseWorkspaceLayout({
   const pageTarget = academy || learner ? "/learning" : "/courses";
   const showManagementActions =
     __PORTAL_INTERNAL_EDITION__ && !academy && !learner;
+  const showReadiness =
+    __PORTAL_INTERNAL_EDITION__ &&
+    !academy &&
+    (course.access.manager || course.access.teacher);
 
   // React Router may resolve a deep link before the scoped course data
   // loads. Apply that hash when its destination first becomes available.
@@ -1143,9 +1147,10 @@ function CourseWorkspaceLayout({
           </Button>
         )}
       </header>
-      {showManagementActions && (canPrepareOffer || hasRegister || editor) && (
+      {((showManagementActions && (canPrepareOffer || hasRegister || editor)) ||
+        showReadiness) && (
         <div className="page-actions course-room-actions">
-          {canPrepareOffer && (
+          {showManagementActions && canPrepareOffer && (
             <Button
               onClick={(event) => {
                 setOfferTrigger(event.currentTarget);
@@ -1155,17 +1160,17 @@ function CourseWorkspaceLayout({
               {t("prepareOffer")}
             </Button>
           )}
-          {hasRegister && (
+          {showManagementActions && hasRegister && (
             <Button asChild variant="secondary">
               <Link to="#course-register">{t("workspaceRegister")}</Link>
             </Button>
           )}
-          {editor && (
+          {showManagementActions && editor && (
             <Button asChild variant="secondary">
               <Link to={`/courses?run=${course.id}`}>{t("manageCourse")}</Link>
             </Button>
           )}
-          {editor && (
+          {showReadiness && (
             <Button asChild variant="secondary">
               <Link to={`/readiness/${course.id}`}>{t("courseReadiness")}</Link>
             </Button>
@@ -1498,7 +1503,13 @@ function CourseWorkspaceLayout({
 }
 
 /** Standard access renders operational course facts only, even on an old Premium deep link. */
-function StandardCourseWorkspace({ course }: { course: CourseWorkspace }) {
+function StandardCourseWorkspace({
+  course,
+  internal,
+}: {
+  course: CourseWorkspace;
+  internal: boolean;
+}) {
   const { t } = useTranslation("learning");
   return (
     <div className="section-stack">
@@ -1506,17 +1517,26 @@ function StandardCourseWorkspace({ course }: { course: CourseWorkspace }) {
         title={course.title}
         description={course.time_zone}
         action={
-          <Button asChild variant="secondary">
-            <Link
-              to={
-                course.access.manager
-                  ? `/courses?run=${course.id}`
-                  : "/learning"
-              }
-            >
-              {t(course.access.manager ? "manageCourse" : "back")}
-            </Link>
-          </Button>
+          <div className="page-actions course-room-actions">
+            {internal && (course.access.manager || course.access.teacher) && (
+              <Button asChild>
+                <Link to={`/readiness/${course.id}`}>
+                  {t("courseReadiness")}
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="secondary">
+              <Link
+                to={
+                  course.access.manager
+                    ? `/courses?run=${course.id}`
+                    : "/learning"
+                }
+              >
+                {t(course.access.manager ? "manageCourse" : "back")}
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Notice>{t("premiumOff")}</Notice>
@@ -1582,7 +1602,12 @@ function ConnectedCourseWorkspace({
   }
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
   if (!query.data.lms_enabled)
-    return <StandardCourseWorkspace course={query.data} />;
+    return (
+      <StandardCourseWorkspace
+        course={query.data}
+        internal={__PORTAL_INTERNAL_EDITION__ && !academy}
+      />
+    );
   return (
     <CourseWorkspaceLayout
       key={id}

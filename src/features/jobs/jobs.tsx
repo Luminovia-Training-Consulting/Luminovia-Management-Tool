@@ -206,6 +206,12 @@ export function JobDetail() {
             <JobRelatedNavigation
               actor={session!.user.id}
               jobId={job.id}
+              showReadiness={
+                permissions.data?.includes("courses.manage") ||
+                (teaching &&
+                  claims.isSuccess &&
+                  ownClaim?.status === "confirmed")
+              }
               afterWorkspace={<div ref={setEditButtonTarget} />}
             />
           )}

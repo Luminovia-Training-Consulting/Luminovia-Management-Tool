@@ -50,7 +50,7 @@ Consolidated reference. Source and tests remain authoritative for current behavi
 At `/enquiries`, authorised organisation management can review private training requests, assign responsibility, link or create the configured customer and convert reviewed dates into a course run. Requests are preferences until management confirms a plan; no commercial quote is invented. The trusted-server endpoint is disabled by default and the public marketing site is unchanged. See [website enquiries](GUIDE.md#section-website-enquiries) for configuration and remaining activation
 requirements.
 
-Course preparation is available from the course workspace. Urgent teaching cover appears at the top of the normal assignment list. Old replacement links open that list. Support lives in Knowledge & Help. See [course readiness](GUIDE.md#section-course-readiness), [urgent teaching cover](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk).
+Open **Kursbereitschaft / Course readiness** from an assigned job or course workspace. The progress ring shows how many applicable checks are complete. Urgent teaching cover appears at the top of the normal assignment list. Old replacement links open that list. Support lives in Knowledge & Help. See [course readiness](GUIDE.md#section-course-readiness), [urgent teaching cover](GUIDE.md#section-replacement-marketplace) and [support](GUIDE.md#section-support-desk).
 
 This guide describes current source and dated feature history, including course workspaces, request briefs, personal teaching context, finance facts, waitlists, urgent teaching cover, calendar connections, Push settings and own qualification-passport export. Participant-only accounts use their own course list, notifications and account settings. Company membership and an active Premium entitlement govern enrolment and learning access. Your current role and resource access determine which controls appear. Source availability does not prove that an installed hosted release includes each
 feature or that native/device/hosting acceptance has passed.
@@ -152,7 +152,7 @@ Participants open their enrolled courses from the learning area and see their ow
 
 ## Personal dashboard
 
-Use **Dashboard anpassen / Customize dashboard** to show/hide and reorder preview cards, then save online. Choices belong to your current account and persist across devices. A concurrent change requires loading the latest saved layout. Hiding a card changes presentation, not resource permissions.
+**Direkt weiter / Quick links** sits immediately below the dashboard metrics. Use **Dashboard anpassen / Customize dashboard** to show/hide and reorder preview cards, then save online. Choices belong to your current account and persist across devices. A concurrent change requires loading the latest saved layout. Hiding a card changes presentation, not resource permissions.
 
 **Mein Unterrichtstag / My teaching day** lists your own current confirmed, unreleased sessions overlapping today in your saved profile zone. It offers the safe teaching link or venue, the deliberately selected course customer contact and safe email/phone actions. No first directory contact or private profile data is substituted when no contact has been selected.
 

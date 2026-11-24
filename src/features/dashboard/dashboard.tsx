@@ -28,7 +28,11 @@ import { JobCard } from "../jobs/card";
 import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { dateTime, validZone } from "../../lib/dates";
-import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
+import {
+  DashboardCalendarPreview,
+  DashboardShortcuts,
+  DashboardWidgets,
+} from "./widgets";
 import { DashboardCustomization } from "./personal";
 import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
@@ -136,6 +140,7 @@ export function Dashboard() {
             ))}
         </div>
       )}
+      <DashboardShortcuts staff={staff} clientAccount={clientAccount} />
       {staff ? (
         <div className="dashboard-overview">
           {teaching && jobSummary && (
@@ -205,9 +210,7 @@ export function Dashboard() {
       <DashboardWidgets
         actor={session!.user.id}
         zone={zone}
-        staff={staff}
         teaching={teaching}
-        clientAccount={clientAccount}
         jobCounts={jobSummary?.management ?? undefined}
       />
       {staff && (

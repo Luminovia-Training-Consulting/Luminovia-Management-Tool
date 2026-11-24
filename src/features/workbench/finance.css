@@ -12,6 +12,7 @@
 }
 
 .finance-period .field {
+  margin-block-end: 0;
   min-width: 0;
   flex: 1 1 14rem;
 }

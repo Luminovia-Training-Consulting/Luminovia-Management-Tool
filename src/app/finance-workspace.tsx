@@ -17,9 +17,27 @@ import {
 import { permissionsQuery, userRolesQuery } from "../lib/queries";
 
 const tabs = [
-  { suffix: "", key: "overview", label: "financeOverview" },
-  { suffix: "/accounting", key: "accounting", label: "accountingExports" },
-  { suffix: "/analytics", key: "analytics", label: "analytics" },
+  {
+    suffix: "",
+    key: "overview",
+    label: "financeOverview",
+    personal: "myFinanceOverview",
+    staff: "platformFinanceOverview",
+  },
+  {
+    suffix: "/accounting",
+    key: "accounting",
+    label: "accountingExports",
+    personal: "myFinanceExports",
+    staff: "platformFinanceExports",
+  },
+  {
+    suffix: "/analytics",
+    key: "analytics",
+    label: "analytics",
+    personal: "myFinanceAnalytics",
+    staff: "platformFinanceAnalytics",
+  },
 ] as const;
 
 export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
@@ -111,7 +129,7 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
   return (
     <>
       <nav
-        className="admin-tabs"
+        className={scope === "company" ? "admin-tabs" : "finance-navigation"}
         aria-label={t(
           scope === "staff"
             ? "platformFinance"
@@ -120,12 +138,27 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
               : "myFinance",
         )}
       >
-        {visible.map(({ suffix: path, label }) => (
-          <NavLink key={path} to={base + path} end={path !== "/analytics"}>
-            {t(
-              scope === "personal" && path === "/accounting"
-                ? "myInvoiceExports"
-                : label,
+        {visible.map(({ suffix: path, label, personal, staff }) => (
+          <NavLink
+            key={path}
+            to={base + path}
+            end={path !== "/analytics"}
+            aria-labelledby={`finance-label-${label}`}
+            aria-describedby={
+              scope === "company" ? undefined : `finance-description-${label}`
+            }
+          >
+            <strong id={`finance-label-${label}`}>
+              {t(
+                scope === "personal" && path === "/accounting"
+                  ? "myInvoiceExports"
+                  : label,
+              )}
+            </strong>
+            {scope !== "company" && (
+              <small id={`finance-description-${label}`}>
+                {t(scope === "personal" ? personal : staff)}
+              </small>
             )}
           </NavLink>
         ))}

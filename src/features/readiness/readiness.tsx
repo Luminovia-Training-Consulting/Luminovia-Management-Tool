@@ -401,6 +401,10 @@ function CourseDetail({
     course: CourseReadiness;
     task: ReadinessTask | null;
   }>();
+  const progress = t("progress", {
+    complete: course.completed_count,
+    total: course.applicable_count,
+  });
   const href = meetingHref(course.meeting_url);
   const ownReceipt = course.lecturers.find(
     (person) => person.id === actor,
@@ -408,24 +412,46 @@ function CourseDetail({
   return (
     <>
       <div className="readiness-detail-header panel">
-        <Status value={course.status} />
-        <Progress course={course} />
-        <p className="muted">{t("missingHelp")}</p>
-        {course.settings.preparation_deadline && (
-          <p>
-            <strong>{t("deadline")}: </strong>
-            {dateTime(
-              course.settings.preparation_deadline,
-              i18n.language,
-              course.time_zone,
-            )}
+        <div
+          className="readiness-ring"
+          role="progressbar"
+          aria-label={t("checklist")}
+          aria-valuenow={course.percentage}
+          aria-valuetext={progress}
+        >
+          <svg viewBox="0 0 44 44" aria-hidden="true">
+            <circle cx="22" cy="22" r="18" />
+            <circle
+              cx="22"
+              cy="22"
+              r="18"
+              pathLength="100"
+              strokeDasharray={`${course.percentage} 100`}
+            />
+          </svg>
+          <strong>{t("percentValue", { value: course.percentage })}</strong>
+        </div>
+        <div className="readiness-detail-summary">
+          <h2>{t("checklist")}</h2>
+          <p>{progress}</p>
+          <Status value={course.status} />
+          <p className="muted">{t("missingHelp")}</p>
+          {course.settings.preparation_deadline && (
+            <p>
+              <strong>{t("deadline")}: </strong>
+              {dateTime(
+                course.settings.preparation_deadline,
+                i18n.language,
+                course.time_zone,
+              )}
+            </p>
+          )}
+          <p className="muted">
+            {t("asOf", {
+              date: dateTime(course.as_of, i18n.language, course.time_zone),
+            })}
           </p>
-        )}
-        <p className="muted">
-          {t("asOf", {
-            date: dateTime(course.as_of, i18n.language, course.time_zone),
-          })}
-        </p>
+        </div>
       </div>
       <CourseStartPanel actor={actor} run={course.id} />
       <div className="readiness-detail-grid">
@@ -434,7 +460,7 @@ function CourseDetail({
           aria-label={t("checklist")}
         >
           <div className="section-heading">
-            <h2>{t("checklist")}</h2>
+            <h2>{t("requirementsTitle")}</h2>
             <ClipboardCheck aria-hidden="true" />
           </div>
           <ul>

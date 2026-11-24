@@ -111,6 +111,21 @@ test("administration navigation keeps shared workflows together on desktop and m
     await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
     await expect(page.getByRole("link", {name: "Leitstand", exact: true})).toHaveAttribute("href", "/control-center");
     await expect(page.getByRole("link", {name: "Themen & Tools", exact: true})).toHaveAttribute("href", "/topics");
+    await expect(page.getByRole("link", {name: "Verträge", exact: true})).toHaveAccessibleDescription(
+        "Vertragsdokumente zuordnen und Bestätigungen nachverfolgen.",
+    );
+    await page.getByRole("link", {name: "Leitstand", exact: true}).click();
+    const dates = page.locator(".finance-period");
+    const until = dates.locator('input[type="date"]').last();
+    const show = dates.getByRole("button", {name: "Zeitraum anzeigen", exact: true});
+    await expect(show).toBeVisible();
+    if (!mobile) {
+        const fieldBox = (await until.boundingBox())!;
+        const buttonBox = (await show.boundingBox())!;
+        expect(Math.abs(fieldBox.y + fieldBox.height - buttonBox.y - buttonBox.height)).toBeLessThan(2);
+    }
+    await show.click();
+    await sections.getByRole("link", {name: "Kursbetrieb", exact: true}).click();
     await page.getByRole("link", {name: "Verträge", exact: true}).click();
     await expect(page).toHaveURL(/\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
@@ -155,7 +170,15 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
     try {
         await checked(control.from("user_roles").insert({user_id: manager.id, role: "lecturer"}));
         await login(page, manager.email);
+        await page.goto("/");
+        const shortcuts = page.getByRole("navigation", {name: "Direkt weiter", exact: true});
+        await expect(shortcuts).toBeVisible();
+        expect(await shortcuts.evaluate((nav) =>
+            nav.previousElementSibling?.classList.contains("dashboard-metrics"),
+        )).toBe(true);
         await page.goto("/finance");
+        await expect(page.locator(".finance-navigation").getByRole("link", {name: "Analysen", exact: true}))
+            .toHaveAccessibleDescription("Eigene Einsätze und Einnahmen auswerten");
         await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
         await expect(page.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true})).toHaveCount(0);
         const personalReport = page.waitForRequest((request) =>

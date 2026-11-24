@@ -44,6 +44,30 @@ const pairs: Record<string, [string, string]> = {
   contracts: ["Verträge", "Contracts"],
   finance: ["Finanzen", "Finance"],
   controlCenter: ["Leitstand", "Control Center"],
+  myFinanceOverview: [
+    "Eigene Honorare und Rechnungen",
+    "Your fees and invoices",
+  ],
+  myFinanceExports: [
+    "Rechnungsdaten herunterladen",
+    "Download your invoice records",
+  ],
+  myFinanceAnalytics: [
+    "Eigene Einsätze und Einnahmen auswerten",
+    "Analyse your assignments and earnings",
+  ],
+  platformFinanceOverview: [
+    "Umsatz, Rechnungen und Zahlungen",
+    "Revenue, invoices and payments",
+  ],
+  platformFinanceExports: [
+    "Buchhaltung und Abrechnungsdaten",
+    "Accounting and financial exports",
+  ],
+  platformFinanceAnalytics: [
+    "Kennzahlen, Vergleiche und Prognosen",
+    "Metrics, comparisons and forecasts",
+  ],
   myFinance: ["Meine Finanzen", "My finances"],
   myInvoiceExports: ["Rechnungsexporte", "Invoice exports"],
   companyFinance: ["Unternehmensfinanzen", "Company finances"],
@@ -257,6 +281,62 @@ const pairs: Record<string, [string, string]> = {
   admin: ["Verwaltung", "Administration"],
   adminCoursesAssignments: ["Kurse & Aufträge", "Courses & assignments"],
   adminOverview: ["Übersicht", "Overview"],
+  adminDestination_adminCoursesAssignments: [
+    "Kursdurchführungen planen, Ausschreibungen erstellen und Dozierende zuweisen.",
+    "Schedule course runs, publish assignments and allocate lecturers.",
+  ],
+  adminDestination_controlCenter: [
+    "Offene Besetzungen, fehlende Unterlagen und Aufgaben vor Kursbeginn im Blick behalten.",
+    "Track unfilled assignments, missing documents and tasks due before courses start.",
+  ],
+  adminDestination_topics: [
+    "Themen, Werkzeuge und Sprachen für Kurse und Dozierendenprofile pflegen.",
+    "Manage topics, tools and languages used in courses and lecturer profiles.",
+  ],
+  adminDestination_assignmentChanges: [
+    "Änderungen an bestätigten Aufträgen prüfen und Entscheidungen festhalten.",
+    "Review changes to confirmed assignments and record decisions.",
+  ],
+  adminDestination_contracts: [
+    "Vertragsdokumente zuordnen und Bestätigungen nachverfolgen.",
+    "Manage contract documents and track acknowledgements.",
+  ],
+  adminDestination_companies: [
+    "Unternehmen, Ansprechpersonen, Klassen und interne Dozierende verwalten.",
+    "Manage companies, contacts, classes and internal lecturers.",
+  ],
+  adminDestination_staffDirectory: [
+    "Dozierendenprofile und fachliche Schwerpunkte einsehen.",
+    "Browse lecturer profiles and areas of expertise.",
+  ],
+  adminDestination_adminAccounts: [
+    "Konten einladen, Rollen zuweisen und Zugänge verwalten.",
+    "Invite users, assign roles and manage account access.",
+  ],
+  adminDestination_platformFinance: [
+    "Einnahmen, Rechnungen, Abrechnungsexporte und Kennzahlen der Plattform einsehen.",
+    "Review platform revenue, invoices, accounting exports and analytics.",
+  ],
+  adminDestination_announcements: [
+    "Portalweite Mitteilungen verfassen und veröffentlichen.",
+    "Write and publish announcements for the portal.",
+  ],
+  adminDestination_auditLog: [
+    "Administrative Aktionen und Änderungen nachvollziehen.",
+    "Review administrative actions and changes.",
+  ],
+  adminDestination_mailSettings: [
+    "Mailversand konfigurieren und Zustellprobleme bearbeiten.",
+    "Configure outgoing mail and resolve delivery failures.",
+  ],
+  adminDestination_whiteLabel: [
+    "Edition, Lizenz und Darstellung der Kundeninstallation verwalten.",
+    "Manage the edition, licence and branding of a customer installation.",
+  ],
+  adminDestination_fullPlatformReset: [
+    "Die gesamte Installation über den bestätigten Reset-Ablauf zurücksetzen.",
+    "Reset the entire installation through the confirmed reset workflow.",
+  ],
   adminOperations: ["Kursbetrieb", "Course operations"],
   adminOperationsDescription: [
     "Aufträge, Leitstand, Themen und Verträge",

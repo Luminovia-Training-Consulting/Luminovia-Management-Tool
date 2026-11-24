@@ -41,6 +41,7 @@ export function administrationLinks(
   const links: {
     to: string;
     label: string;
+    description: string;
     visible: boolean | undefined;
     area: AdministrationArea;
     end?: boolean;
@@ -48,6 +49,7 @@ export function administrationLinks(
     {
       to: "/admin/assignments",
       label: "adminCoursesAssignments",
+      description: "adminDestination_adminCoursesAssignments",
       visible: has("jobs.manage"),
       area: "operations",
       end: true,
@@ -55,24 +57,28 @@ export function administrationLinks(
     {
       to: "/control-center",
       label: "controlCenter",
+      description: "adminDestination_controlCenter",
       area: "operations",
       visible: has("jobs.manage"),
     },
     {
       to: "/topics",
       label: "topics",
+      description: "adminDestination_topics",
       area: "operations",
       visible: has("taxonomy.manage"),
     },
     {
       to: "/changes",
       label: "assignmentChanges",
+      description: "adminDestination_assignmentChanges",
       area: "operations",
       visible: management,
     },
     {
       to: "/contracts",
       label: "contracts",
+      description: "adminDestination_contracts",
       area: "operations",
       visible:
         management &&
@@ -83,24 +89,28 @@ export function administrationLinks(
     {
       to: "/admin/clients",
       label: "companies",
+      description: "adminDestination_companies",
       area: "directory",
       visible: has("organisations.manage"),
     },
     {
       to: "/people",
       label: "staffDirectory",
+      description: "adminDestination_staffDirectory",
       area: "directory",
       visible: management,
     },
     {
       to: "/admin/accounts",
       label: "adminAccounts",
+      description: "adminDestination_adminAccounts",
       area: "directory",
       visible: has("users.manage"),
     },
     {
       to: "/admin/finance",
       label: "platformFinance",
+      description: "adminDestination_platformFinance",
       area: "finance",
       visible:
         active &&
@@ -111,30 +121,35 @@ export function administrationLinks(
     {
       to: "/admin/announcements",
       label: "announcements",
+      description: "adminDestination_announcements",
       area: "platform",
       visible: has("announcements.manage"),
     },
     {
       to: "/admin/audit",
       label: "auditLog",
+      description: "adminDestination_auditLog",
       area: "platform",
       visible: has("audit.read") || has("audit.activity.read"),
     },
     {
       to: "/admin/mail",
       label: "mailSettings",
+      description: "adminDestination_mailSettings",
       area: "platform",
       visible: has("mail.settings.manage"),
     },
     {
       to: "/admin/white-label",
       label: "whiteLabel",
+      description: "adminDestination_whiteLabel",
       area: "platform",
       visible: administrator,
     },
     {
       to: "/admin/reset",
       label: "fullPlatformReset",
+      description: "adminDestination_fullPlatformReset",
       area: "platform",
       visible: administrator,
     },
