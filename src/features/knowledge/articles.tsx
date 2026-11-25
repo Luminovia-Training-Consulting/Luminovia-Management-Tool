@@ -20,8 +20,10 @@ import {
   Settings2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
+import { PageNotFound } from "../../components/page-not-found";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -237,31 +239,25 @@ function WikiForm({
 /** Display the permitted version, its history and separate editing state. */
 function WikiArticle({
   actor,
-  id,
+  record,
   canPublish,
   categories,
   onBack,
 }: {
   actor: string;
-  id: string;
+  record: WikiPageRecord;
   canPublish: boolean;
   categories: KnowledgeCategory[];
   onBack: () => void;
 }) {
   const { t, i18n } = useTranslation("knowledge");
-  const article = useQuery(wikiPageQuery(actor, id));
   const [editing, setEditing] = useState<WikiPageRecord | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [revision, setRevision] = useState<number | null>(null);
   const history = useQuery({
-    ...wikiHistoryQuery(actor, id),
+    ...wikiHistoryQuery(actor, record.id),
     enabled: historyOpen,
   });
-  if (article.isPending) return <Loading />;
-  if (article.isError)
-    return <ErrorState retry={() => void article.refetch()} />;
-  if (!article.data) return <Notice kind="error">{t("unavailable")}</Notice>;
-  const record = article.data;
   const selectedRevision = history.data?.find(
     (item) => item.version === revision,
   );
@@ -400,6 +396,10 @@ export function KnowledgeArticles() {
   });
   const [params, setParams] = useSearchParams();
   const id = params.get("page");
+  const article = useQuery({
+    ...wikiPageQuery(actor, id ?? ""),
+    enabled: Boolean(id && access.isSuccess && access.data.can_author),
+  });
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -418,10 +418,25 @@ export function KnowledgeArticles() {
     setParams(next);
     setWriting(false);
   };
+  if (isDatabasePermissionDenied(access.failureReason)) return <PageNotFound />;
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
-  if (!access.data?.can_author)
-    return <Notice kind="error">{t("noAccess")}</Notice>;
+  if (!access.data?.can_author) return <PageNotFound />;
+  if (id !== null && !writing) {
+    if (
+      !id ||
+      isDatabasePermissionDenied(article.failureReason) ||
+      (typeof article.failureReason === "object" &&
+        article.failureReason !== null &&
+        "code" in article.failureReason &&
+        article.failureReason.code === "22P02") ||
+      (article.isSuccess && !article.data)
+    )
+      return <PageNotFound />;
+    if (article.isPending) return <Loading />;
+    if (article.isError)
+      return <ErrorState retry={() => void article.refetch()} />;
+  }
   return (
     <>
       <PageHeading
@@ -563,11 +578,11 @@ export function KnowledgeArticles() {
             ) : (
               <Notice>{t("categoryMissing")}</Notice>
             )
-          ) : id ? (
+          ) : id && article.data ? (
             <WikiArticle
               key={id}
               actor={actor}
-              id={id}
+              record={article.data}
               categories={categories.data ?? []}
               canPublish={access.data.can_publish_wiki}
               onBack={() => select(null)}

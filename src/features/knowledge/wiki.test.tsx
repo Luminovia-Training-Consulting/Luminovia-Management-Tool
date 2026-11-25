@@ -123,6 +123,7 @@ function initialRecord(): WikiPageRecord {
 type RpcResult = { data: unknown; error: unknown };
 let access: KnowledgeAccess;
 let record: WikiPageRecord;
+let readFailure: { code: string } | null | undefined;
 let availableCategories: KnowledgeCategory[];
 let save: (payload: Record<string, unknown>) => Promise<RpcResult>;
 const clients: QueryClient[] = [];
@@ -158,6 +159,7 @@ function confirmSave(payload: Record<string, unknown>): RpcResult {
 beforeEach(async () => {
   state.online = true;
   record = initialRecord();
+  readFailure = undefined;
   availableCategories = [...categories];
   access = {
     can_author: true,
@@ -176,7 +178,9 @@ beforeEach(async () => {
         case "wiki_pages_list":
           return { data: [record], error: null };
         case "wiki_page":
-          return { data: { ...record }, error: null };
+          return readFailure === undefined
+            ? { data: { ...record }, error: null }
+            : { data: null, error: readFailure };
         case "wiki_attachments":
           return { data: [], error: null };
         case "save_wiki_page":
@@ -222,6 +226,25 @@ async function editArticle() {
 }
 
 const saveFailure = /The change could not be saved\. Your draft is preserved/;
+
+it.each([null, { code: "42501" }, { code: "22P02" }])(
+  "shows a neutral 404 instead of mounting an unavailable article (%j)",
+  async (failure) => {
+    readFailure = failure;
+    view();
+    expect(
+      await screen.findByRole("heading", {
+        name: "This page could not be found.",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: record.title }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit" }),
+    ).not.toBeInTheDocument();
+  },
+);
 
 describe("Wiki editor confirmation and draft preservation", () => {
   it("preserves a stale-version draft and repeats the same page/version/payload on explicit retry", async () => {
@@ -430,9 +453,9 @@ describe("Wiki permissions and creation prerequisites", () => {
       }),
     );
     expect(
-      await screen.findByText(
-        "You do not have permission to access this knowledge area.",
-      ),
+      await screen.findByRole("heading", {
+        name: "This page could not be found.",
+      }),
     ).toBeVisible();
     expect(
       screen.queryByRole("textbox", { name: "Content" }),
