@@ -293,6 +293,8 @@ export default defineConfig(({ mode }) => {
             "**/academy-explorer-*.{js,css}",
             "**/standalone-swagger-*.{js,css}",
             "**/swagger-view-*.{js,css}",
+            // Spreadsheet processing is loaded on demand during online imports.
+            "**/attendance-xlsx-*.js",
             // Private company contracts cannot be viewed or filed offline.
             "**/company-contracts-*.js",
           ],

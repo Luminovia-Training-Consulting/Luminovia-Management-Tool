@@ -883,13 +883,15 @@ const wikiCourseReference = voidRpc(
   "native_manage_wiki_course_template",
   "Knowledge",
   "Add or remove a visible course template on a wiki draft",
-  "Requires staff access and page ownership or wiki management permission. Only the current unpublished draft can change. The template must be readable to the actor and active when adding it. A draft supports at most 20 distinct references. Repeated additions or removals of the same reference leave the same result.",
+  "Requires staff access and page ownership or wiki management permission. Only the current unpublished draft can change. With a company ID, the caller needs current company authoring access and the template must belong to that company. Without it, the global editorial scope applies. The template must be readable and active when adding it. A draft supports at most 20 distinct references. Repeated additions or removals leave the same result.",
   {
     p_page_id: uuid,
     p_revision: wikiVersion,
     p_template_id: uuid,
     p_remove: boolean,
+    p_organisation_id: nullableUuid,
   },
+  ["p_organisation_id"],
 );
 const jobBriefingFields = {
   reference_url: { ...text, maxLength: 2048 },
@@ -3963,6 +3965,14 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/wiki_course_template_choices": rpc(
+    "native_wiki_course_template_choices",
+    "Knowledge",
+    "List course templates eligible for a wiki draft",
+    "Returns IDs and titles of active, readable templates for the current unpublished draft. The caller must be staff and own the page or manage the wiki. Pass a company ID to get only templates owned by that company, subject to current company access. Pass null for the global editorial scope. If the draft or scope is unavailable, the result is empty.",
+    { p_page_id: uuid, p_organisation_id: nullableUuid },
+    { type: "array", items: object({ id: uuid, title: text }) },
+  ),
   "/rest/v1/rpc/forum_threads_list": rpc(
     "native_forum_threads_list",
     "Knowledge",
@@ -4148,13 +4158,14 @@ const nativePaths = {
     "native_wiki_course_templates",
     "Courses",
     "List visible course template references on a wiki page",
-    "The read follows the caller's visible wiki revision and independent course template authority. The page owner and wiki managers may see the current revision. Other permitted readers see the published revision.",
-    { p_page_id: uuid },
+    "The read follows the caller's visible wiki revision and independent course template authority. The page owner and wiki managers may see the current revision. Other permitted readers see the published revision. With a company ID, the caller needs current access to that company and only its templates are listed. Without it, the global editorial scope applies.",
+    { p_page_id: uuid, p_organisation_id: nullableUuid },
     {
       type: "array",
       maxItems: 20,
       items: object({ template_id: uuid, title: text, archived: boolean }),
     },
+    ["p_organisation_id"],
   ),
   "/rest/v1/rpc/teaching_day": rpc(
     "native_teaching_day",

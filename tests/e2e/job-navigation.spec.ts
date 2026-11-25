@@ -90,6 +90,14 @@ test("opens only the assigned course, member chat and own assignment calendar", 
     );
     await login(page, teacher.email);
     await page.goto(`/jobs/${job}`);
+    // The authenticated detail must show the company and the confirmed lecturer from the job lifecycle.
+    const toolbar = page.locator(".job-detail-toolbar");
+    await expect(
+        toolbar.getByText("Unternehmen: Fictional organisation", {exact: true}),
+    ).toBeVisible();
+    await expect(
+        toolbar.getByText("Dozierende: Fictional assigned navigation teacher", {exact: true}),
+    ).toBeVisible();
     const course = page.getByRole("link", {
         name: "Kursarbeitsraum öffnen",
         exact: true,

@@ -174,13 +174,22 @@ for (const role of actors) {
           const metrics = page.locator(".dashboard-metric");
           await expect(metrics.first()).toBeVisible();
           for (const metric of await metrics.all()) {
-            const label = await metric.locator(":scope > span").boundingBox();
-            const arrow = await metric
-              .locator(".dashboard-metric-arrow")
-              .boundingBox();
-            expect(label).not.toBeNull();
-            expect(arrow).not.toBeNull();
-            expect(label!.x + label!.width).toBeLessThanOrEqual(arrow!.x);
+            // Measure both elements in the same layout after resizing.
+            await expect
+              .poll(() =>
+                metric.evaluate((link) => {
+                  const label = link
+                    .querySelector(":scope > span")
+                    ?.getBoundingClientRect();
+                  const arrow = link
+                    .querySelector(".dashboard-metric-arrow")
+                    ?.getBoundingClientRect();
+                  return Boolean(
+                    label?.width && arrow?.width && label.right <= arrow.left,
+                  );
+                }),
+              )
+              .toBe(true);
           }
         }
         if ("additional" in role && width === 1440) {
@@ -230,7 +239,9 @@ for (const role of actors) {
         if (role.primary === "client") {
           if (isMobile) {
             await page.locator("details.mobile-more > summary").click();
-            await page.locator('#mobile-shell-navigation a[href="/client/finance"]').click();
+            await page
+              .locator('#mobile-shell-navigation a[href="/client/finance"]')
+              .click();
           } else {
             await sidebarLink("/client/finance").click();
           }

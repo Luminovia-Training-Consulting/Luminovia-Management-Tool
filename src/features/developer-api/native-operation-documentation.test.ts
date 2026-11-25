@@ -118,6 +118,29 @@ describe("internal operation documentation", () => {
     }
   });
 
+  it("documents scoped and legacy wiki template calls", () => {
+    const page = { p_page_id: id };
+    const scoped = { ...page, p_organisation_id: id };
+    const choices = input("wiki_course_template_choices");
+    expect(choices.safeParse(scoped).success).toBe(true);
+    expect(
+      choices.safeParse({ ...page, p_organisation_id: null }).success,
+    ).toBe(true);
+    expect(choices.safeParse(page).success).toBe(false);
+
+    const references = input("wiki_course_templates");
+    expect(references.safeParse(page).success).toBe(true);
+    expect(references.safeParse(scoped).success).toBe(true);
+
+    const edit = input("manage_wiki_course_template");
+    const draft = { p_revision: 1, p_template_id: id, p_remove: false };
+    expect(edit.safeParse({ ...draft, ...page }).success).toBe(true);
+    expect(edit.safeParse({ ...draft, ...scoped }).success).toBe(true);
+    expect(
+      edit.safeParse({ ...draft, ...page, p_organisation_id: "no" }).success,
+    ).toBe(false);
+  });
+
   it("keeps actual assignment constraints and response states visible", () => {
     const capacity = {
       p_job_id: id,

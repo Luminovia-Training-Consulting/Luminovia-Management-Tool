@@ -31,6 +31,29 @@ async function accessible(page: Page) {
     ).toBe(true);
 }
 
+async function expectAuditNotFound(page: Page, label: string, secret: string) {
+    const main = page.getByRole("main");
+    await expect(
+        main.getByRole("heading", {
+            level: 1,
+            name: /^(Diese Seite wurde nicht gefunden\.|This page could not be found\.)$/,
+        }),
+    ).toBeVisible();
+    await expect(page).toHaveURL("/admin/audit");
+    const overview = main.getByRole("link", {name: /^(Zur Übersicht|Go to overview)$/});
+    const help = main.getByRole("link", {name: /^(Hilfe öffnen|Open help)$/});
+    await expect(overview).toBeVisible();
+    await expect(overview).toHaveAttribute("href", "/");
+    await expect(help).toBeVisible();
+    await expect(help).toHaveAttribute("href", "/help?topic=troubleshooting");
+    await expect(page.getByRole("article", {includeHidden: true})).toHaveCount(0);
+    await expect(main).not.toContainText(
+        /Verwaltungsprotokoll|Administration log|Das Protokoll erfordert/i,
+    );
+    await expect(main).not.toContainText(label);
+    await expect(page.locator("body")).not.toContainText(secret);
+}
+
 test("administrators and management can inspect redacted activity with role-appropriate controls", async ({
                                                                                                                                                           page,
                                                                                                                                                           browser,
@@ -143,8 +166,7 @@ test("administrators and management can inspect redacted activity with role-appr
         const reader = await readerContext.newPage();
         await login(reader, teacher.email);
         await reader.goto("/admin/audit");
-        await expect(reader.getByText(/Das Protokoll erfordert/)).toBeVisible();
-        await expect(reader.getByRole("article")).toHaveCount(0);
+        await expectAuditNotFound(reader, label, secret);
         await context.setOffline(true);
         await expect(
             page.getByRole("button", {name: "Apply filters", exact: true}),
@@ -159,6 +181,15 @@ test("administrators and management can inspect redacted activity with role-appr
         await page.getByRole("button", {name: "Refresh", exact: true}).click();
         await expect(page.getByText(label, {exact: true})).toHaveCount(0);
         await expect(page.getByRole("alert")).toBeVisible();
+        // Restore portal access as a lecturer without restoring audit access.
+        await checked(
+            service.from("user_roles").insert({
+                user_id: administrator.id,
+                role: "lecturer",
+            }),
+        );
+        await page.reload();
+        await expectAuditNotFound(page, label, secret);
     } finally {
         await context.setOffline(false);
         await readerContext?.close();

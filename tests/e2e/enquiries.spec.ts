@@ -46,6 +46,7 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 privacy_notice_version: "fictional-v1",
                 consent: true,
             };
+            const managementNote = "Fictional requirements reviewed.";
             const id = await checked(
                 service.rpc("receive_website_enquiry", {
                     p_sender_hash: randomUUID().replaceAll("-", "").repeat(2),
@@ -159,13 +160,13 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 await page
                     .getByRole("dialog")
                     .getByLabel("Verwaltungsnotiz", {exact: true})
-                    .fill("Fictional requirements reviewed.");
+                    .fill(managementNote);
                 await page
                     .getByRole("dialog")
                     .getByRole("button", {name: "Bestätigen", exact: true})
                     .click();
                 await expect(
-                    page.getByText("Fictional requirements reviewed.", {exact: true}),
+                    page.getByText(managementNote, {exact: true}),
                 ).toBeVisible();
                 await page
                     .getByRole("button", {name: "Kursdurchlauf erstellen", exact: true})
@@ -227,13 +228,40 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                 other = await browser.newContext();
                 const peer = await other.newPage();
                 await login(peer, outsider.email);
-                await peer.goto(`/enquiries/${id}`);
-                await expect(peer.getByRole("alert")).toContainText(
-                    "Unternehmensverwaltung",
-                );
-                await expect(
-                    peer.getByText(payload.email, {exact: true}),
-                ).toHaveCount(0);
+                for (const path of ["/enquiries", `/enquiries/${id}`]) {
+                    await peer.goto(path);
+                    const main = peer.getByRole("main");
+                    await expect(
+                        main.getByRole("heading", {
+                            level: 1,
+                            name: "Diese Seite wurde nicht gefunden.",
+                            exact: true,
+                        }),
+                    ).toBeVisible();
+                    await expect(peer).toHaveURL(path);
+                    const overview = main.getByRole("link", {name: "Zur Übersicht", exact: true});
+                    const help = main.getByRole("link", {name: "Hilfe öffnen", exact: true});
+                    await expect(overview).toBeVisible();
+                    await expect(overview).toHaveAttribute("href", "/");
+                    await expect(help).toBeVisible();
+                    await expect(help).toHaveAttribute("href", "/help?topic=troubleshooting");
+                    await expect(main).not.toContainText(
+                        /Unternehmensanfragen|Unternehmensverwaltung/,
+                    );
+                    await expect(
+                        main.locator(".enquiry-list, .enquiry-original, .enquiry-management"),
+                    ).toHaveCount(0);
+                    for (const value of [
+                        payload.email,
+                        payload.company_name,
+                        payload.contact_name,
+                        payload.topic,
+                        payload.message,
+                        managementNote,
+                    ]) {
+                        await expect(peer.locator("body")).not.toContainText(value);
+                    }
+                }
             } finally {
                 await context.setOffline(false);
                 await other?.close();
