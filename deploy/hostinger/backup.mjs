@@ -152,9 +152,9 @@ export async function fileDigest(file) {
 }
 
 // Write a command stream exclusively to a private artifact and accept it only after successful process completion.
-async function streamArtifact(directory, name, command, input) {
+async function streamArtifact(directory, name, command, input, start = startCommand) {
     const output = resolve(directory, name);
-    const {child, completed} = startCommand("ssh", sshArgs(command), {input});
+    const {child, completed} = start("ssh", sshArgs(command), {input});
     const hash = createHash("sha256");
     let bytes = 0;
     const checksum = new Transform({
@@ -239,28 +239,33 @@ export async function inventoryTotals(file) {
     return {files, bytes};
 }
 
-// Create separate private dump/Storage artifacts and write the final manifest only after success; failed partial output is not a complete backup.
-export async function createDevelopmentBackup({quiescent = false} = {}) {
+// Create private dump/Storage artifacts only after the caller confirms quiescence. The optional command adapters are an internal fixture seam; normal CLI invocation always uses the fixed collectors and streaming child-process path. Write the manifest last so a failed stream can leave only explicitly incomplete private data.
+export async function createDevelopmentBackup({quiescent = false, dependencies = {}} = {}) {
     if (quiescent !== true)
         throw new Error(
             "Confirm quiescent development writes with --quiescent before backup.",
         );
-    await collectCommand("git", ["check-ignore", "--quiet", backupRoot]);
-    await mkdir(backupRoot, {recursive: true, mode: 0o700});
-    const state = await lstat(backupRoot);
+    // Optional adapters support deterministic fixtures; the CLI always uses the
+    // fixed command implementations and never reads adapters from external input.
+    const collect = dependencies.collectCommand ?? collectCommand;
+    const start = dependencies.startCommand ?? startCommand;
+    const outputRoot = dependencies.outputRoot ?? backupRoot;
+    await collect("git", ["check-ignore", "--quiet", outputRoot]);
+    await mkdir(outputRoot, {recursive: true, mode: 0o700});
+    const state = await lstat(outputRoot);
     if (!state.isDirectory() || state.isSymbolicLink())
         throw new Error("Unsafe backup directory.");
-    await chmod(backupRoot, 0o700);
+    await chmod(outputRoot, 0o700);
     const stamp = new Date().toISOString().replaceAll(/[-:.]/g, "");
     const name = stamp + "-" + randomUUID().slice(0, 8);
-    const partial = resolve(backupRoot, name + ".partial");
-    const final = resolve(backupRoot, name);
+    const partial = resolve(outputRoot, name + ".partial");
+    const final = resolve(outputRoot, name);
     await mkdir(partial, {mode: 0o700});
     const startedAt = new Date().toISOString();
     let stage = "source-inspection";
     try {
         const actualImage = JSON.parse(
-            await collectCommand(
+            await collect(
                 "ssh",
                 sshArgs("docker inspect --format '{{json .Config.Image}}' " + db),
             ),
@@ -271,7 +276,7 @@ export async function createDevelopmentBackup({quiescent = false} = {}) {
             );
         const summary = async () =>
             JSON.parse(
-                await collectCommand(
+                await collect(
                     "ssh",
                     sshArgs(
                         `docker exec -i ${db} psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1`,
@@ -290,11 +295,15 @@ export async function createDevelopmentBackup({quiescent = false} = {}) {
             partial,
             "database.dump",
             `docker exec ${db} pg_dump -U postgres -d postgres --format=custom --no-password`,
+            undefined,
+            start,
         );
         artifacts["roles.sql"] = await streamArtifact(
             partial,
             "roles.sql",
             `docker exec ${db} pg_dumpall -U postgres --roles-only --no-role-passwords`,
+            undefined,
+            start,
         );
         stage = "storage-inventory";
         artifacts["objects.jsonl"] = await streamArtifact(
@@ -302,6 +311,7 @@ export async function createDevelopmentBackup({quiescent = false} = {}) {
             "objects.jsonl",
             "python3 -",
             inventoryPython,
+            start,
         );
         const objects = await inventoryTotals(resolve(partial, "objects.jsonl"));
         stage = "storage-bytes";
@@ -309,6 +319,8 @@ export async function createDevelopmentBackup({quiescent = false} = {}) {
             partial,
             "storage.tar",
             `tar --create --file=- --directory=${storage} .`,
+            undefined,
+            start,
         );
         stage = "consistency-check";
         const afterInventory = await streamArtifact(
@@ -316,6 +328,7 @@ export async function createDevelopmentBackup({quiescent = false} = {}) {
             "objects.after.jsonl",
             "python3 -",
             inventoryPython,
+            start,
         );
         if (afterInventory.sha256 !== artifacts["objects.jsonl"].sha256)
             throw new Error(
