@@ -24,6 +24,37 @@ interface Dependencies {
     download: (path: string) => Promise<Blob | null>;
 }
 
+/** Read no more than the already-authorized byte count from private Storage. */
+async function readExpectedBytes(object: Blob, expectedSize: number) {
+    const bytes = new Uint8Array(expectedSize);
+    const reader = object.stream().getReader();
+    let offset = 0;
+    try {
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            if (value.byteLength > expectedSize - offset) {
+                await reader.cancel();
+                throw new Error('access_denied');
+            }
+            bytes.set(value, offset);
+            offset += value.byteLength;
+        }
+    } catch (error) {
+        if (error instanceof Error && error.message === 'access_denied') throw error;
+        try {
+            await reader.cancel();
+        } catch {
+            // Preserve the fail-closed response when the underlying stream has failed.
+        }
+        throw new Error('access_denied');
+    } finally {
+        reader.releaseLock();
+    }
+    if (offset !== expectedSize) throw new Error('access_denied');
+    return bytes;
+}
+
 /** Recheck the caller's current grant after fetching and verifying the bounded object. */
 export async function organisationContractBytes(id: string, maxBytes: number, deps: Dependencies) {
     const selected = await deps.selection(id);
@@ -36,8 +67,8 @@ export async function organisationContractBytes(id: string, maxBytes: number, de
         throw new Error('access_denied');
     }
     const object = await deps.download(version.object_path);
-    if (!object || object.size !== version.size_bytes) throw new Error('access_denied');
-    const bytes = await object.arrayBuffer();
+    if (!object) throw new Error('access_denied');
+    const bytes = await readExpectedBytes(object, version.size_bytes);
     if (await sha256FileHex(bytes) !== selected.sha256) throw new Error('access_denied');
     const current = await deps.selection(id);
     if (!current || current.document_id !== id || current.version_id !== version.id ||

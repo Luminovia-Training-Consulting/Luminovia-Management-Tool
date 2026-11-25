@@ -270,7 +270,11 @@ async function downloadFile(
     throw new Error(code);
   }
   const blob = await response.blob();
+  if (signal?.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   const { data, error } = await db().auth.getSession();
+  if (signal?.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   // Server authorization occurs at request time. The active browser account
   // can change while the bytes arrive, even though the old request succeeded.
   if (error || data.session?.user.id !== session.user.id)
@@ -343,12 +347,16 @@ export async function saveOrganisationContract(
   organisationId: string,
   documentId: string,
   name: string,
+  signal?: AbortSignal,
 ) {
-  const blob = await downloadFile({
-    action: "organisation_contract_download",
-    organisation_id: organisationId,
-    id: documentId,
-  });
+  const blob = await downloadFile(
+    {
+      action: "organisation_contract_download",
+      organisation_id: organisationId,
+      id: documentId,
+    },
+    signal,
+  );
   saveBlob(blob, name);
 }
 

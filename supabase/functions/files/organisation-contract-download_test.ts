@@ -54,3 +54,33 @@ Deno.test('company downloads fail closed on content mismatch or changed access',
     await assertRejects(() => organisationContractBytes('agreement', 1024, deps), Error, 'access_denied');
     assertEquals(checks, 2);
 });
+
+Deno.test('company download rejects a short Storage stream and aborts an overlong stream', async () => {
+    const short = await fixture();
+    short.version.size_bytes += 1;
+    await assertRejects(() => organisationContractBytes('agreement', 1024, short.deps), Error, 'access_denied');
+    assertEquals(short.calls, ['selection', 'version', 'download']);
+
+    const overlong = await fixture();
+    overlong.version.size_bytes -= 1;
+    let cancelled = false;
+    let sent = false;
+    overlong.deps.download = (_path) => {
+        overlong.calls.push('download');
+        return Promise.resolve({
+            stream: () => new ReadableStream<Uint8Array>({
+                pull(controller) {
+                    if (sent) return;
+                    sent = true;
+                    controller.enqueue(new Uint8Array(overlong.version.size_bytes + 1));
+                },
+                cancel() {
+                    cancelled = true;
+                },
+            }),
+        } as Blob);
+    };
+    await assertRejects(() => organisationContractBytes('agreement', 1024, overlong.deps), Error, 'access_denied');
+    assertEquals(cancelled, true);
+    assertEquals(overlong.calls, ['selection', 'version', 'download']);
+});

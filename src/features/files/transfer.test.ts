@@ -437,6 +437,57 @@ describe("online, authenticated document transfers", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("does not save a company PDF when cancellation arrives during the final Auth check", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("Fictional company contract bytes."));
+    vi.stubGlobal("fetch", fetch);
+    let finishFinalAuth!: (value: {
+      data: { session: { user: { id: string } } };
+      error: null;
+    }) => void;
+    auth.getSession
+      .mockResolvedValueOnce({
+        data: {
+          session: {
+            access_token: "fictional-access-token",
+            user: { id: "fictional-actor" },
+          },
+        },
+        error: null,
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFinalAuth = resolve;
+          }),
+      );
+    const create = vi.fn(() => "blob:should-not-be-saved");
+    class DownloadURL extends URL {
+      static createObjectURL = create;
+    }
+    vi.stubGlobal("URL", DownloadURL);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click");
+    const controller = new AbortController();
+    const pending = saveOrganisationContract(
+      "fictional-company",
+      "fictional-contract",
+      "Agreement.pdf",
+      controller.signal,
+    );
+
+    await vi.waitFor(() => expect(auth.getSession).toHaveBeenCalledTimes(2));
+    controller.abort();
+    finishFinalAuth({
+      data: { session: { user: { id: "fictional-actor" } } },
+      error: null,
+    });
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(create).not.toHaveBeenCalled();
+    expect(click).not.toHaveBeenCalled();
+  });
+
   it("fetches the reviewed exact version without caching private response bytes", async () => {
     const fetch = vi
       .fn()

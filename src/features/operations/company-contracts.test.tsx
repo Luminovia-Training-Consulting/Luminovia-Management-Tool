@@ -81,7 +81,12 @@ it("loads and paginates only the opened company's PDFs, allowing downloads after
   });
   expect(first.abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
   await user.click(file);
-  expect(save).toHaveBeenCalledWith(companyId, documentId, "Agreement.pdf");
+  expect(save).toHaveBeenCalledWith(
+    companyId,
+    documentId,
+    "Agreement.pdf",
+    expect.any(AbortSignal),
+  );
   await user.click(
     screen.getByRole("button", { name: "Weitere Verträge laden" }),
   );
@@ -90,6 +95,77 @@ it("loads and paginates only the opened company's PDFs, allowing downloads after
     p_before_at: entry.created_at,
     p_before_id: documentId,
   });
+});
+
+it("aborts an in-flight company PDF download when its dossier closes", async () => {
+  save.mockImplementation(
+    (_organisationId, _documentId, _name, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => reject(new DOMException("Aborted", "AbortError")),
+          { once: true },
+        );
+      }),
+  );
+  rpc.mockReturnValueOnce(list());
+  const user = userEvent.setup();
+  renderDossier();
+  await user.click(
+    screen.getByRole("button", { name: "Unternehmensverträge" }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "PDF herunterladen: Agreement.pdf",
+    }),
+  );
+  const signal = save.mock.calls[0][3] as AbortSignal;
+  expect(signal.aborted).toBe(false);
+
+  await user.keyboard("{Escape}");
+
+  await waitFor(() => expect(signal.aborted).toBe(true));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("aborts an in-flight company PDF download when the selected company changes", async () => {
+  save.mockImplementation(
+    (_organisationId, _documentId, _name, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => reject(new DOMException("Aborted", "AbortError")),
+          { once: true },
+        );
+      }),
+  );
+  rpc.mockReturnValue(list());
+  const cache = new QueryClient();
+  const user = userEvent.setup();
+  const dossier = (id: string) => (
+    <QueryClientProvider client={cache}>
+      <CompanyContracts
+        actor="manager"
+        organisationId={id}
+        organisationName="Fictional company"
+        archived={false}
+      />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(dossier(companyId));
+  await user.click(
+    screen.getByRole("button", { name: "Unternehmensverträge" }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "PDF herunterladen: Agreement.pdf",
+    }),
+  );
+  const signal = save.mock.calls[0][3] as AbortSignal;
+
+  rerender(dossier("a144cfc1-4a96-4e58-9ec1-4c2c54173f43"));
+
+  await waitFor(() => expect(signal.aborted).toBe(true));
 });
 
 it("retries the selected PDF with the same request ID and shows it only after a confirmed upload", async () => {
@@ -145,6 +221,18 @@ it.each(["refresh", "more"] as const)(
     const file = await screen.findByRole("button", {
       name: "PDF herunterladen: Agreement.pdf",
     });
+    save.mockImplementation(
+      (_organisationId, _documentId, _name, signal: AbortSignal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }),
+    );
+    await user.click(file);
+    const downloadSignal = save.mock.calls[0][3] as AbortSignal;
     const uploadButton = screen.getByRole("button", { name: "PDF hochladen" });
     await user.upload(
       screen.getByLabelText("Vertrag als PDF auswählen"),
@@ -163,6 +251,7 @@ it.each(["refresh", "more"] as const)(
     }
 
     await waitFor(() => expect(file).not.toBeInTheDocument());
+    await waitFor(() => expect(downloadSignal.aborted).toBe(true));
     expect(uploadButton).not.toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeVisible();
     expect(rpc).toHaveBeenCalledTimes(2);

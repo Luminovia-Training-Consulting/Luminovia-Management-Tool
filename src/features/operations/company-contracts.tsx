@@ -1,5 +1,5 @@
 /** Actor-scoped, on-demand list and upload for a single company dossier. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -63,6 +63,7 @@ export function ContractFiles({
   const cache = useQueryClient();
   const queryKey = ["organisation-contracts", actor, organisationId];
   const field = useRef<HTMLInputElement>(null);
+  const downloadController = useRef<AbortController | undefined>(undefined);
   const [selected, setSelected] = useState<{ file: File; requestId: string }>();
   const [invalid, setInvalid] = useState(false);
   const contracts = useInfiniteQuery({
@@ -77,6 +78,7 @@ export function ContractFiles({
   const upload = useMutation({
     mutationFn: ({ file, requestId }: NonNullable<typeof selected>) =>
       uploadOrganisationContract(file, organisationId, requestId),
+    gcTime: 0,
     onSuccess: async () => {
       if (field.current) field.current.value = "";
       setSelected(undefined);
@@ -84,11 +86,34 @@ export function ContractFiles({
     },
   });
   const download = useMutation({
-    mutationFn: ({ id, file_name }: Contract) =>
-      saveOrganisationContract(organisationId, id, file_name),
+    mutationFn: ({
+      id,
+      file_name,
+      signal,
+    }: Contract & { signal: AbortSignal }) =>
+      saveOrganisationContract(organisationId, id, file_name, signal),
+    gcTime: 0,
+    onSettled: (_data, _error, variables) => {
+      if (downloadController.current?.signal === variables.signal)
+        downloadController.current = undefined;
+    },
   });
+  useEffect(
+    () => () => {
+      downloadController.current?.abort();
+      downloadController.current = undefined;
+    },
+    [actor, organisationId],
+  );
+  const permissionDenied = isDatabasePermissionDenied(contracts.error);
+  useEffect(() => {
+    if (!permissionDenied) return;
+    downloadController.current?.abort();
+    downloadController.current = undefined;
+    if (field.current) field.current.value = "";
+  }, [permissionDenied]);
   // Failed refreshes and next pages can leave previously fetched names in the cache.
-  if (isDatabasePermissionDenied(contracts.error)) {
+  if (permissionDenied) {
     if (selected) setSelected(undefined);
     if (invalid) setInvalid(false);
     return (
@@ -163,7 +188,11 @@ export function ContractFiles({
               <Button
                 variant="secondary"
                 disabled={!online || download.isPending}
-                onClick={() => download.mutate(item)}
+                onClick={() => {
+                  const controller = new AbortController();
+                  downloadController.current = controller;
+                  download.mutate({ ...item, signal: controller.signal });
+                }}
               >
                 {t("companyContractsDownload", { name: item.file_name })}
               </Button>
