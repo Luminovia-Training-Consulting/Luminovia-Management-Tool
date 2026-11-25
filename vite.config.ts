@@ -293,6 +293,8 @@ export default defineConfig(({ mode }) => {
             "**/academy-explorer-*.{js,css}",
             "**/standalone-swagger-*.{js,css}",
             "**/swagger-view-*.{js,css}",
+            // Private company contracts cannot be viewed or filed offline.
+            "**/company-contracts-*.js",
           ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,

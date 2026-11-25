@@ -1,5 +1,4 @@
 import { financeWorkspaceAccess } from "../../app/finance-access";
-import { hasTeachingRole } from "../auth/internal-capabilities";
 
 export const administrationAreas = {
   operations: {
@@ -74,17 +73,6 @@ export function administrationLinks(
       description: "adminDestination_assignmentChanges",
       area: "operations",
       visible: management,
-    },
-    {
-      to: "/contracts",
-      label: "contracts",
-      description: "adminDestination_contracts",
-      area: "operations",
-      visible:
-        management &&
-        (has("contracts.manage") ||
-          has("contracts.read") ||
-          hasTeachingRole(roles)),
     },
     {
       to: "/admin/clients",

@@ -444,6 +444,43 @@ const pairs: Record<string, [string, string]> = {
     "Check the start date, daily times and duration. End must follow start.",
   ],
   clients: ["Unternehmen", "Companies"],
+  companyContracts: ["Unternehmensverträge", "Company contracts"],
+  companyContractsIntro: [
+    "Private Vertragsablage für dieses Unternehmen. Nur berechtigte Mitarbeitende können die geprüften PDFs abrufen.",
+    "Private contract storage for this company. Only authorised staff can access the scanned PDFs.",
+  ],
+  companyContractsArchived: [
+    "Archiviert: Vorhandene Verträge bleiben abrufbar. Neue Uploads sind nicht möglich.",
+    "Archived: Existing contracts remain available. New uploads are disabled.",
+  ],
+  companyContractsChoose: [
+    "Vertrag als PDF auswählen",
+    "Select a contract PDF",
+  ],
+  companyContractsUpload: ["PDF hochladen", "Upload PDF"],
+  companyContractsScanning: [
+    "PDF wird hochgeladen und geprüft …",
+    "Uploading and scanning PDF…",
+  ],
+  companyContractsSaved: ["Vertrag hinterlegt.", "Contract filed."],
+  companyContractsFailed: [
+    "Das PDF konnte nicht hinterlegt werden.",
+    "The PDF could not be filed.",
+  ],
+  companyContractsInvalid: ["Bitte ein PDF auswählen.", "Select a PDF file."],
+  companyContractsEmpty: [
+    "Noch keine Verträge für dieses Unternehmen hinterlegt.",
+    "No contracts have been filed for this company.",
+  ],
+  companyContractsDownload: [
+    "PDF herunterladen: {{name}}",
+    "Download PDF: {{name}}",
+  ],
+  companyContractsDownloadFailed: [
+    "Das PDF konnte nicht heruntergeladen werden.",
+    "The PDF could not be downloaded.",
+  ],
+  companyContractsMore: ["Weitere Verträge laden", "Load more contracts"],
   clientsIntro: [
     "Organisationen, geschäftliche Kontakte und interne Notizen verwalten.",
     "Manage organisations, business contacts and internal notes.",

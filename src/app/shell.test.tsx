@@ -408,7 +408,7 @@ it.each(["admin", "management"])(
 );
 
 it.each(["admin", "management"])(
-  "groups contracts, changes and companies for %s and keeps deep links",
+  "groups changes and companies for %s but keeps personal contracts in the main navigation",
   async (role) => {
     access.roles = [role];
     access.permissions = [
@@ -423,7 +423,9 @@ it.each(["admin", "management"])(
     expect(sidebar.getByRole("link", { name: "Verwaltung" })).toHaveClass(
       "active",
     );
-    for (const name of ["Verträge", "Auftragsänderungen", "Unternehmen"])
+    const contracts = sidebar.getByRole("link", { name: "Verträge" });
+    expect(contracts).toHaveAttribute("href", "/contracts");
+    for (const name of ["Auftragsänderungen", "Unternehmen"])
       expect(sidebar.queryByRole("link", { name })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Chat" })).toHaveAttribute(
       "href",
@@ -445,11 +447,15 @@ it.each(["admin", "management"])(
     expect(
       screen.getByRole("link", { name: /^Dozierende(?: |$)/ }),
     ).toHaveAttribute("href", "/people");
-    expect(screen.queryByRole("link", { name: /^Verträge(?: |$)/ })).toBeNull();
     await user.click(
       sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
     );
-    await user.click(screen.getByRole("link", { name: /^Verträge(?: |$)/ }));
+    expect(
+      within(screen.getByRole("main")).queryByRole("link", {
+        name: /^Verträge(?: |$)/,
+      }),
+    ).toBeNull();
+    await user.click(contracts);
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/contracts",
     );
@@ -458,7 +464,11 @@ it.each(["admin", "management"])(
 
 it("keeps contracts and assignment changes directly accessible to lecturers", () => {
   access.roles = ["lecturer"];
-  setup("/contracts", false);
+  const legacyUrl = "/contracts?user=d415d832-e22e-4e32-bacc-180811de988c";
+  setup(legacyUrl, false);
+  expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
+    legacyUrl,
+  );
   const sidebar = within(screen.getByRole("complementary"));
   expect(sidebar.getByRole("link", { name: "Verträge" })).toHaveAttribute(
     "href",

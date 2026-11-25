@@ -81,6 +81,22 @@ export async function uploadDocument(
   return transferUpload(form, endpoint(), onProgress);
 }
 
+/** Send a company PDF to its dedicated reservation, not the personal file library. */
+export function uploadOrganisationContract(
+  file: File,
+  organisationId: string,
+  clientId: string,
+) {
+  if (file.size < 1 || file.size > maximumFileSize)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set("client_id", clientId);
+  form.set("kind", "organisation_contract");
+  form.set("contract_organisation_id", organisationId);
+  return transferUpload(form, endpoint());
+}
+
 const courseSubmissionMaxBytes = 10 * 1024 * 1024;
 
 /** Reserve and scan a private file for the caller's own enrolment. */
@@ -318,6 +334,20 @@ export async function saveQualificationEvidence(
   const blob = await downloadFile({
     action: "qualification_evidence_download",
     evidence_id: evidenceId,
+  });
+  saveBlob(blob, name);
+}
+
+/** Save only the company-specific PDF authorized by the authenticated file gateway. */
+export async function saveOrganisationContract(
+  organisationId: string,
+  documentId: string,
+  name: string,
+) {
+  const blob = await downloadFile({
+    action: "organisation_contract_download",
+    organisation_id: organisationId,
+    id: documentId,
   });
   saveBlob(blob, name);
 }

@@ -53,19 +53,24 @@ function RegisterContract({
   actor,
   zone,
   records,
-  initialUser,
+  initialUser = "",
+  boundUser,
   onDone,
 }: {
   actor: string;
   zone: string;
   records: ContractRecord[];
-  initialUser: string;
+  initialUser?: string;
+  boundUser?: string;
   onDone: () => void;
 }) {
   const { t } = useTranslation("commercial");
   const online = useOnline();
   const client = useQueryClient();
-  const people = useQuery(commercialPeopleQuery(actor));
+  const people = useQuery({
+    ...commercialPeopleQuery(actor),
+    enabled: !boundUser,
+  });
   const [document, setDocument] = useState("");
   const [invalidDates, setInvalidDates] = useState(false);
   const [initialDate] = useState(() =>
@@ -75,7 +80,7 @@ function RegisterContract({
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
-      user: initialUser,
+      user: boundUser ?? initialUser,
       title: "",
       kind: "master",
       parent: "",
@@ -83,8 +88,12 @@ function RegisterContract({
       expires: "",
     },
   });
-  const person = useWatch({ control: form.control, name: "user" });
-  const eligiblePerson = people.data?.some(({ id }) => id === person) === true;
+  // Contextual callers already checked eligibility. The fixed ID also owns upload and registration.
+  const chosenUser = useWatch({ control: form.control, name: "user" });
+  const person = boundUser ?? chosenUser;
+  const eligiblePerson =
+    Boolean(boundUser) ||
+    (people.isSuccess && people.data.some(({ id }) => id === person));
   const kind = useWatch({ control: form.control, name: "kind" });
   const candidates = useQuery({
     queryKey: ["contract-registration-candidates", actor, person],
@@ -120,7 +129,7 @@ function RegisterContract({
       )
         throw new Error("document_required");
       const payload = {
-        p_user_id: values.user,
+        p_user_id: boundUser ?? values.user,
         p_title: values.title,
         p_document_version_id: document,
         p_effective_from: effective,
@@ -143,36 +152,39 @@ function RegisterContract({
       onDone();
     },
   });
-  if (people.isPending) return <Loading />;
-  if (people.isError) return <ErrorState retry={() => void people.refetch()} />;
+  if (!boundUser && people.isPending) return <Loading />;
+  if (!boundUser && people.isError)
+    return <ErrorState retry={() => void people.refetch()} />;
   return (
     <form
       noValidate
       onSubmit={form.handleSubmit((values) => save.mutate(values))}
     >
-      <Field
-        id="contract-person"
-        label={t("person")}
-        error={Boolean(form.formState.errors.user)}
-      >
-        <select
+      {!boundUser && (
+        <Field
           id="contract-person"
-          {...form.register("user", {
-            onChange: () => {
-              setDocument("");
-              form.setValue("parent", "");
-            },
-          })}
-          disabled={save.isPending}
+          label={t("person")}
+          error={Boolean(form.formState.errors.user)}
         >
-          <option value="">{t("selectPerson")}</option>
-          {people.data.map((person) => (
-            <option key={person.id} value={person.id}>
-              {person.display_name}
-            </option>
-          ))}
-        </select>
-      </Field>
+          <select
+            id="contract-person"
+            {...form.register("user", {
+              onChange: () => {
+                setDocument("");
+                form.setValue("parent", "");
+              },
+            })}
+            disabled={save.isPending}
+          >
+            <option value="">{t("selectPerson")}</option>
+            {people.data?.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.display_name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <Field
         id="contract-title"
         label={t("title")}
@@ -296,17 +308,19 @@ function RegisterContract({
   );
 }
 
-/** Display contract version/validity and perform an explicit receipt acknowledgement. */
+/** Display an exact registered version; management of metadata is not file access. */
 function ContractCard({
   actor,
   contract,
   zone,
   manager,
+  checkDelegatedDownload = false,
 }: {
   actor: string;
   contract: ContractRecord;
   zone: string;
   manager: boolean;
+  checkDelegatedDownload?: boolean;
 }) {
   const { t, i18n } = useTranslation("commercial");
   const common = useTranslation().t;
@@ -316,6 +330,36 @@ function ContractCard({
   const [statusOpen, setStatusOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const own = contract.user_id === actor;
+  const { document_id: documentId, document_version_id: versionId } = contract;
+  const delegatedVersion = useQuery({
+    queryKey: ["contract-download-version", actor, documentId, versionId],
+    enabled:
+      checkDelegatedDownload &&
+      manager &&
+      !own &&
+      Boolean(documentId && versionId),
+    // RLS admits only the authorized uploader on behalf. The gateway rechecks access on download.
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("document_versions")
+        .select("id")
+        .eq("id", versionId!)
+        .eq("document_id", documentId!)
+        .eq("status", "clean")
+        .eq("mime_type", "application/pdf")
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.id === versionId;
+    },
+  });
+  const canDownload =
+    own ||
+    (checkDelegatedDownload &&
+      manager &&
+      delegatedVersion.isSuccess &&
+      delegatedVersion.data);
   const key = useRef(crypto.randomUUID());
   const acknowledge = useMutation({
     mutationFn: async () => {
@@ -385,20 +429,17 @@ function ContractCard({
         <Button
           variant="secondary"
           disabled={
-            contract.user_id !== actor ||
-            !online ||
-            busy ||
-            !contract.document_id ||
-            !contract.document_version_id
+            !canDownload || !online || busy || !documentId || !versionId
           }
           onClick={async () => {
+            if (!canDownload || !documentId || !versionId) return;
             setBusy(true);
             setDownloadFailed(false);
             try {
               await saveDownload(
-                contract.document_id!,
+                documentId,
                 `${contract.title}.pdf`,
-                contract.document_version_id!,
+                versionId,
               );
             } catch {
               setDownloadFailed(true);
@@ -426,40 +467,38 @@ function ContractCard({
       {!contract.document_id && (
         <p className="muted commercial-small">{t("noDocument")}</p>
       )}
-      {contract.user_id === actor &&
-        contract.sha256 &&
-        contract.document_version_id && (
-          <div className="commercial-receipt">
-            {contract.acknowledged_at ? (
-              <p>
-                <CheckCircle2 size={17} />
-                {t("acknowledged", {
-                  date: dateTime(contract.acknowledged_at, i18n.language, zone),
-                })}
-              </p>
-            ) : (
-              <>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => setChecked(event.target.checked)}
-                    disabled={acknowledge.isPending}
-                  />
-                  {t("acknowledgeLabel")}
-                </label>
-                <small>{t("acknowledgeHint")}</small>
-                <Button
-                  variant="secondary"
-                  disabled={!online || !checked || acknowledge.isPending}
-                  onClick={() => acknowledge.mutate()}
-                >
-                  {t("acknowledge")}
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+      {own && contract.sha256 && contract.document_version_id && (
+        <div className="commercial-receipt">
+          {contract.acknowledged_at ? (
+            <p>
+              <CheckCircle2 size={17} />
+              {t("acknowledged", {
+                date: dateTime(contract.acknowledged_at, i18n.language, zone),
+              })}
+            </p>
+          ) : (
+            <>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => setChecked(event.target.checked)}
+                  disabled={acknowledge.isPending}
+                />
+                {t("acknowledgeLabel")}
+              </label>
+              <small>{t("acknowledgeHint")}</small>
+              <Button
+                variant="secondary"
+                disabled={!online || !checked || acknowledge.isPending}
+                onClick={() => acknowledge.mutate()}
+              >
+                {t("acknowledge")}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       {(downloadFailed || acknowledge.isError) && (
         <Notice kind="error">{t("failed")}</Notice>
       )}
@@ -487,6 +526,95 @@ function ContractCard({
         {status.isError && <Notice kind="error">{t("failed")}</Notice>}
       </Dialog>
     </article>
+  );
+}
+
+/** Render the same contract and status cards in the personal and lecturer contexts. */
+function ContractCards({
+  actor,
+  records,
+  zone,
+  manager,
+  checkDelegatedDownload,
+}: {
+  actor: string;
+  records: ContractRecord[];
+  zone: string;
+  manager: boolean;
+  checkDelegatedDownload?: boolean;
+}) {
+  const { t } = useTranslation("commercial");
+  return records.length ? (
+    <div className="commercial-contract-grid">
+      {records.map((contract) => (
+        <ContractCard
+          key={contract.id}
+          actor={actor}
+          contract={contract}
+          zone={zone}
+          manager={manager}
+          checkDelegatedDownload={checkDelegatedDownload}
+        />
+      ))}
+    </div>
+  ) : (
+    <div className="panel commercial-empty">
+      <FileSignature size={35} />
+      <p>{t("noContracts")}</p>
+    </div>
+  );
+}
+
+/** Manage an eligible lecturer only. The person action mounts this after the commercial access checks. */
+export function LecturerContracts({
+  actor,
+  lecturer,
+}: {
+  actor: string;
+  lecturer: string;
+}) {
+  const { t } = useTranslation("commercial");
+  const profile = useQuery(profileQuery(actor));
+  const records = useQuery({
+    ...contractsQuery(actor, true),
+    // The existing RPC supports own/all. Only this lecturer's records reach either UI.
+    select: (all) => all.filter(({ user_id }) => user_id === lecturer),
+  });
+  const [registering, setRegistering] = useState(false);
+  const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  if (records.isPending) return <Loading />;
+  if (records.isError)
+    return <ErrorState retry={() => void records.refetch()} />;
+  return (
+    <div className="section-stack">
+      <div className="form-actions">
+        <Button type="button" onClick={() => setRegistering(true)}>
+          <Plus size={17} />
+          {t("register")}
+        </Button>
+      </div>
+      <ContractCards
+        actor={actor}
+        records={records.data}
+        zone={zone}
+        manager
+        checkDelegatedDownload
+      />
+      <Dialog
+        open={registering}
+        onOpenChange={setRegistering}
+        title={t("register")}
+        description={t("registerHint")}
+      >
+        <RegisterContract
+          actor={actor}
+          zone={zone}
+          records={records.data}
+          boundUser={lecturer}
+          onDone={() => setRegistering(false)}
+        />
+      </Dialog>
+    </div>
   );
 }
 
@@ -591,23 +719,13 @@ export function ContractsPage() {
               void records.refetch();
             }}
           />
-        ) : filtered.length ? (
-          <div className="commercial-contract-grid">
-            {filtered.map((contract) => (
-              <ContractCard
-                key={contract.id}
-                actor={actor}
-                contract={contract}
-                zone={profile.data?.time_zone ?? "Europe/Berlin"}
-                manager={effectiveAll}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="panel commercial-empty">
-            <FileSignature size={35} />
-            <p>{t("noContracts")}</p>
-          </div>
+          <ContractCards
+            actor={actor}
+            records={filtered}
+            zone={profile.data?.time_zone ?? "Europe/Berlin"}
+            manager={effectiveAll}
+          />
         )}
       </div>
       <Dialog

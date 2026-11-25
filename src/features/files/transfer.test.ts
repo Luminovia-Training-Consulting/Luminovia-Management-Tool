@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   downloadDocument,
   maximumFileSize,
+  saveOrganisationContract,
   saveDownload,
   saveQualificationEvidence,
   uploadAcademyAnswerKeyPdf,
@@ -15,6 +16,7 @@ import {
   uploadAcademyStudentExamPdf,
   uploadCourseSubmission,
   uploadDocument,
+  uploadOrganisationContract,
 } from "./api";
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }));
@@ -98,6 +100,32 @@ async function transfer(onProgress?: (percent: number) => void) {
 }
 
 describe("online, authenticated document transfers", () => {
+  it("uploads company PDFs only to the dedicated company reservation", async () => {
+    const bytes = file();
+    const pending = uploadOrganisationContract(bytes, "company-id", "retry-id");
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect([...request.form!]).toEqual([
+      ["file", bytes],
+      ["client_id", "retry-id"],
+      ["kind", "organisation_contract"],
+      ["contract_organisation_id", "company-id"],
+    ]);
+    request.respond(200, { document: { status: "clean" } });
+    await expect(pending).resolves.toMatchObject({ status: "clean" });
+  });
+
+  it("rejects invalid company PDF sizes before opening a transfer", () => {
+    for (const size of [0, maximumFileSize + 1]) {
+      const bytes = new File([], "empty.pdf");
+      Object.defineProperty(bytes, "size", { value: size });
+      expect(() =>
+        uploadOrganisationContract(bytes, "company-id", "retry-id"),
+      ).toThrow("file_size");
+    }
+    expect(auth.getSession).not.toHaveBeenCalled();
+    expect(Request.requests).toHaveLength(0);
+  });
   it.each([
     ["academy-material", uploadAcademyCourseMaterial],
     ["academy-student-exam", uploadAcademyStudentExamPdf],
@@ -450,7 +478,7 @@ describe("online, authenticated document transfers", () => {
     },
   );
 
-  it.each(["document", "qualification"] as const)(
+  it.each(["document", "qualification", "company contract"] as const)(
     "saves %s only after authenticated bytes arrive, pins its gateway identity and releases its Blob URL",
     async (kind) => {
       vi.useFakeTimers();
@@ -489,7 +517,13 @@ describe("online, authenticated document transfers", () => {
       const saved =
         kind === "document"
           ? saveDownload("fictional-document", name, "reviewed-version")
-          : saveQualificationEvidence("fictional-topic-binding", name);
+          : kind === "qualification"
+            ? saveQualificationEvidence("fictional-topic-binding", name)
+            : saveOrganisationContract(
+                "fictional-company",
+                "fictional-document",
+                name,
+              );
       await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
       expect(element).not.toHaveBeenCalled();
       expect(create).not.toHaveBeenCalled();
@@ -510,10 +544,16 @@ describe("online, authenticated document transfers", () => {
                   id: "fictional-document",
                   version_id: "reviewed-version",
                 }
-              : {
-                  action: "qualification_evidence_download",
-                  evidence_id: "fictional-topic-binding",
-                },
+              : kind === "qualification"
+                ? {
+                    action: "qualification_evidence_download",
+                    evidence_id: "fictional-topic-binding",
+                  }
+                : {
+                    action: "organisation_contract_download",
+                    organisation_id: "fictional-company",
+                    id: "fictional-document",
+                  },
           ),
           cache: "no-store",
         },

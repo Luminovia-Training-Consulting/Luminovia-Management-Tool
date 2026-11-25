@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -170,7 +171,11 @@ it("uses the active chat contact cache for a verified person", async () => {
   await act(() =>
     client.invalidateQueries({ queryKey: ["chat-contacts", "viewer"] }),
   );
-  expect(screen.queryByRole("link", { name: "Send message" })).toBeNull();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("link", { name: "Send message" }),
+    ).not.toBeInTheDocument(),
+  );
 });
 
 it.each([
