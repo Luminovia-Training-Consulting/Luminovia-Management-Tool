@@ -22,7 +22,7 @@ In beiden Academy-Editionen besetzen lokale Lehrteams die Kurse direkt. Luminovi
 - Öffentliche durchsuchbare Hilfe mit Themenfiltern, Direktlinks und Fehlerbehebung. Im internen Portal gibt es zusätzlich einen rollenabhängigen Rundgang und eine persönliche Willkommens-Checkliste mit gespeichertem Fortschritt.
 - Persönliche Profile mit Name, Sprache, Zeitzone, Erfahrung, Expertise und zweisprachig pflegbarer Biografie. Im internen Portal gehören geprüftes Profilbild, private Kontakteinstellungen, eigene Anzeige-Bezeichnungen und freiwillig freigegebene Kontaktdaten dazu.
 - Dashboard im internen Portal mit persönlichen Terminen, Lehrtag, nächsten Schritten, Aufgabenhinweisen, relevanten Aufträgen, Kursen, Benachrichtigungen und rollenabhängigen Kennzahlen. Direkte Links führen zum zuständigen Arbeitsbereich.
-- Berechtigungsgefilterte Suche im internen Portal über relevante Kurse, Aufträge, Personen, Unternehmen, Dateien, Wissensinhalte und Chatnachrichten. Suchergebnisse öffnen den passenden Kontext, bei Nachrichten auch den Treffer im Verlauf.
+- Berechtigungsgefilterte Suche im internen Portal über relevante Kurse, Aufträge, Personen, Unternehmen, Dateien, Wissensinhalte und Chatnachrichten. Suchbegriffe stehen nicht in der Webadresse und gehen beim Neuladen verloren. Suchergebnisse öffnen den passenden Kontext, bei Nachrichten auch den Treffer im Verlauf.
 
 ## Konten, Unternehmen und Berechtigungen
 

@@ -1,7 +1,12 @@
 /** Unified discovery renders only server-authorised pages for the current actor. */
 import { mergeCursorItems } from "../../lib/cursor-rows";
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useOutletContext,
+} from "react-router-dom";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -21,7 +26,13 @@ import { searchKinds } from "./unified-schema";
 import "./unified-i18n";
 import "./unified.css";
 
-/** URL navigation remounts the draft; a language change preserves unsaved text. */
+type SearchCriteria = { q: string; kind: string };
+export type SearchSession = [
+  SearchCriteria,
+  (criteria: SearchCriteria) => void,
+];
+
+/** A new submitted search remounts the draft; a language change preserves unsaved text. */
 function SearchForm({
   query,
   kind,
@@ -46,6 +57,7 @@ function SearchForm({
         <input
           id="portal-query"
           type="search"
+          autoComplete="off"
           value={input}
           maxLength={100}
           onChange={(event) => setInput(event.target.value)}
@@ -70,18 +82,19 @@ function SearchForm({
   );
 }
 
-/** Keep the server's cursor intact and hide cached results on a failed recheck. */
+/** Replace old search URLs without rehydrating potentially private query strings. */
 export function PortalSearch() {
+  const { search } = useLocation();
+  return search ? <Navigate to="/search" replace /> : <SearchResults />;
+}
+
+/** Keep the server's cursor intact and hide cached results on a failed recheck. */
+function SearchResults() {
   const { t } = useTranslation("unifiedSearch");
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
-  const [params, setParams] = useSearchParams();
-  const q = (params.get("q") ?? "").trim().slice(0, 100),
-    rawKind = params.get("kind") ?? "",
-    kind = searchKinds.includes(rawKind as (typeof searchKinds)[number])
-      ? rawKind
-      : "";
+  const [{ q, kind }, setCriteria] = useOutletContext<SearchSession>();
   const searchOptions = unifiedSearchQuery(session!.user.id, q, kind);
   const query = useInfiniteQuery({
     ...searchOptions,
@@ -109,7 +122,7 @@ export function PortalSearch() {
                 exact: true,
               });
           } else {
-            setParams({ q: text, ...(value ? { kind: value } : {}) });
+            setCriteria({ q: text, kind: value });
           }
         }}
       />

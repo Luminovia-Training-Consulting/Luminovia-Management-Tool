@@ -57,6 +57,7 @@ import { administrationLinks } from "../features/admin/navigation-links";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { useSignOut } from "../features/auth/sign-out-state";
+import type { SearchSession } from "../features/search/search";
 import i18n from "../lib/i18n";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import {
@@ -105,6 +106,8 @@ export function Shell() {
   const { mutateAsync: saveAppearance } = useSaveUiPreferences(actor);
   const navigate = useNavigate();
   const location = useLocation();
+  // The protected route is keyed by actor; only its current search lives in memory.
+  const [search, setSearch] = useState<SearchSession[0]>({ q: "", kind: "" });
   const { attributes: mobileDisclosure, close: closeMobileMore } =
     useDismissibleDisclosure(location.key, true);
   const { attributes: accountDisclosure } = useDismissibleDisclosure(
@@ -344,10 +347,15 @@ export function Shell() {
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
-                const query = new FormData(event.currentTarget).get("q");
-                navigate(
-                  `/search?q=${encodeURIComponent(String(query ?? ""))}`,
-                );
+                const q = String(
+                  new FormData(event.currentTarget).get("q") ?? "",
+                )
+                  .trim()
+                  .slice(0, 100);
+                setSearch({ q, kind: "" });
+                navigate("/search", {
+                  replace: location.pathname === "/search",
+                });
               }}
             >
               <Search size={20} aria-hidden="true" />
@@ -357,6 +365,7 @@ export function Shell() {
               <input
                 id="portal-global-search"
                 name="q"
+                autoComplete="off"
                 maxLength={100}
                 placeholder={t("portalSearch")}
               />
@@ -481,7 +490,9 @@ export function Shell() {
               ></PortalTour>
               <PermanentDeletionProvider>
                 <Suspense fallback={<Loading />}>
-                  <Outlet />
+                  <Outlet
+                    context={[search, setSearch] satisfies SearchSession}
+                  />
                 </Suspense>
               </PermanentDeletionProvider>
             </>

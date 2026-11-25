@@ -21,8 +21,10 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useOutletContext,
 } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
+import type { SearchSession } from "../features/search/search";
 import {
   AdminNavigation,
   AdministrationSection,
@@ -253,7 +255,7 @@ function setup(
               <Route path="jobs/:id" element={<p>Live job detail route</p>} />
               <Route path="finance" element={<p>Live finance route</p>} />
               <Route path="learning" element={<p>Live learning route</p>} />
-              <Route path="search" element={<NavigationTarget />} />
+              <Route path="search" element={<SearchTarget />} />
             </Route>
             <Route path="/login" element={<p>Login screen</p>} />
           </Routes>
@@ -518,6 +520,16 @@ function NavigationTarget() {
   );
 }
 
+function SearchTarget() {
+  const [{ q }] = useOutletContext<SearchSession>();
+  return (
+    <>
+      <NavigationTarget />
+      <output aria-label="Fixture search term">{q}</output>
+    </>
+  );
+}
+
 describe("native mobile More navigation", () => {
   it("closes after ordinary keyboard link navigation and leaves focus on its visible summary", async () => {
     const { user } = setup();
@@ -593,27 +605,35 @@ describe("native mobile More navigation", () => {
     expect(menu).toHaveProperty("open", false);
     await user.keyboard("{Enter}");
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
-      "/search?q=Fictional%20files",
+      /^\/search$/,
+    );
+    expect(screen.getByLabelText("Fixture search term")).toHaveTextContent(
+      "Fictional files",
     );
     await waitFor(() => expect(menu).toHaveProperty("open", false));
     expect(search).toHaveFocus();
     expect(search).toHaveValue("Fictional files");
   });
 
-  it("closes for same-path query changes and back navigation rather than only a pathname change", async () => {
-    const { user } = setup("/search?q=original");
+  it("closes for repeated search and back navigation without creating search history entries", async () => {
+    const { user } = setup("/calendar");
     const summary = screen.getByLabelText("Mehr");
     const menu = summary.closest("details")!;
-    await user.click(summary);
-    await user.type(
-      within(screen.getByRole("banner")).getByLabelText("Im Portal suchen"),
-      "updated",
+    const search = within(screen.getByRole("banner")).getByLabelText(
+      "Im Portal suchen",
     );
-    await user.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
-        "/search?q=updated",
-      ),
+    await user.type(search, "original{Enter}");
+    expect(
+      await screen.findByLabelText("Fixture search term"),
+    ).toHaveTextContent("original");
+    await user.click(summary);
+    await user.clear(search);
+    await user.type(search, "updated{Enter}");
+    expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
+      /^\/search$/,
+    );
+    expect(screen.getByLabelText("Fixture search term")).toHaveTextContent(
+      "updated",
     );
     await waitFor(() => expect(menu).toHaveProperty("open", false));
     await user.click(summary);
@@ -623,7 +643,7 @@ describe("native mobile More navigation", () => {
     );
     await waitFor(() =>
       expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
-        "/search?q=original",
+        "/calendar",
       ),
     );
     expect(menu).toHaveProperty("open", false);
@@ -642,7 +662,10 @@ describe("Royal workspace sidebar preference", () => {
     await user.type(input, "Fictional files");
     await user.keyboard("{Enter}");
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
-      "/search?q=Fictional%20files",
+      /^\/search$/,
+    );
+    expect(screen.getByLabelText("Fixture search term")).toHaveTextContent(
+      "Fictional files",
     );
     expect(
       banner.querySelector(".notification-menu summary"),

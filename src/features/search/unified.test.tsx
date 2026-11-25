@@ -6,10 +6,11 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { useState } from "react";
+import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { PortalSearch } from "./search";
+import { PortalSearch, type SearchSession } from "./search";
 import { unifiedSearchQuery } from "./unified-api";
 import { unifiedSearchPageSchema } from "./unified-schema";
 
@@ -57,14 +58,22 @@ afterEach(() => {
 });
 
 function view() {
+  function FixtureShell() {
+    const search: SearchSession = useState({ q: "Needle", kind: "wiki" });
+    return <Outlet context={search} />;
+  }
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/search?q=Needle&kind=wiki"]}>
-        <PortalSearch />
+      <MemoryRouter initialEntries={["/search"]}>
+        <Routes>
+          <Route element={<FixtureShell />}>
+            <Route path="search" element={<PortalSearch />} />
+          </Route>
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );

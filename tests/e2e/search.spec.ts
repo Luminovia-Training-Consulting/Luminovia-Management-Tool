@@ -301,11 +301,13 @@ test("real portal search combines authorized sources, excludes foreign private r
     });
     await expect(results.getByRole("link")).toHaveCount(1);
     await expect(results.getByText(jobTitle, {exact: true})).toBeVisible();
-    expect(new URL(page.url()).searchParams.get("q")).toBe(literal);
+    await expect(page).toHaveURL(/\/search$/);
+    expect(await page.evaluate(() => window.history.state?.usr ?? null)).toBeNull();
     await page.reload();
-    await expect(
-        page.getByRole("searchbox", {name: "Search term", exact: true}),
-    ).toHaveValue(literal);
+    await expect(englishSearch).toHaveValue("");
+    await expect(results).toHaveCount(0);
+    await englishSearch.fill(literal);
+    await englishSearch.press("Enter");
     await expect(results.getByRole("link")).toHaveCount(1);
     await results.getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`/jobs/${job}$`));
@@ -313,23 +315,25 @@ test("real portal search combines authorized sources, excludes foreign private r
         page.getByRole("heading", {name: jobTitle, exact: true}),
     ).toBeVisible();
 
-    await page.goto(`/search?q=${encodeURIComponent(marker)}`);
+    await page.goBack();
+    await englishSearch.fill(marker);
+    await englishSearch.press("Enter");
     await results.locator(`a[href="/chats/forum?view=articles&page=${wiki.page_id}"]`).click();
     await expect(
         page.getByRole("heading", {name: wikiTitle, exact: true}),
     ).toBeVisible();
-    await page.goto(`/search?q=${encodeURIComponent(marker)}`);
+    await page.goBack();
     await messageLink.click();
     await expect(
         page.locator(".chat-message-body").filter({hasText: visibleMessage}),
     ).toBeVisible();
-    await page.goto(`/search?q=${encodeURIComponent(marker)}`);
+    await page.goBack();
     await results.locator(`a[href="/people/${peer.id}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/people/${peer.id}$`));
     await expect(
         page.getByRole("heading", {name: peer.name, exact: true}),
     ).toBeVisible();
-    await page.goto(`/search?q=${encodeURIComponent(marker)}`);
+    await page.goBack();
     await expect(results.getByRole("link")).toHaveCount(7);
     await page.evaluate(() => document.fonts.ready);
     expect(

@@ -56,10 +56,17 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
             pages.push(saved.page_id);
         }
         await login(page, owner.email);
-        await page.goto(`/search?q=${encodeURIComponent(needle)}&kind=wiki`);
+        await page.goto("/search");
         await expect(
             page.getByRole("heading", {name: "Universelle Suche", exact: true}),
         ).toBeVisible();
+        const field = page.getByRole("searchbox", {
+            name: "Suchbegriff",
+            exact: true,
+        });
+        await field.fill(needle);
+        await page.getByRole("combobox", {name: "Bereich", exact: true}).selectOption("wiki");
+        await field.press("Enter");
         const result = page.getByRole("link", {
             name: new RegExp(`${needle} own draft`),
         });
@@ -67,19 +74,22 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
         await expect(
             page.getByText(`${needle} peer private`, {exact: true}),
         ).toHaveCount(0);
-        const field = page.getByRole("searchbox", {
-            name: "Suchbegriff",
-            exact: true,
-        });
         await field.fill("Unsaved authored search");
         await page.getByLabel("Sprache", {exact: true}).selectOption("en");
         await expect(
             page.getByRole("searchbox", {name: "Search term", exact: true}),
         ).toHaveValue("Unsaved authored search");
         await page.reload();
-        await expect(
-            page.getByRole("searchbox", {name: "Search term", exact: true}),
-        ).toHaveValue(needle);
+        const englishField = page.getByRole("searchbox", {
+            name: "Search term",
+            exact: true,
+        });
+        await expect(englishField).toHaveValue("");
+        await expect(result).toHaveCount(0);
+        await englishField.fill(needle);
+        await page.getByRole("combobox", {name: "Area", exact: true}).selectOption("wiki");
+        await englishField.press("Enter");
+        await expect(result).toBeVisible();
         expect(
             (
                 await new AxeBuilder({page})

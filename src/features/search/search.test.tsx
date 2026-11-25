@@ -1,13 +1,14 @@
 /**
- * Regressions for URL-driven search, retained typing drafts and no requests for short terms. UI
+ * Regressions for private search terms, typing drafts and no requests for short terms. UI
  * fixtures do not replace permission-filtered server search.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { useState } from "react";
+import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PortalSearch } from "./search";
+import { PortalSearch, type SearchSession } from "./search";
 import i18n from "../../lib/i18n";
 
 const fake = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn() }));
@@ -37,11 +38,23 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 /** Render the real page in its router/query context for the interaction checks below. */
-function page() {
+function page(path = "/search", q = "Alpha") {
+  function FixtureShell() {
+    const search: SearchSession = useState({ q, kind: "" });
+    return <Outlet context={search} />;
+  }
   const router = createMemoryRouter(
-    [{ path: "/search", element: <PortalSearch /> }],
+    [
+      {
+        element: <FixtureShell />,
+        children: [
+          { path: "/search", element: <PortalSearch /> },
+          { path: "/files", element: <p>Files fixture</p> },
+        ],
+      },
+    ],
     {
-      initialEntries: ["/search?q=Alpha"],
+      initialEntries: [path],
     },
   );
   const client = new QueryClient({
@@ -55,33 +68,54 @@ function page() {
   return router;
 }
 
-describe("URL-driven portal search", () => {
-  it("replaces the draft on query navigation but preserves ordinary unsaved typing", async () => {
+describe("In-memory portal search", () => {
+  it("submits the term without putting it in the URL or navigation state", async () => {
+    const router = page("/search", "");
+    const input = screen.getByRole("searchbox", { name: "Suchbegriff" });
+    await userEvent.type(input, "Fictional private term{Enter}");
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "unified_search",
+        expect.objectContaining({ p_query: "Fictional private term" }),
+      ),
+    );
+    expect(router.state.location).toMatchObject({
+      pathname: "/search",
+      search: "",
+      state: null,
+    });
+  });
+
+  it("retains the last submitted term on in-app return, not the unsaved draft", async () => {
     const router = page();
     const input = screen.getByRole("searchbox", { name: "Suchbegriff" });
     expect(input).toHaveValue("Alpha");
     await userEvent.clear(input);
     await userEvent.type(input, "unfinished draft");
     expect(input).toHaveValue("unfinished draft");
-    await router.navigate("/search?q=Beta");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("searchbox", { name: "Suchbegriff" }),
-      ).toHaveValue("Beta"),
-    );
-    await router.navigate("/search?q=Alpha");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("searchbox", { name: "Suchbegriff" }),
-      ).toHaveValue("Alpha"),
+    await act(() => router.navigate("/files"));
+    await act(() => router.navigate(-1));
+    expect(screen.getByRole("searchbox", { name: "Suchbegriff" })).toHaveValue(
+      "Alpha",
     );
   });
+  it("scrubs an old query URL without automatically submitting its text", async () => {
+    const router = page("/search?q=Fictional%20legacy%20term&kind=wiki", "");
+    await waitFor(() => expect(router.state.location.search).toBe(""));
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(screen.getByRole("searchbox", { name: "Suchbegriff" })).toHaveValue(
+      "",
+    );
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
   it("does not request any data for a short query", async () => {
-    const router = page();
+    page();
     await waitFor(() => expect(fake.rpc).toHaveBeenCalled());
     fake.rpc.mockClear();
     fake.from.mockClear();
-    await router.navigate("/search?q=x");
+    const input = screen.getByRole("searchbox", { name: "Suchbegriff" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "x{Enter}");
     expect(fake.rpc).not.toHaveBeenCalled();
     expect(fake.from).not.toHaveBeenCalled();
   });
