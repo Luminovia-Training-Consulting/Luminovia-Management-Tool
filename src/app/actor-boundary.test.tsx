@@ -92,10 +92,26 @@ vi.mock("../features/dashboard/dashboard", () => ({
   Dashboard: () => <p>Fictional workspace</p>,
 }));
 const { accountPage } = vi.hoisted(() => ({ accountPage: vi.fn() }));
+const { clientPortalPage, enquiriesPage } = vi.hoisted(() => ({
+  clientPortalPage: vi.fn(),
+  enquiriesPage: vi.fn(),
+}));
 vi.mock("../features/accounts/accounts", () => ({
   AccountsPage: () => {
     accountPage();
     return <h1>Fictional account administration</h1>;
+  },
+}));
+vi.mock("../features/commercial/client-portal", () => ({
+  ClientPortalPage: () => {
+    clientPortalPage();
+    return <h1>Fictional company workspace</h1>;
+  },
+}));
+vi.mock("../features/enquiries/enquiries", () => ({
+  EnquiriesPage: () => {
+    enquiriesPage();
+    return <h1>Fictional management enquiries</h1>;
   },
 }));
 vi.mock("../features/auth/callback", async () => {
@@ -125,6 +141,8 @@ afterEach(() => {
   state.permissions = [];
   state.callback = null;
   accountPage.mockClear();
+  clientPortalPage.mockClear();
+  enquiriesPage.mockClear();
 });
 
 /** Observe the Router URL without exposing it in the real recovery page. */
@@ -229,6 +247,9 @@ it.each([
   ["management", "/admin/white-label"],
   ["management", "/admin/reset"],
   ["client", "/chats/forum"],
+  ["client", "/enquiries"],
+  ["lecturer", "/enquiries"],
+  ["management", "/client"],
   ["lecturer", "/missing-page?private=example"],
 ])(
   "shows the same actionable 404 at the original URL for %s on %s",
@@ -247,11 +268,24 @@ it.each([
       screen.getByRole("link", { name: /Hilfe öffnen|Open help/ }),
     ).toHaveAttribute("href", "/help?topic=troubleshooting");
     expect(accountPage).not.toHaveBeenCalled();
+    if (path === "/client") expect(clientPortalPage).not.toHaveBeenCalled();
+    if (path === "/enquiries") expect(enquiriesPage).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("heading", { name: /^(Verwaltung|Administration)$/ }),
     ).not.toBeInTheDocument();
   },
 );
+
+it.each([
+  ["client", "/client", "Fictional company workspace"],
+  ["admin", "/client", "Fictional company workspace"],
+  ["management", "/enquiries", "Fictional management enquiries"],
+])("mounts %s access to %s when authorized", async (role, path, heading) => {
+  state.roles = [role];
+  if (role === "management") state.permissions = ["organisations.manage"];
+  setup(path);
+  expect(await screen.findByRole("heading", { name: heading })).toBeVisible();
+});
 
 it("allows the authorized administration destination and unmounts it when its permission is lost", async () => {
   state.roles = ["management"];

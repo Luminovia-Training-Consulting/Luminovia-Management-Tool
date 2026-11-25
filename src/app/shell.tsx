@@ -66,6 +66,7 @@ import {
 } from "../lib/installation-brand";
 import { financeWorkspaceAccess } from "./finance-access";
 import { Button } from "../components/ui/button";
+import { PageNotFound } from "../components/page-not-found";
 import { ErrorState, Loading, Notice } from "../components/common";
 import "../features/learning/i18n";
 import "../features/workbench/finance-i18n";
@@ -207,6 +208,9 @@ export function Shell() {
   const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const clientPortalAccess = roles.data?.includes("client") ?? false;
+  const platformAdministrator = roles.data?.some(
+    (role) => role === "admin" || role === "owner",
+  );
   const learnerAccess = roles.data?.includes("participant") ?? false;
   const financeAccess = financeWorkspaceAccess(roles.data, permissions.data);
   const administration = administrationLinks(
@@ -304,6 +308,22 @@ export function Shell() {
     return <Loading />;
   if (online && !profileDenied && !profile.isError && roles.isError)
     return <ErrorState retry={() => void roles.refetch()} />;
+  if (
+    location.pathname === "/client" &&
+    !clientPortalAccess &&
+    !platformAdministrator
+  )
+    return <PageNotFound />;
+  if (/^\/enquiries(?:\/|$)/.test(location.pathname)) {
+    if (permissions.isPending) return <Loading />;
+    if (permissions.isError)
+      return <ErrorState retry={() => void permissions.refetch()} />;
+    if (
+      !permissions.data?.includes("organisations.manage") &&
+      !platformAdministrator
+    )
+      return <PageNotFound />;
+  }
   if (guestOnly && !guestRouteAllowed(location.pathname))
     return <Navigate to="/profile" replace />;
   // Keep standalone learners out of operational page loaders, including on direct links.
