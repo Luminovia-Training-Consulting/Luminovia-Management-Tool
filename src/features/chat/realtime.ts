@@ -8,8 +8,8 @@ import { db } from "../../lib/supabase";
 import { chatKeys } from "./api";
 
 /**
- * Treat Realtime payloads as refetch signals; authorized RPCs remain authoritative. Observe one room,
- * batch refreshes and dispose timers/subscription on actor or room changes.
+ * Message events carry only message and room IDs. Authorized RPCs remain the
+ * source of history; batch refreshes and dispose the room subscription on changes.
  */
 export function useChatRealtime(actor: string, room: string | undefined) {
   const client = useQueryClient();

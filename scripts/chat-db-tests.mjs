@@ -93,7 +93,10 @@ const msg = (who, room, body, key = randomUUID(), document = null) =>
     value(who, "send_message", [room, body, key, document]);
 try {
     await sql(`create database ${database}`, "postgres");
-    await sql(`create schema auth;create schema extensions;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz default now(),created_at timestamptz default clock_timestamp());
+    // Provide the publication without starting a service. The API suite also
+    // checks the actual Realtime payload assembled for authenticated sessions.
+    await sql(`create publication supabase_realtime;
+ create schema auth;create schema extensions;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz default now(),created_at timestamptz default clock_timestamp());
  create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;
  create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;
  grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`);
@@ -227,6 +230,35 @@ try {
             await assert.rejects(
                 msg(a, dm, "Altered content", key),
                 /Idempotency key conflicts/,
+            );
+        },
+    );
+    await check(
+        "DM text is available through authorized history, not raw table or published columns",
+        async () => {
+            await assert.rejects(
+                actor(b, `select body from public.messages where id='${first}'`),
+                /permission denied/,
+            );
+            assert.equal(
+                await actor(b, `select id from public.messages where room_id='${dm}'`),
+                first,
+            );
+            assert.equal(
+                await actor(admin, `select id from public.messages where room_id='${dm}'`),
+                "",
+            );
+            assert.equal((await rows(b, "chat_messages", [dm]))[0].body, "Hallo Beta");
+            assert.deepEqual(
+                JSON.parse(await sql(`select json_agg(a.attname order by a.attnum)
+                    from pg_attribute a where a.attrelid='public.messages'::regclass
+                    and a.attnum > 0 and not a.attisdropped
+                    and has_column_privilege('authenticated', a.attrelid, a.attnum, 'select')`)),
+                ["id", "room_id"],
+            );
+            assert.equal(await sql(`select attnames::text from pg_publication_tables
+                where pubname='supabase_realtime' and schemaname='public' and tablename='messages'`),
+                "{id,room_id}",
             );
         },
     );

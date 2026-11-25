@@ -153,6 +153,15 @@ try {
         ).length,
         1,
     );
+    assert.equal(
+        (await b.client.from("messages").select("body").eq("id", message)).error?.code,
+        "42501",
+        "A current DM member reads content through history, not the invalidation source",
+    );
+    assert.equal(
+        (await checked(b.client.rpc("chat_messages", {p_room_id: dm}), "Read authorized DM history"))[0].body,
+        "Actual private message",
+    );
     for (const actor of [outsider, admin]) {
         assert.equal(
             (
@@ -291,13 +300,13 @@ try {
     const ownerEvents = [],
         memberEvents = [],
         outsiderEvents = [];
-    await subscribeToRoom(a.client, group, "messages", ["INSERT"], ownerEvents);
-    await subscribeToRoom(b.client, group, "messages", ["INSERT"], memberEvents);
+    await subscribeToRoom(a.client, group, "messages", ["INSERT", "UPDATE"], ownerEvents);
+    await subscribeToRoom(b.client, group, "messages", ["INSERT", "UPDATE"], memberEvents);
     await subscribeToRoom(
         outsider.client,
         group,
         "messages",
-        ["INSERT"],
+        ["INSERT", "UPDATE"],
         outsiderEvents,
     );
     const visible = await checked(
@@ -312,8 +321,20 @@ try {
         () =>
             ownerEvents.some((m) => m.id === visible) &&
             memberEvents.some((m) => m.id === visible),
-        "Both actual authorised subscribers receive persisted message",
+        "Both actual authorised subscribers receive the committed invalidation",
     );
+    await checked(
+        a.client.rpc("edit_message", {p_message_id: visible, p_body: "Fictional edit via RPC"}),
+        "Edit Realtime fixture",
+    );
+    await eventually(
+        () => [ownerEvents, memberEvents].every((events) =>
+            events.filter((event) => event.id === visible).length === 2),
+        "Both authorised subscribers receive the edit invalidation too",
+    );
+    for (const event of [...ownerEvents, ...memberEvents]) {
+        assert.deepEqual(event, {id: visible, room_id: group}, "No message text or other fields on the wire");
+    }
     assert.equal(
         outsiderEvents.length,
         0,
