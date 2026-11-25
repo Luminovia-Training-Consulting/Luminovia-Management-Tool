@@ -42,7 +42,7 @@ export function Avatar({
   const version = !selection.isError ? selection.data?.version_id : undefined;
   const image = useQuery({
     queryKey: ["avatar-image", actor, userId, version],
-    queryFn: ({ signal }) => readAvatar(userId, signal),
+    queryFn: ({ signal }) => readAvatar(userId, version!, signal),
     enabled: Boolean(actor && version) && online,
     retry: false,
     gcTime: 0,
@@ -112,8 +112,11 @@ export function AvatarEditor({ name }: { name: string }) {
       } else await selectAvatar(null);
     },
     onSuccess: async () => {
-      await cache.invalidateQueries({ queryKey: ["avatar", actor] });
-      cache.removeQueries({ queryKey: ["avatar-image", actor] });
+      cache.removeQueries({ queryKey: ["avatar-image", actor, actor] });
+      await cache.invalidateQueries({
+        queryKey: ["avatar", actor, actor],
+        exact: true,
+      });
     },
   });
   return (

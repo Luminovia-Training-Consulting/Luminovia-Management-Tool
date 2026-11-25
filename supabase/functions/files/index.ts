@@ -69,7 +69,7 @@ Deno.serve(async (request: Request) => {
         headers['Access-Control-Allow-Origin'] = origin;
         headers['Access-Control-Allow-Headers'] = 'authorization,apikey,content-type,x-client-info';
         headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
-        headers['Access-Control-Expose-Headers'] = 'Content-Disposition';
+        headers['Access-Control-Expose-Headers'] = 'Content-Disposition,X-Avatar-Version';
     }
     const json = (status: number, body: unknown) => new Response(JSON.stringify(body), {status, headers: {...headers, 'Content-Type': 'application/json'}});
     if (!origins.includes(origin)) return json(403, {error: 'origin_not_allowed'});
@@ -404,8 +404,8 @@ Deno.serve(async (request: Request) => {
         }
         // Avatar selection is a narrow projection, not a general grant to personal files.
         if (data.action === 'avatar') {
-            if (!uuid(data.user_id)) return json(400, {error: 'invalid_request'});
-            const bytes = await selectedAvatarBytes(data.user_id, {
+            if (!uuid(data.user_id) || (data.version_id !== undefined && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
+            const selected = await selectedAvatarBytes(data.user_id, {
                 selection: async (target) => {
                     const result = await user.rpc('profile_avatar', {p_user_id: target});
                     if (result.error) throw new Error('access_denied');
@@ -425,10 +425,11 @@ Deno.serve(async (request: Request) => {
                     const result = await service.storage.from('portal-clean').download(path);
                     return result.error || !result.data ? null : new Uint8Array(await result.data.arrayBuffer());
                 },
-            });
-            return new Response(webFileBytes(bytes), {
+            }, data.version_id as string | undefined);
+            return new Response(webFileBytes(selected.bytes), {
                 headers: {
                     ...headers, 'Content-Type': 'image/png',
+                    'X-Avatar-Version': selected.versionId,
                     'Content-Disposition': 'inline; filename="avatar.png"', 'Content-Security-Policy': "default-src 'none'; sandbox"
                 }
             });
@@ -476,6 +477,6 @@ Deno.serve(async (request: Request) => {
         // Return only allowed stable error codes, not Storage paths, tokens or internal provider responses.
     } catch (error) {
         const code = error instanceof RequestBodyTooLarge ? 'file_size' : error instanceof Error ? error.message : '';
-        return json(code === 'deletion_unavailable' ? 503 : code === 'access_denied' ? 403 : code === 'avatar_unavailable' ? 404 : code === 'file_size' ? 413 : code === 'unsupported_type' ? 415 : 400, {error: ['deletion_unavailable', 'access_denied', 'avatar_unavailable', 'file_size', 'unsupported_type', 'avatar_image_invalid'].includes(code) ? code : 'invalid_request'});
+        return json(code === 'deletion_unavailable' ? 503 : code === 'access_denied' ? 403 : code === 'avatar_unavailable' ? 404 : code === 'avatar_changed' ? 409 : code === 'file_size' ? 413 : code === 'unsupported_type' ? 415 : 400, {error: ['deletion_unavailable', 'access_denied', 'avatar_unavailable', 'avatar_changed', 'file_size', 'unsupported_type', 'avatar_image_invalid'].includes(code) ? code : 'invalid_request'});
     }
 });

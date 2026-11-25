@@ -29,6 +29,11 @@ interface AvatarDependencies {
     download: (path: string) => Promise<Uint8Array | null>;
 }
 
+interface SelectedAvatar {
+    bytes: Uint8Array;
+    versionId: string;
+}
+
 /** No Storage URL or general personal-document grant is returned. The caller
  * adapter uses the user's SQL projection for selection/visibility, and a
  * server-only client solely for reading the selected exact clean object. */
@@ -36,9 +41,11 @@ interface AvatarDependencies {
 export async function selectedAvatarBytes(
     target: string,
     dependencies: AvatarDependencies,
-): Promise<Uint8Array> {
+    expectedVersion?: string,
+): Promise<SelectedAvatar> {
     const selected = await dependencies.selection(target);
     if (!selected) throw new Error("avatar_unavailable");
+    if (expectedVersion && selected.version_id !== expectedVersion) throw new Error("avatar_changed");
     const version = await dependencies.version(selected.version_id);
     if (
         !version ||
@@ -57,6 +64,8 @@ export async function selectedAvatarBytes(
         document.deleted_at
     )
         throw new Error("access_denied");
+    const beforeDownload = await dependencies.selection(target);
+    if (beforeDownload?.version_id !== version.id) throw new Error("avatar_changed");
     const bytes = await dependencies.download(version.object_path);
     if (!bytes) throw new Error("avatar_unavailable");
     await validateAvatar(bytes, LEGACY_MAX_AVATAR_SIZE + 1);
@@ -64,5 +73,5 @@ export async function selectedAvatarBytes(
     // The same target must still expose this exact version before any byte leaves.
     const current = await dependencies.selection(target);
     if (current?.version_id !== version.id) throw new Error("access_denied");
-    return bytes;
+    return {bytes, versionId: version.id};
 }

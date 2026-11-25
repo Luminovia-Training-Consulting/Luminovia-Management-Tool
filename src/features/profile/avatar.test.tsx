@@ -13,7 +13,16 @@ import {
 import { Avatar, AvatarEditor } from "./avatar";
 
 const { state, readAvatar } = vi.hoisted(() => ({
-  state: { actor: "actor-a", online: true, canView: true, selection: vi.fn() },
+  state: {
+    actor: "actor-a",
+    online: true,
+    canView: true,
+    ownVersion: "actor-a" as string | null,
+    selection: vi.fn(),
+    selectAvatar: vi.fn(async (versionId: string | null) => {
+      state.ownVersion = versionId;
+    }),
+  },
   readAvatar: vi.fn(),
 }));
 vi.mock("../auth/auth-context", () => ({
@@ -28,13 +37,14 @@ vi.mock("./avatar-api", () => ({
     queryKey: ["avatar", actor, target],
     queryFn: async () => {
       state.selection();
-      return state.canView ? { version_id: actor } : null;
+      const version_id = target === actor ? state.ownVersion : actor;
+      return state.canView && version_id ? { version_id } : null;
     },
     gcTime: 0,
   }),
   readAvatar,
   prepareAvatar: vi.fn(),
-  selectAvatar: vi.fn(),
+  selectAvatar: state.selectAvatar,
 }));
 afterEach(() => {
   cleanup();
@@ -43,6 +53,7 @@ afterEach(() => {
   state.actor = "actor-a";
   state.online = true;
   state.canView = true;
+  state.ownVersion = "actor-a";
   vi.useRealTimers();
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
@@ -83,6 +94,11 @@ describe("private avatar Blob lifecycle", () => {
     await waitFor(() =>
       expect(screen.getByRole("img")).toHaveAttribute("src", "blob:avatar-a"),
     );
+    expect(readAvatar).toHaveBeenCalledWith(
+      "teacher",
+      "actor-a",
+      expect.any(AbortSignal),
+    );
     state.actor = "actor-b";
     view.update();
     expect(screen.getByRole("img")).not.toHaveAttribute("src");
@@ -120,7 +136,7 @@ describe("private avatar Blob lifecycle", () => {
     let finish!: (blob: Blob) => void;
     let oldSignal!: AbortSignal;
     readAvatar
-      .mockImplementationOnce((_target, signal) => {
+      .mockImplementationOnce((_target, _version, signal) => {
         oldSignal = signal;
         return new Promise((resolve) => {
           finish = resolve;
@@ -178,5 +194,43 @@ describe("private avatar Blob lifecycle", () => {
     );
     expect(screen.getByRole("img")).not.toHaveAttribute("src");
     expect(readAvatar).toHaveBeenCalledTimes(1);
+  });
+  it("updates only the own avatar selection and leaves another profile's active image cache intact", async () => {
+    readAvatar.mockResolvedValue(new Blob(["private image"]));
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <Avatar userId="teacher" name="Fictional Teacher" />
+        <AvatarEditor name="Fictional Teacher" />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(readAvatar).toHaveBeenCalledTimes(2));
+    const teacherImage = client.getQueryCache().find({
+      queryKey: ["avatar-image", "actor-a", "teacher", "actor-a"],
+    });
+    const ownImage = client.getQueryCache().find({
+      queryKey: ["avatar-image", "actor-a", "actor-a", "actor-a"],
+    });
+    expect(teacherImage).toBeDefined();
+    expect(ownImage).toBeDefined();
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Profilbild entfernen" }).click();
+    });
+    await waitFor(() => expect(state.selectAvatar).toHaveBeenCalledWith(null));
+    await waitFor(() =>
+      expect(
+        client.getQueryCache().find({
+          queryKey: ["avatar-image", "actor-a", "teacher", "actor-a"],
+        }),
+      ).toBeDefined(),
+    );
+    expect(
+      client.getQueryCache().find({
+        queryKey: ["avatar-image", "actor-a", "actor-a", "actor-a"],
+      }),
+    ).toBeUndefined();
   });
 });

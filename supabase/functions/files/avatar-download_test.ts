@@ -36,7 +36,14 @@ function fixture() {
             if (!visible) throw new Error("access_denied");
             return current ? {version_id: current} : null;
         },
-        version: async (id: string) => ({
+        version: async (id: string): Promise<{
+            id: string;
+            document_id: string;
+            object_path: string;
+            status: string;
+            mime_type: string;
+            size_bytes: number;
+        } | null> => ({
             id,
             document_id: "image",
             object_path: "private/image/version",
@@ -44,7 +51,12 @@ function fixture() {
             mime_type: "image/png",
             size_bytes: png.length,
         }),
-        document: async (_id: string) => ({
+        document: async (_id: string): Promise<{
+            owner_id: string;
+            scope: string;
+            kind: string;
+            deleted_at: string | null;
+        } | null> => ({
             owner_id: "teacher",
             scope: "personal",
             kind: "avatar",
@@ -72,7 +84,8 @@ Deno.test(
     async () => {
         const state = fixture();
         const result = await selectedAvatarBytes("teacher", state.dependencies);
-        assert(result === png);
+        assert(result.bytes === png);
+        assert(result.versionId === "selected");
         assert(state.downloads() === 1);
         state.dependencies.document = async () => ({
             owner_id: "another-person",
@@ -85,6 +98,49 @@ Deno.test(
             "access_denied",
         );
         assert(state.downloads() === 1, "Foreign bytes must not be fetched");
+    },
+);
+Deno.test(
+    "a stale requested version is rejected before version, document or Storage reads",
+    async () => {
+        const state = fixture();
+        let metadataReads = 0;
+        state.dependencies.version = async () => {
+            metadataReads++;
+            return null;
+        };
+        state.dependencies.document = async () => {
+            metadataReads++;
+            return null;
+        };
+        await rejects(
+            selectedAvatarBytes("teacher", state.dependencies, "older-version"),
+            "avatar_changed",
+        );
+        assert(metadataReads === 0, "stale selections must not read metadata");
+        assert(state.downloads() === 0, "stale selections must not read Storage");
+    },
+);
+Deno.test(
+    "a selection change during metadata lookup is rejected before Storage access",
+    async () => {
+        const state = fixture();
+        state.dependencies.version = async (id) => {
+            state.select("replacement");
+            return {
+                id,
+                document_id: "image",
+                object_path: "private/image/version",
+                status: "clean",
+                mime_type: "image/png",
+                size_bytes: png.length,
+            };
+        };
+        await rejects(
+            selectedAvatarBytes("teacher", state.dependencies, "selected"),
+            "avatar_changed",
+        );
+        assert(state.downloads() === 0, "superseded selections must not read Storage");
     },
 );
 Deno.test(

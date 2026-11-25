@@ -42,10 +42,15 @@ export async function selectAvatar(versionId: string | null) {
 /** Read permitted PNG bytes through the authenticated gateway with AbortSignal and no HTTP cache. */
 export async function readAvatar(
   target: string,
+  versionId: string,
   signal: AbortSignal,
 ): Promise<Blob> {
+  if (signal.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   requireOnline();
   const auth = await db().auth.getSession();
+  if (signal.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   if (auth.error || !auth.data.session)
     throw new Error("authentication_required");
   const response = await fetch(
@@ -57,14 +62,25 @@ export async function readAvatar(
         Authorization: `Bearer ${auth.data.session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ action: "avatar", user_id: target }),
+      body: JSON.stringify({
+        action: "avatar",
+        user_id: target,
+        version_id: versionId,
+      }),
       signal,
       cache: "no-store",
     },
   );
+  if (signal.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   if (!response.ok || response.headers.get("Content-Type") !== "image/png")
     throw new Error("avatar_unavailable");
-  return await response.blob();
+  if (response.headers.get("X-Avatar-Version") !== versionId)
+    throw new Error("avatar_unavailable");
+  const blob = await response.blob();
+  if (signal.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
+  return blob;
 }
 
 /**

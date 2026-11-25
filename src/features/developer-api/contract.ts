@@ -570,7 +570,14 @@ const fileGateway = {
               }),
               required: ["action", "id"],
             },
-            object({ action: { const: "avatar" }, user_id: uuid }),
+            {
+              ...object({
+                action: { const: "avatar" },
+                user_id: uuid,
+                version_id: uuid,
+              }),
+              required: ["action", "user_id"],
+            },
             object({
               action: { const: "qualification_evidence_download" },
               evidence_id: uuid,
@@ -596,6 +603,11 @@ const fileGateway = {
           "Cache-Control": privateDownloadHeaders["Cache-Control"],
           "X-Content-Type-Options":
             privateDownloadHeaders["X-Content-Type-Options"],
+          "X-Avatar-Version": {
+            description:
+              "Returned only for avatar responses; confirms the exact selected version.",
+            schema: uuid,
+          },
           "Content-Disposition": {
             ...privateDownloadHeaders["Content-Disposition"],
             description: "Present for binary responses only.",
@@ -624,6 +636,7 @@ const fileGateway = {
         "file_not_clean",
         "idempotency_conflict",
         "version_superseded",
+        "avatar_changed",
       ]),
       "413": documentGatewayError("File empty or size limit exceeded", [
         "file_size",
