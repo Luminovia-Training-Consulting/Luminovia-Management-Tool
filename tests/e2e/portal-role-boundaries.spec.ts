@@ -237,11 +237,20 @@ for (const role of actors) {
       if ("landing" in role) {
         await expect(page).toHaveURL(destination);
         if (role.primary === "client") {
+          // The URL can update before the redirected workspace has rendered.
+          await expect(
+            page.getByRole("heading", {
+              name: /^(Unternehmensportal|Company portal)$/i,
+              level: 1,
+            }),
+          ).toBeVisible();
           if (isMobile) {
-            await page.locator("details.mobile-more > summary").click();
-            await page
-              .locator('#mobile-shell-navigation a[href="/client/finance"]')
-              .click();
+            const menu = page.locator("details.mobile-more");
+            await menu.getByLabel("Mehr", { exact: true }).tap();
+            await expect(menu).toHaveJSProperty("open", true);
+            await menu
+              .getByRole("link", { name: "Unternehmensfinanzen", exact: true })
+              .tap();
           } else {
             await sidebarLink("/client/finance").click();
           }
