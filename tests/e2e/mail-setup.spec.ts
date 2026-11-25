@@ -51,12 +51,14 @@ test("reports invitation and relay switches only to current mail administrators"
     page.getByRole("heading", { name: "Vollreset" }),
   ).toBeVisible();
   await expect(page.getByText("Dauerhafte Datenlöschung")).toBeVisible();
+  // The isolated local supervisor advertises this test installation as a
+  // valid target. Never submit the destructive form in the browser suite.
   await expect(
-    page.getByText("Der Browser-Reset ist auf dieser Installation gerade nicht verfügbar."),
+    page.getByText(/^luminovia-portal-test-[a-f0-9]{8}$/),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Alle Daten dieser Installation löschen" }),
-  ).toHaveCount(0);
+  ).toBeDisabled();
 });
 
 test("mail administrators can correct a rejected invitation while ambiguous messages stay locked", async ({

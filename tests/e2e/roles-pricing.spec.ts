@@ -128,7 +128,7 @@ test("management assigns only subordinate roles while only administration sees a
         expect((await managerApi.rpc("lecturer_compensation", {
             p_user_id: teacher.id,
         })).error?.code).toBe("42501");
-        await page.goto("/admin");
+        await page.goto("/admin/operations");
         await expect(
             page.getByRole("heading", {
                 name: "Kurse & Aufträge verwalten",

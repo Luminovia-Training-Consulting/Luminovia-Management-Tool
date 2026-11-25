@@ -42,7 +42,7 @@ test("Chats and legacy articles reach the same Forum and outsiders cannot open a
         await page.goto("/wiki");
         await expect(page).toHaveURL(/\/chats\/forum\?view=articles$/);
         await expect(page.getByRole("heading", {name: /^(Fachartikel|Articles)$/})).toBeVisible();
-        await page.getByRole("button", {name: /^(Diskussionen|Discussions)$/}).click();
+        await page.getByRole("button", {name: /^(Diskussionen|Discussions)(?: |$)/}).click();
         await expect(page).toHaveURL(/\/chats\/forum$/);
         await expect(
             page.getByRole("heading", {name: "Forum", exact: true}),
