@@ -8,7 +8,7 @@ import fs, {existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSyn
 import {syncBuiltinESMExports} from "node:module";
 import {tmpdir} from "node:os";
 import {createServer} from "node:net";
-import {join, resolve} from "node:path";
+import {basename, join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
 import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, baselineFixtureMigrations, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
@@ -908,10 +908,11 @@ test("staged API adaptation refuses dangling links, FIFOs and Unix sockets witho
                         [
                             "-c",
                             "import socket,sys\nwith socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as fixture:\n fixture.bind(sys.argv[1])",
-                            f.file,
+                            // AF_UNIX cannot hold a long absolute TMPDIR path.
+                            basename(f.file),
                         ],
                     ];
-            const created = spawnSync(...args, {encoding: "utf8"});
+            const created = spawnSync(...args, {cwd: f.testing, encoding: "utf8"});
             assert.equal(created.status, 0, created.stderr);
         }
         const result = spawnSync(

@@ -266,6 +266,24 @@ const acceptance = (result) =>
             .value,
     );
 
+test("GitHub acceptance failures annotate the stage without publishing child errors", async () => {
+    for (const githubActions of ["true", "false"]) {
+        const result = await runFixture({
+            args: ["--phase", "system"],
+            inherited: {GITHUB_ACTIONS: githubActions},
+            fail: ({args}) => args.includes("audit"),
+        });
+        assert.ok(result.error);
+        assert.equal(acceptance(result).status, "failed");
+        assert.deepEqual(
+            result.messages.filter((text) => text.startsWith("::error::")),
+            githubActions === "true"
+                ? ["::error::Isolated system acceptance failed: Production dependencies"]
+                : [],
+        );
+    }
+});
+
 test("a browser lane cannot reduce complete or system acceptance before acquiring any resource", async () => {
     for (const args of [
         [],

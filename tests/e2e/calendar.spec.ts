@@ -48,8 +48,10 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     const commonZones = zoneSelect.locator('optgroup[label="Häufige Zeitzonen"]');
     await expect(commonZones.locator(`option[value="${profileZone}"]`)).toHaveCount(1);
     await zoneSelect.selectOption(profileZone);
-    await page.getByRole("button", { name: "Profil speichern", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText(/gespeichert/i);
+    // Other profile panels can announce loading while this form confirms the save.
+    const profileForm = page.locator("form").filter({ has: zoneSelect });
+    await profileForm.getByRole("button", { name: "Profil speichern", exact: true }).click();
+    await expect(profileForm.getByRole("status")).toContainText(/gespeichert/i);
     await page.reload();
     await expect(zoneSelect).toHaveValue(profileZone);
     await page.goto("/calendar");

@@ -661,6 +661,16 @@ if (failure) {
     evidence.status = "failed";
     evidence.completedAt = new Date().toISOString();
     saveEvidence();
+    if (process.env.GITHUB_ACTIONS === "true") {
+        // Only publish stage labels, never child output or raw error messages.
+        const failedStages = evidence.stages
+            .filter(({status}) => status === "failed")
+            .map(({label}) => label);
+        const detail = failedStages.join(", ") || "setup, reporting, or cleanup";
+        const message = `Isolated ${phase.phase} acceptance failed: ${detail}`
+            .replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+        console.log(`::error::${message}`);
+    }
     privateWrite(
         join(artifacts, "RESULT.txt"),
         `FAIL\nPhase: ${phase.phase}\n${failure.message}\n`,
