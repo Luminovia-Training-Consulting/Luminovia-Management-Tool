@@ -307,32 +307,43 @@ await withApiFixture(
         pass(
             "Versioned evidence/manual decisions share one history; withdrawal and sanitized retry never auto-verify",
         );
-        const before = (
-            await checked(
-                service
-                    .from("document_versions")
-                    .select("id")
-                    .eq("uploaded_by", manager.id),
-            )
-        ).length;
+        // Count reservations for the actor who actually attempted each upload.
+        async function versionCount(who) {
+            const {count, error} = await service
+                .from("document_versions")
+                .select("id", {count: "exact", head: true})
+                .eq("uploaded_by", who.id);
+            assert.ifError(error);
+            assert.ok(Number.isSafeInteger(count));
+            return count;
+        }
+        const peerBefore = await versionCount(peer);
         const foreign = await upload(
-            manager,
+            peer,
             "Forbidden.txt",
             "Fictional forbidden upload",
             {owner_id: teacher.id},
         );
         assert.equal(foreign.status, 403);
-        assert.equal(
-            (
-                await checked(
-                    service
-                        .from("document_versions")
-                        .select("id")
-                        .eq("uploaded_by", manager.id),
-                )
-            ).length,
-            before,
+        assert.equal(await versionCount(peer), peerBefore);
+        const managerBefore = await versionCount(manager);
+        const delegated = await upload(
+            manager,
+            "Delegated.txt",
+            "Fictional authorised delegated certificate",
+            {owner_id: teacher.id},
         );
+        assert.equal(delegated.status, 200, JSON.stringify(delegated.body));
+        assert.equal(delegated.body.document.status, "clean");
+        const document = await checked(
+            service
+                .from("documents")
+                .select("owner_id,uploaded_by")
+                .eq("id", delegated.body.document.id)
+                .single(),
+        );
+        assert.deepEqual(document, {owner_id: teacher.id, uploaded_by: manager.id});
+        assert.equal(await versionCount(manager), managerBefore + 1);
         const eicar = await upload(
             teacher,
             "Antivirus.txt",
@@ -361,7 +372,7 @@ await withApiFixture(
             true,
         );
         pass(
-            "Foreign subject upload rejected before reservation; actual antivirus-test content cannot become evidence",
+            "Only authorised management can upload delegated certificates; actual antivirus-test content cannot become evidence",
         );
         const again = await bind(doc.current_version_id, 4);
         await sql(

@@ -560,11 +560,16 @@ try {
                     .teachers.some((x) => x.id === lecturer),
             );
             assert.deepEqual(await rows(otherClient, "client_spend_summary"), []);
+            // Business receipts are private; only the reduced activity projection is readable.
+            await assert.rejects(
+                actor(management, "select details from public.audit_events"),
+                /permission denied for table audit_events/,
+            );
             const json = await actor(
                 management,
-                "select coalesce(json_agg(x),'[]') from public.audit_events x",
-                "aal1",
+                `select public.admin_audit_events(p_search=>${quote(aud)})`,
             );
+            assert.ok(JSON.parse(json).items.some((item) => item.resource_id === aud));
             assert.ok(
                 !/gross_amount|gross_total_amount|platform_percent|platform_total/.test(
                     json,
