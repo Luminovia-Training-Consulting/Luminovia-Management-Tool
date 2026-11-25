@@ -271,14 +271,21 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     await expect(dialog).not.toBeVisible();
     const staffFile = `fictional-admin-contract-${randomUUID().slice(0, 8)}.pdf`,
         staffTitle = `Rahmenvertrag Verwaltung ${randomUUID().slice(0, 8)}`;
-    await adminPage
+    await adminPage.goto(`/people/${lecturer.id}`);
+    await adminPage.getByRole("button", {
+        name: `Verträge verwalten: ${lecturer.name}`,
+        exact: true,
+    }).click();
+    const lecturerContracts = adminPage.getByRole("dialog", {name: "Verträge verwalten", exact: true});
+    await expect(lecturerContracts).toHaveAccessibleDescription(lecturer.name);
+    await lecturerContracts
         .getByRole("button", {
             name: "Ausgeführten Vertrag hinterlegen",
             exact: true,
         })
         .click();
-    dialog = adminPage.getByRole("dialog");
-    await dialog.getByLabel("Dozent:in", {exact: true}).selectOption(lecturer.id);
+    dialog = adminPage.getByRole("dialog", {name: "Ausgeführten Vertrag hinterlegen", exact: true});
+    await expect(dialog.getByLabel("Dozent:in", {exact: true})).toHaveCount(0);
     await dialog.getByLabel("Titel", {exact: true}).fill(staffTitle);
     await dialog.getByLabel(/Gültig ab/).fill("2026-01-02T00:00");
     await dialog.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
@@ -321,6 +328,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
         document_version_id: uploaded.data.current_version_id,
         registered_by: administrator.id,
     });
+    await adminPage.goto(`/contracts?user=${lecturer.id}`);
     await adminPage
         .getByRole("button", {name: "Alle Dozierenden anzeigen", exact: true})
         .click();

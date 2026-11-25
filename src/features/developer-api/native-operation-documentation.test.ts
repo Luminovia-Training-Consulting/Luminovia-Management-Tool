@@ -61,9 +61,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 66 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(66);
-    expect(definitions).toHaveLength(66);
+  it("covers the 67 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(67);
+    expect(definitions).toHaveLength(67);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -177,6 +177,7 @@ describe("internal operation documentation", () => {
         "set_job_capacity",
         "set_job_commission",
         "register_executed_contract",
+        "organisation_contracts",
         "set_user_active",
       ]) {
         expect(academy.paths).not.toHaveProperty(path(name));

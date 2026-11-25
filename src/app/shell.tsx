@@ -256,10 +256,9 @@ export function Shell() {
             : []),
           { to: "/chats", icon: MessagesSquare, label: "chats" },
           { to: "/files", icon: FolderOpen, label: "files" },
-          ...(!administration.some(({ to }) => to === "/contracts") &&
-          (teaching ||
-            permissions.data?.includes("contracts.read") ||
-            permissions.data?.includes("contracts.manage"))
+          ...(teaching ||
+          permissions.data?.includes("contracts.read") ||
+          permissions.data?.includes("contracts.manage")
             ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
             : []),
           ...(portalInternalEdition && financeAccess.personal.overview

@@ -43,6 +43,7 @@ import { CompanyLecturers } from "./company-lecturers";
 import { CompanyLecturerBlocks } from "./company-lecturer-blocks";
 import { CompanyIntegrations } from "./company-integrations";
 import { CompanyParticipantsPanel } from "./company-participants";
+import { CompanyContracts } from "./company-contract-trigger";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const orgSchema = z.object({
@@ -289,6 +290,7 @@ function ClientWorkspace({
   canManageWebhooks,
   canSubscribeAccounting,
   canManageCourses,
+  canManageContracts,
 }: {
   actor: string;
   isAdmin: boolean;
@@ -296,6 +298,7 @@ function ClientWorkspace({
   canManageWebhooks: boolean;
   canSubscribeAccounting: boolean;
   canManageCourses: boolean;
+  canManageContracts: boolean;
 }) {
   const { t, i18n } = useTranslation("operations");
   const de = i18n.language.startsWith("de");
@@ -453,8 +456,19 @@ function ClientWorkspace({
                   {t("editClient")}
                 </Button>
               </div>
-              {(organisation.tags.length > 0 || canManageCourses) && (
+              {(organisation.tags.length > 0 ||
+                canManageCourses ||
+                canManageContracts) && (
                 <div className="company-header-actions">
+                  {canManageContracts && (
+                    <CompanyContracts
+                      key={organisation.id}
+                      actor={actor}
+                      organisationId={organisation.id}
+                      organisationName={organisation.name}
+                      archived={Boolean(organisation.archived_at)}
+                    />
+                  )}
                   {organisation.tags.length > 0 && (
                     <div className="tags">
                       {organisation.tags.map((tag) => (
@@ -755,6 +769,7 @@ export function ClientsPage() {
       }
       canSubscribeAccounting={permissions.data.includes("finance.gross.read")}
       canManageCourses={permissions.data.includes("courses.manage")}
+      canManageContracts={permissions.data.includes("contracts.manage")}
     />
   );
 }

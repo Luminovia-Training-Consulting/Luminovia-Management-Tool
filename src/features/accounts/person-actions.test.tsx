@@ -1,6 +1,13 @@
 /** Person actions target the selected account and require explicit server-confirmed changes. */
 import { afterEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   notifyManager,
@@ -11,6 +18,7 @@ import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { PersonManagementActions } from "./person-actions";
 
+const lecturer = "d415d832-e22e-4e32-bacc-180811de988c";
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   active: true,
@@ -32,6 +40,13 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["permissions"],
     queryFn: async () => fake.permissions,
   }),
+  profileQuery: (id: string) => ({
+    queryKey: ["profile", id],
+    queryFn: async () => ({ time_zone: "Europe/Berlin" }),
+  }),
+}));
+vi.mock("../commercial/pdf-upload", () => ({
+  CommercialPdfUpload: () => null,
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
@@ -68,6 +83,7 @@ afterEach(async () => {
     await new Promise<void>((resolve) => notifyManager.schedule(resolve));
   });
   vi.clearAllMocks();
+  fake.rpc.mockReset();
   fake.permissions = ["users.manage"];
   fake.active = true;
 });
@@ -80,7 +96,10 @@ it("opens scoped management and confirms blocking without optimistic success", a
     screen.getByRole("link", { name: "Rollen und Zugriffe bearbeiten" }),
   ).toHaveAttribute("href", "/admin/accounts?q=Fictional%20person&user=target");
   await userEvent.click(block);
-  expect(fake.rpc).not.toHaveBeenCalled();
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "set_user_active",
+    expect.anything(),
+  );
   await userEvent.click(
     screen.getByRole("button", { name: "Kontostatus bestätigen" }),
   );
@@ -119,4 +138,80 @@ it("offers delegated evidence and expertise management from the selected person'
     screen.getByRole("button", { name: "Qualifikationen und Nachweise" }),
   );
   expect(await screen.findByText("Managed evidence for target")).toBeVisible();
+});
+
+it("opens lecturer contracts by keyboard and restores focus to the selected person's action", async () => {
+  await i18n.changeLanguage("de");
+  fake.rpc.mockImplementation(async (name: string) => ({
+    data:
+      name === "commercial_access"
+        ? { can_manage_contracts: true }
+        : name === "commercial_people"
+          ? [{ id: lecturer, display_name: "Fictional person" }]
+          : [],
+    error: null,
+  }));
+  mount(lecturer);
+  const user = userEvent.setup();
+  const action = await screen.findByRole("button", {
+    name: /Verträge verwalten/,
+  });
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "contract_records",
+    expect.anything(),
+  );
+  action.focus();
+  await user.keyboard("{Enter}");
+  const dialog = await screen.findByRole("dialog", {
+    name: "Verträge verwalten",
+  });
+  expect(dialog).toHaveAccessibleDescription("Fictional person");
+  expect(
+    await within(dialog).findByRole("button", {
+      name: "Ausgeführten Vertrag hinterlegen",
+    }),
+  ).toBeVisible();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(action).toHaveFocus());
+});
+
+it("does not offer lecturer contracts or read their records with only account management permission", async () => {
+  await i18n.changeLanguage("de");
+  fake.rpc.mockResolvedValue({
+    data: { can_manage_contracts: false },
+    error: null,
+  });
+  mount(lecturer);
+  await waitFor(() =>
+    expect(client.getQueryData(["commercial-access", "actor"])).toEqual({
+      can_manage_contracts: false,
+    }),
+  );
+  expect(
+    screen.queryByRole("button", { name: /Verträge verwalten/ }),
+  ).toBeNull();
+  expect(fake.rpc).not.toHaveBeenCalledWith("commercial_people");
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "contract_records",
+    expect.anything(),
+  );
+});
+
+it("does not offer the action for a target outside the permitted lecturer list", async () => {
+  await i18n.changeLanguage("de");
+  fake.rpc.mockImplementation(async (name: string) => ({
+    data: name === "commercial_access" ? { can_manage_contracts: true } : [],
+    error: null,
+  }));
+  mount(lecturer);
+  await waitFor(() =>
+    expect(client.getQueryData(["commercial-people", "actor"])).toEqual([]),
+  );
+  expect(
+    screen.queryByRole("button", { name: /Verträge verwalten/ }),
+  ).toBeNull();
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "contract_records",
+    expect.anything(),
+  );
 });

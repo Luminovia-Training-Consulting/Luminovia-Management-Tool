@@ -109,6 +109,9 @@ describe("private client directory capability boundary", () => {
       expect(action).toHaveAttribute("data-id", id);
     }
     expect(
+      screen.queryByRole("button", { name: "Unternehmensverträge" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole("button", { name: "Delete Fictional organisation" }),
     ).not.toBeInTheDocument();
     await userEvent.click(

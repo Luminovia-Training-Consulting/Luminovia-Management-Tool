@@ -511,6 +511,11 @@ const fileGateway = {
                 description:
                   "Required for course-submission and exam-submission. Omit for generic transfers.",
               },
+              contract_organisation_id: {
+                ...uuid,
+                description:
+                  "Required with kind=organisation_contract for a private company PDF. Requires company and contract management permissions. Send only file, client_id, kind and this field in that case.",
+              },
               scope: {
                 enum: ["personal", "room", "job_before", "job_after"],
                 default: "personal",
@@ -522,6 +527,7 @@ const fileGateway = {
                   "cv",
                   "certificate",
                   "contract",
+                  "organisation_contract",
                   "invoice",
                   "avatar",
                 ],
@@ -557,6 +563,12 @@ const fileGateway = {
                 client_id: uuid,
                 file: { type: "string", format: "binary" },
               }),
+              contract_organisation_id: object({
+                contract_organisation_id: uuid,
+                client_id: uuid,
+                kind: { const: "organisation_contract" },
+                file: { type: "string", format: "binary" },
+              }),
             },
           },
         },
@@ -581,6 +593,11 @@ const fileGateway = {
             object({
               action: { const: "qualification_evidence_download" },
               evidence_id: uuid,
+            }),
+            object({
+              action: { const: "organisation_contract_download" },
+              organisation_id: uuid,
+              id: uuid,
             }),
             object({
               action: { enum: ["job_source_available", "job_source_download"] },

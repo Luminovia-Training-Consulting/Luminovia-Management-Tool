@@ -12,6 +12,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { Notice } from "../../components/common";
 import { PermanentDeleteAction } from "../deletions/deletions";
 import { ManagedProfileEditor } from "./managed-profile-editor";
+import { PersonContractAction } from "./person-contract-action";
 import { PersonExpertise } from "./person-expertise";
 import "./i18n";
 
@@ -86,6 +87,7 @@ export function PersonManagementActions({
         )}
       </Dialog>
       {canManage && id !== actor && <PersonExpertise id={id} />}
+      <PersonContractAction actor={actor} id={id} name={name} />
       {canManage && id !== actor && (
         <Button asChild variant="secondary">
           <Link

@@ -37,6 +37,7 @@ import {
   accountRoleCatalogQuery,
 } from "./api";
 import { ManagedProfileEditor } from "./managed-profile-editor";
+import { PersonContractAction } from "./person-contract-action";
 import "./i18n";
 import "./accounts.css";
 
@@ -443,29 +444,19 @@ function AccountsDirectory({
               </div>
               <div className="account-list-actions">
                 {person.id === actorId && (
-                  <>
-                    <Button asChild variant="secondary">
-                      <Link
-                        to={
-                          canManageContracts
-                            ? `/contracts?user=${actorId}`
-                            : "/contracts"
-                        }
-                      >
-                        {t("ownContracts")}
-                      </Link>
-                    </Button>
-                  </>
+                  <Button asChild variant="secondary">
+                    <Link to="/contracts">{t("ownContracts")}</Link>
+                  </Button>
                 )}
                 {canManageContracts &&
                   person.roles.some(
                     (role) => role === "lecturer" || role === "senior_lecturer",
                   ) && (
-                    <Button asChild variant="secondary">
-                      <Link to={`/contracts?user=${person.id}`}>
-                        {t("manageContracts")}
-                      </Link>
-                    </Button>
+                    <PersonContractAction
+                      actor={actorId}
+                      id={person.id}
+                      name={person.display_name || person.email}
+                    />
                   )}
                 {canManageCompanies && person.roles.includes("client") && (
                   <Button asChild variant="secondary">

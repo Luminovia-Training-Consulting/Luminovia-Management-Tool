@@ -50,6 +50,10 @@ vi.mock("../../lib/supabase", () => ({
           return query;
         },
         order: () => query,
+        maybeSingle: async () => ({
+          data: { time_zone: "Europe/Berlin" },
+          error: null,
+        }),
         then: (resolve: (result: unknown) => unknown) =>
           Promise.resolve({
             data:
@@ -155,6 +159,36 @@ afterEach(async () => {
   });
 });
 describe("Account administration", () => {
+  it("opens the same person-bound contracts dialog from a lecturer's account row", async () => {
+    fake.capabilities = ["users.manage", "contracts.manage"];
+    const previous = fake.rpc.getMockImplementation()!;
+    fake.rpc.mockImplementation(async (name: string) => {
+      if (name === "commercial_access")
+        return { data: { can_manage_contracts: true }, error: null };
+      if (name === "commercial_people")
+        return {
+          data: [{ id: "teacher-id", display_name: "Anna" }],
+          error: null,
+        };
+      if (name === "contract_records") return { data: [], error: null };
+      return previous(name);
+    });
+    page();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Verträge verwalten: Anna" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Verträge verwalten",
+    });
+    expect(dialog).toHaveAccessibleDescription("Anna");
+    expect(
+      await within(dialog).findByRole("button", {
+        name: "Ausgeführten Vertrag hinterlegen",
+      }),
+    ).toBeVisible();
+    expect(fake.rpc).toHaveBeenCalledWith("contract_records", { p_all: true });
+  });
+
   it("opens profile and expertise for the selected account and preserves profile drafts across views", async () => {
     fake.capabilities = ["users.manage", "qualifications.verify"];
     const previous = fake.rpc.getMockImplementation()!;

@@ -7,6 +7,7 @@
 import {sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
 import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
+import {organisationContractBytes} from './organisation-contract-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
@@ -150,6 +151,16 @@ Deno.serve(async (request: Request) => {
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
             const form = await boundedFormData(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
+            const company = form.get('contract_organisation_id');
+            const companyUpload = form.get('kind') === 'organisation_contract';
+            if (companyUpload || company !== null) {
+                const allowedFields = ['file', 'kind', 'client_id', 'contract_organisation_id'];
+                if (!companyUpload || !uuid(company) || query !== '' ||
+                    [...form.keys()].some((field) => !allowedFields.includes(field)) ||
+                    allowedFields.some((field) => form.getAll(field).length !== 1)) {
+                    return json(400, {error: 'invalid_request'});
+                }
+            }
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
             const attendanceSession = academyAttendanceSession(form, academyAttendance);
@@ -168,7 +179,7 @@ Deno.serve(async (request: Request) => {
             if (!uuid(clientId)) return json(400, {error: 'invalid_request'});
             const scope = String(form.get('scope') ?? 'personal');
             const kind = String(form.get('kind') ?? (scope === 'room' ? 'chat' : 'material'));
-            if (kind === 'invoice' && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
+            if ((kind === 'invoice' || companyUpload) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             if (kind === 'avatar') await validateAvatar(bytes);
             const roomId = chatRoom ?? (form.get('room_id') || null);
             const jobId = form.get('job_id') || null;
@@ -180,7 +191,9 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = submissionRun
+            const reserved = companyUpload
+                ? await user.rpc('reserve_organisation_contract', {p_organisation_id: company, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                : submissionRun
                 ? await user.rpc(examSubmission ? 'reserve_course_exam_submission' : 'reserve_course_submission', {p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : attendanceSession
                 ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
@@ -198,7 +211,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            if (protectedUpload && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+            if ((protectedUpload || companyUpload) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
                 return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
@@ -217,10 +230,19 @@ Deno.serve(async (request: Request) => {
                 if (status.error || !status.data?.document) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             };
-            const scoped = protectedUpload || courseChat === 'true' ? await courseStatus() : null;
+            const scopedStatus = companyUpload ? async () => {
+                const status = await user.rpc('organisation_contract_upload_status', {
+                    p_organisation_id: company,
+                    p_document_id: reservation.document_id,
+                    p_version_id: reservation.version_id,
+                });
+                if (status.error || status.data?.document?.kind !== 'organisation_contract') throw new Error('access_denied');
+                return status.data as {document: Document; sha256: string | null};
+            } : protectedUpload || courseChat === 'true' ? courseStatus : null;
+            const scoped = await scopedStatus?.();
             const doc = scoped?.document ?? await visible(reservation.document_id);
             if (doc.current_version_id !== reservation.version_id) return json(409, {error: 'version_superseded'});
-            const currentDocument = async () => scoped ? (await courseStatus()).document : visible(doc.id);
+            const currentDocument = async () => scopedStatus ? (await scopedStatus()).document : visible(doc.id);
             const requestedVersion = scoped
                 ? {data: {sha256: scoped.sha256, status: doc.status}, error: null}
                 : await user.from('document_versions').select('sha256,status').eq('id', reservation.version_id).eq('document_id', doc.id).maybeSingle();
@@ -457,6 +479,32 @@ Deno.serve(async (request: Request) => {
             });
             await service.from('audit_events').insert({actor_id: actor, action: 'qualification.evidence_downloaded', resource_id: data.evidence_id});
             return new Response(webFileBytes(selected.bytes), {headers: {...headers, 'Content-Type': selected.mime_type, 'Content-Disposition': downloadDisposition(selected.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
+        }
+        // This branch never extends generic file discovery or gives out a Storage URL.
+        if (data.action === 'organisation_contract_download') {
+            const company = data.organisation_id, id = data.id;
+            if (!uuid(company) || !uuid(id) || Object.keys(data).length !== 3) return json(400, {error: 'invalid_request'});
+            const selected = await organisationContractBytes(id.toLowerCase(), MAX_FILE_SIZE, {
+                selection: async (documentId) => {
+                    const r = await user.rpc('organisation_contract_download', {p_organisation_id: company, p_document_id: documentId});
+                    return r.error ? null : r.data;
+                },
+                version: async (versionId) => {
+                    const r = await service.from('document_versions')
+                        .select('id,document_id,object_path,status,mime_type,size_bytes,sha256').eq('id', versionId).maybeSingle();
+                    return r.error ? null : r.data;
+                },
+                download: async (path) => {
+                    const r = await service.storage.from('portal-clean').download(path);
+                    return r.error ? null : r.data;
+                },
+            });
+            const audit = await service.from('audit_events').insert({actor_id: actor, action: 'organisation.contract_downloaded', resource_id: id});
+            if (audit.error) return json(503, {error: 'download_unavailable'});
+            return new Response(selected.bytes, {headers: {
+                ...headers, 'Content-Type': 'application/pdf', 'Content-Disposition': downloadDisposition(selected.name),
+                'Content-Security-Policy': "default-src 'none'; sandbox",
+            }});
         }
         if (data.action !== 'download' || !uuid(data.id) || (data.version_id !== undefined && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
         const doc = await visible(data.id);

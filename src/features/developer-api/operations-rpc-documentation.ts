@@ -23,6 +23,40 @@ const withdrawalReason = {
 };
 
 export const operationsRpcDocumentation = {
+  organisation_contracts: {
+    summary: "List scanned private PDFs filed for one company",
+    description:
+      "Internal edition only. Requires an active staff account with organisations.manage and contracts.manage; client accounts are excluded. Returns up to 30 clean contracts in descending creation-time and ID order. If has_more is true, send both cursor fields from the last item. Archived companies retain access to existing contracts. Download through the private files gateway; no Storage URL is returned.",
+    parameters: {
+      p_organisation_id: id,
+      p_before_at: { type: "string", format: "date-time" },
+      p_before_id: id,
+    },
+    result: {
+      type: "object",
+      required: ["items", "has_more"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["id", "file_name", "created_at"],
+            properties: {
+              id,
+              file_name: { type: "string" },
+              created_at: { type: "string", format: "date-time" },
+            },
+          },
+        },
+        has_more: { type: "boolean" },
+      },
+    },
+    errors: {
+      "400": "Both cursor parts must be supplied together.",
+      "403":
+        "The account or installation is not authorised to view company contracts.",
+    },
+  },
   acknowledge_announcement: {
     summary: "Acknowledge the currently published announcement revision",
     description:

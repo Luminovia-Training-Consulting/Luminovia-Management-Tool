@@ -157,6 +157,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   my_push_devices: "GET",
   notification_inbox: "GET",
   notification_preferences: "GET",
+  organisation_contracts: "GET",
   own_profile_details: "GET",
   own_qualification_certificates: "GET",
   people_directory: "GET",
