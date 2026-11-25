@@ -201,6 +201,30 @@ class BackupSafetyTests(unittest.TestCase):
         (directory / "database-000.dump.age").write_bytes(b"broken")
         self.assertFalse(self.backup.fresh(max_age_hours=26))
 
+    def test_freshness_rejects_malformed_manifest_and_invalid_completion_times(self):
+        # An update must treat unreadable, missing, unzoned and future completion evidence as no fresh recovery set.
+        cases = [
+            ("malformed-json", b"{not-json"),
+            ("missing-time", None),
+            ("invalid-time", "not-a-timestamp"),
+            ("unzoned-time", dt.datetime.now().replace(tzinfo=None).isoformat()),
+            ("future-time", (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)).isoformat()),
+        ]
+        for ordinal, (name, completion) in enumerate(cases, start=1):
+            with self.subTest(case=name):
+                directory = synthetic_set(self.destination, ordinal)
+                manifest_path = directory / "manifest.json"
+                if isinstance(completion, bytes):
+                    manifest_path.write_bytes(completion)
+                else:
+                    manifest = json.loads(manifest_path.read_text())
+                    if completion is None:
+                        manifest.pop("completedAt", None)
+                    else:
+                        manifest["completedAt"] = completion
+                    b.write_json(manifest_path, manifest)
+                self.assertFalse(self.backup.fresh(max_age_hours=26))
+
     def test_shared_updater_lock_excludes_backup_without_stopping_services(self):
         b.private_dir(self.backup.lock.parent)
         lock = os.open(self.backup.lock, os.O_CREAT | os.O_WRONLY, 0o600)
