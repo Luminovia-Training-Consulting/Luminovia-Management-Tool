@@ -381,15 +381,20 @@ test("release shell preflight independently rejects missing or mismatched revisi
     }
 });
 
-test("automatic CMS publication follows current main without consulting CI results", () => {
+test("automatic CMS publication waits for exact-main application and security success", () => {
     const automatic = workflow("automatic-cms-release");
     assert.deepEqual(automatic.on.push.branches, ["main"]);
     const job = automatic.jobs.publish;
     assert.match(job.if, /github\.event_name == 'push'/);
     assert.match(job.if, /github\.ref == 'refs\/heads\/main'/);
-    assert.doesNotMatch(job.if, /workflow_run|conclusion|success/);
+    assert.match(job.steps[0].run, /Portal checks/);
+    assert.match(job.steps[0].run, /Security analysis/);
+    assert.match(job.steps[0].run, /\.event == "push"/);
+    assert.match(job.steps[0].run, /\.head_sha == \$sha/);
+    assert.match(job.steps[0].run, /CONCLUSION.*success/);
+    assert.equal(job["timeout-minutes"], "75");
     assert.equal(job.permissions.contents, "write");
-    assert.equal(job.permissions.actions, undefined);
+    assert.equal(job.permissions.actions, "read");
     assert.equal(
         job.concurrency.group,
         "cms-release-${{ github.sha }}",
@@ -414,17 +419,32 @@ test("automatic CMS publication follows current main without consulting CI resul
         const gh = join(dir, "gh");
         writeFileSync(
             gh,
-            '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; else exit 7; fi\n',
+            '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; elif [[ "$*" == *"/actions/runs?"* ]]; then printf "%s\\n" "$FAKE_RUNS"; else exit 7; fi\n',
         );
         chmodSync(gh, 0o700);
+        const sleep = join(dir, "sleep");
+        writeFileSync(sleep, "#!/usr/bin/env bash\nexit 0\n");
+        chmodSync(sleep, 0o700);
         const git = join(dir, "git");
         writeFileSync(git, '#!/usr/bin/env bash\ntest "$*" = "rev-parse HEAD" || exit 7\nprintf "%s\\n" "$FAKE_CHECKOUT"\n');
         chmodSync(git, 0o700);
         const sha = "a".repeat(40);
+        const successfulRuns = JSON.stringify({
+            workflow_runs: [
+                {head_sha: sha, event: "push", head_branch: "main", name: "Portal checks", status: "completed", conclusion: "success", created_at: "2026-11-25T00:00:00Z"},
+                {head_sha: sha, event: "push", head_branch: "main", name: "Security analysis", status: "completed", conclusion: "success", created_at: "2026-11-25T00:00:01Z"},
+            ],
+        });
+        const failedRuns = JSON.stringify({
+            workflow_runs: [
+                {head_sha: sha, event: "push", head_branch: "main", name: "Portal checks", status: "completed", conclusion: "failure", created_at: "2026-11-25T00:00:00Z"},
+                {head_sha: sha, event: "push", head_branch: "main", name: "Security analysis", status: "completed", conclusion: "success", created_at: "2026-11-25T00:00:01Z"},
+            ],
+        });
         const output = join(dir, "output");
         for (const [changes, allowed] of [
-            [{}, true],
-            [{FAKE_MAIN: "b".repeat(40)}, false],
+            [{FAKE_RUNS: successfulRuns}, true],
+            [{FAKE_MAIN: "b".repeat(40), FAKE_RUNS: successfulRuns}, false],
         ]) {
             writeFileSync(output, "");
             const result = spawnSync(
@@ -437,6 +457,7 @@ test("automatic CMS publication follows current main without consulting CI resul
                         TARGET_SHA: sha,
                         GITHUB_OUTPUT: output,
                         FAKE_MAIN: sha,
+                        FAKE_RUNS: successfulRuns,
                         ...changes,
                     },
                     encoding: "utf8",
@@ -451,6 +472,25 @@ test("automatic CMS publication follows current main without consulting CI resul
                 JSON.stringify(changes),
             );
         }
+        writeFileSync(output, "");
+        const failedGate = spawnSync(
+            "bash",
+            ["-e", "-u", "-o", "pipefail", "-c", gate.run],
+            {
+                env: {
+                    PATH: `${dir}:${process.env.PATH}`,
+                    GH_REPO: "fictional/example",
+                    TARGET_SHA: sha,
+                    GITHUB_OUTPUT: output,
+                    FAKE_MAIN: sha,
+                    FAKE_RUNS: failedRuns,
+                },
+                encoding: "utf8",
+                timeout: 1000,
+            },
+        );
+        assert.notEqual(failedGate.status, 0);
+        assert.equal(readFileSync(output, "utf8"), "");
         for (const checkout of [sha, "b".repeat(40)]) {
             writeFileSync(output, "");
             const result = spawnSync("bash", ["-e", "-c", source.run], {

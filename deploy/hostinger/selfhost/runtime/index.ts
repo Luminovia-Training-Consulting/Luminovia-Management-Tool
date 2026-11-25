@@ -32,7 +32,7 @@ const PORTAL_FUNCTIONS = new Set([
     "portal-api",
 ]);
 
-const JWT_SECRET = Deno.env.get("JWT_SECRET");
+const legacyJwtSigningKey = Deno.env.get("JWT_SECRET");
 const SUPABASE_JWKS = parseJwks(Deno.env.get("SUPABASE_JWKS"));
 const LOCAL_JWKS = SUPABASE_JWKS ? jose.createLocalJWKSet(SUPABASE_JWKS) : null;
 const VERIFY_JWT = Deno.env.get("VERIFY_JWT") === "true";
@@ -266,13 +266,13 @@ function getAuthErrorResponse({code, message = "Invalid JWT"}: AuthFailure) {
 
 // Verify a legacy JWT with the server-side symmetric key; missing configuration fails closed.
 async function isValidLegacyJWT(jwt: string): Promise<AuthFailure | null> {
-    if (!JWT_SECRET) {
+    if (!legacyJwtSigningKey) {
         console.error("JWT_SECRET not available for HS256 token verification");
         return {code: RequestErrors.InvalidLegacyJWT};
     }
 
     const encoder = new TextEncoder();
-    const secretKey = encoder.encode(JWT_SECRET);
+    const secretKey = encoder.encode(legacyJwtSigningKey);
 
     try {
         await jose.jwtVerify(jwt, secretKey);

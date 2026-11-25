@@ -1,7 +1,6 @@
-# Publish a complete immutable application package for each current main push.
-# The VPS decides whether the package is safe to apply using its independent
-# archive, migration, backup, health and rollback checks; application CI is
-# intentionally not an update gate.
+# Publish a complete immutable application package only after current main's
+# application and security workflows pass. The VPS independently validates
+# archive, migration, backup, health and rollback safety before activation.
 name: Automatic CMS release
 on:
   push:
@@ -15,14 +14,15 @@ jobs:
   publish:
     if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 75
     concurrency:
       group: cms-release-${{ github.sha }}
       cancel-in-progress: false
     permissions:
+      actions: read
       contents: write
     steps:
-      - name: Verify current main before checkout or build
+      - name: Verify current main and wait for complete CI and security checks
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,7 +37,43 @@ jobs:
             echo 'publish=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo 'publish=true' >> "$GITHUB_OUTPUT"
+          for attempt in $(seq 1 120); do
+            RUNS="$(gh api "repos/$GH_REPO/actions/runs?head_sha=$TARGET_SHA&per_page=100")"
+            ALL_SUCCESS=true
+            for WORKFLOW in 'Portal checks' 'Security analysis'; do
+              STATE="$(jq -r --arg sha "$TARGET_SHA" --arg workflow "$WORKFLOW" '
+                [.workflow_runs[] | select(
+                  .head_sha == $sha and .event == "push" and
+                  .head_branch == "main" and .name == $workflow
+                )] | sort_by(.created_at) | last // {} |
+                [.status // "missing", .conclusion // ""] | @tsv
+              ' <<< "$RUNS")"
+              IFS=$'\t' read -r STATUS CONCLUSION <<< "$STATE"
+              if test "$STATUS" = completed; then
+                if test "$CONCLUSION" != success; then
+                  echo "$WORKFLOW did not pass for $TARGET_SHA (conclusion: $CONCLUSION)." >&2
+                  exit 1
+                fi
+                echo "$WORKFLOW passed for $TARGET_SHA."
+              else
+                ALL_SUCCESS=false
+                echo "Waiting for $WORKFLOW ($STATUS) on $TARGET_SHA."
+              fi
+            done
+            if test "$ALL_SUCCESS" = true; then
+              CURRENT_SHA="$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')"
+              if test "$TARGET_SHA" != "$CURRENT_SHA"; then
+                echo 'Main advanced while CI was running; do not publish this revision.'
+                echo 'publish=false' >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo 'publish=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo 'Timed out waiting for complete application and security checks.' >&2
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.publish == 'true'
         with:

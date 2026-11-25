@@ -829,6 +829,20 @@ test("credential scanning covers unquoted and multiline values without rejecting
     assert.equal(existsSync(join(child.root, "out/cms-release.tar.gz")), true);
 });
 
+test("the real self-host router source passes the release credential scan", (t) => {
+    const {root, put, release} = fixture(t);
+    put(
+        "deploy/hostinger/selfhost/runtime/index.ts",
+        readFileSync(
+            join(repositoryRoot, "deploy/hostinger/selfhost/runtime/index.ts"),
+            "utf8",
+        ),
+    );
+
+    assert.doesNotThrow(() => release());
+    assert.equal(existsSync(join(root, "out/cms-release.tar.gz")), true);
+});
+
 test("mutable image tags, different major versions and untested provenance block packaging", (t) => {
     for (const change of ["mutable", "major", "unreviewed", "digest-mismatch"]) {
         const child = fixture(t);
