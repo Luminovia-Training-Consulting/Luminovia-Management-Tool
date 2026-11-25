@@ -107,6 +107,18 @@ await withTestDatabase("chat_mentions", async ({sql, actor}) => {
                 await send("Fictional <script> lesson", [target], key),
                 message,
             );
+            const retryReceipt = await sql(
+                `select payload::text from private.chat_mention_requests
+                 where actor_id=${q(author)} and request_id=${q(key)}`,
+            );
+            assert.match(retryReceipt, /chat-v1:/);
+            assert.doesNotMatch(retryReceipt, /Fictional|script/);
+            assert.equal(
+                await sql(
+                    "select has_table_privilege('authenticated','private.chat_mention_requests','select')",
+                ),
+                "f",
+            );
             await assert.rejects(
                 send("Fictional <script> lesson", [third], key),
                 /idempotency conflict/,

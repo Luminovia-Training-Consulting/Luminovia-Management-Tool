@@ -64,6 +64,10 @@ JWKS includes a legacy symmetric verification key and is therefore itself server
 
 Keep generated credentials, PostgreSQL custom/key volumes and deployment configuration in secure recovery backups.
 
+Chat messages, edit/deletion snapshots and retry receipts use separate per-installation, versioned Supabase Vault secrets for encryption, ciphertext authentication and retry fingerprints. Preserve the matching Vault recovery material with the database recovery set, but keep that material in its separate protected source; restore it before serving chat reads. Missing keys fail closed, so their messages cannot be recovered by falling back to plaintext. The `VAULT_ENC_KEY` setting belongs to Supavisor and is not the chat key. Key versions are retained for existing ciphertext; this release does not provide an automated key-rotation command, so do not remove an old version or Vault secret without a tested re-encryption and restore procedure.
+
+This protects database copies that lack the matching Vault recovery material; it is not end-to-end encryption. The running PostgreSQL server and its authorised superuser can decrypt messages, metadata remains visible, and old database backups/WAL from before migration may contain plaintext.
+
 ## Correct Auth URLs for the /backend prefix
 
 For the current canonical origin, the generator sets:

@@ -35,6 +35,18 @@ await withTestDatabase(
             );
         const id = await reply(b, parent);
         assert.equal(await reply(b, parent), id);
+        const retryReceipt = await sql(
+            `select payload::text from private.chat_reply_requests
+             where actor_id=${q(b)} and request_id=${q(key)}`,
+        );
+        assert.match(retryReceipt, /chat-v1:/);
+        assert.doesNotMatch(retryReceipt, /Reply content/);
+        assert.equal(
+            await sql(
+                "select has_table_privilege('authenticated','private.chat_reply_requests','select')",
+            ),
+            "f",
+        );
         await assert.rejects(reply(b, outsiderParent), /22023/);
         await assert.rejects(reply(b, outsiderParent, randomUUID()), /42501/);
         const replyResponse = rpcResponse("chat_reply_previews");

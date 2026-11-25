@@ -17,6 +17,7 @@ for (const edition of [
     const [
       installation,
       admin,
+      directPeer,
       client,
       foreign,
       learner,
@@ -30,7 +31,7 @@ for (const edition of [
       linkedRoom,
       separateRoom,
       directRoom,
-    ] = Array.from({ length: 15 }, randomUUID);
+    ] = Array.from({ length: 16 }, randomUUID);
     const api = portalOpenApi("https://example.invalid", true, {
       name: "Practice Academy",
       edition,
@@ -69,11 +70,12 @@ for (const edition of [
     await sql(`
       insert into auth.users(id,email,email_confirmed_at) values
         (${q(admin)},'chat-admin@example.invalid',now()),
+        (${q(directPeer)},'chat-peer@example.invalid',now()),
         (${q(client)},'chat-client@example.invalid',now()),
         (${q(foreign)},'chat-foreign@example.invalid',now()),
         (${q(learner)},'chat-learner@example.invalid',now());
       insert into public.user_roles(user_id,role) values
-        (${q(admin)},'admin'),(${q(client)},'client'),(${q(foreign)},'client'),(${q(learner)},'participant');
+        (${q(admin)},'admin'),(${q(directPeer)},'lecturer'),(${q(client)},'client'),(${q(foreign)},'client'),(${q(learner)},'participant');
       insert into public.organisations(id,name) values (${q(company)},'Fictional company'),(${q(other)},'Other fictional company');
       insert into public.client_organisation_memberships(user_id,organisation_id)
         values (${q(client)},${q(company)}),(${q(foreign)},${q(other)});
@@ -88,7 +90,8 @@ for (const edition of [
         (${q(separateRoom)},'participant_course',${q(separate)},'Independent room');
       insert into public.chat_rooms(id,kind,dm_key) values (${q(directRoom)},'dm',${q(randomUUID())});
       insert into public.chat_members(room_id,user_id) values
-        (${q(room)},${q(admin)}),(${q(linkedRoom)},${q(admin)}),(${q(separateRoom)},${q(admin)}),(${q(directRoom)},${q(admin)});
+        (${q(room)},${q(admin)}),(${q(linkedRoom)},${q(admin)}),(${q(separateRoom)},${q(admin)}),
+        (${q(directRoom)},${q(admin)}),(${q(directRoom)},${q(directPeer)});
     `);
 
     const read = (who, target = course) =>
@@ -154,6 +157,24 @@ for (const edition of [
 
     const firstRequest = randomUUID();
     const first = await send(room, firstRequest);
+    const storedBody = await sql(
+      `select body from public.messages where id=${q(first)}`,
+    );
+    assert.match(storedBody, /^chat-v1:/);
+    assert.notEqual(storedBody, "Fictional course message");
+    const authorizedHistory = JSON.parse(
+      await actor(
+        admin,
+        gate("course_chat_messages") +
+          `select public.course_chat_messages(${q(room)},null,null,50)`,
+      ),
+    );
+    assert.ok(
+      authorizedHistory.some(
+        (message) =>
+          message.id === first && message.body === "Fictional course message",
+      ),
+    );
     for (let i = 0; i < 6; i++) await send(i % 2 ? linkedRoom : room);
     const competing = await Promise.allSettled([
       send(room),

@@ -81,6 +81,13 @@ const a = randomUUID(),
     admin = randomUUID(),
     participant = randomUUID(),
     outsider = randomUUID();
+const legacy = {
+    actor: randomUUID(),
+    peer: randomUUID(),
+    messageKey: randomUUID(),
+    mentionKey: randomUUID(),
+    replyKey: randomUUID(),
+};
 let checks = 0;
 /** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
@@ -105,17 +112,117 @@ try {
             await readdir(new URL("../supabase/migrations/", import.meta.url))
         )
             .filter((f) => f.endsWith(".sql"))
-            .sort())
+            .sort()) {
+            if (file === "20261126012000_encrypt_stored_chat_text.sql") {
+                await sql(`insert into auth.users(id,email)
+                  values (${quote(legacy.actor)},'legacy-chat-a@example.invalid'),
+                    (${quote(legacy.peer)},'legacy-chat-b@example.invalid');
+                  insert into public.user_roles(user_id,role)
+                  values (${quote(legacy.actor)},'lecturer'),(${quote(legacy.peer)},'lecturer');`);
+                legacy.room = await value(legacy.actor, "create_dm", [legacy.peer]);
+                legacy.message = await msg(
+                    legacy.actor,
+                    legacy.room,
+                    "Legacy original text",
+                    legacy.messageKey,
+                );
+                await value(legacy.actor, "edit_message", [
+                    legacy.message,
+                    "Legacy edited text",
+                ]);
+                legacy.mentionMessage = await actor(
+                    legacy.actor,
+                    `select public.send_message_with_mentions(${quote(legacy.room)},'Legacy mention text',${quote(legacy.mentionKey)},null,array[]::uuid[])`,
+                );
+                legacy.replyMessage = await actor(
+                    legacy.actor,
+                    `select public.send_chat_reply(${quote(legacy.room)},${quote(legacy.message)},'Legacy reply text',${quote(legacy.replyKey)},null,array[]::uuid[])`,
+                );
+            }
             await sql(
                 await readFile(
                     new URL(`../supabase/migrations/${file}`, import.meta.url),
                     "utf8",
                 ),
             );
+        }
     });
     await sql(`insert into auth.users(id) values ${[a, b, c, admin, participant, outsider].map((id) => `('${id}')`).join(",")};
  insert into public.user_roles(user_id,role) values('${a}','lecturer'),('${b}','lecturer'),('${c}','senior_lecturer'),('${admin}','admin'),('${participant}','participant'),('${outsider}','participant');
  update public.profiles set display_name=case id when '${a}' then 'Fictional Alpha' when '${b}' then 'Fictional Beta' else 'Fictional Other' end;`);
+    await check(
+        "Legacy plaintext, revisions and retry receipts migrate without changing versions or idempotent outcomes",
+        async () => {
+            const stored = await sql(
+                `select body from public.messages where id=${quote(legacy.message)}`,
+            );
+            assert.match(stored, /^chat-v1:/);
+            assert.notEqual(stored, "Legacy edited text");
+            assert.equal(
+                await sql(
+                    `select content_version from public.messages where id=${quote(legacy.message)}`,
+                ),
+                "2",
+            );
+            const [revisionId, revisionCiphertext] = (
+                await sql(
+                    `select id||'|'||previous_body from public.chat_message_revisions
+                     where message_id=${quote(legacy.message)} order by created_at limit 1`,
+                )
+            ).split("|");
+            assert.match(revisionCiphertext, /^chat-v1:/);
+            assert.equal(
+                await sql(
+                    `select private.chat_decrypt_text(${quote(`revision:${revisionId}:${legacy.message}:previous_body`)},${quote(revisionCiphertext)})`,
+                ),
+                "Legacy original text",
+            );
+            const mentionCiphertext = await sql(
+                `select payload::text from private.chat_mention_requests
+                 where actor_id=${quote(legacy.actor)} and request_id=${quote(legacy.mentionKey)}`,
+            );
+            assert.match(mentionCiphertext, /chat-v1:/);
+            assert.doesNotMatch(mentionCiphertext, /Legacy mention text/);
+            const mentionPayload = JSON.parse(
+                await sql(
+                    `select private.chat_decrypt_request(${quote(`mention-request:${legacy.actor}:${legacy.mentionKey}`)},payload)::text
+                     from private.chat_mention_requests where actor_id=${quote(legacy.actor)} and request_id=${quote(legacy.mentionKey)}`,
+                ),
+            );
+            assert.equal(mentionPayload.body, "Legacy mention text");
+            const replyCiphertext = await sql(
+                `select payload::text from private.chat_reply_requests
+                 where actor_id=${quote(legacy.actor)} and request_id=${quote(legacy.replyKey)}`,
+            );
+            assert.match(replyCiphertext, /chat-v1:/);
+            assert.doesNotMatch(replyCiphertext, /Legacy reply text/);
+            const replyPayload = JSON.parse(
+                await sql(
+                    `select private.chat_decrypt_request(${quote(`reply-request:${legacy.actor}:${legacy.replyKey}`)},payload)::text
+                     from private.chat_reply_requests where actor_id=${quote(legacy.actor)} and request_id=${quote(legacy.replyKey)}`,
+                ),
+            );
+            assert.equal(replyPayload.body, "Legacy reply text");
+            assert.equal(
+                await msg(legacy.actor, legacy.room, "Legacy original text", legacy.messageKey),
+                legacy.message,
+            );
+            assert.equal(
+                await actor(
+                    legacy.actor,
+                    `select public.send_message_with_mentions(${quote(legacy.room)},'Legacy mention text',${quote(legacy.mentionKey)},null,array[]::uuid[])`,
+                ),
+                legacy.mentionMessage,
+            );
+            assert.equal(
+                await actor(
+                    legacy.actor,
+                    `select public.send_chat_reply(${quote(legacy.room)},${quote(legacy.message)},'Legacy reply text',${quote(legacy.replyKey)},null,array[]::uuid[])`,
+                ),
+                legacy.replyMessage,
+            );
+        },
+    );
     let dm;
     await check(
         "Concurrent opposing DM requests return one canonical private room",
@@ -227,9 +334,53 @@ try {
                 ),
                 "1",
             );
+            const storedBody = await sql(
+                `select body from public.messages where id='${first}'`,
+            );
+            assert.match(storedBody, /^chat-v1:/);
+            assert.notEqual(storedBody, "Hallo Beta");
             await assert.rejects(
                 msg(a, dm, "Altered content", key),
                 /Idempotency key conflicts/,
+            );
+        },
+    );
+    await check(
+        "Stored text is authenticated ciphertext bound to its row and inaccessible to API roles",
+        async () => {
+            const context = `message:${first}:${dm}:body`;
+            const ciphertext = await sql(
+                `select body from public.messages where id=${quote(first)}`,
+            );
+            assert.match(ciphertext, /^chat-v1:/);
+            assert.notEqual(ciphertext, "Hallo Beta");
+            assert.equal(
+                await sql(
+                    `select has_table_privilege('authenticated','private.chat_encryption_keys','select') or has_function_privilege('authenticated','private.chat_decrypt_text(text,text)','execute')`,
+                ),
+                "f",
+            );
+            const damaged = ciphertext.slice(0, -1) + (ciphertext.endsWith("0") ? "1" : "0");
+            await assert.rejects(
+                sql(`select private.chat_decrypt_text(${quote(context)},${quote(damaged)})`),
+                /Chat ciphertext unavailable/,
+            );
+            await assert.rejects(
+                sql(`select private.chat_decrypt_text('other-row',${quote(ciphertext)})`),
+                /Chat ciphertext unavailable/,
+            );
+            await assert.rejects(
+                sql(`begin;
+                     delete from private.chat_encryption_keys where version=1;
+                     select private.chat_decrypt_text(${quote(context)},${quote(ciphertext)});
+                     rollback;`),
+                /Chat ciphertext unavailable/,
+            );
+            assert.equal((await rows(b, "chat_messages", [dm]))[0].body, "Hallo Beta");
+            assert.equal(
+                await sql(`select to_regclass('public.messages_text_search') is null
+                    and to_regclass('public.messages_search_live_body_trgm') is null`),
+                "t",
             );
         },
     );
@@ -437,18 +588,18 @@ try {
             await assert.rejects(value(b, "edit_message", [first, "No"]), /denied/);
             await value(a, "edit_message", [first, "Corrected text"]);
             assert.equal(await msg(a, dm, "Hallo Beta", key), first);
-            const revision = await actor(
-                a,
+            const storedRevision = await sql(
                 `select previous_body from public.chat_message_revisions where message_id='${first}'`,
             );
-            assert.equal(revision, "Hallo Beta");
-            assert.equal(
-                await actor(
-                    admin,
-                    `select count(*) from public.chat_message_revisions where message_id='${first}'`,
-                    "aal1",
-                ),
-                "0",
+            assert.match(storedRevision, /^chat-v1:/);
+            assert.notEqual(storedRevision, "Hallo Beta");
+            await assert.rejects(
+                actor(a, `select previous_body from public.chat_message_revisions where message_id='${first}'`),
+                /permission denied/,
+            );
+            await assert.rejects(
+                actor(admin, `select previous_body from public.chat_message_revisions where message_id='${first}'`, "aal1"),
+                /permission denied/,
             );
             await sql(
                 `update public.messages set created_at=now()-interval '16 minutes' where id='${first}'`,
