@@ -204,3 +204,27 @@ it("accepts an IANA display zone and rejects an invalid zone", () => {
   expect(validZone("Europe/Berlin")).toBe(true);
   expect(validZone("Invalid/Zone")).toBe(false);
 });
+
+it("reuses currency formatters without mixing currencies or languages", () => {
+  const native = Intl.NumberFormat;
+  const fixtures = [
+    ["de-CH", "CHF"],
+    ["de-CH", "EUR"],
+    ["en-AU", "CHF"],
+  ] as const;
+  const expected = fixtures.map(([language, currency]) =>
+    new native(language, { style: "currency", currency }).format(-1234.56),
+  );
+  const constructor = vi.spyOn(Intl, "NumberFormat");
+  try {
+    for (let index = 0; index < 50; index++)
+      expect(
+        fixtures.map(([language, currency]) =>
+          money(-1234.56, currency, language),
+        ),
+      ).toEqual(expected);
+    expect(constructor).toHaveBeenCalledTimes(fixtures.length);
+  } finally {
+    constructor.mockRestore();
+  }
+});
