@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 export type ChartSeries = {
   name: string;
@@ -26,6 +26,7 @@ export function ChartKey({
   );
 }
 
+/** Keep the native disclosure accessible without building hidden rows for every chart. */
 export function ChartTable({
   title,
   month,
@@ -39,40 +40,46 @@ export function ChartTable({
   series: ChartSeries[];
   format: (value: number) => string;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
-    <details className="analytics-data">
+    <details
+      className="analytics-data"
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary>{title}</summary>
-      <div
-        className="analytics-scroll"
-        role="region"
-        aria-label={title}
-        tabIndex={0}
-      >
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">{month}</th>
-              {series.map(({ name }) => (
-                <th key={name} scope="col">
-                  {name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {labels.map((label, index) => (
-              <tr key={label}>
-                <th scope="row">{label}</th>
-                {series.map(({ name, values }) => (
-                  <td key={name}>
-                    {values[index] == null ? "—" : format(values[index])}
-                  </td>
+      {expanded && (
+        <div
+          className="analytics-scroll"
+          role="region"
+          aria-label={title}
+          tabIndex={0}
+        >
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{month}</th>
+                {series.map(({ name }) => (
+                  <th key={name} scope="col">
+                    {name}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {labels.map((label, index) => (
+                <tr key={label}>
+                  <th scope="row">{label}</th>
+                  {series.map(({ name, values }) => (
+                    <td key={name}>
+                      {values[index] == null ? "—" : format(values[index])}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </details>
   );
 }

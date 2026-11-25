@@ -29,6 +29,13 @@ export const forecastSchema = z.object({
         .nonnegative()
         .default(0),
       pipeline_gross_known: z.number().nullable(),
+      pipeline_margin_known: z.number().nullable().optional(),
+      pipeline_margin_unknown_positions: z
+        .number()
+        .int()
+        .nonnegative()
+        .nullable()
+        .optional(),
       lecturer_invoice_payments: z.number(),
     }),
   ),

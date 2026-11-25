@@ -43,6 +43,66 @@ const labels = {
   allSeries: ["Alle Zeitstatus", "All time statuses"],
   forecastWindow: ["Vorschauzeitraum", "Forecast window"],
   forecastDays: ["Nächste {{count}} Tage", "Next {{count}} days"],
+  nextCalendarQuarter: ["Nächstes Kalenderquartal", "Next calendar quarter"],
+  calendarYear: ["Ganzes Kalenderjahr", "Full calendar year"],
+  forecastYear: ["Kalenderjahr auswählen", "Select calendar year"],
+  forecastCurrency: ["Währung der Vorschau", "Forecast currency"],
+  platformMargin: ["Bekannte Plattformmarge", "Known platform margin"],
+  confirmedPlatformMargin: [
+    "Bestätigte bekannte Marge",
+    "Confirmed known margin",
+  ],
+  scenarioPlatformMargin: [
+    "Gewichtete Marge bepreister Angebote",
+    "Weighted margin on priced offers",
+  ],
+  platformMarginBasis: [
+    "Auftragshonorar abzüglich Dozentenvergütung, vor weiteren Kosten und Steuern. Bei offenen Angeboten zählt nur der bepreiste Teil; unveröffentlichte Anfragen sind hier nicht enthalten. Keine Zahlungseingänge.",
+    "Contract fees less lecturer compensation, before overhead and taxes. Only priced open positions are included; unpublished requests are excluded. These are not receipts.",
+  ],
+  unknownPipelineMargin: [
+    "Offene Plätze ohne berechenbare Marge, nicht enthalten: {{count}}.",
+    "Open positions with no calculable margin, excluded: {{count}}.",
+  ],
+  personalScenario: [
+    "Persönliches Honorarszenario",
+    "Personal income scenario",
+  ],
+  personalScenarioBasis: [
+    "Bestätigte Honorare plus deine Annahme für volle zukünftige Monate im Berichtszeitraum. Die Annahme wird nicht gespeichert. Das sind keine erwarteten Zahlungseingänge.",
+    "Confirmed fees plus your assumption for full future months in the reporting period. The assumption is not saved. These are not expected cash receipts.",
+  ],
+  personalExtraInput: [
+    "Zusatzhonorar je vollem zukünftigen Monat ({{currency}})",
+    "Extra income per full future month ({{currency}})",
+  ],
+  personalExtra: ["Geplantes Zusatzhonorar", "Planned extra income"],
+  personalEstimate: ["Honorare im Szenario", "Scenario income"],
+  personalNoFullMonth: [
+    "Wähle für Zusatzhonorare einen Zeitraum mit mindestens einem vollen zukünftigen Monat.",
+    "To model extra income, select a range with at least one full future month.",
+  ],
+  personalExtraInvalid: [
+    "Gib einen Betrag zwischen 0 und 1.000.000 mit höchstens zwei Nachkommastellen ein.",
+    "Enter an amount from 0 to 1,000,000 with up to two decimal places.",
+  ],
+  personalPaymentsTrend: [
+    "Meine erfassten Zahlungen im Monatsverlauf",
+    "My recorded monthly payments",
+  ],
+  personalReceipts: [
+    "Meine erfassten Zahlungseingänge",
+    "My recorded receipts",
+  ],
+  profileOutlook: ["Meine nächsten 90 Tage", "My next 90 days"],
+  profileOutlookBasis: [
+    "Eigene bestätigte Aufträge, geplante Unterrichtszeit und Honorare nach Kursbeginn. Keine Zahlungsvorschau.",
+    "Your confirmed assignments, scheduled teaching time and fees by course start. Not a payment forecast.",
+  ],
+  openPersonalAnalytics: [
+    "Meine Finanzanalyse öffnen",
+    "Open my finance analytics",
+  ],
   emptyScenario: [
     "Für diese Währung liegen keine Vorschauwerte vor.",
     "There are no forecast values in this currency.",

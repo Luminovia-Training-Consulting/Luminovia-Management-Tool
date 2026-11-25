@@ -6,9 +6,8 @@ import { db } from "../../lib/supabase";
 import { controlSchema, forecastSchema } from "./finance-schema";
 export type { ControlCenter } from "./finance-schema";
 
-export const financePeriodSchema = z
-  .object({ from: z.string(), until: z.string() })
-  .refine((value) => {
+const periodSchema = (maxDays: number) =>
+  z.object({ from: z.string(), until: z.string() }).refine((value) => {
     const from = DateTime.fromISO(value.from, { zone: "UTC" }),
       until = DateTime.fromISO(value.until, { zone: "UTC" });
     return (
@@ -17,9 +16,11 @@ export const financePeriodSchema = z
       from.isValid &&
       until.isValid &&
       until > from &&
-      until.diff(from, "days").days <= 93
+      until.diff(from, "days").days <= maxDays
     );
   });
+export const financePeriodSchema = periodSchema(93);
+export const forecastPeriodSchema = periodSchema(367);
 export type FinancePeriod = z.infer<typeof financePeriodSchema>;
 export const forecastQuery = (
   actor: string,
@@ -31,7 +32,7 @@ export const forecastQuery = (
     queryKey: ["finance-forecast", actor, period, probability],
     enabled,
     queryFn: async ({ signal }) => {
-      financePeriodSchema.parse(period);
+      forecastPeriodSchema.parse(period);
       const { data, error } = await db()
         .rpc("finance_forecast", {
           p_from: period.from,

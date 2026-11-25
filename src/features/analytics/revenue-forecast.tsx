@@ -16,6 +16,7 @@ import {
   type ChartSeries,
 } from "./charts";
 import { ScenarioProbability, Totals } from "./report-ui";
+import { forecastPeriod, type ForecastWindow } from "./period";
 
 function total(values: ChartSeries["values"]) {
   let cents = 0;
@@ -29,24 +30,24 @@ function total(values: ChartSeries["values"]) {
 export default function RevenueForecast({
   actor,
   zone,
-  currency,
+  preferredCurrency,
   compact = false,
 }: {
   actor: string;
   zone: string;
-  currency?: CurrencyCode;
+  preferredCurrency?: CurrencyCode;
   compact?: boolean;
 }) {
   const { t, i18n } = useTranslation("analytics");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const [probability, setProbability] = useState(0.5);
-  const [days, setDays] = useState(90);
+  const [window, setWindow] = useState<ForecastWindow>("90");
+  const [forecastYear, setForecastYear] = useState(
+    () => DateTime.now().setZone(zone).year + 1,
+  );
   const [selectedCurrency, setCurrency] = useState<CurrencyCode>();
   const now = DateTime.now().setZone(zone);
-  const period = {
-    from: now.toISODate() ?? "",
-    until: now.plus({ days }).toISODate() ?? "",
-  };
+  const period = forecastPeriod(window, forecastYear, now);
   const forecast = useQuery(
     forecastQuery(
       actor,
@@ -60,10 +61,11 @@ export default function RevenueForecast({
     data?.months.some((month) => month.currency === code),
   );
   const activeCurrency =
-    currency ??
-    (selectedCurrency && currencies.includes(selectedCurrency)
+    selectedCurrency && currencies.includes(selectedCurrency)
       ? selectedCurrency
-      : (currencies[0] ?? "EUR"));
+      : preferredCurrency && currencies.includes(preferredCurrency)
+        ? preferredCurrency
+        : (currencies[0] ?? "EUR");
   const months = (data?.months ?? []).filter(
     ({ currency }) => currency === activeCurrency,
   );
@@ -120,6 +122,29 @@ export default function RevenueForecast({
       ),
     },
   ];
+  const margin: ChartSeries[] = data?.gross_authorized
+    ? [
+        {
+          name: t("confirmedPlatformMargin"),
+          tone: "past",
+          values: months.map((row) => row.accepted_margin_known),
+        },
+      ]
+    : [];
+  if (
+    data?.gross_authorized &&
+    months.every((row) => row.pipeline_margin_known !== undefined)
+  ) {
+    margin.push({
+      name: t("scenarioPlatformMargin"),
+      tone: "open",
+      values: months.map((row) => row.pipeline_margin_known ?? null),
+    });
+  }
+  const unpricedMargin = months.reduce(
+    (sum, row) => sum + (row.pipeline_margin_unknown_positions ?? 0),
+    0,
+  );
   const unknownCosts = months.reduce(
     (sum, row) => sum + row.pipeline_cost_unknown_positions,
     0,
@@ -159,18 +184,38 @@ export default function RevenueForecast({
         <ScenarioProbability value={probability} onChange={setProbability} />
         <Field id="analytics-forecast-window" label={t("forecastWindow")}>
           <select
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
+            value={window}
+            onChange={(event) =>
+              setWindow(event.target.value as ForecastWindow)
+            }
           >
             {[30, 60, 90].map((count) => (
               <option value={count} key={count}>
                 {t("forecastDays", { count })}
               </option>
             ))}
+            <option value="quarter">{t("nextCalendarQuarter")}</option>
+            <option value="year">{t("calendarYear")}</option>
           </select>
         </Field>
-        {compact && currencies.length > 1 && (
-          <Field id="finance-forecast-currency" label={t("currency")}>
+        {window === "year" && (
+          <Field id="analytics-forecast-year" label={t("forecastYear")}>
+            <select
+              value={forecastYear}
+              onChange={(event) => setForecastYear(Number(event.target.value))}
+            >
+              {Array.from({ length: 10 }, (_, index) => now.year + index).map(
+                (year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ),
+              )}
+            </select>
+          </Field>
+        )}
+        {currencies.length > 1 && (
+          <Field id="finance-forecast-currency" label={t("forecastCurrency")}>
             <select
               value={activeCurrency}
               onChange={(event) =>
@@ -205,6 +250,34 @@ export default function RevenueForecast({
                   <p className="analytics-muted">
                     {t("unknownGross", { count: unknownGross })}
                   </p>
+                )}
+              </section>
+            )}
+            {margin.length > 0 && (
+              <section>
+                <h3>{t("platformMargin")}</h3>
+                <Totals items={totals(margin)} />
+                <p className="analytics-muted">{t("platformMarginBasis")}</p>
+                {unknownGross > 0 && (
+                  <p className="analytics-muted">
+                    {t("unknownGross", { count: unknownGross })}
+                  </p>
+                )}
+                {data.pipeline_probability > 0 && unpricedMargin > 0 && (
+                  <p className="analytics-muted">
+                    {t("unknownPipelineMargin", { count: unpricedMargin })}
+                  </p>
+                )}
+                {!compact && (
+                  <>
+                    <ChartKey series={margin} />
+                    <LineChart
+                      labels={labels}
+                      series={margin}
+                      format={format}
+                    />
+                    <ChartTable {...table} series={margin} />
+                  </>
                 )}
               </section>
             )}

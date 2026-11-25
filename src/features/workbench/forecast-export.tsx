@@ -91,7 +91,13 @@ export function ForecastExport({
                 : []),
               t("pipelineCost"),
               t("unknownPipelineCostCount"),
-              ...(gross ? [t("pipelineGross")] : []),
+              ...(gross
+                ? [
+                    t("pipelineGross"),
+                    t("pipelineMargin"),
+                    t("unknownPipelineMarginCount"),
+                  ]
+                : []),
               t("payments"),
             ],
             ...forecast.months.map((row) => [
@@ -111,7 +117,13 @@ export function ForecastExport({
                 : []),
               row.pipeline_lecturer_cost_known,
               row.pipeline_cost_unknown_positions,
-              ...(gross ? [row.pipeline_gross_known] : []),
+              ...(gross
+                ? [
+                    row.pipeline_gross_known,
+                    row.pipeline_margin_known ?? null,
+                    row.pipeline_margin_unknown_positions ?? null,
+                  ]
+                : []),
               row.lecturer_invoice_payments,
             ]),
           ],

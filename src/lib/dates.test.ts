@@ -184,6 +184,22 @@ it("reuses currency formatters across rows while retaining locale and currency",
   }
 });
 
+it("bounds the currency formatter cache as the display locale changes", () => {
+  const oldest = "en-x-test-oldest";
+  const format = (locale: string) => money(1, "CAD", locale);
+  const original = format(oldest);
+  for (let index = 0; index < 32; index++) format(`en-x-test-money-${index}`);
+  const constructor = vi.spyOn(Intl, "NumberFormat");
+  try {
+    expect(format(oldest)).toBe(original);
+    expect(constructor).toHaveBeenCalledTimes(1);
+    expect(format(oldest)).toBe(original);
+    expect(constructor).toHaveBeenCalledTimes(1);
+  } finally {
+    constructor.mockRestore();
+  }
+});
+
 it("accepts an IANA display zone and rejects an invalid zone", () => {
   expect(validZone("Europe/Berlin")).toBe(true);
   expect(validZone("Invalid/Zone")).toBe(false);

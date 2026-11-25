@@ -738,6 +738,72 @@ try {
             "0",
         );
     });
+    await test("Annual finance forecast fills a calendar axis and leaves ordinary finance periods capped", async () => {
+        const year = new Date(sessions[0].starts_at).getUTCFullYear();
+        const from = `${year}-01-01`,
+            until = `${year + 1}-01-01`;
+        const forecast = JSON.parse(
+            await as(
+                admin,
+                `select public.finance_forecast('${from}'::date,'${until}'::date,0.5)`,
+                "aal2",
+            ),
+        );
+        assert.equal(forecast.from, from);
+        assert.equal(forecast.until, until);
+        assert.equal(forecast.months.length, 12);
+        assert.deepEqual(
+            forecast.months.map(({ month }) => month),
+            Array.from({ length: 12 }, (_, index) =>
+                `${year}-${String(index + 1).padStart(2, "0")}-01`,
+            ),
+        );
+        assert.ok(
+            forecast.months.some(
+                ({ accepted_lecturer_cost }) => Number(accepted_lecturer_cost) === 0,
+            ),
+        );
+        await sql(`select private.finance_period('2027-01-01','2027-04-04')`);
+        await assert.rejects(
+            sql(`select private.finance_period('2027-01-01','2027-04-05')`),
+            /Finite exclusive date period up to 93 days required/,
+        );
+    });
+    await test("Forecast weights only known open margin and hides it without gross finance permission", async () => {
+        const offer = jobPayload({
+            currency: "CHF",
+            sessions: [sessions[0]],
+            rate_unit: "fixed_total",
+        });
+        delete offer.amount;
+        delete offer.total_amount;
+        const payload = quote(JSON.stringify({
+            ...offer,
+            gross_amount: 1000,
+            gross_total_amount: 1000,
+        }));
+        for (const commission of [20, null]) {
+            await as(admin, `select public.create_commission_job(null,${payload}::jsonb,${commission},'${randomUUID()}')`, "aal2");
+        }
+        const month = sessions[0].starts_at.slice(0, 7) + "-01";
+        const forecast = (user, weight) => as(user,
+            `select public.finance_forecast('${month}'::date,('${month}'::date + interval '1 month')::date,${weight})`,
+            "aal2",
+        ).then(JSON.parse);
+        const bucket = async (user, weight) => (await forecast(user, weight)).months.find(({currency}) => currency === "CHF");
+        const priced = await bucket(admin, 0.5);
+        assert.equal(priced.pipeline_margin_known, 100);
+        assert.equal(priced.pipeline_margin_unknown_positions, 1);
+        assert.equal(priced.pipeline_gross_known, 1000);
+        assert.equal(priced.pipeline_lecturer_cost_known, null);
+        assert.equal((await bucket(admin, 0)).pipeline_margin_known, 0);
+        const manager = randomUUID();
+        await sql(`insert into auth.users(id) values('${manager}'); insert into public.user_roles(user_id,role) values('${manager}','management')`);
+        const restricted = await bucket(manager, 0.5);
+        assert.equal(restricted.pipeline_margin_known, null);
+        assert.equal(restricted.pipeline_margin_unknown_positions, null);
+        assert.equal(restricted.pipeline_gross_known, null);
+    });
     console.log(
         `\n${checks} PostgreSQL tests passed (including 50 genuinely parallel transactions).`,
     );

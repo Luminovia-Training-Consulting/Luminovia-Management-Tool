@@ -1,6 +1,40 @@
 import { DateTime } from "luxon";
 
 export type AnalyticsPeriod = { from: string; through: string };
+export type ForecastWindow = "30" | "60" | "90" | "quarter" | "year";
+
+/** Forecast dates use exclusive bounds and calendar-aware quarter/year windows. */
+export function forecastPeriod(
+  window: ForecastWindow,
+  year: number,
+  now: DateTime,
+) {
+  if (window === "year") {
+    const from = DateTime.fromObject(
+      { year, month: 1, day: 1 },
+      {
+        zone: now.zone,
+      },
+    );
+    return {
+      from: from.toISODate() ?? "",
+      until: from.plus({ years: 1 }).toISODate() ?? "",
+    };
+  }
+  if (window === "quarter") {
+    const from = now.startOf("quarter").plus({ quarters: 1 });
+    return {
+      from: from.toISODate() ?? "",
+      until: from.plus({ quarters: 1 }).toISODate() ?? "",
+    };
+  }
+  const days = Number(window);
+  return {
+    from: now.toISODate() ?? "",
+    until: now.plus({ days }).toISODate() ?? "",
+  };
+}
+
 export const analyticsPresets = [
   "around",
   "historyYear",

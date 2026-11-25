@@ -17,7 +17,7 @@ import { DisplayNameEditor } from "./display-name-editor";
 import { AccountSettings } from "./account-settings";
 import { ProfileLanguage } from "./profile-language";
 import { ProfileEvidence } from "../files/profile-evidence";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -37,6 +37,8 @@ import type { Profile } from "../../lib/types";
 import { validZone } from "../../lib/dates";
 import { TimeZoneOptions } from "../../components/time-zone-options";
 import { requireOnline, useOnline } from "../../lib/online";
+import { hasTeachingRole } from "../auth/internal-capabilities";
+import { portalInternalEdition } from "../../lib/installation-brand";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
@@ -45,6 +47,12 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+
+const ProfileOutlook = lazy(() =>
+  import("../analytics/profile-outlook").then(({ ProfileOutlook }) => ({
+    default: ProfileOutlook,
+  })),
+);
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
@@ -283,6 +291,15 @@ export function ProfilePage() {
       </p>
       <div className="section-stack profile-sections">
         <AvatarEditor name={profile.data.display_name} />
+        {portalInternalEdition && online && hasTeachingRole(roles.data) && (
+          <Suspense fallback={<Loading />}>
+            <ProfileOutlook
+              key={session!.user.id}
+              actor={session!.user.id}
+              zone={profile.data.time_zone}
+            />
+          </Suspense>
+        )}
         <div className="profile-account-grid">
           <ProfileLanguage
             key={session!.user.id}

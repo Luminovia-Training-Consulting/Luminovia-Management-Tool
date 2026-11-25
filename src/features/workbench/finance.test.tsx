@@ -273,6 +273,8 @@ it("exports the applied scenario while masking gross columns without the current
     unknown_gross_claims: 1,
     pipeline_lecturer_cost_known: null,
     pipeline_cost_unknown_positions: 2,
+    pipeline_margin_known: -50,
+    pipeline_margin_unknown_positions: 3,
   });
   mount(
     <ForecastExport
@@ -291,6 +293,7 @@ it("exports the applied scenario while masking gross columns without the current
   const [filename, [header, row]] = fake.download.mock.calls[0]!;
   expect(filename).toBe("luminovia-forecast-2020-01-01-2020-02-01.csv");
   expect(header).not.toContain("Bekannter Bruttoumsatz");
+  expect(header).not.toContain("Gewichtete Marge bepreister Angebote");
   expect(row).toContain(null);
   expect(row).toContain(2);
   await waitFor(() => expect(button).toBeEnabled());
@@ -304,6 +307,16 @@ it("exports the applied scenario while masking gross columns without the current
   const [, [authorisedHeader, authorisedRow]] = fake.download.mock.calls[1]!;
   expect(authorisedHeader).toContain("Bekannter Bruttoumsatz");
   expect(authorisedRow).toContain(500);
+  expect(
+    authorisedRow[
+      authorisedHeader.indexOf("Gewichtete Marge bepreister Angebote")
+    ],
+  ).toBe(-50);
+  expect(
+    authorisedRow[
+      authorisedHeader.indexOf("Offene Positionen ohne berechenbare Marge")
+    ],
+  ).toBe(3);
 });
 
 it("does not fetch any privileged Control Center or forecast data without current management permission", async () => {

@@ -16,6 +16,7 @@ import { Totals } from "./report-ui";
 export function ReportPanels({
   report,
   staff,
+  personal = false,
   scenario,
   companyFiltered,
   currency,
@@ -23,6 +24,7 @@ export function ReportPanels({
 }: {
   report: AnalyticsReport;
   staff: boolean;
+  personal?: boolean;
   scenario?: ReactNode;
   companyFiltered: boolean;
   currency: AnalyticsCurrency;
@@ -105,9 +107,14 @@ export function ReportPanels({
   const cashSeries: ChartSeries[] = (
     [
       ["customerPaymentsIn", "past", "customer_cash"],
-      ["lecturerPaymentsOut", "open", "lecturer_cash"],
+      [
+        personal ? "personalReceipts" : "lecturerPaymentsOut",
+        "open",
+        "lecturer_cash",
+      ],
     ] as const
   )
+    .filter(([, , field]) => !personal || field === "lecturer_cash")
     .map(([name, tone, field]) => ({
       name: t(name),
       tone,
@@ -215,9 +222,11 @@ export function ReportPanels({
         format={money.format}
         table={table}
       />
-      {staff && cashSeries.length > 0 && (
+      {(staff || personal) && cashSeries.length > 0 && (
         <section className="panel">
-          <h2>{t("recordedPaymentsTrend")}</h2>
+          <h2>
+            {t(personal ? "personalPaymentsTrend" : "recordedPaymentsTrend")}
+          </h2>
           <p className="analytics-muted">{t("cashNote")}</p>
           <ChartKey series={cashSeries} />
           <LineChart
@@ -267,7 +276,7 @@ function MoneyPanel({
   const { t } = useTranslation("analytics");
   const [selected, setSelected] = useState<Metric | null>(null);
   const [cumulative, setCumulative] = useState(false);
-  const showCumulative = staff && cumulative;
+  const showCumulative = cumulative;
   const currencies = currencyCodes.filter((code) =>
     report.months.some((month) => month.currencies[code] !== undefined),
   );
@@ -369,19 +378,17 @@ function MoneyPanel({
               ))}
             </select>
           </Field>
-          {staff && (
-            <Field id="analytics-finance-display" label={t("financeView")}>
-              <select
-                value={showCumulative ? "cumulative" : "monthly"}
-                onChange={(event) =>
-                  setCumulative(event.target.value === "cumulative")
-                }
-              >
-                <option value="monthly">{t("monthly")}</option>
-                <option value="cumulative">{t("cumulative")}</option>
-              </select>
-            </Field>
-          )}
+          <Field id="analytics-finance-display" label={t("financeView")}>
+            <select
+              value={showCumulative ? "cumulative" : "monthly"}
+              onChange={(event) =>
+                setCumulative(event.target.value === "cumulative")
+              }
+            >
+              <option value="monthly">{t("monthly")}</option>
+              <option value="cumulative">{t("cumulative")}</option>
+            </select>
+          </Field>
         </div>
       </div>
       <Totals

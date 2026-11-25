@@ -23,6 +23,7 @@ import {
   type AnalyticsPeriod,
 } from "./period";
 import { ReportPanels } from "./report-panels";
+import { PersonalIncomeScenario } from "./personal-income-scenario";
 import {
   analyticsScopes,
   type AnalyticsAccess,
@@ -213,16 +214,26 @@ function AnalyticsView({
       </section>
       {query.isPending && <Loading />}
       {query.isError && <ErrorState retry={() => void query.refetch()} />}
+      {query.isSuccess &&
+        scope === "staff" &&
+        query.data.can_model_pipeline &&
+        !organisation && (
+          <RevenueForecast
+            key={`forecast-${dateFormVersion}`}
+            actor={actor}
+            zone={query.data.time_zone}
+            preferredCurrency={selectedCurrency}
+          />
+        )}
       {query.isSuccess && (
         <ReportPanels
           key={dateFormVersion}
+          personal={scope === "personal"}
           scenario={
-            scope === "staff" &&
-            query.data.can_model_pipeline &&
-            !organisation && (
-              <RevenueForecast
-                actor={actor}
-                zone={query.data.time_zone}
+            scope === "personal" && (
+              <PersonalIncomeScenario
+                report={query.data}
+                period={period}
                 currency={selectedCurrency}
               />
             )

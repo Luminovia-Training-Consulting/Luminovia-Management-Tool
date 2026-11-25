@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { DateTime } from "luxon";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AnalyticsPage } from "./analytics";
+import { ProfileOutlook } from "./profile-outlook";
 import { analyticsPreset, analyticsUntil } from "./period";
 import type { AnalyticsAccess, AnalyticsReport } from "./schema";
 import i18n from "../../lib/i18n";
@@ -66,6 +67,7 @@ function openAnalytics(
   path = "/analytics",
   scope?: "personal" | "staff",
   grossForecast = false,
+  personalScenario = false,
 ) {
   rpc.mockImplementation(
     (
@@ -89,6 +91,15 @@ function openAnalytics(
           open_positions: 0,
         });
       }
+      if (personalScenario && input?.p_scope === "personal") {
+        const month = DateTime.now().setZone(report.time_zone).startOf("month");
+        report.months[0].month = month.toISODate()!;
+        report.months.push({
+          ...report.months[0],
+          month: month.plus({ months: 1 }).toISODate()!,
+          history: false,
+        });
+      }
       const forecast = {
         from: "2026-11-01",
         until: "2027-01-30",
@@ -102,7 +113,7 @@ function openAnalytics(
             currency: "EUR",
             accepted_lecturer_cost: 0,
             accepted_gross_known: grossForecast ? 1000 : null,
-            accepted_margin_known: null,
+            accepted_margin_known: grossForecast ? 200 : null,
             unknown_gross_claims: grossForecast ? 1 : null,
             pipeline_lecturer_cost_known: null,
             pipeline_cost_unknown_positions: 1,
@@ -116,7 +127,7 @@ function openAnalytics(
             currency: "EUR",
             accepted_lecturer_cost: 0,
             accepted_gross_known: grossForecast ? 500 : null,
-            accepted_margin_known: null,
+            accepted_margin_known: grossForecast ? -25 : null,
             unknown_gross_claims: grossForecast ? 0 : null,
             pipeline_lecturer_cost_known: 100,
             pipeline_cost_unknown_positions: 0,
@@ -162,6 +173,101 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+it("shows known platform margin as a signed period total, with a missing-revenue warning", async () => {
+  openAnalytics(
+    {
+      staff: true,
+      personal: false,
+      time_zone: "Europe/Berlin",
+      organisations: [],
+    },
+    true,
+    "/admin/finance/analytics",
+    "staff",
+    true,
+  );
+  const heading = await screen.findByRole("heading", {
+    name: "Known platform margin",
+  });
+  const margin = within(heading.closest("section")!);
+  expect(margin.getByText("€175.00", { selector: "dd" })).toBeVisible();
+  expect(margin.getByText(/has no contract amount/)).toBeVisible();
+  await userEvent.click(margin.getByText("Monthly values as a table"));
+  expect(margin.getByText("-€25.00", { selector: "td" })).toBeVisible();
+});
+
+it("adds a currency-specific personal scenario without requesting administrative forecast data", async () => {
+  openAnalytics(
+    {
+      staff: false,
+      personal: true,
+      time_zone: "Europe/Berlin",
+      organisations: [],
+    },
+    false,
+    "/finance/analytics",
+    "personal",
+    false,
+    true,
+  );
+  const scenario = within(
+    (
+      await screen.findByRole("heading", {
+        name: "Personal income scenario",
+      })
+    ).closest("section")!,
+  );
+  const amount = scenario.getByLabelText(
+    "Extra income per full future month (EUR)",
+  );
+  await userEvent.type(amount, "75.25");
+  expect(scenario.getByText("€75.25", { selector: "dd" })).toBeVisible();
+  expect(scenario.getByText("€275.25", { selector: "dd" })).toBeVisible();
+  await userEvent.selectOptions(screen.getByLabelText("Currency"), "AUD");
+  expect(
+    scenario.getByLabelText("Extra income per full future month (AUD)"),
+  ).toHaveValue(null);
+  expect(rpc.mock.calls.some(([name]) => name === "finance_forecast")).toBe(
+    false,
+  );
+});
+
+it("requests only the actor's next 90 days for the private profile outlook", async () => {
+  rpc.mockReturnValue({
+    abortSignal: async () => ({ data: fakeReport("personal"), error: null }),
+  });
+  const zone = "Australia/Brisbane";
+  const now = DateTime.now().setZone(zone);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <ProfileOutlook actor="fictional-actor" zone={zone} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("6 hr", { selector: "dd" })).toBeVisible();
+  expect(document.querySelector(".analytics-data table")).toBeNull();
+  await userEvent.click(screen.getByText("Monthly values as a table"));
+  const table = await screen.findByRole("table");
+  expect(within(table).getByText("6 hr", { selector: "td" })).toBeVisible();
+  await userEvent.click(screen.getByText("Monthly values as a table"));
+  await waitFor(() => expect(table).not.toBeInTheDocument());
+  expect(
+    screen.getByRole("link", { name: "Open my finance analytics" }),
+  ).toHaveAttribute("href", "/finance/analytics");
+  expect(rpc.mock.calls).toEqual([
+    [
+      "analytics_report",
+      {
+        p_scope: "personal",
+        p_organisation_id: null,
+        p_from: now.toISODate(),
+        p_until: now.plus({ days: 90 }).toISODate(),
+      },
+    ],
+  ]);
 });
 
 it("keeps company finance separate from teaching income and uses original currency", async () => {
@@ -557,6 +663,20 @@ it("ignores a platform query parameter in a fixed personal analytics view", asyn
   );
   await screen.findByRole("heading", { name: "Financial trend" });
   expect(screen.queryByLabelText("View")).toBeNull();
+  const finance = within(
+    screen
+      .getByRole("heading", { name: "Financial trend" })
+      .closest("section")!,
+  );
+  expect(finance.getByLabelText("Display")).toHaveValue("monthly");
+  await userEvent.selectOptions(
+    finance.getByLabelText("Display"),
+    "cumulative",
+  );
+  await userEvent.click(finance.getByText("Cumulative values as a table"));
+  expect(
+    finance.getByRole("columnheader", { name: "Confirmed, past" }),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "Open work scenario" }),
   ).toBeNull();
