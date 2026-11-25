@@ -11,7 +11,9 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
-import { type Template, templatesQuery } from "../operations/data";
+import { readDirectoryPages } from "../../lib/paged-read";
+import { userRolesQuery } from "../../lib/queries";
+import { clientOrganisationsQuery } from "../commercial/commission-api";
 import { wikiPageQuery } from "./api";
 import type { WikiPageRecord } from "./types";
 import "./wiki-course-templates-i18n";
@@ -23,20 +25,68 @@ interface WikiCourseTemplateReference {
   archived: boolean;
 }
 
-/**
- * Read references for the page's actor-visible revision and allow one-at-a-time add/remove on a
- * current unpublished draft. The existing course-template RLS query supplies chooser options;
- * the database independently rechecks that same permission at mutation time.
- */
-export function WikiCourseTemplates({
-  actor,
-  page,
-  canEdit,
-}: {
+type WikiCourseTemplatesProps = {
   actor: string;
   page: WikiPageRecord;
   canEdit: boolean;
-}) {
+};
+
+/** Global wiki editing stays available; a company context is an explicit, separate projection. */
+export function WikiCourseTemplates(props: WikiCourseTemplatesProps) {
+  const { t } = useTranslation("wikiCourseTemplates");
+  const roles = useQuery(userRolesQuery(props.actor));
+  const isClient = roles.data?.includes("client") ?? false;
+  const companies = useQuery({
+    ...clientOrganisationsQuery(props.actor),
+    enabled: isClient,
+  });
+  const [selectedCompany, setSelectedCompany] = useState("");
+  const company =
+    isClient && companies.data?.some(({ id }) => id === selectedCompany)
+      ? selectedCompany
+      : "";
+  return (
+    <section
+      className="knowledge-course-templates"
+      aria-labelledby="wiki-course-templates-title"
+    >
+      <h3 id="wiki-course-templates-title">{t("title")}</h3>
+      <p>{t("hint")}</p>
+      {isClient && companies.isError && (
+        <ErrorState retry={() => void companies.refetch()} />
+      )}
+      {isClient && Boolean(companies.data?.length) && (
+        <Field id="wiki-template-company" label={t("companyContext")}>
+          <select
+            id="wiki-template-company"
+            value={company}
+            onChange={(event) => setSelectedCompany(event.target.value)}
+          >
+            <option value="">{t("globalContext")}</option>
+            {companies.data?.map(({ id, name }) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+      <WikiCourseTemplateReferences
+        key={company}
+        {...props}
+        company={company}
+      />
+    </section>
+  );
+}
+
+/** The selected scope travels with every read and mutation of the current revision. */
+function WikiCourseTemplateReferences({
+  actor,
+  page,
+  canEdit,
+  company,
+}: WikiCourseTemplatesProps & { company: string }) {
   const { t } = useTranslation("wikiCourseTemplates");
   const client = useQueryClient();
   const online = useOnline();
@@ -46,6 +96,7 @@ export function WikiCourseTemplates({
     actor,
     page.id,
     page.version,
+    company,
   ] as const;
   const editable =
     canEdit &&
@@ -53,18 +104,34 @@ export function WikiCourseTemplates({
     page.version !== page.published_version;
   const references = useQuery({
     queryKey: referenceKey,
-    queryFn: async () => {
-      const { data, error } = await db().rpc("wiki_course_templates", {
-        p_page_id: page.id,
-      });
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("wiki_course_templates", {
+          p_page_id: page.id,
+          ...(company ? { p_organisation_id: company } : {}),
+        })
+        .abortSignal(signal);
       if (error) throw error;
       return (data ?? []) as WikiCourseTemplateReference[];
     },
   });
   const canMutate = editable && references.isSuccess;
-  // The native table query is RLS-filtered by private.can_read_course_template; it is not a
-  // general catalogue endpoint and remains disabled unless this page can currently be edited.
-  const templates = useQuery({ ...templatesQuery(actor), enabled: canMutate });
+  const templates = useQuery({
+    queryKey: [...referenceKey, "choices"],
+    enabled: canMutate,
+    queryFn: ({ signal }) =>
+      readDirectoryPages<{ id: string; title: string }>((from, to) =>
+        db()
+          .rpc("wiki_course_template_choices", {
+            p_page_id: page.id,
+            p_organisation_id: company || null,
+          })
+          .order("title")
+          .order("id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
+  });
   const change = useMutation({
     mutationFn: async ({
       templateId,
@@ -79,6 +146,7 @@ export function WikiCourseTemplates({
         p_revision: page.version,
         p_template_id: templateId,
         p_remove: remove,
+        ...(company ? { p_organisation_id: company } : {}),
       });
       if (error) throw error;
     },
@@ -101,8 +169,8 @@ export function WikiCourseTemplates({
   });
   const linked = references.data ?? [];
   const linkedIds = new Set(linked.map((item) => item.template_id));
-  const available = ((templates.data ?? []) as Template[]).filter(
-    (item) => !item.archived_at && !linkedIds.has(item.id),
+  const available = (templates.data ?? []).filter(
+    (item) => !linkedIds.has(item.id),
   );
   const busy = change.isPending || templates.isFetching;
   const atLimit = linked.length >= 20;
@@ -111,12 +179,7 @@ export function WikiCourseTemplates({
       ? change.error.code
       : null;
   return (
-    <section
-      className="knowledge-course-templates"
-      aria-labelledby="wiki-course-templates-title"
-    >
-      <h3 id="wiki-course-templates-title">{t("title")}</h3>
-      <p>{t("hint")}</p>
+    <>
       {references.isPending ? (
         <Loading />
       ) : references.isError ? (
@@ -127,7 +190,7 @@ export function WikiCourseTemplates({
             <li key={item.template_id}>
               <Link
                 className="knowledge-course-template-link"
-                to={`/courses?template=${encodeURIComponent(item.template_id)}`}
+                to={`/courses?${new URLSearchParams({ template: item.template_id, ...(company ? { company, tab: "templates" } : {}) })}`}
               >
                 {item.title}
               </Link>
@@ -207,6 +270,6 @@ export function WikiCourseTemplates({
               : t("error")}
         </Notice>
       )}
-    </section>
+    </>
   );
 }

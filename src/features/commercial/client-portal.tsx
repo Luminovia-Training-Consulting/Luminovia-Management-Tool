@@ -46,6 +46,8 @@ import { JobDateRange } from "../jobs/session-range";
 import { resolveJobSessions } from "../jobs/session-schedule";
 import { dateTime, money, validZone } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { PageNotFound } from "../../components/page-not-found";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
@@ -710,7 +712,8 @@ export function ClientPortalPage() {
   const online = useOnline();
   const access = useQuery(commissionAccessQuery(actor));
   const eligible = Boolean(
-    access.data?.can_request || access.data?.can_manage_gross,
+    access.isSuccess &&
+    (access.data.can_request || access.data.can_manage_gross),
   );
   const orgs = useQuery({
     ...clientOrganisationsQuery(actor),
@@ -726,7 +729,7 @@ export function ClientPortalPage() {
   const monthly = useQuery({
     ...companyMonthlySpendingQuery(actor, organisation || null),
     enabled: Boolean(
-      access.data?.can_request && !access.data?.can_manage_gross,
+      eligible && access.data?.can_request && !access.data?.can_manage_gross,
     ),
   });
   const profile = useQuery(profileQuery(actor));
@@ -734,15 +737,10 @@ export function ClientPortalPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
+  if (isDatabasePermissionDenied(access.failureReason)) return <PageNotFound />;
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
-  if (!eligible)
-    return (
-      <>
-        <PageHeading title={t("clientPortal")} />
-        <Notice kind="error">{t("noMembership")}</Notice>
-      </>
-    );
+  if (!eligible) return <PageNotFound />;
   const filtered =
     requests.data?.filter(
       (row) =>

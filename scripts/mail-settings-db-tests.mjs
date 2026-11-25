@@ -15,9 +15,9 @@ async function check(name, run) {
 }
 
 await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
-    const admin = randomUUID(), manager = randomUUID(), lecturer = randomUUID();
+    const admin = randomUUID(), manager = randomUUID(), lecturer = randomUUID(), client = randomUUID();
     await sql(
-        `insert into auth.users(id,email) values('${admin}','admin@example.invalid'),('${manager}','manager@example.invalid'),('${lecturer}','lecturer@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer');`,
+        `insert into auth.users(id,email) values('${admin}','admin@example.invalid'),('${manager}','manager@example.invalid'),('${lecturer}','lecturer@example.invalid'),('${client}','client@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer'),('${client}','client');`,
     );
     const {paths} = portalOpenApi("https://portal.example.invalid");
     const mailPaths = ["get_mail_configuration", "save_mail_configuration", "queue_mail_connection_test"];
@@ -95,6 +95,15 @@ await withTestDatabase("mail_settings_test", async ({sql, actor}) => {
         password: "",
     };
     let testId = "";
+
+    await check("Non-admin roles cannot read or change SMTP settings", async () => {
+        for (const who of [manager, lecturer, client]) {
+            await assert.rejects(rpc(who, "get_mail_configuration"), /42501/);
+            await assert.rejects(rpc(who, "save_mail_configuration", [0, smtp, imap]), /42501/);
+            await assert.rejects(rpc(who, "queue_mail_connection_test", ["smtp"]), /42501/);
+        }
+        assert.equal((await rpc(admin, "get_mail_configuration")).version, 0);
+    });
 
     await check(
         "SMTP settings store Vault credentials with optimistic versioning and no secret readback",

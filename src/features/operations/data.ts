@@ -215,20 +215,24 @@ export const notesQuery = (actor: string, organisation: string | undefined) =>
       return data?.private_notes ?? "";
     },
   });
-/** Read course_templates through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
-export const templatesQuery = (actor: string) =>
+/** Keep the selected company's library separate from the actor's run metadata and global library. */
+export const templatesQuery = (actor: string, company?: string) =>
   queryOptions({
-    queryKey: ["operations", "templates", actor],
+    queryKey: company
+      ? ["operations", "templates", actor, company]
+      : ["operations", "templates", actor],
     queryFn: ({ signal }) =>
-      readDirectoryPages<Template>((from, to) =>
-        db()
+      readDirectoryPages<Template>((from, to) => {
+        const query = db()
           .from("course_templates")
-          .select("*,course_template_topics(topic_id)")
+          .select("*,course_template_topics(topic_id)");
+        if (company) query.eq("owner_organisation_id", company);
+        return query
           .order("title")
           .order("id")
           .range(from, to)
-          .abortSignal(signal),
-      ),
+          .abortSignal(signal);
+      }),
   });
 /** Read course_runs through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const runsQuery = (actor: string, withAssignments = false) =>

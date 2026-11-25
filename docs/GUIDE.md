@@ -70,7 +70,7 @@ Use `./portal check` for fast local source/coverage/build validation and `./port
 
 At sign-in choose **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour**. [Usage and verification](GUIDE.md#section-tour-and-help).
 
-Unknown URLs and unavailable administration or forum pages show the same **Seite nicht gefunden / Page not found** screen. It does not reveal whether the requested page exists or why it is unavailable. It keeps the address and offers links to the overview and public troubleshooting help. Temporary service errors retain their separate retry state.
+Unknown URLs and unavailable administration, company or forum pages show the same **Seite nicht gefunden / Page not found** screen. It does not reveal whether the requested page exists or why it is unavailable. It keeps the address and offers links to the overview and public troubleshooting help. Temporary service errors retain their separate retry state. The database independently checks each request; an operational management role does not grant platform administration such as SMTP configuration.
 
 In a long form dialog, scroll the fields below the heading. The heading and close button stay visible. During saves that disable the close button, the dialog stays open until the request returns.
 
@@ -1474,6 +1474,8 @@ additional/changed sources. Updating an existing code to a different curriculum 
 
 The current sources are `scripts/course-catalogue.mjs`, `data/course-building-blocks.json` and the [customer-neutral forward migration](../supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql). Historical migration `20261115155208` in [the migration directory](../supabase/migrations) remains byte-identical. The catalogue has no dependency on the user's absolute filesystem path at runtime. Its deterministic insert-only import is safe to reapply to missing initial rows and never
 replaces user-authored template text. Original files remain in the user's existing folder.
+
+Company-owned course templates are separate from the customer-neutral catalogue. Choose the company explicitly before editing a template or linking it from a wiki draft. The server checks current membership and template ownership, including for accounts with multiple company memberships. A draft or a course run cannot use a foreign company's template through a saved reference. Global editorial access remains a separate capability.
 
 <a id="section-course-building-blocks-customer-neutral-correction-and-installation-boundary"></a>
 

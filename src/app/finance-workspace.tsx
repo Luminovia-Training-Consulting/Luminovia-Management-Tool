@@ -16,6 +16,7 @@ import {
   type FinanceScope,
 } from "./finance-access";
 import { permissionsQuery, userRolesQuery } from "../lib/queries";
+import { isDatabasePermissionDenied } from "../lib/database-errors";
 
 const tabs = [
   {
@@ -48,6 +49,12 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
   const actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
   const permissions = useQuery(permissionsQuery(actor));
+  if (
+    [roles.failureReason, permissions.failureReason].some(
+      isDatabasePermissionDenied,
+    )
+  )
+    return <PageNotFound />;
   if (roles.isPending || permissions.isPending) return <Loading />;
   if (roles.isError || permissions.isError)
     return (
@@ -106,6 +113,8 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
   const current = access[scope];
   const visible = tabs.filter(({ key }) => current[key]);
   const isLearning = suffix === "/analytics/learning";
+  if (scope !== "personal" && !visible.length && !current.learning)
+    return <PageNotFound />;
   if (
     !(isLearning
       ? current.learning

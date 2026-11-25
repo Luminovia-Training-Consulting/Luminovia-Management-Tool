@@ -288,6 +288,10 @@ try {
             assert.equal(await request(client, org, body, key), r);
             assert.equal((await rows(client, "client_requests")).length, 1);
             assert.deepEqual(await rows(otherClient, "client_requests", [org]), []);
+            for (const who of [lecturer, management]) {
+                assert.deepEqual(await rows(who, "client_requests", [org]), []);
+                await assert.rejects(request(who, org, body), /Organisation access required/);
+            }
             await assert.rejects(
                 request(client, otherOrg, body),
                 /Organisation access required/,

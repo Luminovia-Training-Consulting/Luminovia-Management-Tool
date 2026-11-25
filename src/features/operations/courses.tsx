@@ -284,7 +284,7 @@ function TemplateForm({
       saveCourseTemplate(
         values,
         original?.id ?? null,
-        original?.owner_organisation_id ? undefined : owner,
+        companyOnly || !original?.owner_organisation_id ? owner : undefined,
       ),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["operations"] });
@@ -299,7 +299,7 @@ function TemplateForm({
         <select
           id="template-owner"
           value={owner}
-          disabled={Boolean(original?.owner_organisation_id)}
+          disabled={companyOnly || Boolean(original?.owner_organisation_id)}
           onChange={(event) => setOwner(event.target.value)}
         >
           {!companyOnly && <option value="">{t("internalTemplate")}</option>}
@@ -832,6 +832,8 @@ function RunForm({
               id="run-template"
               {...register("template_id", {
                 onChange: (event) => {
+                  // Company planning is already bound to the selected company.
+                  if (companyOnly) return;
                   const owner = templates.find(
                     ({ id }) => id === event.target.value,
                   )?.owner_organisation_id;
@@ -1294,7 +1296,6 @@ export function CoursesPage() {
   const { session } = useAuth();
   const actor = session!.user.id;
   const permissions = useQuery(permissionsQuery(actor));
-  const templates = useQuery(templatesQuery(actor));
   const manage = permissions.data?.includes("courses.manage") ?? false;
   const canPrepareOffer =
     manage && (permissions.data?.includes("jobs.manage") ?? false);
@@ -1321,9 +1322,20 @@ export function CoursesPage() {
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
-  const company = manage ? `${params.get("company") ?? ""}` : "";
+  const company = `${params.get("company") ?? ""}`;
+  const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
+  // Only infer a company when there is exactly one active membership and no explicit request.
+  const templateCompany = company
+    ? companyOrganisations.find(({ id }) => id === company)
+    : companyOrganisations.length === 1
+      ? companyOrganisations[0]
+      : undefined;
+  const templateCompanyId = `${templateCompany?.id ?? ""}`;
   const setCourseView = (view: Record<string, string>, replace = false) =>
-    setParams(company ? { ...view, company } : view, { replace });
+    setParams(
+      (manage || companyViewer) && company ? { ...view, company } : view,
+      { replace },
+    );
   const selectedRunStatus =
     manage && (runStatus !== "assigned" || canPrepareOffer) ? runStatus : "all";
   const onlyAssignedRuns = canPrepareOffer && selectedRunStatus === "assigned";
@@ -1331,6 +1343,17 @@ export function CoursesPage() {
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
       : "runs";
+  const companyLibrary = useQuery({
+    ...templatesQuery(actor, templateCompanyId),
+    enabled: Boolean(templateCompanyId),
+  });
+  // The run overview still needs authorized run titles across memberships, but
+  // it is not a source of company library options or of scoped detail records.
+  const useRunMetadata = !companyViewer || tab === "runs" || params.has("run");
+  const templates = useQuery({
+    ...templatesQuery(actor),
+    enabled: permissions.isSuccess && roles.isSuccess && useRunMetadata,
+  });
   const needsRuns =
     tab === "runs" || params.has("run") || params.has("template");
   const runs = useQuery({
@@ -1349,7 +1372,7 @@ export function CoursesPage() {
   const listKey = JSON.stringify(
     tab === "runs"
       ? [actor, tab, needle, company, phase, selectedRunStatus, lecturer]
-      : [actor, tab, needle],
+      : [actor, tab, needle, templateCompanyId],
   );
   const [visibleList, setVisibleList] = useState({
     key: listKey,
@@ -1360,8 +1383,7 @@ export function CoursesPage() {
   const setTab = (next: "runs" | "templates") => {
     setCourseView(next === "templates" ? { tab: next } : {});
   };
-  const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
-  const canCreateTemplate = manage || companyOrganisations.length > 0;
+  const canCreateTemplate = manage || Boolean(templateCompany);
   const templatesById = useMemo(
     () => new Map(templates.data?.map((item) => [item.id, item])),
     [templates.data],
@@ -1434,10 +1456,10 @@ export function CoursesPage() {
     (template: Template) =>
       manage ||
       Boolean(
-        companyViewer &&
-        companyOrganisationsById.has(template.owner_organisation_id ?? ""),
+        templateCompanyId &&
+        template.owner_organisation_id === templateCompanyId,
       ),
-    [manage, companyViewer, companyOrganisationsById],
+    [manage, templateCompanyId],
   );
   const canEditTemplate = (template: Template) =>
     manage ||
@@ -1451,7 +1473,17 @@ export function CoursesPage() {
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
     enabled: Boolean(detail && !detail.archived_at),
   });
-  const templateDetail = templatesById.get(params.get("template") ?? "");
+  const templateId = params.get("template");
+  const libraryDetail = companyLibrary.data?.find(
+    (template) => template.id === templateId && canManageTemplate(template),
+  );
+  const runTemplateDetail = templatesById.get(templateId ?? "");
+  const templateDetail = companyViewer
+    ? (libraryDetail ??
+      (!company && tab === "runs" && !runTemplateDetail?.owner_organisation_id
+        ? runTemplateDetail
+        : undefined))
+    : runTemplateDetail;
   const editRun = (
     run: CourseRun | null,
     target?: "schedule" | "organisation",
@@ -1570,7 +1602,7 @@ export function CoursesPage() {
       const assignments = assignmentsByRun.get(run.id) ?? [];
       if (
         (!manage && run.archived_at) ||
-        (company && run.organisation_id !== company) ||
+        (manage && company && run.organisation_id !== company) ||
         (onlyAssignedRuns && !assignments.length) ||
         (canPrepareOffer &&
           lecturer &&
@@ -1614,8 +1646,11 @@ export function CoursesPage() {
     selectedRunStatus,
   ]);
   const visibleTemplates = useMemo(
-    () => (templates.data ?? []).filter(canManageTemplate),
-    [templates.data, canManageTemplate],
+    () =>
+      manage
+        ? (templates.data ?? [])
+        : (companyLibrary.data ?? []).filter(canManageTemplate),
+    [manage, templates.data, companyLibrary.data, canManageTemplate],
   );
   const blockCodes = useMemo(
     () => new Map(blockPlanning.data?.map((block) => [block.id, block.code])),
@@ -1639,7 +1674,10 @@ export function CoursesPage() {
     [tab, needle, visibleTemplates, blockCodes],
   );
   if (
-    templates.isError ||
+    (useRunMetadata && templates.isError) ||
+    (Boolean(templateCompany) && companyLibrary.isError) ||
+    (companyViewer && ownCompanies.isError) ||
+    roles.isError ||
     (needsRuns && runs.isError) ||
     orgs.isError ||
     topics.isError ||
@@ -1648,7 +1686,10 @@ export function CoursesPage() {
     return (
       <ErrorState
         retry={() => {
-          void templates.refetch();
+          if (useRunMetadata) void templates.refetch();
+          if (templateCompany) void companyLibrary.refetch();
+          if (companyViewer) void ownCompanies.refetch();
+          void roles.refetch();
           if (needsRuns && permissions.isSuccess) void runs.refetch();
           void orgs.refetch();
           void topics.refetch();
@@ -1657,7 +1698,10 @@ export function CoursesPage() {
       />
     );
   if (
-    templates.isPending ||
+    (useRunMetadata && templates.isPending) ||
+    (Boolean(templateCompany) && companyLibrary.isPending) ||
+    (companyViewer && ownCompanies.isPending) ||
+    roles.isPending ||
     (needsRuns && runs.isPending) ||
     orgs.isPending ||
     topics.isPending ||
@@ -1665,7 +1709,18 @@ export function CoursesPage() {
   )
     return <Loading />;
   const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
-  const planningOrganisations = manage ? orgs.data : companyOrganisations;
+  const planningOrganisations = manage
+    ? orgs.data
+    : templateCompany
+      ? [templateCompany]
+      : [];
+  // A browser history change can switch scope without using the company picker.
+  const mayOpenTemplateEditor =
+    canCreateTemplate && (!templateEdit || canEditTemplate(templateEdit));
+  const mayOpenSeries =
+    canCreateTemplate && (!seriesTemplate || canManageTemplate(seriesTemplate));
+  const mayOpenRunEditor =
+    manage || visibleTemplates.some(({ id }) => id === initialTemplateId);
   const offerStatus = (
     run: CourseRun,
     { liveOffers, closedReason }: ReturnType<typeof courseOfferState>,
@@ -1876,7 +1931,9 @@ export function CoursesPage() {
                 )}
                 {manage &&
                   tab === "runs" &&
-                  templates.data.some((template) => !template.archived_at) && (
+                  visibleTemplates.some(
+                    (template) => !template.archived_at,
+                  ) && (
                     <TableImport
                       inDialog
                       label={
@@ -1904,7 +1961,7 @@ export function CoursesPage() {
                         "2027-01-11T12:00",
                       ]}
                       parse={(row) => {
-                        const matchingTemplates = templates.data.filter(
+                        const matchingTemplates = visibleTemplates.filter(
                           (item) =>
                             !item.archived_at &&
                             item.title === row.template_title.trim(),
@@ -1989,6 +2046,34 @@ export function CoursesPage() {
           </div>
         </div>
         <div className="course-search-row">
+          {companyViewer &&
+            tab === "templates" &&
+            companyOrganisations.length > 0 && (
+              <Field id="template-library-company" label={t("organisation")}>
+                <select
+                  id="template-library-company"
+                  value={templateCompany?.id ?? ""}
+                  onChange={(event) => {
+                    setTemplateEdit(undefined);
+                    setSeriesTemplate(undefined);
+                    setRunEdit(undefined);
+                    setParams(
+                      { tab: "templates", company: event.target.value },
+                      { replace: true },
+                    );
+                  }}
+                >
+                  <option value="" disabled>
+                    {t("none")}
+                  </option>
+                  {companyOrganisations.map(({ id, name }) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
           <Field id="course-search" label={t("search")}>
             <input
               id="course-search"
@@ -2300,10 +2385,6 @@ export function CoursesPage() {
             );
           })}
         </div>
-      ) : companyViewer && ownCompanies.isPending ? (
-        <Loading />
-      ) : companyViewer && ownCompanies.isError ? (
-        <ErrorState retry={() => void ownCompanies.refetch()} />
       ) : filteredTemplates.length === 0 ? (
         <div className="empty-state">{t("noCourseTemplates")}</div>
       ) : (
@@ -2409,7 +2490,7 @@ export function CoursesPage() {
         </div>
       )}
       <Dialog
-        open={seriesTemplate !== undefined}
+        open={mayOpenSeries && seriesTemplate !== undefined}
         closeDisabled={seriesBusy}
         onOpenChange={(open) => {
           if (!open && !seriesBusy) setSeriesTemplate(undefined);
@@ -2417,8 +2498,9 @@ export function CoursesPage() {
         title={t("courseSeries:title")}
         description={t("courseSeries:intro")}
       >
-        {seriesTemplate !== undefined && (
+        {mayOpenSeries && seriesTemplate !== undefined && (
           <CourseSeriesForm
+            key={templateCompanyId}
             actor={actor}
             organisations={planningOrganisations.filter(
               (organisation) =>
@@ -2444,7 +2526,7 @@ export function CoursesPage() {
         )}
       </Dialog>
       <Dialog
-        open={templateEdit !== undefined}
+        open={mayOpenTemplateEditor && templateEdit !== undefined}
         onOpenChange={(open) => {
           if (!open) setTemplateEdit(undefined);
         }}
@@ -2452,7 +2534,7 @@ export function CoursesPage() {
         description={t("template")}
       >
         <TemplateForm
-          key={templateEdit?.id}
+          key={`${templateCompany?.id ?? "global"}:${templateEdit?.id ?? "new"}`}
           original={templateEdit ?? undefined}
           organisations={planningOrganisations}
           companyOnly={!manage}
@@ -2463,7 +2545,7 @@ export function CoursesPage() {
         />
       </Dialog>
       <Dialog
-        open={runEdit !== undefined}
+        open={mayOpenRunEditor && runEdit !== undefined}
         onOpenChange={(open) => {
           if (!open && !runSaving) setRunEdit(undefined);
         }}
@@ -2482,7 +2564,7 @@ export function CoursesPage() {
         <RunForm
           key={runEdit?.id ?? `new:${initialTemplateId ?? "default"}`}
           original={runEdit ?? undefined}
-          templates={manage ? templates.data : visibleTemplates}
+          templates={manage ? (templates.data ?? []) : visibleTemplates}
           organisations={planningOrganisations}
           initialTemplateId={initialTemplateId}
           companyOnly={!manage}

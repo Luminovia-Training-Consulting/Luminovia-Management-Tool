@@ -162,13 +162,13 @@ test("individual account roles, scoped invitations and linked status management 
     try {
         const lecturerPage = await lecturerContext.newPage();
         await login(lecturerPage, teacher.email);
-        await lecturerPage.goto("/admin/accounts");
-        await expect(
-            lecturerPage.getByRole("heading", {
+        for (const path of ["/admin/accounts", "/client", "/clients", "/client/finance/accounting"]) {
+            await lecturerPage.goto(path);
+            await expect(lecturerPage.getByRole("heading", {
                 name: "Diese Seite wurde nicht gefunden.", exact: true,
-            }),
-        ).toBeVisible();
-        await expect(lecturerPage).toHaveURL(/\/admin\/accounts$/);
+            })).toBeVisible();
+            expect(new URL(lecturerPage.url()).pathname).toBe(path);
+        }
         await expect(
             lecturerPage.getByText(admin.email, {exact: true}),
         ).toHaveCount(0);

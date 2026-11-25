@@ -54,7 +54,11 @@ export function AdminNavigation() {
   );
   const inAdministration = Boolean(matchPath("/admin/*", pathname));
   const overview = Boolean(matchPath("/admin", pathname));
-  const resetAlias = Boolean(matchPath("/reset", pathname));
+  const legacyDestination = matchPath("/reset", pathname)
+    ? "/admin/reset"
+    : matchPath("/clients", pathname)
+      ? "/admin/clients"
+      : undefined;
   const controlCenter = Boolean(matchPath("/control-center", pathname));
   const context: AdministrationContext = {
     links,
@@ -73,7 +77,7 @@ export function AdminNavigation() {
 
   // Mount administrative routes only for the capabilities used to advertise
   // them. Shared routes outside /admin still have their own audience rules.
-  if (inAdministration || resetAlias || controlCenter) {
+  if (inAdministration || legacyDestination || controlCenter) {
     if (
       [permissions.error, roles.error, profile.error].some(
         isDatabasePermissionDenied,
@@ -86,8 +90,8 @@ export function AdminNavigation() {
       ? legacyAssignment
         ? links.some(({ to }) => to === "/admin/assignments")
         : areaLinks.length > 0
-      : resetAlias
-        ? links.some(({ to }) => to === "/admin/reset")
+      : legacyDestination
+        ? links.some(({ to }) => to === legacyDestination)
         : current ||
           areaLinks.some(([, { to }]) => matchPath(to, pathname)) ||
           (matchPath("/admin/people", pathname) &&

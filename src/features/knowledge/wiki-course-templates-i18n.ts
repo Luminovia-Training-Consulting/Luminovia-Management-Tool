@@ -3,6 +3,11 @@ import i18n from "../../lib/i18n";
 
 const words = {
   title: ["Kursvorlagen", "Course templates"],
+  companyContext: [
+    "Firmenkontext für Kursvorlagen",
+    "Company context for course templates",
+  ],
+  globalContext: ["Globale Redaktion", "Global editorial context"],
   hint: [
     "Verknüpfte Vorlagen öffnen sich nur, wenn du sie aktuell lesen darfst.",
     "Linked templates open only when you currently have permission to read them.",

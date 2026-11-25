@@ -330,7 +330,6 @@ export default function PortalRoutes() {
             <Route path="forum" element={<CommunicationForum />} />
           </Route>
           <Route path="search" element={<PortalSearch />} />
-          <Route path="clients" element={<ClientsPage />} />
           <Route path="client" element={<ClientPortalPage />} />
           <Route
             path="my-reviews"
@@ -469,6 +468,7 @@ export default function PortalRoutes() {
           />
           <Route path="auth/password" element={<PasswordRecovery />} />
           <Route element={<AdminNavigation />}>
+            <Route path="clients" element={<ClientsPage />} />
             <Route
               path="reset"
               element={<Navigate to="/admin/reset" replace />}

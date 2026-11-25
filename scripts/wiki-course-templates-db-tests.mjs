@@ -109,5 +109,40 @@ await withTestDatabase("wiki_course_templates", async ({sql, actor}) => {
     await sql(`update public.job_claims set status='cancelled' where job_id=${q(offer)} and lecturer_id=${q(reader)}`);
     assert.deepEqual(await list(reader), []);
     assert.equal(await actor(reader, `select count(*) from public.wiki_pages where id=${q(page)}`), "1");
+
+    // One shared wiki revision can contain isolated company references; an editor
+    // with both memberships must still operate in the selected company only.
+    const [companyA, companyB, companyC, templateA, templateB] = Array.from({length: 5}, randomUUID);
+    await sql(`insert into public.organisations(id,name) values
+      (${q(companyA)},'Fictional company A'),(${q(companyB)},'Fictional company B'),(${q(companyC)},'Fictional company C');
+      insert into public.user_roles(user_id,role) values (${q(author)},'client'),(${q(reader)},'client');
+      insert into public.client_organisation_memberships(user_id,organisation_id) values
+        (${q(author)},${q(companyA)}),(${q(author)},${q(companyB)}),(${q(reader)},${q(companyA)});
+      insert into public.course_templates(id,title,owner_organisation_id) values
+        (${q(templateA)},'Fictional template A',${q(companyA)}),(${q(templateB)},'Fictional template B',${q(companyB)});`);
+    const companyPage = (await save(author, null, null)).page_id;
+    const link = (target, company, remove = false, revision = 1) => actor(author,
+        `select public.manage_wiki_course_template(${q(companyPage)},${revision},${q(target)},${remove},${company ? q(company) : "null"})`);
+    const scopedList = async (who, company) => references.parse(JSON.parse(await actor(who,
+        `select public.wiki_course_templates(${q(companyPage)},${company ? q(company) : "null"})`)));
+    await assert.rejects(link(templateB, companyA), /42501/);
+    await assert.rejects(link(templateB, null), /42501/);
+    await assert.rejects(link(templateA, companyC), /42501/);
+    await link(templateA, companyA);
+    await link(templateB, companyB);
+    assert.deepEqual((await scopedList(author, companyA)).map(({template_id}) => template_id), [templateA]);
+    assert.deepEqual((await scopedList(author, companyB)).map(({template_id}) => template_id), [templateB]);
+    assert.deepEqual(await scopedList(author, null), []);
+    assert.equal(await actor(author, `select id from public.wiki_course_template_choices(${q(companyPage)},${q(companyA)})`), templateA);
+    await assert.rejects(link(templateB, companyA, true), /42501/);
+    await save(manager, companyPage, 1, "published");
+    assert.deepEqual((await scopedList(reader, companyA)).map(({template_id}) => template_id), [templateA]);
+    await assert.rejects(scopedList(reader, companyB), /42501/);
+    const revision = (await save(author, companyPage, 2)).version;
+    assert.deepEqual((await scopedList(author, companyB)).map(({template_id}) => template_id), [templateB]);
+    await sql(`update public.client_organisation_memberships set removed_at=now() where user_id=${q(author)} and organisation_id=${q(companyB)}`);
+    await assert.rejects(link(templateB, companyB, true, revision), /42501/);
+    await assert.rejects(scopedList(author, companyB), /42501/);
+    assert.deepEqual((await scopedList(manager, null)).map(({template_id}) => template_id), [templateA, templateB]);
     console.log("PASS wiki template references: caller visibility, draft revision CAS, immutable published snapshot, archive and delete boundaries");
 });

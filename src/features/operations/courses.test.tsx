@@ -151,6 +151,11 @@ function renderCourses({
     ["organisations", organisations],
   ] as const)
     client.setQueryData(["operations", name, actor], value);
+  for (const { id } of organisations)
+    client.setQueryData(
+      ["operations", "templates", actor, id],
+      templates.filter((item) => item.owner_organisation_id === id),
+    );
   if (blocks.length)
     client.setQueryData(buildingBlockPlanningQuery(actor).queryKey, blocks);
   if (!coldStart) {
@@ -244,16 +249,21 @@ beforeEach(async () => {
   });
   state.from.mockReset();
   state.from.mockImplementation((table: string) => {
+    let rows = state.tables[table] ?? [];
     const query = {
       select: () => query,
       order: () => query,
       limit: () => query,
-      eq: () => query,
+      eq: (column: string, value: string) => {
+        if (table === "course_templates" && column === "owner_organisation_id")
+          rows = (rows as Template[]).filter(
+            (row) => row.owner_organisation_id === value,
+          );
+        return query;
+      },
       range: (from: number, to: number) => ({
         abortSignal: async () => ({
-          data: structuredClone(
-            (state.tables[table] ?? []).slice(from, to + 1),
-          ),
+          data: structuredClone(rows.slice(from, to + 1)),
           error: null,
         }),
       }),
@@ -506,14 +516,55 @@ it("opens the company library directly and saves new and existing company templa
   await waitFor(() => expect(dialog).not.toBeInTheDocument());
   expect(state.rpc).toHaveBeenCalledWith("save_course_template", {
     p_id: templateId,
-    p_payload: expect.not.objectContaining({
-      owner_organisation_id: expect.anything(),
+    p_payload: expect.objectContaining({
+      owner_organisation_id: companyId,
+      title: "Revised Linux practice day",
     }),
   });
-  expect(state.rpc).toHaveBeenLastCalledWith("save_course_template", {
-    p_id: templateId,
-    p_payload: expect.objectContaining({ title: "Revised Linux practice day" }),
+});
+
+it("uses one selected company for the library and refuses a deep link to another membership", async () => {
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
+    organisations: [
+      organisation,
+      { ...organisation, id: runId, name: "Fictional second company" },
+    ],
+    templates: [
+      {
+        ...template,
+        owner_organisation_id: companyId,
+        title: "First company template",
+      },
+      {
+        ...template,
+        id: runId,
+        owner_organisation_id: runId,
+        title: "Second company template",
+      },
+    ],
+    path: `/courses?tab=templates&company=${companyId}&template=${runId}`,
   });
+  expect(
+    await screen.findByRole("heading", { name: "First company template" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Second company template")).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("Organisation"), runId);
+  expect(
+    await screen.findByRole("heading", { name: "Second company template" }),
+  ).toBeVisible();
+  expect(screen.queryByText("First company template")).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Aus Vorlage erstellen" }),
+  );
+  const editor = within(screen.getByRole("dialog", { name: "Kurs anlegen" }));
+  expect(editor.getByLabelText("Organisation")).toHaveValue(runId);
+  expect(editor.getByLabelText("Kursvorlage")).toHaveValue(runId);
+  expect(
+    editor.queryByRole("option", { name: "First company template" }),
+  ).not.toBeInTheDocument();
 });
 
 it("opens the organisation field from the marketplace section and continues after saving", async () => {
