@@ -1056,6 +1056,54 @@ class InstallationTests(unittest.TestCase):
             with self.assertRaisesRegex(u.UpdateError, "unsafe_private_gateway_address"):
                 updater.health(env, private_api=True)
 
+    def test_each_required_health_facet_fails_closed_independently(self):
+        # Keep each health boundary distinguishable so a partial runtime or failed probe cannot be hidden by a later success.
+        cases = [
+            ("container", "runtime_container_health_failed", False),
+            ("private-address", "unsafe_private_gateway_address", True),
+            ("private-api-timeout", "public_api_health_failed", True),
+            ("private-jwks-key", "private_signing_material_in_public_jwks", True),
+            ("release-index", "static_release_health_failed", False),
+        ]
+        for facet, expected, private_api in cases:
+            with self.subTest(facet=facet), tempfile.TemporaryDirectory() as directory:
+                updater = u.Updater(instance(directory))
+                env = {
+                    "SUPABASE_PUBLIC_URL": "https://cms.luminovia.org/backend",
+                    "SUPABASE_PUBLISHABLE_KEY": KEY,
+                    "PORTAL_APP_ORIGIN": "https://cms.luminovia.org",
+                }
+                address = "8.8.8.8" if facet == "private-address" else "172.19.0.5"
+
+                # Emulate Docker's health inspection while leaving every unrelated service healthy.
+                def command(arguments):
+                    if arguments[-2] == "{{json .State}}":
+                        service = arguments[-1]
+                        running = not (facet == "container" and service == "luminovia-supabase-rest-1")
+                        return json.dumps({"Running": running, "Paused": False, "OOMKilled": False, "Health": {"Status": "healthy"}}).encode()
+                    return json.dumps({"luminovia-portal-backend": {"IPAddress": address}}).encode()
+
+                updater.command = command
+
+                # Return healthy endpoints except for the one selected failure boundary.
+                def request(value, timeout):
+                    if facet == "private-api-timeout" and value.full_url.endswith("/auth/v1/health"):
+                        raise TimeoutError("fictional health probe timeout")
+                    if value.full_url.endswith("jwks.json"):
+                        keys = [{"kty": "RSA", "x": "fictional-public-x", "y": "fictional-public-y"}]
+                        if facet == "private-jwks-key":
+                            keys[0]["d"] = "fictional-private-key-material"
+                        response = io.BytesIO(json.dumps({"keys": keys}).encode())
+                    elif value.full_url == env["PORTAL_APP_ORIGIN"]:
+                        response = io.BytesIO(b"different public index" if facet == "release-index" else b"exact candidate index")
+                    else:
+                        response = io.BytesIO(b"healthy")
+                    response.status = 200
+                    return response
+
+                with patch.object(u.urllib.request, "urlopen", side_effect=request), self.assertRaisesRegex(u.UpdateError, expected):
+                    updater.health(env, b"exact candidate index", private_api=private_api)
+
     def test_partial_writer_stop_failure_restarts_existing_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
             archive, manifest, _ = fixture(directory)
