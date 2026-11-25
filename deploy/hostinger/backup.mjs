@@ -5,7 +5,7 @@ import {spawn} from "node:child_process";
 import {createHash, randomUUID} from "node:crypto";
 import {createReadStream, createWriteStream} from "node:fs";
 import {chmod, lstat, mkdir, rename, rm, writeFile} from "node:fs/promises";
-import {dirname, resolve} from "node:path";
+import {dirname, posix, resolve} from "node:path";
 import {Transform} from "node:stream";
 import {pipeline} from "node:stream/promises";
 import {fileURLToPath, pathToFileURL} from "node:url";
@@ -215,6 +215,9 @@ export async function inventoryTotals(file) {
         if (
             typeof item.path !== "string" ||
             !item.path ||
+            posix.isAbsolute(item.path) ||
+            item.path === "." ||
+            item.path.split("/").includes("..") ||
             !/^[a-f0-9]{64}$/.test(item.sha256) ||
             !Number.isSafeInteger(item.bytes) ||
             item.bytes < 0

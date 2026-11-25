@@ -296,6 +296,33 @@ export async function streamIntoContainer(name, command, file, errorFile) {
     }
 }
 
+const validateStorageArchive = `import json,pathlib,sys,tarfile
+archive,inventory=sys.argv[1:]
+try:
+ expected={}
+ with open(inventory,encoding='utf8') as source:
+  for line in source:
+   row=json.loads(line);path=pathlib.PurePosixPath(row['path'])
+   if path.is_absolute() or '..' in path.parts or not path.parts or str(path)=='.':raise ValueError()
+   if str(path) in expected or len(row['sha256'])!=64 or any(c not in 'abcdef0123456789' for c in row['sha256']) or not isinstance(row['bytes'],int) or row['bytes']<0:raise ValueError()
+   expected[str(path)]=row['bytes']
+ seen=set()
+ with tarfile.open(archive,'r|') as tar:
+  for member in tar:
+   path=pathlib.PurePosixPath(member.name)
+   if path.is_absolute() or '..' in path.parts:raise ValueError()
+   if str(path)=='.':
+    if not member.isdir():raise ValueError()
+    continue
+   if member.isdir():continue
+   if not member.isfile() or str(path) not in expected or str(path) in seen or member.size!=expected[str(path)]:raise ValueError()
+   seen.add(str(path))
+ if seen!=set(expected):raise ValueError()
+ print(json.dumps({'files':len(expected),'bytes':sum(expected.values())}))
+except Exception:
+ sys.stderr.write('Storage archive paths or inventory are invalid; private paths withheld.\\n');sys.exit(1)
+`;
+
 const extractPython = `import hashlib,json,os,pathlib,sqlite3,sys,tarfile
 os.umask(0o077)
 archive,inventory,destination=sys.argv[1:]
@@ -412,17 +439,46 @@ export async function inspectBackup(directory) {
         throw new Error("Backup directory permissions are unsafe.");
     const manifest = await readBackupManifest(actual);
     if (
+        !manifest ||
+        typeof manifest !== "object" ||
+        Array.isArray(manifest) ||
         manifest.format !== "luminovia-development-backup-v1" ||
         manifest.status !== "complete" ||
-        !approvedDatabaseImages.has(manifest.source.image)
+        !manifest.source ||
+        !approvedDatabaseImages.has(manifest.source.image) ||
+        !manifest.summary ||
+        typeof manifest.summary !== "object" ||
+        !manifest.objects ||
+        !Number.isSafeInteger(manifest.objects.files) ||
+        manifest.objects.files < 0 ||
+        !Number.isSafeInteger(manifest.objects.bytes) ||
+        manifest.objects.bytes < 0 ||
+        !manifest.artifacts ||
+        typeof manifest.artifacts !== "object" ||
+        Array.isArray(manifest.artifacts)
     )
         throw new Error("Unsupported or incomplete backup.");
-    for (const name of [
+    const artifactNames = [
         "database.dump",
         "roles.sql",
         "storage.tar",
         "objects.jsonl",
-    ]) {
+    ];
+    if (
+        Object.keys(manifest.artifacts).sort().join("\0") !==
+        [...artifactNames].sort().join("\0")
+    )
+        throw new Error("Unsupported or incomplete backup artifacts.");
+    for (const name of artifactNames) {
+        const expected = manifest.artifacts[name];
+        if (
+            !expected ||
+            typeof expected !== "object" ||
+            !/^[a-f0-9]{64}$/.test(expected.sha256) ||
+            !Number.isSafeInteger(expected.bytes) ||
+            expected.bytes < 0
+        )
+            throw new Error("Unsupported or incomplete backup artifact record.");
         const state = await lstat(resolve(actual, name));
         if (!state.isFile() || state.isSymbolicLink() || state.mode & 0o077)
             throw new Error("Backup artifact permissions are unsafe.");
@@ -452,6 +508,15 @@ export async function restoreCheck(directory, {candidateImage} = {}) {
             image !== candidateDatabaseImage)
     )
         throw new Error("Unsupported PostgreSQL upgrade path.");
+    const checkedObjects = JSON.parse(
+        await collectCommand("python3", [
+            "-c",
+            validateStorageArchive,
+            resolve(actual, "storage.tar"),
+            resolve(actual, "objects.jsonl"),
+        ]),
+    );
+    assert.deepEqual(checkedObjects, manifest.objects);
     const free = await statfs(actual);
     if (free.bavail * free.bsize < manifest.objects.bytes + 1024 * 1024 * 1024)
         throw new Error(

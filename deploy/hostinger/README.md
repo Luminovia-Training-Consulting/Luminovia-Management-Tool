@@ -11,7 +11,7 @@ The authorised instance is **https://cms.luminovia.org**, fully self-hosted on t
 - `instance.json`: nonsecret deployment identity and explicit development capacity.
 - [Reviewed updates](maintenance/README.md): exact-source incremental migrations with backup, health verification and recovery.
 - `backup.mjs --development-vps --quiescent`: streaming off-site database/object backup with restricted files.
-- `restore-check.mjs --latest-development-vps`: isolated database/object recovery using the manifest's reviewed image, never restoration over the VPS.
+- `restore-check.mjs --latest-development-vps`: isolated database/object recovery using the manifest's reviewed image, never restoration over the VPS. It validates the bounded manifest, exact artifact inventory, hashes and relative Storage paths before creating an extraction destination or database container.
 - `restore-check.mjs --latest-development-vps-upgrade`: bounded 17.6-to-17.12 candidate restore, including exact migration SQL/roles/file hashes.
 - `scanner/`: optional authenticated HTTPS scanner adapter for other topologies; not an active service in this private-network deployment.
 
