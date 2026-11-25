@@ -96,6 +96,12 @@ const { clientPortalPage, enquiriesPage } = vi.hoisted(() => ({
   clientPortalPage: vi.fn(),
   enquiriesPage: vi.fn(),
 }));
+vi.mock("../features/readiness/readiness", () => ({
+  CourseReadinessPage: () => <h1>Fictional course readiness</h1>,
+}));
+vi.mock("../features/learning/course-hub", () => ({
+  LearningHubPage: () => <h1>Fictional learner workspace</h1>,
+}));
 vi.mock("../features/accounts/accounts", () => ({
   AccountsPage: () => {
     accountPage();
@@ -238,9 +244,12 @@ it.each([
   ["lecturer", "/admin/accounts"],
   ["lecturer", "/control-center"],
   ["lecturer", "/client"],
+  ["lecturer", "/CLIENT/"],
+  ["lecturer", "/cl%69ent"],
   ["lecturer", "/clients"],
   ["lecturer", "/client/finance/accounting"],
   ["client", "/ADMIN/ACCOUNTS/"],
+  ["client", "/a%64min/accounts"],
   ["client", "/reset"],
   ["management", "/admin/accounts"],
   ["management", "/admin/mail"],
@@ -248,8 +257,13 @@ it.each([
   ["management", "/admin/reset"],
   ["client", "/chats/forum"],
   ["client", "/enquiries"],
+  ["client", "/ENQUIRIES/fictional/"],
+  ["client", "/readiness/fictional"],
+  ["client", "/learning"],
   ["lecturer", "/enquiries"],
+  ["lecturer", "/learning"],
   ["management", "/client"],
+  ["management", "/ClIeNt/"],
   ["lecturer", "/missing-page?private=example"],
 ])(
   "shows the same actionable 404 at the original URL for %s on %s",
@@ -268,8 +282,8 @@ it.each([
       screen.getByRole("link", { name: /Hilfe öffnen|Open help/ }),
     ).toHaveAttribute("href", "/help?topic=troubleshooting");
     expect(accountPage).not.toHaveBeenCalled();
-    if (path === "/client") expect(clientPortalPage).not.toHaveBeenCalled();
-    if (path === "/enquiries") expect(enquiriesPage).not.toHaveBeenCalled();
+    expect(clientPortalPage).not.toHaveBeenCalled();
+    expect(enquiriesPage).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("heading", { name: /^(Verwaltung|Administration)$/ }),
     ).not.toBeInTheDocument();
@@ -280,6 +294,8 @@ it.each([
   ["client", "/client", "Fictional company workspace"],
   ["admin", "/client", "Fictional company workspace"],
   ["management", "/enquiries", "Fictional management enquiries"],
+  ["lecturer", "/readiness", "Fictional course readiness"],
+  ["participant", "/learning", "Fictional learner workspace"],
 ])("mounts %s access to %s when authorized", async (role, path, heading) => {
   state.roles = [role];
   if (role === "management") state.permissions = ["organisations.manage"];

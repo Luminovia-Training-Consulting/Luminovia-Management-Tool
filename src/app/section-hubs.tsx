@@ -154,6 +154,9 @@ export function SectionHub({
       roles.data?.some((role) => ["client", "owner", "admin"].includes(role))
     );
   });
+  // A direct course link must pass the same audience rule as the hub tab.
+  if (current === "readiness" && !items.some(([id]) => id === current))
+    return <PageNotFound />;
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
   if (!selected) return children ?? <Navigate to="/profile" replace />;

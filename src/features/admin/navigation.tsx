@@ -1,7 +1,7 @@
 /** Compact navigation across administration subpages and existing workflow links. */
 import {
   Link,
-  matchPath,
+  matchRoutes,
   Outlet,
   useLocation,
   useOutletContext,
@@ -49,17 +49,17 @@ export function AdminNavigation() {
     permissions.data,
     profile.data?.active === true && !failed,
   );
-  const current = links.find(({ to, end }) =>
-    matchPath({ path: to, end: end ?? false }, pathname),
-  );
-  const inAdministration = Boolean(matchPath("/admin/*", pathname));
-  const overview = Boolean(matchPath("/admin", pathname));
-  const legacyDestination = matchPath("/reset", pathname)
+  // Match the same decoded URL and path variants as the router that mounts the page.
+  const matches = (path: string) => Boolean(matchRoutes([{ path }], pathname));
+  const current = links.find(({ to, end }) => matches(end ? to : `${to}/*`));
+  const inAdministration = matches("/admin/*");
+  const overview = matches("/admin");
+  const legacyDestination = matches("/reset")
     ? "/admin/reset"
-    : matchPath("/clients", pathname)
+    : matches("/clients")
       ? "/admin/clients"
       : undefined;
-  const controlCenter = Boolean(matchPath("/control-center", pathname));
+  const controlCenter = matches("/control-center");
   const context: AdministrationContext = {
     links,
     pending: permissions.isPending || roles.isPending || profile.isPending,
@@ -93,10 +93,10 @@ export function AdminNavigation() {
       : legacyDestination
         ? links.some(({ to }) => to === legacyDestination)
         : current ||
-          areaLinks.some(([, { to }]) => matchPath(to, pathname)) ||
-          (matchPath("/admin/people", pathname) &&
+          areaLinks.some(([, { to }]) => matches(to)) ||
+          (matches("/admin/people") &&
             links.some(({ to }) => to === "/people")) ||
-          (matchPath("/admin/deletions", pathname) &&
+          (matches("/admin/deletions") &&
             roles.data?.some((role) => role === "admin" || role === "owner") &&
             links.some(({ to }) => to === "/admin/accounts"));
     if (!allowed) return <PageNotFound />;
@@ -119,7 +119,7 @@ export function AdminNavigation() {
               title={t(label)}
               description={t(description)}
               aria-current={
-                matchPath(to, pathname)
+                matches(to)
                   ? "page"
                   : current?.area === area ||
                       (legacyAssignment && area === "operations")

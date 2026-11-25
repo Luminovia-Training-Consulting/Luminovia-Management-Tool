@@ -223,6 +223,71 @@ await withTestDatabase("company_lecturer_access", async ({ sql, actor }) => {
     "1",
   );
 
+  // A retained company request can be the only organisation FK for an assignment.
+  // A matching free-text customer name is never a substitute for that FK.
+  const standaloneJob = randomUUID();
+  await sql(`
+    insert into public.jobs(id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
+      values (${q(standaloneJob)},'Fictional Standalone Assignment','Fictional Current Organisation','online','filled',0,'EUR','per_hour',0,'Terms');
+    insert into public.job_claims(job_id,lecturer_id,idempotency_key,status,amount,currency,rate_unit,total_amount,terms,terms_version)
+      values (${q(standaloneJob)},${q(unrelatedLecturer)},${q(randomUUID())},'cancelled',0,'EUR','per_hour',0,'Terms',1);
+  `);
+  await assert.rejects(
+    value(client, "create_dm", [unrelatedLecturer]),
+    /contact|access denied|not allowed/i,
+  );
+  await sql(`insert into private.client_course_requests(organisation_id,requested_by,client_id,payload,status,job_id)
+    values (${q(historicalOrganisation)},${q(historicalClient)},${q(randomUUID())},'{}','published',${q(standaloneJob)})`);
+  assert.ok(
+    (await rows(historicalClient, "chat_contacts")).some(
+      (entry) => entry.id === unrelatedLecturer,
+    ),
+  );
+  assert.ok(
+    (await rows(unrelatedLecturer, "chat_contacts")).some(
+      (entry) => entry.id === historicalClient,
+    ),
+  );
+  assert.equal(
+    JSON.parse(
+      await value(historicalClient, "person_profile", [unrelatedLecturer]),
+    ).id,
+    unrelatedLecturer,
+  );
+  const standaloneRoom = await value(unrelatedLecturer, "create_dm", [
+    historicalClient,
+  ]);
+  await value(historicalClient, "send_message", [
+    standaloneRoom,
+    "Fictional retained assignment",
+    randomUUID(),
+  ]);
+
+  // If sources disagree, neither company inherits contact from that assignment.
+  await sql(`insert into private.job_commission_offers(job_id,organisation_id,gross_amount,gross_total_amount,platform_total_amount,lecturer_net_amount,lecturer_net_total_amount,currency)
+    values (${q(standaloneJob)},${q(organisation)},100,100,50,50,50,'EUR')`);
+  await assert.rejects(
+    value(client, "create_dm", [unrelatedLecturer]),
+    /contact|access denied|not allowed/i,
+  );
+  await assert.rejects(
+    value(historicalClient, "person_profile", [unrelatedLecturer]),
+    /Profile access denied/i,
+  );
+  await assert.rejects(
+    value(unrelatedLecturer, "chat_messages", [standaloneRoom]),
+    /access denied/i,
+  );
+
+  // Removing membership revokes a previously valid relationship on the same account.
+  await sql(`update public.client_organisation_memberships set removed_at=now()
+    where user_id=${q(client)} and organisation_id=${q(organisation)}`);
+  assert.deepEqual(await rows(client, "chat_contacts"), []);
+  await assert.rejects(
+    value(lecturer, "chat_messages", [currentRoom]),
+    /access denied/i,
+  );
+
   console.log(
     "PASS company/lecturer profile, directory, contact and existing-DM boundaries",
   );

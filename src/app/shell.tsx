@@ -10,6 +10,7 @@ import {
   NavLink,
   Outlet,
   useLocation,
+  useMatch,
   useNavigate,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,7 +67,6 @@ import {
 } from "../lib/installation-brand";
 import { financeWorkspaceAccess } from "./finance-access";
 import { Button } from "../components/ui/button";
-import { PageNotFound } from "../components/page-not-found";
 import { ErrorState, Loading, Notice } from "../components/common";
 import "../features/learning/i18n";
 import "../features/workbench/finance-i18n";
@@ -107,6 +107,9 @@ export function Shell() {
   const { mutateAsync: saveAppearance } = useSaveUiPreferences(actor);
   const navigate = useNavigate();
   const location = useLocation();
+  const jobsPath = useMatch("/jobs/*");
+  const jobDetailPath = useMatch("/jobs/:id");
+  const replacementsPath = useMatch("/replacements");
   // The protected route is keyed by actor; only its current search lives in memory.
   const [search, setSearch] = useState<SearchSession[0]>({ q: "", kind: "" });
   const { attributes: mobileDisclosure, close: closeMobileMore } =
@@ -208,9 +211,6 @@ export function Shell() {
   const teaching = roles.isSuccess && hasTeachingRole(roles.data);
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const clientPortalAccess = roles.data?.includes("client") ?? false;
-  const platformAdministrator = roles.data?.some(
-    (role) => role === "admin" || role === "owner",
-  );
   const learnerAccess = roles.data?.includes("participant") ?? false;
   const financeAccess = financeWorkspaceAccess(roles.data, permissions.data);
   const administration = administrationLinks(
@@ -308,22 +308,6 @@ export function Shell() {
     return <Loading />;
   if (online && !profileDenied && !profile.isError && roles.isError)
     return <ErrorState retry={() => void roles.refetch()} />;
-  if (
-    location.pathname === "/client" &&
-    !clientPortalAccess &&
-    !platformAdministrator
-  )
-    return <PageNotFound />;
-  if (/^\/enquiries(?:\/|$)/.test(location.pathname)) {
-    if (permissions.isPending) return <Loading />;
-    if (permissions.isError)
-      return <ErrorState retry={() => void permissions.refetch()} />;
-    if (
-      !permissions.data?.includes("organisations.manage") &&
-      !platformAdministrator
-    )
-      return <PageNotFound />;
-  }
   if (guestOnly && !guestRouteAllowed(location.pathname))
     return <Navigate to="/profile" replace />;
   // Keep standalone learners out of operational page loaders, including on direct links.
@@ -337,12 +321,8 @@ export function Shell() {
   if (online && !profileDenied && !profile.isError && !limitedAccount) {
     const companyJobDetail =
       clientPortalAccess &&
-      /^\/jobs\/[0-9a-f-]{36}\/?$/i.test(location.pathname);
-    if (
-      !staff &&
-      !companyJobDetail &&
-      /^\/(?:jobs(?:\/|$)|replacements\/?$)/.test(location.pathname)
-    )
+      /^[0-9a-f-]{36}$/i.test(jobDetailPath?.params.id ?? "");
+    if (!staff && !companyJobDetail && (jobsPath || replacementsPath))
       return <Navigate to={clientPortalAccess ? "/client" : "/"} replace />;
   }
   return (

@@ -3,6 +3,7 @@
  * stay outside the protected user-keyed subtree.
  */
 import { lazy } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FinanceWorkspace, LegacyFinanceRoute } from "./finance-workspace";
 import {
   CommunicationForum,
@@ -35,6 +36,8 @@ import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
 import { PageNotFound } from "../components/page-not-found";
 import { isConfigured } from "../lib/supabase";
+import { permissionsQuery, userRolesQuery } from "../lib/queries";
+import { isDatabasePermissionDenied } from "../lib/database-errors";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
 
@@ -293,6 +296,50 @@ function Protected() {
   );
 }
 
+/** Gate route branches before any of their feature pages (or loaders) mount. */
+function PortalAudience({
+  area,
+}: {
+  area: "company" | "enquiries" | "learning";
+}) {
+  const actor = useAuth().session!.user.id;
+  const roles = useQuery(userRolesQuery(actor));
+  const permissions = useQuery({
+    ...permissionsQuery(actor),
+    enabled: area === "enquiries",
+  });
+  if (isDatabasePermissionDenied(roles.error)) return <PageNotFound />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  if (roles.isPending) return <Loading />;
+
+  const administrator = roles.data.some(
+    (role) => role === "admin" || role === "owner",
+  );
+  if (area === "company")
+    return roles.data.includes("client") || administrator ? (
+      <Outlet />
+    ) : (
+      <PageNotFound />
+    );
+  if (area === "learning")
+    return roles.data.includes("participant") ? <Outlet /> : <PageNotFound />;
+
+  if (administrator) return <Outlet />;
+  if (
+    !roles.data.includes("management") ||
+    isDatabasePermissionDenied(permissions.error)
+  )
+    return <PageNotFound />;
+  if (permissions.isError)
+    return <ErrorState retry={() => void permissions.refetch()} />;
+  if (permissions.isPending) return <Loading />;
+  return permissions.data.includes("organisations.manage") ? (
+    <Outlet />
+  ) : (
+    <PageNotFound />
+  );
+}
+
 export default function PortalRoutes() {
   return (
     <Routes>
@@ -330,7 +377,9 @@ export default function PortalRoutes() {
             <Route path="forum" element={<CommunicationForum />} />
           </Route>
           <Route path="search" element={<PortalSearch />} />
-          <Route path="client" element={<ClientPortalPage />} />
+          <Route element={<PortalAudience area="company" />}>
+            <Route path="client" element={<ClientPortalPage />} />
+          </Route>
           <Route
             path="my-reviews"
             element={
@@ -384,9 +433,13 @@ export default function PortalRoutes() {
             path="replacements"
             element={<Navigate to="/jobs" replace />}
           />
-          <Route path="enquiries" element={<EnquiriesPage />} />
-          <Route path="enquiries/:id" element={<EnquiriesPage />} />
-          <Route path="learning" element={<LearningHubPage />} />
+          <Route element={<PortalAudience area="enquiries" />}>
+            <Route path="enquiries" element={<EnquiriesPage />} />
+            <Route path="enquiries/:id" element={<EnquiriesPage />} />
+          </Route>
+          <Route element={<PortalAudience area="learning" />}>
+            <Route path="learning" element={<LearningHubPage />} />
+          </Route>
           <Route path="workbench" element={<CourseCloseoutFollowupRoute />} />
           <Route
             path="timesheets"
