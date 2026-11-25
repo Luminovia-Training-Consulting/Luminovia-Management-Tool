@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
@@ -86,6 +87,16 @@ export function ContractFiles({
     mutationFn: ({ id, file_name }: Contract) =>
       saveOrganisationContract(organisationId, id, file_name),
   });
+  // Failed refreshes and next pages can leave previously fetched names in the cache.
+  if (isDatabasePermissionDenied(contracts.error)) {
+    if (selected) setSelected(undefined);
+    if (invalid) setInvalid(false);
+    return (
+      <ErrorState
+        retry={() => void cache.resetQueries({ queryKey, exact: true })}
+      />
+    );
+  }
   const items = contracts.data?.pages.flatMap((page) => page.items) ?? [];
   return (
     <div className="section-stack">

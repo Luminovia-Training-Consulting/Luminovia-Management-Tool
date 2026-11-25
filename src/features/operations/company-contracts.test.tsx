@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { CompanyContracts } from "./company-contract-trigger";
@@ -37,8 +44,9 @@ function list(items = [entry], hasMore = false) {
 }
 
 function renderDossier(archived = false) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
+  const cache = new QueryClient();
+  render(
+    <QueryClientProvider client={cache}>
       <CompanyContracts
         actor="manager"
         organisationId={companyId}
@@ -47,6 +55,7 @@ function renderDossier(archived = false) {
       />
     </QueryClientProvider>,
   );
+  return cache;
 }
 
 it("loads and paginates only the opened company's PDFs, allowing downloads after archive", async () => {
@@ -118,3 +127,61 @@ it("retries the selected PDF with the same request ID and shows it only after a 
     }),
   ).toBeVisible();
 });
+
+it.each(["refresh", "more"] as const)(
+  "hides cached contract names and upload controls when %s is denied",
+  async (action) => {
+    rpc.mockReturnValueOnce(list([entry], true)).mockReturnValue({
+      abortSignal: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "42501" },
+      }),
+    });
+    const user = userEvent.setup();
+    const cache = renderDossier();
+    await user.click(
+      screen.getByRole("button", { name: "Unternehmensverträge" }),
+    );
+    const file = await screen.findByRole("button", {
+      name: "PDF herunterladen: Agreement.pdf",
+    });
+    const uploadButton = screen.getByRole("button", { name: "PDF hochladen" });
+    await user.upload(
+      screen.getByLabelText("Vertrag als PDF auswählen"),
+      new File(["test PDF"], "Draft.pdf", { type: "application/pdf" }),
+    );
+    expect(uploadButton).toBeEnabled();
+
+    if (action === "refresh") {
+      await act(() =>
+        cache.invalidateQueries({ queryKey: ["organisation-contracts"] }),
+      );
+    } else {
+      await user.click(
+        screen.getByRole("button", { name: "Weitere Verträge laden" }),
+      );
+    }
+
+    await waitFor(() => expect(file).not.toBeInTheDocument());
+    expect(uploadButton).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(rpc).toHaveBeenCalledTimes(2);
+
+    rpc.mockReturnValueOnce(list([{ ...entry, file_name: "Current.pdf" }]));
+    await user.click(within(screen.getByRole("alert")).getByRole("button"));
+    expect(
+      await screen.findByRole("button", {
+        name: "PDF herunterladen: Current.pdf",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: "PDF herunterladen: Agreement.pdf",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "PDF hochladen" }),
+    ).toBeDisabled();
+    expect(upload).not.toHaveBeenCalled();
+  },
+);
