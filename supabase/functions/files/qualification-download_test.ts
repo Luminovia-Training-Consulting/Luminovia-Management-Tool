@@ -37,6 +37,34 @@ Deno.test('qualification grant downloads exact immutable V1 bytes, independent o
     assert(result.bytes === f.bytes);
     assert(f.downloads() === 1);
 });
+Deno.test('qualification metadata is checked in parallel before the private object is fetched', async () => {
+    const f = await fixture();
+    let releaseVersion!: (value: typeof f.version) => void;
+    let releaseDocument!: (value: typeof f.document) => void;
+    let versionStarted!: () => void;
+    const started = new Promise<void>(resolve => versionStarted = resolve);
+    let documentStarted = false;
+    f.deps.version = () => {
+        versionStarted();
+        return new Promise(resolve => releaseVersion = resolve);
+    };
+    f.deps.document = () => {
+        documentStarted = true;
+        return new Promise(resolve => releaseDocument = resolve);
+    };
+
+    const pending = qualificationEvidenceBytes('grant', f.deps);
+    await started;
+    assert(documentStarted, 'document metadata was not requested alongside version metadata');
+    assert(f.downloads() === 0, 'private bytes were fetched before metadata checks finished');
+    releaseVersion({...f.version});
+    await Promise.resolve();
+    assert(f.downloads() === 0, 'private bytes were fetched before document metadata finished');
+    releaseDocument({...f.document});
+    const result = await pending;
+    assert(result.bytes === f.bytes);
+    assert(f.downloads() === 1);
+});
 Deno.test('ungranted, forged or another owner/version never fetches storage', async () => {
     for (const change of ['missing', 'id', 'owner', 'version', 'document', 'kind', 'scope', 'archive', 'rejected', 'hash', 'size']) {
         const f = await fixture();

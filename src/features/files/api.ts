@@ -33,9 +33,13 @@ export const acceptedFiles =
 export const maximumFileSize = 100 * 1024 * 1024;
 
 /** Capture the native session used to authorize a transfer across asynchronous browser work. */
-async function requireSession() {
+async function requireSession(signal?: AbortSignal) {
+  if (signal?.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   requireOnline();
   const { data, error } = await db().auth.getSession();
+  if (signal?.aborted)
+    throw new DOMException("The operation was aborted", "AbortError");
   if (error || !data.session) throw new Error("authentication_required");
   return data.session;
 }
@@ -229,7 +233,7 @@ async function downloadFile(
   body: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<Blob> {
-  const session = await requireSession();
+  const session = await requireSession(signal);
   const response = await fetch(endpoint(), {
     method: "POST",
     headers: {
@@ -295,8 +299,15 @@ export async function saveJobSource(
 }
 
 /** Download the selected version so replacement cannot silently substitute newer bytes. */
-export async function downloadDocument(id: string, versionId?: string | null) {
-  return downloadFile({ action: "download", id, version_id: versionId });
+export async function downloadDocument(
+  id: string,
+  versionId?: string | null,
+  signal?: AbortSignal,
+) {
+  return downloadFile(
+    { action: "download", id, version_id: versionId },
+    signal,
+  );
 }
 
 /** Download through the qualification binding, preserving its separately authorized exact version. */

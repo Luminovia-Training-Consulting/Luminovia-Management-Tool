@@ -40,9 +40,11 @@ export interface QualificationDownloadDependencies {
 export async function qualificationEvidenceBytes(id: string, deps: QualificationDownloadDependencies) {
     const selected = await deps.selection(id);
     if (!selected || selected.id !== id) throw new Error('access_denied');
-    const version = await deps.version(selected.version_id);
+    const [version, document] = await Promise.all([
+        deps.version(selected.version_id),
+        deps.document(selected.document_id),
+    ]);
     if (!version || version.id !== selected.version_id || version.document_id !== selected.document_id || version.status !== 'clean' || version.sha256 !== selected.sha256 || version.size_bytes < 1 || version.size_bytes > MAX_FILE_SIZE) throw new Error('access_denied');
-    const document = await deps.document(version.document_id);
     if (!document || document.owner_id !== selected.user_id || document.scope !== 'personal' || document.kind !== 'certificate' || document.deleted_at) throw new Error('access_denied');
     const bytes = await deps.download(version.object_path);
     if (!bytes || bytes.length !== version.size_bytes) throw new Error('access_denied');

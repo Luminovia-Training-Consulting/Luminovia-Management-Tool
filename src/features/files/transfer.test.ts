@@ -378,6 +378,37 @@ describe("online, authenticated document transfers", () => {
     },
   );
 
+  it("does not fetch private bytes when a preview is aborted during Auth lookup", async () => {
+    const session = {
+      data: {
+        session: {
+          access_token: "fictional-access-token",
+          user: { id: "fictional-actor" },
+        },
+      },
+      error: null,
+    };
+    let finishAuth!: (value: typeof session) => void;
+    auth.getSession.mockImplementation(
+      () => new Promise((resolve) => (finishAuth = resolve)),
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const controller = new AbortController();
+    const pending = downloadDocument(
+      "fictional-file",
+      "reviewed-version",
+      controller.signal,
+    );
+
+    await vi.waitFor(() => expect(auth.getSession).toHaveBeenCalledOnce());
+    controller.abort();
+    finishAuth(session);
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("fetches the reviewed exact version without caching private response bytes", async () => {
     const fetch = vi
       .fn()

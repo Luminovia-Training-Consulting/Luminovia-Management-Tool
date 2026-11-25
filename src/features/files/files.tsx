@@ -233,7 +233,7 @@ export function FileUpload({
   );
 }
 
-/** Bind metadata and bytes to the same version and dispose Blob URLs created by late responses. */
+/** Bind metadata and bytes to the same version and abort previews after close. */
 function Preview({ file }: { file: PortalDocument }) {
   const { t } = useTranslation("files");
   const [url, setUrl] = useState("");
@@ -241,19 +241,21 @@ function Preview({ file }: { file: PortalDocument }) {
   useEffect(() => {
     let alive = true;
     let object = "";
+    const controller = new AbortController();
     // A row's name/MIME and bytes must describe the same reviewed version,
     // even if another client replaces the document during this download.
-    void downloadDocument(file.id, file.current_version_id)
+    void downloadDocument(file.id, file.current_version_id, controller.signal)
       .then((blob) => {
+        if (!alive) return;
         object = URL.createObjectURL(blob);
-        if (alive) setUrl(object);
-        else URL.revokeObjectURL(object);
+        setUrl(object);
       })
       .catch(() => {
         if (alive) setFailed(true);
       });
     return () => {
       alive = false;
+      controller.abort();
       if (object) URL.revokeObjectURL(object);
     };
   }, [file.id, file.current_version_id]);

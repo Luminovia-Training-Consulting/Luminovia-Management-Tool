@@ -180,9 +180,39 @@ it("pins previews and current-row downloads to the exact selected metadata versi
   expect(state.downloadDocument).toHaveBeenCalledWith(
     "file",
     "reviewed-version",
+    expect.any(AbortSignal),
   );
   cleanup();
   await waitFor(() =>
     expect(revoke).toHaveBeenCalledWith("blob:fictional-preview"),
   );
+});
+
+it("aborts a preview when closed and ignores a late response without creating a Blob URL", async () => {
+  const user = userEvent.setup();
+  let complete!: (blob: Blob) => void;
+  let signal: AbortSignal | undefined;
+  state.downloadDocument.mockImplementation((_id, _version, requestSignal) => {
+    signal = requestSignal;
+    return new Promise<Blob>((resolve) => {
+      complete = resolve;
+    });
+  });
+  const create = vi.fn(() => "blob:late-preview");
+  class PreviewURL extends URL {
+    static createObjectURL = create;
+    static revokeObjectURL = vi.fn();
+  }
+  vi.stubGlobal("URL", PreviewURL);
+
+  setup(<SubjectDocuments ownerId="actor" />);
+  await user.click(
+    screen.getByRole("button", { name: "Vorschau: Fictional image.png" }),
+  );
+  await waitFor(() => expect(state.downloadDocument).toHaveBeenCalled());
+  await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+  expect(signal?.aborted).toBe(true);
+  complete(new Blob(["late bytes"]));
+  await waitFor(() => expect(create).not.toHaveBeenCalled());
 });

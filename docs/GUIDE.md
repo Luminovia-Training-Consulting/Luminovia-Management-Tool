@@ -390,6 +390,7 @@ files are unavailable for download; a scanner outage leaves the upload unapprove
 
 Use a document’s actions to download it, inspect its versions, rename it, add a new version or archive it where permitted. Image/PDF preview requires a fresh authorised download. Previous clean versions retain their own bytes and hash. Archive confirmation removes normal availability while retaining history; documents linked to retained contract/invoice snapshots have extra server retention protection. Shared storage paths do not confer access, and private files are not deliberately cached
 offline.
+Closing a preview aborts the browser request and prevents late responses from creating an object URL; aborting the browser request cannot guarantee that already-started server work stops.
 
 Management with current `jobs.manage` can attach **Vor der Übernahme sichtbar / Visible before claiming** or **Nach der Übernahme sichtbar / Visible after claiming** material. Opening a nonpersonal upload scope starts the bounded offer picker; ordinary browsing/personal uploads do not. Apply a literal search, load another page if needed and choose the offer. The uploader appears after the server confirms that exact selection. This does not claim a job, expose financial fields or authorize a
 different task. After-claim resources require a current confirmed allocation or explicit management permission; room files inherit current membership. See [Scoped choices](GUIDE.md#section-job-pickers).
