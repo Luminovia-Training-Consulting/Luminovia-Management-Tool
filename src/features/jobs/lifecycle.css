@@ -164,8 +164,20 @@
   display: none;
 }
 
-.status.job-detail-status {
+/* Keep the summary together beside the actions, but let long labels wrap. */
+.job-detail-labels {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-inline-size: 0;
   margin-inline-start: auto;
+}
+
+.job-detail-labels > :is(.status, .badge) {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   padding: 8px 14px;
   font-size: 0.95rem;
 }

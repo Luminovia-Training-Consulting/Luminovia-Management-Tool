@@ -12,7 +12,7 @@ import { JobSickDay } from "./sick-day";
 import { JobBriefing } from "./briefing";
 import { JobRelatedNavigation } from "./related-navigation";
 import { JobWaitlist } from "./lifecycle-extra";
-import { refreshJobState } from "./lifecycle-api";
+import { lifecycleQuery, refreshJobState } from "./lifecycle-api";
 import { jobDetailQuery } from "./discovery-api";
 import { ResourceComments } from "../comments/comments";
 import { AssignmentAmendments } from "../changes/changes";
@@ -35,6 +35,7 @@ import { useAuth } from "../auth/auth-context";
 import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
 import { dateTime, money } from "../../lib/dates";
+import type { Job } from "../../lib/types";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -56,6 +57,45 @@ function BackLink({
         {t("back")}
       </NavLink>
     </Button>
+  );
+}
+
+/** Summarize the authorised offer and its current staffing beside the detail actions. */
+function JobDetailLabels({ actor, job }: { actor: string; job: Job }) {
+  const { t, i18n } = useTranslation();
+  const lifeText = useTranslation("jobLifecycle").t;
+  // Share the lifecycle panel's actor/job query. Offer status describes the
+  // vacancy, not staffing; only visible confirmed claims supply names. A
+  // failed refresh can retain cached data, so don't use it after an error.
+  const lifecycle = useQuery(lifecycleQuery(actor, job.id));
+  const lecturers = lifecycle.isSuccess
+    ? lifecycle.data.claims
+        .filter(({ status }) => status === "confirmed")
+        .map(({ lecturer_name }) => lecturer_name.trim())
+        .filter(Boolean)
+    : [];
+  const company = job.customer_name.trim();
+  return (
+    <div className="job-detail-labels">
+      <span className={`status status-${job.status}`}>
+        {job.urgent_reopened_at && job.status === "published"
+          ? t("sickDay:urgent")
+          : t(job.status)}
+      </span>
+      <span className="badge">
+        {company
+          ? lifeText("detailCompany", { name: company })
+          : lifeText("noCompany")}
+      </span>
+      {lecturers.length > 0 && (
+        <span className="badge">
+          {lifeText("detailLecturers", {
+            count: lecturers.length,
+            names: new Intl.ListFormat(i18n.language).format(lecturers),
+          })}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -199,7 +239,7 @@ export function JobDetail() {
   return (
     <>
       <BackLink companyDispatchOnly={companyDispatchOnly} />
-      <PageHeading eyebrow={job.customer_name} title={job.title} />
+      <PageHeading title={job.title} />
       <div className="section-stack job-detail-sections">
         <div className="job-detail-toolbar">
           {!companyDispatchOnly && (
@@ -215,11 +255,7 @@ export function JobDetail() {
               afterWorkspace={<div ref={setEditButtonTarget} />}
             />
           )}
-          <span className={`status status-${job.status} job-detail-status`}>
-            {job.urgent_reopened_at && job.status === "published"
-              ? t("sickDay:urgent")
-              : t(job.status)}
-          </span>
+          <JobDetailLabels actor={session!.user.id} job={job} />
         </div>
         {permissions.data?.includes("jobs.manage") && (
           <div id="job-pricing" tabIndex={-1}>

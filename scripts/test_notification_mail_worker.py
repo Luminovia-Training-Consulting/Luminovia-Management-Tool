@@ -12,6 +12,8 @@ import threading
 import time
 import unittest
 from dataclasses import replace
+from email import policy
+from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -213,6 +215,39 @@ class ConfigurationTests(unittest.TestCase):
 class DeliveryTests(unittest.TestCase):
     def setUp(self):
         self.config = worker.Config.from_env(ENV)
+
+    def test_course_offer_message_is_localized_and_links_to_the_exact_assignment(self):
+        delivery = {
+            **DELIVERY,
+            "kind": "course_offer_published",
+            "offer": {
+                "id": TOKEN,
+                "title": "Linux für Einsteiger\r\nBcc: fictional@example.invalid",
+                "description": "Übungen & Praxis\nWöchentlich, online.",
+                "internal": False,
+                "quote": {"total_amount": "1234.50", "currency": "AUD"},
+            },
+        }
+        for locale, fee in (("de", "Dein Honorar für den gesamten Auftrag: 1.234,50 AUD"),
+                            ("en", "Your fee for the entire assignment: 1,234.50 AUD")):
+            with self.subTest(locale=locale):
+                localized = {**delivery, "locale": locale}
+                self.assertTrue(worker.prepared_valid(localized, LEASE))
+                message = BytesParser(policy=policy.default).parsebytes(
+                    worker.make_message(self.config, localized).as_bytes()
+                )
+                self.assertIn("Linux für Einsteiger", message["Subject"])
+                self.assertIsNone(message["Bcc"])
+                self.assertEqual(message.get_content_type(), "text/plain")
+                body = message.get_content().replace("\r\n", "\n")
+                self.assertIn(delivery["offer"]["description"], body)
+                self.assertIn(fee, body)
+                self.assertIn(f"https://portal.example.invalid/jobs/{TOKEN}", body)
+                self.assertNotIn("/notifications", body)
+        self.assertFalse(worker.prepared_valid(
+            {**delivery, "offer": {**delivery["offer"], "id": "//foreign.example.invalid/"}}, LEASE
+        ))
+        self.assertFalse(worker.prepared_valid({**DELIVERY, "kind": "course_offer_published"}, LEASE))
 
     def captured_smtp(self, mode):
         server = SmtpServer(mode)

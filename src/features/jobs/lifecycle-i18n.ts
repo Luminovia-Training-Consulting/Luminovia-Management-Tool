@@ -74,6 +74,9 @@ const en = {
   edit: "Edit unaccepted offer",
   title: "Offer title",
   company: "Company assigned to this job",
+  detailCompany: "Company: {{name}}",
+  detailLecturers_one: "Lecturer: {{names}}",
+  detailLecturers_other: "Lecturers: {{names}}",
   companyFixed:
     "This offer's company is fixed by its source or linked course activity.",
   noCompany: "No company assigned",
@@ -188,6 +191,9 @@ const de: typeof en = {
   edit: "Unangenommenen Auftrag bearbeiten",
   title: "Auftragstitel",
   company: "Unternehmen für diesen Auftrag",
+  detailCompany: "Unternehmen: {{name}}",
+  detailLecturers_one: "Dozierende: {{names}}",
+  detailLecturers_other: "Dozierende: {{names}}",
   companyFixed:
     "Die Firma ist durch die Herkunft des Auftrags oder die verknüpfte Kursaktivität festgelegt.",
   noCompany: "Kein Unternehmen zugeordnet",

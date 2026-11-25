@@ -14,7 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import "../../lib/i18n";
+import i18n from "../../lib/i18n";
 import { JobDetail } from "./jobs";
 import { JobDiscovery } from "./discovery";
 import {
@@ -22,6 +22,7 @@ import {
   jobDetailQuery,
   jobDiscoveryQuery,
 } from "./discovery-api";
+import { lifecycleQuery, type LifecycleClaim } from "./lifecycle-api";
 import type { Job } from "../../lib/types";
 
 vi.mock("../auth/auth-context", () => ({
@@ -30,11 +31,12 @@ vi.mock("../auth/auth-context", () => ({
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 const failedDetailClients: QueryClient[] = [];
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   failedDetailClients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
   rpc.mockReset();
+  await i18n.changeLanguage("de");
 });
 const job: Job & {
   created_at: string;
@@ -85,7 +87,9 @@ const job: Job & {
 function setup(
   route = "/jobs/job-a",
   list = false,
-  overrides: Partial<Job & { dispatch_only: boolean }> = {},
+  overrides: Partial<
+    Job & { dispatch_only: boolean; confirmed_count: number }
+  > = {},
   roles = ["lecturer"],
 ) {
   const offer = { ...job, ...overrides };
@@ -203,6 +207,8 @@ it("opens description and coordinated course dates from the course action row", 
     await toolbar.findByRole("link", { name: "Kursarbeitsraum öffnen" }),
   ).toBeVisible();
   expect(toolbar.getByText("Vergeben")).toBeVisible();
+  expect(toolbar.getByText("Unternehmen: Example Academy")).toBeVisible();
+  expect(toolbar.getByText("Dozierende: Example Lecturer")).toBeVisible();
   await userEvent.click(edit);
   const dialog = within(
     await screen.findByRole("dialog", { name: "Auftrag bearbeiten" }),
@@ -218,6 +224,95 @@ it("opens description and coordinated course dates from the course action row", 
   await waitFor(() =>
     expect(document.getElementById("job-allocation")).toHaveFocus(),
   );
+});
+
+describe("job detail labels from the actor-scoped lifecycle", () => {
+  const lifecycleKey = lifecycleQuery("lecturer-a", job.id).queryKey;
+  const currentClaim: LifecycleClaim = {
+    id: "current-claim",
+    lecturer_id: "lecturer-a",
+    lecturer_name: "Alex Example",
+    status: "confirmed",
+    created_at: job.created_at,
+    can_cancel: false,
+    sessions: [],
+    events: [],
+  };
+  const formerClaim: LifecycleClaim = {
+    ...currentClaim,
+    id: "former-claim",
+    lecturer_id: "lecturer-former",
+    lecturer_name: "Former Lecturer",
+    status: "cancelled",
+  };
+
+  it("shows only confirmed lecturers for a partially staffed offer, then removes the label when no claim remains confirmed", async () => {
+    await i18n.changeLanguage("en");
+    const client = setup(
+      "/jobs/job-a",
+      false,
+      { capacity: 3, capacity_basis: "per_position", confirmed_count: 2 },
+      ["management"],
+    );
+    const state = {
+      version: 2,
+      can_manage: true,
+      can_edit: false,
+      can_duplicate: false,
+      claims: [
+        currentClaim,
+        {
+          ...currentClaim,
+          id: "another-claim",
+          lecturer_id: "lecturer-b",
+          lecturer_name: "Sam Example",
+        },
+        formerClaim,
+      ],
+    };
+    act(() => client.setQueryData(lifecycleKey, state));
+    const toolbar = within(document.querySelector(".job-detail-toolbar")!);
+    expect(toolbar.getByText("Company: Example Academy")).toBeVisible();
+    expect(
+      await toolbar.findByText("Lecturers: Alex Example and Sam Example"),
+    ).toBeVisible();
+    expect(toolbar.queryByText(/Former Lecturer/)).not.toBeInTheDocument();
+
+    act(() =>
+      client.setQueryData(lifecycleKey, { ...state, claims: [formerClaim] }),
+    );
+    await waitFor(() =>
+      expect(toolbar.queryByText(/Lecturers?:/)).not.toBeInTheDocument(),
+    );
+    expect(toolbar.queryByText(/Former Lecturer/)).not.toBeInTheDocument();
+  });
+
+  it("does not render retained lecturer names after lifecycle access is denied", async () => {
+    const client = setup("/jobs/job-a", false, {
+      status: "filled",
+      confirmed_count: 1,
+    });
+    act(() => {
+      client.setQueryData(lifecycleKey, {
+        version: 2,
+        can_manage: false,
+        can_edit: false,
+        can_duplicate: false,
+        claims: [currentClaim],
+      });
+    });
+    const toolbar = within(document.querySelector(".job-detail-toolbar")!);
+    expect(await toolbar.findByText("Dozierende: Alex Example")).toBeVisible();
+
+    rpc.mockReturnValue({
+      abortSignal: async () => ({ data: null, error: { code: "42501" } }),
+    });
+    await act(async () => client.invalidateQueries({ queryKey: lifecycleKey }));
+    await waitFor(() =>
+      expect(toolbar.queryByText(/Alex Example/)).not.toBeInTheDocument(),
+    );
+    expect(toolbar.getByText("Unternehmen: Example Academy")).toBeVisible();
+  });
 });
 
 describe("safe marketplace interactions", () => {
@@ -629,12 +724,21 @@ it("uses the scoped company detail without querying private material or renderin
   setup(
     "/jobs/job-a",
     false,
-    { dispatch_only: true, description: "Fictional company job summary" },
+    {
+      dispatch_only: true,
+      description: "Fictional company job summary",
+      status: "filled",
+      confirmed_count: 1,
+    },
     ["client"],
   );
   expect(
     await screen.findByText("Fictional company job summary"),
   ).toBeVisible();
+  const toolbar = within(document.querySelector(".job-detail-toolbar")!);
+  expect(toolbar.getByText("Unternehmen: Example Academy")).toBeVisible();
+  expect(toolbar.getByText("Vergeben")).toBeVisible();
+  expect(toolbar.queryByText(/Dozierende:/)).not.toBeInTheDocument();
   expect(screen.queryByText("Version one")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /zurück/i })).toHaveAttribute(
     "href",

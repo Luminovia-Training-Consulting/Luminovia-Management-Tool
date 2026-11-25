@@ -19,6 +19,7 @@ import ssl
 import sys
 import time
 from dataclasses import dataclass
+from decimal import Decimal
 from email.message import EmailMessage
 from email.policy import SMTP
 from email.utils import formatdate
@@ -193,6 +194,27 @@ def lease_valid(value: Any) -> bool:
     )
 
 
+def course_offer_valid(offer: Any) -> bool:
+    if not (
+            isinstance(offer, dict)
+            and canonical_uuid(offer.get("id"))
+            and isinstance(offer.get("title"), str)
+            and 1 <= len(offer["title"]) <= 200
+            and isinstance(offer.get("description"), str)
+            and len(offer["description"]) <= 12000
+            and isinstance(offer.get("internal"), bool)
+            and "quote" in offer
+    ):
+        return False
+    quote = offer["quote"]
+    return quote is None or (
+            isinstance(quote, dict)
+            and quote.get("currency") in ("EUR", "AUD", "USD", "CHF")
+            and isinstance(quote.get("total_amount"), str)
+            and re.fullmatch(r"[0-9]{1,14}(?:\.[0-9]{1,2})?", quote["total_amount"]) is not None
+    )
+
+
 def prepared_valid(value: Any, lease: dict[str, str]) -> bool:
     return (
             lease_valid(value)
@@ -201,7 +223,34 @@ def prepared_valid(value: Any, lease: dict[str, str]) -> bool:
             and valid_email(value.get("recipient"))
             and value.get("locale") in ("de", "en")
             and value.get("message_id") == f"<luminovia-notification.{lease['id']}@luminovia.org>"
+            and (value.get("kind") != "course_offer_published" or course_offer_valid(value.get("offer")))
     )
+
+
+def course_offer_content(offer: dict[str, Any], portal_url: str, german: bool) -> tuple[str, str]:
+    title = " ".join(offer["title"].split())
+    subject = f"Luminovia: {'Neuer Kursauftrag' if german else 'New course assignment'} – {title}"
+    if offer["internal"]:
+        intro = "Hallo! Für dein Unternehmen gibt es einen neuen internen Kursauftrag." if german else "Hi! There is a new internal course assignment for your company."
+        fee = "Interner Auftrag ohne separates Honorar." if german else "Internal assignment with no separate fee."
+    else:
+        intro = "Hallo! Wir haben einen neuen Kursauftrag in der Stellenbörse veröffentlicht." if german else "Hi! We’ve published a new course assignment on the job board."
+        quote = offer["quote"]
+        if quote is None:
+            fee = "Dein persönliches Honorar ist derzeit nicht verfügbar. Bitte prüfe das Angebot im Portal." if german else "Your individual fee is currently unavailable. Please check the offer in the portal."
+        else:
+            amount = f"{Decimal(quote['total_amount']):,.2f}"
+            if german:
+                amount = amount.translate(str.maketrans(",.", ".,"))
+            label = "Dein Honorar für den gesamten Auftrag" if german else "Your fee for the entire assignment"
+            fee = f"{label}: {amount} {quote['currency']}"
+    action = "Auftrag im Portal ansehen und anmelden:" if german else "Sign in to view the assignment:"
+    preferences = "Deine E-Mail-Einstellungen kannst du im Portal ändern." if german else "You can change your email preferences in the portal."
+    body = "\n\n".join(filter(None, (
+        intro, title, offer["description"].strip(), fee,
+        f"{action}\n{portal_url}/jobs/{offer['id']}", preferences,
+    )))
+    return subject, f"{body}\n"
 
 
 def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
@@ -220,6 +269,11 @@ def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)
     message["Message-ID"] = delivery["message_id"]
+    if not config.academy and delivery.get("kind") == "course_offer_published":
+        subject, body = course_offer_content(delivery["offer"], config.portal_url, german)
+        message.replace_header("Subject", subject)
+        message.set_content(body, charset="utf-8", cte="quoted-printable")
+        return message
     if config.academy:
         subject = "Neue Akademie-Benachrichtigung" if german else "New academy notification"
         intro = "In deiner Akademie gibt es eine neue Meldung." if german else "There is a new update in your academy."
