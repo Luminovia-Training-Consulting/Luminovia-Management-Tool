@@ -49,4 +49,6 @@ export const unifiedSearchQuery = (
     getNextPageParam: (page) =>
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
     staleTime: 0,
+    // Don't retain private hits or replay old cursor pages after leaving a search.
+    gcTime: 0,
   });

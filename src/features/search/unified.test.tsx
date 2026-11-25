@@ -58,7 +58,7 @@ afterEach(() => {
 
 function view() {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
   return render(
@@ -123,6 +123,16 @@ it("resubmits the same search from the first page without replaying previously l
     row.id,
     null,
   ]);
+});
+
+it("discards unobserved private results rather than replaying loaded cursors on return", async () => {
+  const { unmount } = view();
+  await screen.findByRole("link", { name: /Needle private draft/ });
+  const client = clients.at(-1)!;
+  const key = unifiedSearchQuery("actor-a", "Needle", "wiki").queryKey;
+  expect(client.getQueryData(key)).toBeDefined();
+  unmount();
+  await waitFor(() => expect(client.getQueryState(key)).toBeUndefined());
 });
 
 it("preserves an unsaved search across language changes", async () => {
