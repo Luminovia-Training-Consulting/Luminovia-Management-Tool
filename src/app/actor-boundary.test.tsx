@@ -280,6 +280,7 @@ it.each([
   ["client", "/learning"],
   ["lecturer", "/enquiries"],
   ["lecturer", "/learning"],
+  ["lecturer", "/learning?view=programmes"],
   ["lecturer", "/my-reviews"],
   ["management", "/client"],
   ["management", "/ClIeNt/"],
@@ -328,6 +329,37 @@ it.each([
   if (role === "management") state.permissions = ["organisations.manage"];
   setup(path);
   expect(await screen.findByRole("heading", { name: heading })).toBeVisible();
+});
+
+it.each(["/learning", "/learning?view=materials", "/learning?view=results"])(
+  "does not open the participant view %s for course managers",
+  async (path) => {
+    state.roles = ["management"];
+    state.permissions = ["courses.manage"];
+    setup(path);
+    expect(
+      await screen.findByRole("heading", {
+        name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText("Fictional learner workspace")).toBeNull();
+  },
+);
+
+it("unmounts the programme view when a course manager loses permission", async () => {
+  state.roles = ["management"];
+  state.permissions = ["courses.manage"];
+  const client = setup("/learning?view=programmes");
+  expect(
+    await screen.findByRole("heading", { name: "Fictional learner workspace" }),
+  ).toBeVisible();
+  act(() => client.setQueryData(["permissions", "actor-a"], []));
+  expect(
+    await screen.findByRole("heading", {
+      name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("Fictional learner workspace")).toBeNull();
 });
 
 it("preserves course review access through an independently assigned learner role", async () => {

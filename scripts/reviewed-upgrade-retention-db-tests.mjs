@@ -153,7 +153,7 @@ await withTestDatabase(
       peer.slice(1, -1),
       `select public.mark_chat_read(${room},${sent})`,
     );
-    const snapshot = async () =>
+    const snapshot = async (encrypted = false) =>
       JSON.parse(
         await sql(`select jsonb_build_object(
           'accounts', (select jsonb_agg(row(id,email,email_confirmed_at) order by id) from auth.users),
@@ -168,9 +168,9 @@ await withTestDatabase(
           'payment', (select row(amount,currency,paid_at) from public.payment_records where invoice_id=${invoice}),
           'file_metadata', (select jsonb_agg(row(id,object_path,size_bytes,sha256) order by id)
             from public.document_versions where id in (${contractFile},${invoiceFile})),
-          'chat', (select row(room_id,sender_id,client_id,body,created_at,edited_at)
+          'chat', (select row(room_id,sender_id,client_id,${encrypted ? "private.chat_decrypt_text('message:'||id||':'||room_id||':body',body)" : "body"},created_at,edited_at)
             from public.messages where id=${sent}),
-          'chat_revision', (select row(actor_id,action,previous_body,created_at)
+          'chat_revision', (select row(actor_id,action,${encrypted ? "private.chat_decrypt_text('revision:'||id||':'||message_id||':previous_body',previous_body)" : "previous_body"},created_at)
             from public.chat_message_revisions where message_id=${sent}),
           'chat_members', (select jsonb_agg(row(user_id,last_read_message_id,last_read_at) order by user_id)
             from public.chat_members where room_id=${room}),
@@ -180,9 +180,17 @@ await withTestDatabase(
     const before = await snapshot();
     assert(Object.values(before).every((value) => value !== null));
     assert.equal(await apply(files), files.length - 18);
-    assert.deepEqual(await snapshot(), before);
+    const storedChat = async () =>
+      JSON.parse(await sql(`select jsonb_build_array(
+      (select body from public.messages where id=${sent}),
+      (select previous_body from public.chat_message_revisions where message_id=${sent})
+    )`));
+    const ciphertext = await storedChat();
+    for (const body of ciphertext) assert.match(body, /^chat-v1:/);
+    assert.deepEqual(await snapshot(true), before);
     assert.equal(await apply(files), 0);
-    assert.deepEqual(await snapshot(), before);
+    assert.deepEqual(await storedChat(), ciphertext);
+    assert.deepEqual(await snapshot(true), before);
     assert.equal(
       await actor(
         teacher.slice(1, -1),

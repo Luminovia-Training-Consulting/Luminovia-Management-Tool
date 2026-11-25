@@ -87,14 +87,20 @@ it("adds and removes one authorized template reference using exact revision iden
   fake.choices.mockResolvedValue([readableTemplate]);
   fake.rpc.mockImplementation(
     async (name: string, args: Record<string, unknown>) => {
-      if (name === "wiki_course_templates")
+      if (name === "wiki_course_templates") {
+        expect(args).toEqual({
+          p_page_id: "wiki-page",
+          p_organisation_id: null,
+        });
         return { data: linked, error: null };
+      }
       if (name === "manage_wiki_course_template") {
         expect(args).toEqual({
           p_page_id: "wiki-page",
           p_revision: 2,
           p_template_id: "template-readable",
           p_remove: linked.length > 0,
+          p_organisation_id: null,
         });
         linked = linked.length
           ? []

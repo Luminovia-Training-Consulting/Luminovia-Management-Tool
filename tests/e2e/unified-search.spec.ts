@@ -108,9 +108,11 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
         });
         await result.click();
         await expect(page).toHaveURL(new RegExp(`/chats/forum\\?view=articles&page=${pages[0]}`));
-        await expect(
-            page.getByText(`${needle} own draft`, {exact: true}).first(),
-        ).toBeVisible();
+        await expect(page.getByRole("heading", {
+            name: `${needle} own draft`,
+            exact: true,
+            level: 2,
+        })).toBeVisible();
     } finally {
         for (const client of clients) await client.auth.signOut();
         if (pages.length)

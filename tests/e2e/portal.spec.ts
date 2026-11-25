@@ -93,16 +93,21 @@ test("administration navigation keeps shared workflows together on desktop and m
     const mainMenu = mobile ? page.locator(".mobile-more") : page.locator(".sidebar");
     await expect(mainMenu.getByRole("link", {name: "Verwaltung", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Chat", exact: true})).toBeVisible();
-    await expect(mainMenu.getByRole("link", {name: "Verträge", exact: true})).toHaveCount(0);
+    const personalContracts = mainMenu.getByRole("link", {name: "Verträge", exact: true});
+    await expect(personalContracts).toHaveAttribute("href", "/contracts");
     for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
         await expect(mainMenu.getByRole("link", {name, exact: true})).toHaveCount(0);
-    if (mobile) await more.press("Escape");
+    await personalContracts.click();
+    await expect(page).toHaveURL(/\/contracts$/);
+    await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
+    await page.goto("/admin");
 
     const sections = page.getByRole("navigation", {name: "Verwaltung", exact: true});
+    const administrationContent = page.locator("main");
     await expect(sections.getByRole("link", {name: /^Plattformfinanzen(?: |$)/})).toBeVisible();
     await sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/}).click();
     await expect(page.getByRole("link", {name: /^Unternehmen(?! & Personen)/})).toBeVisible();
-    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
+    await expect(administrationContent.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
     await page.getByRole("link", {name: /^Dozierende(?: |$)/}).click();
     await expect(page).toHaveURL(/\/people$/);
     await expect(page.getByRole("heading", {name: "Dozierende", exact: true})).toBeVisible();
@@ -111,7 +116,7 @@ test("administration navigation keeps shared workflows together on desktop and m
     await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
     await expect(page.getByRole("link", {name: /^Leitstand(?: |$)/})).toHaveAttribute("href", "/control-center");
     await expect(page.getByRole("link", {name: /^Themen & Tools(?: |$)/})).toHaveAttribute("href", "/topics");
-    await expect(page.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveAccessibleName(/Vertragsdokumente zuordnen und Bestätigungen nachverfolgen/);
+    await expect(administrationContent.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
     await page.getByRole("link", {name: /^Leitstand(?: |$)/}).click();
     const dates = page.locator(".finance-period");
     const until = dates.locator('input[type="date"]').last();
@@ -123,10 +128,6 @@ test("administration navigation keeps shared workflows together on desktop and m
         expect(Math.abs(fieldBox.y + fieldBox.height - buttonBox.y - buttonBox.height)).toBeLessThan(2);
     }
     await show.click();
-    await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
-    await page.getByRole("link", {name: /^Verträge(?: |$)/}).click();
-    await expect(page).toHaveURL(/\/contracts$/);
-    await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
     await sections.getByRole("link", {name: /^Kursbetrieb(?: |$)/}).click();
     await page.getByRole("link", {name: /^Auftragsänderungen(?: |$)/}).click();
     await expect(page).toHaveURL(/\/changes$/);

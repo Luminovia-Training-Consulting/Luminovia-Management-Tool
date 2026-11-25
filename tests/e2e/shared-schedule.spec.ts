@@ -393,7 +393,11 @@ async function sharedSchedule(
         reconciliationErrors.push(message.text());
     });
     await page.goto("/finance");
-    const positionRows = page.locator(".platform-revenue tbody tr").filter({
+    const revenue = page.locator(".platform-revenue");
+    await revenue.getByRole("searchbox", {
+      name: /^(Aufträge, Unternehmen oder Dozierende suchen|Search assignments, companies or lecturers)$/,
+    }).fill(title);
+    const positionRows = revenue.getByRole("row").filter({
       has: page.locator(`a[href="/jobs/${offer}"]`),
     });
     await expect(positionRows).toHaveCount(2);

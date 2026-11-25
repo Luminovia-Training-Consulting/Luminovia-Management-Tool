@@ -75,9 +75,9 @@ test("readonly course overview is accessible and private client directory is den
         fullPage: true,
     });
     await page.goto("/clients");
-    await expect(page.getByRole("alert")).toContainText(
-        "Für diesen Bereich fehlt dir die Berechtigung.",
-    );
+    await expect(page).toHaveURL(/\/clients$/);
+    await expect(page.getByRole("heading", {name: "Diese Seite wurde nicht gefunden.", exact: true})).toBeFocused();
+    await expect(page.getByRole("heading", {name: "Unternehmen", exact: true})).toHaveCount(0);
 });
 test("admin persists private customer/contact, course template/run and safe unpublished copy through real UI", async ({
                                                                                                                           page,

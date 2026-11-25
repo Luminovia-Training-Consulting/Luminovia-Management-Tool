@@ -1621,6 +1621,8 @@ test("coordinated commercial amendment preserves the agreement through corrected
             .click();
         await expect(form).not.toBeVisible();
         await review.goto("/admin/finance");
+        // A paid invoice can move out of the first unfiltered batch after settlement.
+        await review.getByRole("searchbox", {name: "Rechnungen durchsuchen", exact: true}).fill(invoiceNumber);
         const bill = review.locator("article").filter({
             has: review.getByRole("heading", {
                 name: invoiceNumber,

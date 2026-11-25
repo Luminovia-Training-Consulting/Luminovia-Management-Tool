@@ -108,7 +108,7 @@ function WikiCourseTemplateReferences({
       const { data, error } = await db()
         .rpc("wiki_course_templates", {
           p_page_id: page.id,
-          ...(company ? { p_organisation_id: company } : {}),
+          p_organisation_id: company || null,
         })
         .abortSignal(signal);
       if (error) throw error;
@@ -146,7 +146,7 @@ function WikiCourseTemplateReferences({
         p_revision: page.version,
         p_template_id: templateId,
         p_remove: remove,
-        ...(company ? { p_organisation_id: company } : {}),
+        p_organisation_id: company || null,
       });
       if (error) throw error;
     },

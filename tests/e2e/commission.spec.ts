@@ -484,6 +484,8 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             fullPage: true,
         });
         await ownerPage.goto("/admin/finance");
+        // Follow the same invoice when payment changes its position in the list.
+        await ownerPage.getByRole("searchbox", {name: "Rechnungen durchsuchen", exact: true}).fill(number);
         const ownerInvoice = ownerPage.locator("article").filter({
             has: ownerPage.getByRole("heading", {name: number, exact: true}),
         });

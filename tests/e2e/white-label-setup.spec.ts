@@ -92,7 +92,8 @@ test("admin saves Academy settings only for an active company member", async ({p
             const managerPage = await managerContext.newPage();
             await login(managerPage, manager.email);
             await managerPage.goto("/admin/white-label");
-            await expect(managerPage.getByText(/nur für aktive Administratoren und Owner/)).toBeVisible();
+            await expect(managerPage).toHaveURL(/\/admin\/white-label$/);
+            await expect(managerPage.getByRole("heading", {name: "Diese Seite wurde nicht gefunden.", exact: true})).toBeFocused();
             await expect(managerPage.getByRole("link", {name: /^White Label(?: |$)/})).toHaveCount(0);
             await expect(managerPage.getByRole("switch", {name: "White-Label-Einrichtung öffnen"})).toHaveCount(0);
         } finally {

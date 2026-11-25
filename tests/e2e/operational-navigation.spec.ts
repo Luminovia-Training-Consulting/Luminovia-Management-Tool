@@ -30,9 +30,16 @@ test("legacy links redirect, teaching evidence opens directly, and collapsed hea
             name: /Navigation einklappen|Collapse navigation/,
         });
         if (await collapse.isVisible()) await collapse.click();
+        const searchResponse = page.waitForResponse((response) =>
+            new URL(response.url()).pathname === "/rest/v1/rpc/unified_search" &&
+            response.request().method() === "POST" &&
+            response.request().postDataJSON().p_query === "Fictional",
+        );
         await page.locator("#portal-global-search").fill("Fictional");
         await page.locator("#portal-global-search").press("Enter");
-        await expect(page).toHaveURL(/\/search\?q=Fictional/);
+        await expect(page).toHaveURL(/\/search$/);
+        await expect(page.getByRole("searchbox", {name: /^(Suchbegriff|Search term)$/})).toHaveValue("Fictional");
+        expect((await searchResponse).status()).toBe(200);
         expect(await page.locator(".sidebar .global-search").count()).toBe(0);
         expect(
             await page.evaluate(

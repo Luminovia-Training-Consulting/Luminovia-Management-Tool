@@ -188,6 +188,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   ui_preferences: "GET",
   unified_search: "GET",
   wiki_attachments: "GET",
+  wiki_course_template_choices: "GET",
   wiki_course_templates: "GET",
   wiki_page: "GET",
   wiki_page_history: "GET",
