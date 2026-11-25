@@ -134,29 +134,34 @@ export function SectionHub({
   const de = i18n.language.startsWith("de");
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  const deliveryByRole =
+    hasTeachingRole(roles.data) || roles.data.includes("client");
+  const deliveryByPermission =
+    permissions.isSuccess &&
+    permissions.data.some(
+      (permission) =>
+        permission === "courses.manage" || permission === "finance.manage",
+    );
   const items = sections[kind].filter((item) => {
     if (isGuestOnly(roles.data))
       return kind === "assistance" && item[0] === "help";
-    if (item[0] === "readiness") return Boolean(staff);
-    if (item[0] === "delivery")
-      return (
-        hasTeachingRole(roles.data) ||
-        roles.data?.includes("client") ||
-        (permissions.isSuccess &&
-          permissions.data.some(
-            (permission) =>
-              permission === "courses.manage" ||
-              permission === "finance.manage",
-          ))
-      );
+    if (item[0] === "readiness") return staff;
+    if (item[0] === "delivery") return deliveryByRole || deliveryByPermission;
     return (
       item[0] !== "reviews" ||
-      roles.data?.some((role) => ["client", "owner", "admin"].includes(role))
+      roles.data.some((role) =>
+        ["client", "owner", "admin", "participant"].includes(role),
+      )
     );
   });
-  // A direct course link must pass the same audience rule as the hub tab.
-  if (current === "readiness" && !items.some(([id]) => id === current))
-    return <PageNotFound />;
+  // A delegated delivery grant is only known after the permission read.
+  if (kind === "courses" && current === "delivery" && !deliveryByRole) {
+    if (permissions.isPending) return <Loading />;
+    if (permissions.isError && !isDatabasePermissionDenied(permissions.error))
+      return <ErrorState retry={() => void permissions.refetch()} />;
+  }
+  // Direct links never mount a page hidden by the hub's audience rules.
+  if (current && !items.some(([id]) => id === current)) return <PageNotFound />;
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
   if (!selected) return children ?? <Navigate to="/profile" replace />;

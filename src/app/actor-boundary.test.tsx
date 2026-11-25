@@ -96,6 +96,22 @@ const { clientPortalPage, enquiriesPage } = vi.hoisted(() => ({
   clientPortalPage: vi.fn(),
   enquiriesPage: vi.fn(),
 }));
+const { deliveryPage, reviewPage } = vi.hoisted(() => ({
+  deliveryPage: vi.fn(),
+  reviewPage: vi.fn(),
+}));
+vi.mock("../features/changes/delivery", () => ({
+  DeliveryPage: () => {
+    deliveryPage();
+    return <h1>Fictional course delivery</h1>;
+  },
+}));
+vi.mock("../features/people/reviews", () => ({
+  MyCourseReviews: () => {
+    reviewPage();
+    return <h1>Fictional course reviews</h1>;
+  },
+}));
 vi.mock("../features/readiness/readiness", () => ({
   CourseReadinessPage: () => <h1>Fictional course readiness</h1>,
 }));
@@ -149,6 +165,8 @@ afterEach(() => {
   accountPage.mockClear();
   clientPortalPage.mockClear();
   enquiriesPage.mockClear();
+  deliveryPage.mockClear();
+  reviewPage.mockClear();
 });
 
 /** Observe the Router URL without exposing it in the real recovery page. */
@@ -262,8 +280,11 @@ it.each([
   ["client", "/learning"],
   ["lecturer", "/enquiries"],
   ["lecturer", "/learning"],
+  ["lecturer", "/my-reviews"],
   ["management", "/client"],
   ["management", "/ClIeNt/"],
+  ["management", "/delivery?session=2c7584ea-4b73-49a1-91a6-f0c2b70e2804"],
+  ["management", "/my-reviews"],
   ["lecturer", "/missing-page?private=example"],
 ])(
   "shows the same actionable 404 at the original URL for %s on %s",
@@ -284,6 +305,8 @@ it.each([
     expect(accountPage).not.toHaveBeenCalled();
     expect(clientPortalPage).not.toHaveBeenCalled();
     expect(enquiriesPage).not.toHaveBeenCalled();
+    expect(deliveryPage).not.toHaveBeenCalled();
+    expect(reviewPage).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("heading", { name: /^(Verwaltung|Administration)$/ }),
     ).not.toBeInTheDocument();
@@ -296,12 +319,45 @@ it.each([
   ["management", "/enquiries", "Fictional management enquiries"],
   ["lecturer", "/readiness", "Fictional course readiness"],
   ["participant", "/learning", "Fictional learner workspace"],
+  ["lecturer", "/delivery", "Fictional course delivery"],
+  ["client", "/delivery", "Fictional course delivery"],
+  ["client", "/my-reviews", "Fictional course reviews"],
+  ["participant", "/my-reviews", "Fictional course reviews"],
 ])("mounts %s access to %s when authorized", async (role, path, heading) => {
   state.roles = [role];
   if (role === "management") state.permissions = ["organisations.manage"];
   setup(path);
   expect(await screen.findByRole("heading", { name: heading })).toBeVisible();
 });
+
+it("preserves course review access through an independently assigned learner role", async () => {
+  state.roles = ["lecturer", "participant"];
+  setup("/my-reviews");
+  expect(
+    await screen.findByRole("heading", { name: "Fictional course reviews" }),
+  ).toBeVisible();
+});
+
+it.each(["courses.manage", "finance.manage"])(
+  "unmounts course delivery when a delegated %s grant is removed",
+  async (permission) => {
+    state.roles = ["management"];
+    state.permissions = [permission];
+    const client = setup("/delivery");
+    expect(
+      await screen.findByRole("heading", { name: "Fictional course delivery" }),
+    ).toBeVisible();
+    act(() => client.setQueryData(["permissions", "actor-a"], []));
+    expect(
+      await screen.findByRole("heading", {
+        name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Fictional course delivery" }),
+    ).not.toBeInTheDocument();
+  },
+);
 
 it("allows the authorized administration destination and unmounts it when its permission is lost", async () => {
   state.roles = ["management"];

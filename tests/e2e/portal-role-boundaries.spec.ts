@@ -106,6 +106,32 @@ for (const role of actors) {
         role.primary === "participant" || role.primary === "guest";
       await login(page, profile.email, restricted ? destination : /\/$/);
       await expect(page.locator("html")).toHaveAttribute("lang", language);
+      if (teaching || company || role.primary === "participant") {
+        await test.step("Apply audience rules to direct course URLs", async () => {
+          const notFound = page.getByRole("heading", {
+            name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+          });
+          if (teaching && !("additional" in role)) {
+            await page.goto("/my-reviews");
+            await expect(notFound).toBeVisible();
+            await expect(page).toHaveURL(/\/my-reviews$/);
+          }
+          if (role.primary === "client") {
+            await page.goto(`/readiness/${randomUUID()}`);
+            await expect(notFound).toBeVisible();
+          }
+          if (role.primary === "participant" || company) {
+            await page.goto("/my-reviews");
+            await expect(
+              page.getByRole("heading", {
+                name: /Dozent:innen bewerten|Review lecturers/,
+              }),
+            ).toBeVisible();
+          }
+          await page.goto("/");
+          await expect(page).toHaveURL(restricted ? destination : /\/$/);
+        });
+      }
       const viewport = page.viewportSize()!;
       for (const width of [320, 390, 768, 1024, 1440, 1920]) {
         await page.setViewportSize({ width, height: viewport.height });
