@@ -546,8 +546,9 @@ test("calendar navigation and long agenda titles stay usable on narrow phones an
             nav.x + nav.width <= tabs.x + 1
         ), `Calendar controls fit at ${width}px`).toBe(true);
         const next = dates.getByRole("button", {name: "Nächster Zeitraum"});
-        // Stacked phone filters can put the calendar below the fold.
-        await next.scrollIntoViewIfNeeded();
+        // Give the stacked toolbar room above the viewport edge instead of
+        // relying on a minimal scroll, which can leave a fractional clip.
+        await next.evaluate((button) => button.scrollIntoView({block: "center", behavior: "instant"}));
         await expect(next).toBeInViewport({ratio: 1});
         const button = await next.boundingBox();
         expect(button && button.x >= 0 && button.x + button.width <= width).toBe(true);
