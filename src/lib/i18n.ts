@@ -699,6 +699,11 @@ const pairs: Record<string, [string, string]> = {
     "Diese Seite wurde nicht gefunden.",
     "This page could not be found.",
   ],
+  notFoundDescription: [
+    "Der Link ist möglicherweise veraltet oder die Seite ist für dein Konto nicht verfügbar. Öffne die Übersicht oder nutze die Hilfe.",
+    "The link may be out of date or the page may not be available to your account. Open the overview or use the help guide.",
+  ],
+  notFoundHelp: ["Hilfe öffnen", "Open help"],
   goHome: ["Zur Übersicht", "Go to overview"],
   scopeNote: [
     "Dein Portal wächst weiter. Weitere Bereiche werden nach geprüfter Fertigstellung freigeschaltet.",

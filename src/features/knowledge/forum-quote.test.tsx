@@ -12,6 +12,7 @@ import { ForumPage } from "./forum";
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
   current: "visible",
+  threadAccess: "visible",
   initialDeleted: false,
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
@@ -63,7 +64,7 @@ const textDoc = (value: string): JSONContent => ({
   content: [{ type: "paragraph", content: [{ type: "text", text: value }] }],
 });
 const thread = {
-  id: "thread",
+  id: "20350101-0000-4000-8000-000000000001",
   title: "Fictional discussion",
   category_id: "cat",
   category_label_de: "Thema",
@@ -81,7 +82,7 @@ const thread = {
 };
 const post = {
   id: "post",
-  thread_id: "thread",
+  thread_id: thread.id,
   author_id: "other",
   author_name: "Fictional",
   content: textDoc("Visible original"),
@@ -93,6 +94,7 @@ const post = {
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   fake.current = "visible";
+  fake.threadAccess = "visible";
   fake.initialDeleted = false;
   let reads = 0;
   fake.rpc.mockImplementation(async (name: string) => {
@@ -107,7 +109,10 @@ beforeEach(async () => {
       case "forum_threads_list":
         return { data: [thread], error: null };
       case "forum_thread":
-        return { data: thread, error: null };
+        return {
+          data: fake.threadAccess === "visible" ? thread : null,
+          error: fake.threadAccess === "denied" ? { code: "42501" } : null,
+        };
       case "forum_posts":
         reads++;
         return {
@@ -155,19 +160,37 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function view() {
+function view(id = thread.id) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/forum?thread=thread"]}>
+      <MemoryRouter initialEntries={[`/forum?thread=${id}`]}>
         <ForumPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return client;
 }
+
+it.each(["missing", "denied", "invalid"])(
+  "shows a neutral 404 for a %s discussion without requesting posts",
+  async (unavailable) => {
+    fake.threadAccess = unavailable;
+    const client = view(unavailable === "invalid" ? "invalid" : thread.id);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Diese Seite wurde nicht gefunden.",
+      }),
+    ).toBeVisible();
+    expect(fake.rpc.mock.calls.some(([name]) => name === "forum_posts")).toBe(
+      false,
+    );
+    expect(screen.queryByText(thread.title)).not.toBeInTheDocument();
+    client.clear();
+  },
+);
 
 it("copies only freshly authorized literal text as a blockquote and retains the existing draft", async () => {
   const client = view(),

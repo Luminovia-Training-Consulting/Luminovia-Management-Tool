@@ -13,7 +13,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { ErrorState, Loading, Notice, PageHeading } from "../components/common";
+import { PageNotFound } from "../components/page-not-found";
+import { ErrorState, Loading, Notice } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { Button } from "../components/ui/button";
 import { academyAdministrationQuery } from "../features/accounts/academy-api";
@@ -237,22 +238,10 @@ function AcademyTimetableLink() {
   );
 }
 
-function AcademyNotFound() {
-  const { t } = useTranslation();
-  return (
-    <div className="state">
-      <PageHeading title={t("notFound")} />
-      <Button asChild>
-        <Link to="/">{t("goHome")}</Link>
-      </Button>
-    </div>
-  );
-}
-
 function AcademyWorkspace() {
   const { id = "" } = useParams();
   const access = useOutletContext<"active" | "grace">();
-  if (!courseId.test(id)) return <AcademyNotFound />;
+  if (!courseId.test(id)) return <PageNotFound />;
   return <CourseWorkspacePage key={id} academy={access} />;
 }
 
@@ -346,7 +335,7 @@ export default function AcademyRoutes() {
             />
           </Route>
         </Route>
-        <Route path="*" element={<AcademyNotFound />} />
+        <Route path="*" element={<PageNotFound standalone />} />
       </Routes>
       {!signingIn && !swagger && <AcademyBrandLinksFooter />}
     </AcademyBrandProvider>

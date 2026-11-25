@@ -19,7 +19,6 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/auth-context";
 import { SwaggerRoute } from "../features/developer-api/swagger-route";
 import { PortalAccess } from "../features/auth/portal-access";
@@ -34,8 +33,8 @@ import { isAssignmentRequest } from "../features/admin/navigation-links";
 import { Shell } from "./shell";
 import { Preferences } from "../components/preferences";
 import { ErrorState, Loading } from "../components/common";
+import { PageNotFound } from "../components/page-not-found";
 import { isConfigured } from "../lib/supabase";
-import { Button } from "../components/ui/button";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
 
@@ -453,10 +452,6 @@ export default function PortalRoutes() {
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route
-            path="reset"
-            element={<Navigate to="/admin/reset" replace />}
-          />
-          <Route
             path="api/docs"
             element={
               <SwaggerRoute>
@@ -474,6 +469,10 @@ export default function PortalRoutes() {
           />
           <Route path="auth/password" element={<PasswordRecovery />} />
           <Route element={<AdminNavigation />}>
+            <Route
+              path="reset"
+              element={<Navigate to="/admin/reset" replace />}
+            />
             <Route path="people" element={<PeopleDirectory />} />
             <Route path="people/:id" element={<PersonProfile />} />
             <Route path="control-center" element={<ControlCenterPage />} />
@@ -533,7 +532,7 @@ export default function PortalRoutes() {
           </Route>
         </Route>
       </Route>
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<PageNotFound standalone />} />
     </Routes>
   );
 }
@@ -568,17 +567,4 @@ function AdministrationIndex() {
 function JobDetailRoute() {
   const { id } = useParams();
   return <JobDetail key={id} />;
-}
-
-/** Offer a translated, accessible route back from an unknown URL. */
-function NotFound() {
-  const { t } = useTranslation();
-  return (
-    <div className="state">
-      <h1>{t("notFound")}</h1>
-      <Button asChild>
-        <a href="/">{t("goHome")}</a>
-      </Button>
-    </div>
-  );
 }

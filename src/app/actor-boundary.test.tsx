@@ -13,7 +13,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { AuthProvider } from "../features/auth/auth-context";
 import { App } from "./app";
@@ -21,6 +21,8 @@ import "../lib/i18n";
 
 const state = vi.hoisted(() => ({
   actor: "actor-a",
+  roles: ["lecturer"],
+  permissions: [] as string[],
   callback: null as
     null | ((event: AuthChangeEvent, session: Session | null) => void),
 }));
@@ -44,7 +46,14 @@ vi.mock("../lib/supabase", () => ({
   },
   db: () => ({
     rpc: async (name: string) => ({
-      data: name === "portal_access" ? true : [],
+      data:
+        name === "portal_access"
+          ? true
+          : name === "get_my_permissions"
+            ? state.permissions
+            : name === "knowledge_access"
+              ? { can_author: !state.roles.includes("client") }
+              : [],
       error: null,
     }),
     from: (table: string) => {
@@ -62,7 +71,7 @@ vi.mock("../lib/supabase", () => ({
                   time_zone: "Europe/Berlin",
                 }
               : table === "user_roles"
-                ? [{ role: "lecturer" }]
+                ? state.roles.map((role) => ({ role }))
                 : [],
           error: null,
         }).then(resolve);
@@ -81,6 +90,13 @@ vi.mock("../features/profile/avatar", () => ({
 }));
 vi.mock("../features/dashboard/dashboard", () => ({
   Dashboard: () => <p>Fictional workspace</p>,
+}));
+const { accountPage } = vi.hoisted(() => ({ accountPage: vi.fn() }));
+vi.mock("../features/accounts/accounts", () => ({
+  AccountsPage: () => {
+    accountPage();
+    return <h1>Fictional account administration</h1>;
+  },
 }));
 vi.mock("../features/auth/callback", async () => {
   const { useState } = await import("react");
@@ -105,8 +121,17 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.unstubAllGlobals();
   state.actor = "actor-a";
+  state.roles = ["lecturer"];
+  state.permissions = [];
   state.callback = null;
+  accountPage.mockClear();
 });
+
+/** Observe the Router URL without exposing it in the real recovery page. */
+function CurrentLocation() {
+  const { pathname, search } = useLocation();
+  return <output aria-label="Current location">{pathname + search}</output>;
+}
 
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(path = "/") {
@@ -125,6 +150,7 @@ function setup(path = "/") {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
+        <CurrentLocation />
         <AuthProvider>
           <App />
         </AuthProvider>
@@ -187,4 +213,55 @@ it("keeps the public invitation/recovery callback mounted when Auth establishes 
   expect(screen.getByLabelText("Public callback state")).toHaveValue(
     "Pending native callback continuation",
   );
+});
+
+it.each([
+  ["lecturer", "/admin"],
+  ["lecturer", "/admin/accounts"],
+  ["lecturer", "/control-center"],
+  ["client", "/ADMIN/ACCOUNTS/"],
+  ["client", "/reset"],
+  ["client", "/chats/forum"],
+  ["lecturer", "/missing-page?private=example"],
+])(
+  "shows the same actionable 404 at the original URL for %s on %s",
+  async (role, path) => {
+    state.roles = [role];
+    setup(path);
+    const heading = await screen.findByRole("heading", {
+      name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+    });
+    expect(heading).toHaveFocus();
+    expect(screen.getByLabelText("Current location")).toHaveTextContent(path);
+    expect(
+      screen.getByRole("link", { name: /Zur Übersicht|Go to overview/ }),
+    ).toHaveAttribute("href", "/");
+    expect(
+      screen.getByRole("link", { name: /Hilfe öffnen|Open help/ }),
+    ).toHaveAttribute("href", "/help?topic=troubleshooting");
+    expect(accountPage).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("heading", { name: /^(Verwaltung|Administration)$/ }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("allows the authorized administration destination and unmounts it when its permission is lost", async () => {
+  state.roles = ["management"];
+  state.permissions = ["users.manage", "jobs.manage"];
+  const client = setup("/admin/accounts");
+  expect(
+    await screen.findByRole("heading", {
+      name: "Fictional account administration",
+    }),
+  ).toBeVisible();
+  act(() => client.setQueryData(["permissions", "actor-a"], ["jobs.manage"]));
+  expect(
+    await screen.findByRole("heading", {
+      name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+    }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "Fictional account administration" }),
+  ).not.toBeInTheDocument();
 });

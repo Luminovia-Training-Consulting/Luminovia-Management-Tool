@@ -128,7 +128,15 @@ it("makes existing article links open in the forum and switches to discussions i
 it("does not mount articles or offer the tab to an account with discussion-only access", async () => {
   state.roles = ["client"];
   renderForum("/chats/forum?view=articles&page=sample");
-  expect(await screen.findByText("Discussion content")).toBeVisible();
+  expect(
+    await screen.findByRole("heading", {
+      name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+    }),
+  ).toBeVisible();
+  expect(
+    screen.getByText("/chats/forum?view=articles&page=sample"),
+  ).toBeVisible();
+  expect(screen.queryByText("Discussion content")).not.toBeInTheDocument();
   expect(screen.queryByText("Article content")).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: /Fachartikel|Articles/ }),

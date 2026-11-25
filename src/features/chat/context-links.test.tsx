@@ -156,10 +156,18 @@ it("preserves the thread and fragment from a legacy forum link", async () => {
   );
 });
 
-it("returns to chats when forum access is unavailable", async () => {
+it("shows 404 without mounting chats or the forum when forum access is unavailable", async () => {
   state.canAuthor = false;
   renderPage("/chats/forum?thread=fixture");
-  await screen.findByRole("heading", { name: "Chats" });
+  await screen.findByRole("heading", {
+    name: "Diese Seite wurde nicht gefunden.",
+  });
+  expect(
+    screen.queryByRole("heading", { name: "Chats" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "/chats/forum?thread=fixture" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("link", { name: /^Forum(?: |$)/ }),
   ).not.toBeInTheDocument();

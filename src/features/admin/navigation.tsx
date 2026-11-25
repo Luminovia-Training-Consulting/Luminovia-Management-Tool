@@ -11,12 +11,9 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { SectionLink } from "../../components/section-card";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
-import {
-  ErrorState,
-  Loading,
-  Notice,
-  PageHeading,
-} from "../../components/common";
+import { ErrorState, Loading, PageHeading } from "../../components/common";
+import { PageNotFound } from "../../components/page-not-found";
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import {
   administrationAreas,
   administrationLinks,
@@ -55,8 +52,10 @@ export function AdminNavigation() {
   const current = links.find(({ to, end }) =>
     matchPath({ path: to, end: end ?? false }, pathname),
   );
-  const inAdministration =
-    pathname === "/admin" || pathname.startsWith("/admin/");
+  const inAdministration = Boolean(matchPath("/admin/*", pathname));
+  const overview = Boolean(matchPath("/admin", pathname));
+  const resetAlias = Boolean(matchPath("/reset", pathname));
+  const controlCenter = Boolean(matchPath("/control-center", pathname));
   const context: AdministrationContext = {
     links,
     pending: permissions.isPending || roles.isPending || profile.isPending,
@@ -67,13 +66,37 @@ export function AdminNavigation() {
       void profile.refetch();
     },
   };
-  const legacyAssignment =
-    pathname === "/admin" &&
-    isAssignmentRequest(params) &&
-    links.some(({ to }) => to === "/admin/assignments");
+  const legacyAssignment = overview && isAssignmentRequest(params);
   const areaLinks = Object.entries(administrationAreas).filter(([area]) =>
     links.some((entry) => entry.area === area),
   );
+
+  // Mount administrative routes only for the capabilities used to advertise
+  // them. Shared routes outside /admin still have their own audience rules.
+  if (inAdministration || resetAlias || controlCenter) {
+    if (
+      [permissions.error, roles.error, profile.error].some(
+        isDatabasePermissionDenied,
+      )
+    )
+      return <PageNotFound />;
+    if (failed) return <ErrorState retry={context.retry} />;
+    if (context.pending) return <Loading />;
+    const allowed = overview
+      ? legacyAssignment
+        ? links.some(({ to }) => to === "/admin/assignments")
+        : areaLinks.length > 0
+      : resetAlias
+        ? links.some(({ to }) => to === "/admin/reset")
+        : current ||
+          areaLinks.some(([, { to }]) => matchPath(to, pathname)) ||
+          (matchPath("/admin/people", pathname) &&
+            links.some(({ to }) => to === "/people")) ||
+          (matchPath("/admin/deletions", pathname) &&
+            roles.data?.some((role) => role === "admin" || role === "owner") &&
+            links.some(({ to }) => to === "/admin/accounts"));
+    if (!allowed) return <PageNotFound />;
+  }
 
   return (
     <>
@@ -83,9 +106,7 @@ export function AdminNavigation() {
             to="/admin"
             title={t("adminOverview")}
             description={t("adminOverviewDescription")}
-            aria-current={
-              pathname === "/admin" && !legacyAssignment ? "page" : undefined
-            }
+            aria-current={overview && !legacyAssignment ? "page" : undefined}
           />
           {areaLinks.map(([area, { to, label, description }]) => (
             <SectionLink
@@ -94,7 +115,7 @@ export function AdminNavigation() {
               title={t(label)}
               description={t(description)}
               aria-current={
-                pathname === to
+                matchPath(to, pathname)
                   ? "page"
                   : current?.area === area ||
                       (legacyAssignment && area === "operations")
@@ -126,32 +147,29 @@ export function AdministrationSection({ area }: { area?: AdministrationArea }) {
   const description = area
     ? t(administrationAreas[area].description)
     : undefined;
+  if (!items.length) return <PageNotFound />;
 
   return (
     <>
       <PageHeading title={title} description={description} />
-      {items.length ? (
-        <ul className="administration-destinations">
-          {items.map((item) => (
-            <li key={item.to}>
-              <Link to={item.to} className="panel">
-                <span>
-                  <strong className="administration-destination-label">
-                    {item.to === "/control-center" && (
-                      <LayoutDashboard size={20} aria-hidden="true" />
-                    )}
-                    {t(item.label)}
-                  </strong>{" "}
-                  <small>{t(item.description)}</small>
-                </span>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Notice kind="error">{t("noAccess")}</Notice>
-      )}
+      <ul className="administration-destinations">
+        {items.map((item) => (
+          <li key={item.to}>
+            <Link to={item.to} className="panel">
+              <span>
+                <strong className="administration-destination-label">
+                  {item.to === "/control-center" && (
+                    <LayoutDashboard size={20} aria-hidden="true" />
+                  )}
+                  {t(item.label)}
+                </strong>{" "}
+                <small>{t(item.description)}</small>
+              </span>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </>
   );
 }

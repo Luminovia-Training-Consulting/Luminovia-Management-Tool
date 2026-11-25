@@ -8,6 +8,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { PageNotFound } from "../components/page-not-found";
+import { isDatabasePermissionDenied } from "../lib/database-errors";
 import { SectionButton, SectionLink } from "../components/section-card";
 import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
@@ -208,11 +210,12 @@ export function CommunicationWorkspace() {
   const knowledge = useQuery(knowledgeAccessQuery(actor));
   const forum = useMatch("/chats/forum");
 
+  if (forum && isDatabasePermissionDenied(knowledge.error))
+    return <PageNotFound />;
   if (forum && knowledge.isPending) return <Loading />;
   if (forum && knowledge.isError)
     return <ErrorState retry={() => void knowledge.refetch()} />;
-  if (forum && !knowledge.data?.can_author)
-    return <Navigate to="/chats" replace />;
+  if (forum && !knowledge.data?.can_author) return <PageNotFound />;
 
   return (
     <>
@@ -255,8 +258,7 @@ export function CommunicationForum() {
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const canReadArticles = hasJobStaffRole(roles.data);
-  if (articles && !canReadArticles)
-    return <Navigate to="/chats/forum" replace />;
+  if (articles && !canReadArticles) return <PageNotFound />;
   return (
     <>
       {canReadArticles && (

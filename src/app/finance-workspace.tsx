@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading } from "../components/common";
+import { PageNotFound } from "../components/page-not-found";
 import { useAuth } from "../features/auth/auth-context";
 import {
   financeRoots,
@@ -60,7 +61,7 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
 
   const access = financeWorkspaceAccess(roles.data, permissions.data);
   const base = financeRoots[scope];
-  const selected = pathname.replace(/\/$/, "");
+  const selected = pathname.toLowerCase().replace(/\/+$/, "");
   const suffix = selected.slice(base.length);
   if (scope === "personal") {
     if (
@@ -110,6 +111,7 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
       ? current.learning
       : visible.some((tab) => tab.suffix === suffix))
   ) {
+    if (scope === "staff" && suffix) return <PageNotFound />;
     const next =
       visible[0]?.suffix ??
       (current.learning && !isLearning ? "/analytics/learning" : null);

@@ -164,11 +164,11 @@ test("individual account roles, scoped invitations and linked status management 
         await login(lecturerPage, teacher.email);
         await lecturerPage.goto("/admin/accounts");
         await expect(
-            lecturerPage.getByText(
-                "Für die Kontoverwaltung sind aktuelle Verwaltungsrechte erforderlich.",
-                {exact: true},
-            ),
+            lecturerPage.getByRole("heading", {
+                name: "Diese Seite wurde nicht gefunden.", exact: true,
+            }),
         ).toBeVisible();
+        await expect(lecturerPage).toHaveURL(/\/admin\/accounts$/);
         await expect(
             lecturerPage.getByText(admin.email, {exact: true}),
         ).toHaveCount(0);

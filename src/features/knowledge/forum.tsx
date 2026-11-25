@@ -26,11 +26,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { profileQuery } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
+import { PageNotFound } from "../../components/page-not-found";
 import {
   ErrorState,
   Field,
@@ -54,6 +56,8 @@ import { ForumMetadataEditor } from "./forum-metadata";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
+
+const threadId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const threadSchema = z.object({
@@ -597,22 +601,19 @@ function ForumPostView({
 /** Combine thread, paginated posts and confirmed subscription/moderation actions. */
 function ForumThreadView({
   actor,
-  id,
+  thread: value,
   canModerate,
   onBack,
 }: {
   actor: string;
-  id: string;
+  thread: ForumThread;
   canModerate: boolean;
   onBack: () => void;
 }) {
   const { t } = useTranslation("knowledge");
   const online = useOnline();
   const client = useQueryClient();
-  const thread = useQuery({
-    ...forumThreadQuery(actor, id),
-    refetchInterval: 10000,
-  });
+  const { id } = value;
   const posts = useQuery({
     ...forumPostsQuery(actor, id),
     refetchInterval: 10000,
@@ -644,7 +645,7 @@ function ForumThreadView({
       requireOnline();
       const { error } = await db().rpc("subscribe_forum_thread", {
         p_thread_id: id,
-        p_subscribed: !thread.data?.subscribed,
+        p_subscribed: !value.subscribed,
       });
       if (error) throw error;
     },
@@ -656,27 +657,18 @@ function ForumThreadView({
       requireOnline();
       const { error } = await db().rpc("moderate_forum_thread", {
         p_thread_id: id,
-        p_locked: field === "locked" ? !thread.data?.locked : null,
-        p_pinned: field === "pinned" ? !thread.data?.pinned : null,
-        p_archived: field === "archived" ? !thread.data?.archived : null,
+        p_locked: field === "locked" ? !value.locked : null,
+        p_pinned: field === "pinned" ? !value.pinned : null,
+        p_archived: field === "archived" ? !value.archived : null,
       });
       if (error) throw error;
     },
     onSuccess: () =>
       client.invalidateQueries({ queryKey: knowledgeKeys.forum(actor) }),
   });
-  if (thread.isPending || posts.isPending) return <Loading />;
-  if (thread.isError || posts.isError)
-    return (
-      <ErrorState
-        retry={() => {
-          void thread.refetch();
-          void posts.refetch();
-        }}
-      />
-    );
-  if (!thread.data) return <Notice kind="error">{t("unavailable")}</Notice>;
-  const value = thread.data;
+  if (isDatabasePermissionDenied(posts.failureReason)) return <PageNotFound />;
+  if (posts.isPending) return <Loading />;
+  if (posts.isError) return <ErrorState retry={() => void posts.refetch()} />;
   return (
     <>
       <section className="panel forum-thread-header">
@@ -899,6 +891,14 @@ export function ForumPage() {
   });
   const [params, setParams] = useSearchParams();
   const id = params.get("thread");
+  const validThread = id !== null && threadId.test(id);
+  // Resolve the selected thread before mounting its content or loading posts.
+  // A missing thread and a refused read must have the same outward behavior.
+  const thread = useQuery({
+    ...forumThreadQuery(actor, id ?? ""),
+    enabled: validThread && access.isSuccess && access.data.can_author,
+    refetchInterval: 10000,
+  });
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -919,8 +919,18 @@ export function ForumPage() {
   };
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
-  if (!access.data?.can_author)
-    return <Notice kind="error">{t("noAccess")}</Notice>;
+  if (!access.data?.can_author) return <PageNotFound />;
+  if (id !== null && !writing) {
+    if (
+      !validThread ||
+      isDatabasePermissionDenied(thread.failureReason) ||
+      (thread.isSuccess && !thread.data)
+    )
+      return <PageNotFound />;
+    if (thread.isPending) return <Loading />;
+    if (thread.isError)
+      return <ErrorState retry={() => void thread.refetch()} />;
+  }
   return (
     <>
       <PageHeading
@@ -1062,11 +1072,11 @@ export function ForumPage() {
             ) : (
               <Notice>{t("categoryMissing")}</Notice>
             )
-          ) : id ? (
+          ) : id && thread.data ? (
             <ForumThreadView
               key={id}
               actor={actor}
-              id={id}
+              thread={thread.data}
               canModerate={access.data.can_moderate_forum}
               onBack={() => select(null)}
             />

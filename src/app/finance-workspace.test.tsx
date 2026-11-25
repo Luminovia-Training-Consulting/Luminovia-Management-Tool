@@ -136,7 +136,9 @@ it("keeps the staff workspace inaccessible to an ordinary lecturer", async () =>
   state.roles = ["lecturer"];
   state.permissions = [];
   open("/admin/finance/accounting");
-  expect(await screen.findByRole("heading", { name: "Home" })).toBeVisible();
+  expect(
+    await screen.findByRole("heading", { name: "notFound" }),
+  ).toBeVisible();
   expect(screen.queryByRole("heading", { name: "Accounting" })).toBeNull();
 });
 
