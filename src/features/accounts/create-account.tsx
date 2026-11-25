@@ -16,6 +16,23 @@ import {
 } from "./api";
 import "./i18n";
 
+/** Explain actionable server responses without exposing internal failure details. */
+function creationErrorKey(error: unknown) {
+  switch (error instanceof Error ? error.message : null) {
+    case "creation_in_progress":
+      return "creationInProgress";
+    case "permission_required":
+      return "creationPermissionRequired";
+    case "invalid_request":
+      return "creationInvalid";
+    case "creation_disabled":
+    case "service_unavailable":
+      return "creationUnavailable";
+    default:
+      return "createError";
+  }
+}
+
 /** Create one account through the caller-authorized facade; password input is transient and never retained after confirmation. */
 export function CreateAccountForm({
   actor,
@@ -105,6 +122,8 @@ export function CreateAccountForm({
         event.preventDefault();
         // Prevent a forged submit event from sending an invalid credential to the Edge handler.
         if (
+          !online ||
+          create.isPending ||
           !validInitialPassword ||
           !available.some((entry) => entry.role === role) ||
           (role === "client" && !organisation)
@@ -172,8 +191,15 @@ export function CreateAccountForm({
             id="create-account-organisation"
             required
             value={organisation}
-            disabled={organisations.isPending || organisations.isError}
-            onChange={(event) => setOrganisation(event.target.value)}
+            disabled={
+              create.isPending ||
+              organisations.isPending ||
+              organisations.isError
+            }
+            onChange={(event) => {
+              setOrganisation(event.target.value);
+              create.reset();
+            }}
           >
             <option value="">{t("choose")}</option>
             {organisations.data?.map((item) => (
@@ -222,7 +248,9 @@ export function CreateAccountForm({
       >
         {t(create.isPending ? "creating" : "createTitle")}
       </Button>
-      {create.isError && <Notice kind="error">{t("createError")}</Notice>}
+      {create.isError && (
+        <Notice kind="error">{t(creationErrorKey(create.error))}</Notice>
+      )}
       {create.data?.access_email === "failed" && (
         <Notice kind="error">{t("accessEmailFailed")}</Notice>
       )}

@@ -182,6 +182,65 @@ it("allows guest creation without a company but never displays success for rejec
     expect.objectContaining({ role: "guest", organisation_id: null }),
   );
 });
+it("keeps the same idempotency key visible and reusable while a prior request is still finalizing", async () => {
+  await i18n.changeLanguage("en");
+  fake.request
+    .mockRejectedValueOnce(new Error("creation_in_progress"))
+    .mockResolvedValueOnce({ status: "created", user_id: "new-user" });
+  mount();
+  await userEvent.type(screen.getByLabelText("Display name"), "Fictional user");
+  await userEvent.type(screen.getByLabelText("Email"), "retry@example.invalid");
+  await userEvent.selectOptions(
+    screen.getByLabelText("Account role"),
+    "lecturer",
+  );
+  await userEvent.type(screen.getByLabelText(/Initial password/), "Aa1!aaaa");
+  const submit = () =>
+    userEvent.click(
+      screen.getByRole("button", { name: "Create user account" }),
+    );
+  await submit();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "still being finalized",
+  );
+  const firstRequest = fake.request.mock.calls[0][2];
+  await submit();
+  await screen.findByRole("link", { name: "Open user account" });
+  expect(fake.request).toHaveBeenCalledTimes(2);
+  expect(fake.request.mock.calls[1][2]).toMatchObject({
+    idempotency_key: firstRequest.idempotency_key,
+  });
+});
+
+it("explains rejected participant placement without claiming account success", async () => {
+  await i18n.changeLanguage("en");
+  fake.request.mockRejectedValue(new Error("permission_required"));
+  mount();
+  await userEvent.type(screen.getByLabelText("Display name"), "Fictional user");
+  await userEvent.type(
+    screen.getByLabelText("Email"),
+    "placement@example.invalid",
+  );
+  await userEvent.selectOptions(
+    screen.getByLabelText("Account role"),
+    "participant",
+  );
+  await screen.findByRole("option", { name: "Fictional company" });
+  await userEvent.selectOptions(
+    screen.getByLabelText("Participant company"),
+    "org-a",
+  );
+  await userEvent.type(screen.getByLabelText(/Initial password/), "Aa1!aaaa");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Create user account" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "role or company placement",
+  );
+  expect(
+    screen.queryByRole("link", { name: "Open user account" }),
+  ).not.toBeInTheDocument();
+});
 
 it("searches participant companies and classes, clears the old class on company change and submits the new placement", async () => {
   await i18n.changeLanguage("de");

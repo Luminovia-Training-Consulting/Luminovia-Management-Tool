@@ -30,7 +30,10 @@ export function PersonExpertise({ id }: { id: string }) {
 
   const open = params.get("expertise") === "1";
   return (
-    <section aria-label={t("manageEvidence")} className="panel">
+    <section
+      aria-label={t("manageEvidence")}
+      className={open ? "panel person-evidence-actions-open" : undefined}
+    >
       <Button
         type="button"
         variant="secondary"

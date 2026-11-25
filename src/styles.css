@@ -2577,6 +2577,11 @@ legend {
   }
 }
 
+.person-evidence-actions-open {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
 .person-managed-expertise:not(:empty) {
   margin-block-start: 12px;
 }

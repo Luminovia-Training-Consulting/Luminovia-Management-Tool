@@ -22,6 +22,11 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../deletions/deletions", () => ({
   PermanentDeleteAction: () => null,
 }));
+vi.mock("../admin/people", () => ({
+  ManagedExpertise: ({ accountId }: { accountId: string }) => (
+    <div>Managed evidence for {accountId}</div>
+  ),
+}));
 vi.mock("../../lib/queries", () => ({
   permissionsQuery: () => ({
     queryKey: ["permissions"],
@@ -100,4 +105,18 @@ it("keeps self blocking unavailable", async () => {
   expect(
     screen.queryByRole("button", { name: "Zugang sperren" }),
   ).not.toBeInTheDocument();
+});
+it("offers delegated evidence and expertise management from the selected person's actions", async () => {
+  await i18n.changeLanguage("de");
+  fake.permissions = ["users.manage", "qualifications.verify"];
+  mount();
+  expect(
+    await screen.findByRole("button", {
+      name: "Qualifikationen und Nachweise",
+    }),
+  ).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Qualifikationen und Nachweise" }),
+  );
+  expect(await screen.findByText("Managed evidence for target")).toBeVisible();
 });

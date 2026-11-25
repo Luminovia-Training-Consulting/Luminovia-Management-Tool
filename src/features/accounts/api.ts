@@ -97,7 +97,10 @@ export async function accountRequest<T>(
     let code = "service_unavailable";
     if (error instanceof FunctionsHttpError) {
       try {
-        code = (await error.context.clone().json()).error ?? code;
+        const payload = await error.context.clone().json();
+        if (payload?.status === "in_progress") code = "creation_in_progress";
+        else if (payload?.status === "failed") code = "creation_failed";
+        else if (typeof payload?.error === "string") code = payload.error;
       } catch {
         /* keep safe error */
       }

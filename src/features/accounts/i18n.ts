@@ -15,6 +15,14 @@ const de = {
   initialPassword: "Startpasswort (mindestens 8 Zeichen)",
   createError:
     "Das Konto wurde nicht bestätigt. Prüfe Berechtigung, Organisation und ob diese E-Mail-Adresse bereits vergeben ist.",
+  creationInProgress:
+    "Diese Kontoerstellung wird noch abgeschlossen. Warte kurz und versuche es erneut; derselbe Schlüssel verhindert doppelte Konten.",
+  creationPermissionRequired:
+    "Die gewählte Rolle oder Firmenzuordnung ist nicht freigegeben. Prüfe deine Berechtigung sowie das ausgewählte Unternehmen und gegebenenfalls die Klasse.",
+  creationInvalid:
+    "Die Kontodaten wurden nicht akzeptiert. Prüfe Anzeigename, E-Mail, Startpasswort und gegebenenfalls die Firmenzuordnung.",
+  creationUnavailable:
+    "Der Kontodienst ist derzeit nicht erreichbar. Lass die Angaben unverändert und versuche es später erneut.",
   created: "Benutzerkonto wurde erstellt.",
   accessEmailRequested: "Die Zugangsmail wurde zum Versand angefordert.",
   accessEmailFailed:
@@ -132,6 +140,14 @@ const en: typeof de = {
   initialPassword: "Initial password (at least 8 characters)",
   createError:
     "Account creation was not confirmed. Check your permission, organisation and whether this email address is already registered.",
+  creationInProgress:
+    "This account request is still being finalized. Wait a moment and retry; the same request key prevents duplicate accounts.",
+  creationPermissionRequired:
+    "The selected role or company placement is not authorised. Check your permissions and the selected company and class, if applicable.",
+  creationInvalid:
+    "The account details were not accepted. Check the display name, email, initial password and any company placement.",
+  creationUnavailable:
+    "The account service is currently unavailable. Keep the details unchanged and try again later.",
   created: "User account created.",
   accessEmailRequested: "The access email was requested.",
   accessEmailFailed:
