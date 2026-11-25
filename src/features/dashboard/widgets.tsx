@@ -131,21 +131,21 @@ export function DashboardCalendarPreview({
         {t("calendarZone", { zone })}
       </p>
       <WidgetState state={personal}>
-        {entries.length ? (
-          <ol className="dashboard-preview-list">
-            {entries.map((event) => (
-              <li key={event.id}>
-                <Link to={event.href}>{event.title}</Link>
-                <small>
-                  {t(event.kind)} · {dateTime(event.start, i18n.language, zone)}
-                </small>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="muted">{t("noEvents")}</p>
-        )}
+        {entries.length === 0 && <p className="muted">{t("noEvents")}</p>}
       </WidgetState>
+      {/* A private calendar read must not block independently authorized assignments. */}
+      {entries.length > 0 && (
+        <ol className="dashboard-preview-list">
+          {entries.map((event) => (
+            <li key={event.id}>
+              <Link to={event.href}>{event.title}</Link>
+              <small>
+                {t(event.kind)} · {dateTime(event.start, i18n.language, zone)}
+              </small>
+            </li>
+          ))}
+        </ol>
+      )}
       <div className="dashboard-widget-footer">
         <TextLink to="/calendar">{t("openCalendar")}</TextLink>
         <Button

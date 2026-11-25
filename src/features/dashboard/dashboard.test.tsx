@@ -387,6 +387,19 @@ describe("role-aware dashboard previews", () => {
     expect(rpcCalls("commission_report")).toHaveLength(0);
   });
   it("a failed optional calendar does not hide the rest of the dashboard", async () => {
+    (
+      fake.rpcData.job_dashboard as { next_assignments: unknown[] }
+    ).next_assignments = [
+      {
+        id: "59b238c5-528b-49be-9b71-010ac4538096",
+        starts_at: ahead(1),
+        ends_at: ahead(1.1),
+        job: {
+          id: "f63d8304-e283-44aa-902a-85ced878857a",
+          title: "Fictional confirmed class",
+        },
+      },
+    ];
     fake.errors.personal_events = { code: "42501", message: "denied" };
     setup();
     const calendar = await screen.findByRole("region", {
@@ -395,6 +408,14 @@ describe("role-aware dashboard previews", () => {
     await waitFor(() =>
       expect(within(calendar).getByRole("alert")).toBeVisible(),
     );
+    expect(
+      await within(calendar).findByRole("link", {
+        name: "Fictional confirmed class",
+      }),
+    ).toBeVisible();
+    expect(
+      within(calendar).queryByText("My private preparation"),
+    ).not.toBeInTheDocument();
     expect(await screen.findByText("Fictional handout.txt")).toBeVisible();
     expect(await screen.findByText("Fictional course update")).toBeVisible();
     expect(

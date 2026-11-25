@@ -2,7 +2,7 @@
 import { mergeCursorItems } from "../../lib/cursor-rows";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
@@ -75,14 +75,16 @@ export function PortalSearch() {
   const { t } = useTranslation("unifiedSearch");
   const { session } = useAuth();
   const online = useOnline();
+  const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const q = (params.get("q") ?? "").trim().slice(0, 100),
     rawKind = params.get("kind") ?? "",
     kind = searchKinds.includes(rawKind as (typeof searchKinds)[number])
       ? rawKind
       : "";
+  const searchOptions = unifiedSearchQuery(session!.user.id, q, kind);
   const query = useInfiniteQuery({
-    ...unifiedSearchQuery(session!.user.id, q, kind),
+    ...searchOptions,
     enabled: online && q.length >= 2,
   });
   const retryNext = canRetryNextPage(query);
@@ -98,9 +100,18 @@ export function PortalSearch() {
         key={`${q}\0${kind}`}
         query={q}
         kind={kind}
-        onSearch={(text, value) =>
-          setParams({ q: text, ...(value ? { kind: value } : {}) })
-        }
+        onSearch={(text, value) => {
+          if (text === q && value === kind) {
+            // Fresh results start at the first cursor; don't replay every loaded page.
+            if (online && q.length >= 2 && !query.isFetching)
+              void client.resetQueries({
+                queryKey: searchOptions.queryKey,
+                exact: true,
+              });
+          } else {
+            setParams({ q: text, ...(value ? { kind: value } : {}) });
+          }
+        }}
       />
       {q.length >= 2 &&
         (!online ? (

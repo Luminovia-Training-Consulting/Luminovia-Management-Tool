@@ -95,6 +95,36 @@ it("uses authenticated server search and exact server-provided stable cursor rat
     unifiedSearchQuery("actor-b", "Needle", "").queryKey,
   );
 });
+it("resubmits the same search from the first page without replaying previously loaded pages", async () => {
+  view();
+  await screen.findByRole("link", { name: /Needle private draft/ });
+  await userEvent.click(
+    screen.getByRole("button", { name: "Weitere Treffer laden" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Weitere Treffer laden" }),
+    ).not.toBeInTheDocument(),
+  );
+  const data = {
+    items: [{ ...row, title: "Fresh result" }],
+    has_more: false,
+    next_cursor: null,
+  };
+  state.rpc.mockImplementation(() => ({
+    abortSignal: async () => ({ data, error: null }),
+  }));
+  await userEvent.click(screen.getByRole("button", { name: "Suchen" }));
+  expect(
+    await screen.findByRole("link", { name: /Fresh result/ }),
+  ).toBeVisible();
+  expect(state.rpc.mock.calls.map(([, args]) => args.p_after_id)).toEqual([
+    null,
+    row.id,
+    null,
+  ]);
+});
+
 it("preserves an unsaved search across language changes", async () => {
   view();
   const field = await screen.findByRole("searchbox", { name: "Suchbegriff" });
