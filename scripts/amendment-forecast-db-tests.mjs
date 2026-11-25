@@ -321,11 +321,20 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
                             february = result.months.find(
                                 (row) => row.month === "2058-02-01" && row.currency === "AUD",
                             );
-                        assert.ok(
-                            !result.months.some(
-                                (row) => row.month === "2058-01-01" && row.currency === "AUD",
-                            ),
+                        const january = result.months.find(
+                            (row) => row.month === "2058-01-01" && row.currency === "AUD",
                         );
+                        // Current calendar forecasts retain empty months; legacy
+                        // install-order fixtures can omit them. Neither may keep the moved cost.
+                        if (mode === "current_source") {
+                            assert.ok(january, "Current forecasts include empty calendar months");
+                        }
+                        if (january) {
+                            assert.equal(january.accepted_lecturer_cost, 0);
+                            assert.equal(january.accepted_gross_known, 0);
+                            assert.equal(january.accepted_margin_known, 0);
+                            assert.equal(january.unknown_gross_claims, 0);
+                        }
                         assert.equal(february.accepted_lecturer_cost, 82.46);
                         assert.equal(february.accepted_gross_known, 200);
                         assert.equal(february.accepted_margin_known, 117.54);

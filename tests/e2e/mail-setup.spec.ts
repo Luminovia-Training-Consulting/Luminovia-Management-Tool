@@ -56,6 +56,9 @@ test("reports invitation and relay switches only to current mail administrators"
   await expect(
     page.getByText(/^luminovia-portal-test-[a-f0-9]{8}$/),
   ).toBeVisible();
+  await expect(page.getByLabel("Zur Bestätigung DELETE eingeben")).toBeVisible();
+  await expect(page.getByLabel("Aktuelles Passwort")).toBeVisible();
+  await expect(page.getByLabel(/Neues Owner-Passwort/)).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Alle Daten dieser Installation löschen" }),
   ).toBeDisabled();

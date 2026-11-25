@@ -83,6 +83,13 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     });
     /** Locates the exact fixture job on the board so unrelated cards cannot satisfy the assertion. */
     const card = () => board.locator(`[data-offer-id="${created.id}"]`);
+    /** A rendered selection can change before the versioned write commits. */
+    const committedStatus = async () =>
+        (
+            await checked(
+                service.from("jobs").select("status").eq("id", created.id).single(),
+            )
+        )?.status;
     await expect(card()).toBeVisible();
     const handle = card().getByRole("button", {
         name: `${title} verschieben`,
@@ -170,21 +177,13 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     await page.keyboard.press(direction);
     await expect(target).toHaveClass(/offer-column-target/);
     await page.keyboard.press("Space");
-    await expect
-        .poll(
-            async () =>
-                (
-                    await checked(
-                        service.from("jobs").select("status").eq("id", created.id).single(),
-                    )
-                )?.status,
-        )
-        .toBe("published");
+    await expect.poll(committedStatus).toBe("published");
     await expect(card().getByRole("combobox")).toHaveValue("published");
     expect(requests).toBe(1);
     // Always retain the ordinary keyboard/select fallback for status changes.
     await card().getByRole("combobox").selectOption("draft");
     await expect(card().getByRole("combobox")).toHaveValue("draft");
+    await expect.poll(committedStatus).toBe("draft");
     if (!testInfo.project.name.startsWith("mobile")) {
         const grip = card().getByRole("button", {
             name: `${title} verschieben`,
@@ -213,6 +212,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
         await card().getByRole("combobox").selectOption("published");
         await expect(card().getByRole("combobox")).toHaveValue("published");
     }
+    await expect.poll(committedStatus).toBe("published");
     const context = await browser.newContext({
         viewport: page.viewportSize(),
         baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
@@ -236,13 +236,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
                 {exact: true},
             ),
         ).toBeVisible();
-        expect(
-            (
-                await checked(
-                    service.from("jobs").select("status").eq("id", created.id).single(),
-                )
-            )?.status,
-        ).toBe("published");
+        expect(await committedStatus()).toBe("published");
         await page
             .getByRole("button", {name: "Board aktualisieren", exact: true})
             .click();

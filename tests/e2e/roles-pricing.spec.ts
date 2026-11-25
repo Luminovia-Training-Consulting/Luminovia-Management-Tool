@@ -128,7 +128,8 @@ test("management assigns only subordinate roles while only administration sees a
         expect((await managerApi.rpc("lecturer_compensation", {
             p_user_id: teacher.id,
         })).error?.code).toBe("42501");
-        await page.goto("/admin/operations");
+        // The assignments workspace, not the operations landing page, owns this policy lookup.
+        await page.goto("/admin/assignments");
         await expect(
             page.getByRole("heading", {
                 name: "Kurse & Aufträge verwalten",
