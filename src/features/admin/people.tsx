@@ -389,6 +389,11 @@ export function ManagedExpertise({
   if (!selected) return <Notice kind="error">{t("peopleNoResults")}</Notice>;
   const name = selected.display_name || t("peopleUnnamed");
   const selectedExpertise = expertise.data;
+  const canEditEvidence =
+    selected.active &&
+    selected.id !== actorId &&
+    lecturers.isSuccess &&
+    lecturers.data.some(({ id }) => id === selected.id);
   return (
     <>
       {updated && (
@@ -456,19 +461,28 @@ export function ManagedExpertise({
         ) : (
           <h2 id="people-profile-title">{t("peopleExpertiseTitle")}</h2>
         )}
-        <ProfileEvidence ownerId={selected.id} readOnly kinds={["cv"]} />
+        {canEditEvidence && (
+          <p className="muted">{t("peopleDelegatedEvidence")}</p>
+        )}
+        <ProfileEvidence
+          ownerId={selected.id}
+          onBehalf
+          readOnly={!canEditEvidence}
+        />
+        {lecturers.isError && (
+          <ErrorState retry={() => void lecturers.refetch()} />
+        )}
         {showAccountDetails && <h3>{t("peopleExpertiseTitle")}</h3>}
         <p>{t("intro", { ns: "qualifications" })}</p>
-        {selected.id !== actorId &&
-          lecturers.data?.some(({ id }) => id === selected.id) && (
-            <ExpertiseSelection
-              key={selected.id}
-              actor={actorId}
-              lecturer={selected.id}
-              topics={topics.data}
-              current={selectedExpertise}
-            />
-          )}
+        {canEditEvidence && (
+          <ExpertiseSelection
+            key={selected.id}
+            actor={actorId}
+            lecturer={selected.id}
+            topics={topics.data}
+            current={selectedExpertise}
+          />
+        )}
         <div className="people-expertise-list">
           {selectedExpertise.length ? (
             selectedExpertise.map((item) => {

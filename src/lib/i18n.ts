@@ -146,6 +146,10 @@ const pairs: Record<string, [string, string]> = {
     "Prüfe die Qualifikationsnachweise vor der Freigabe. Nachweisdateien werden derzeit außerhalb des Portals verwaltet.",
     "Review qualification evidence before verifying expertise. Evidence files are currently managed outside the portal.",
   ],
+  peopleDelegatedEvidence: [
+    "Dateien werden im Profil dieser Person gespeichert. Hier siehst du die Qualifikationsdateien, die du für sie hochgeladen hast. Freigegebene Nachweise findest du beim jeweiligen Thema.",
+    "Files are saved to this person's profile. You can see the qualification files you uploaded for them here. Shared evidence appears under the relevant topic.",
+  ],
   peopleExpertiseTopic: ["Thema für diese Person", "Topic for this lecturer"],
   peopleExpertiseAdd: ["Expertise hinzufügen", "Add expertise"],
   peopleExpertiseRemove: ["Expertise entfernen", "Remove expertise"],

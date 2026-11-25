@@ -326,3 +326,43 @@ test("authored staff profiles connect real course history, company reviews and a
         await Promise.all([managerContext.close(), companyContext.close()]);
     }
 });
+
+// Exercise delegated ownership through the same file gateway and scanner as a personal upload.
+for (const role of ["management", "admin"] as const) {
+    test(`${role} adds a CV, a certificate and expertise from the lecturer profile`, async ({page}) => {
+        const staff = await actor(`Fictional evidence uploader ${role}`, role);
+        const teacher = await actor("Fictional evidence owner", "lecturer");
+        const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+        const topic = await checked(service.from("topics").select("id")
+            .is("archived_at", null).order("id").limit(1).single(), {requireData: true});
+        const topicId = topic.id;
+
+        if (role === "admin") await adminLogin(page, staff);
+        else await login(page, staff.email);
+        await page.goto(`/people/${teacher.id}?expertise=1`);
+        for (const [kind, label] of [["cv", "Lebenslauf"], ["certificate", "Qualifikationsnachweis"]] as const) {
+            const section = page.getByRole("region", {name: label, exact: true});
+            const fileName = `Fictional ${kind}.txt`;
+            await section.locator('input[type="file"]').setInputFiles({
+                name: fileName,
+                mimeType: "text/plain",
+                buffer: Buffer.from(`Fictional delegated ${kind} test evidence`),
+            });
+            await section.getByRole("button", {name: "Datei hochladen", exact: true}).click();
+            await expect(section.getByText(fileName, {exact: true})).toBeVisible();
+            await expect.poll(async () => {
+                const rows = await checked(service.from("documents").select("owner_id,uploaded_by,status")
+                    .eq("owner_id", teacher.id).eq("kind", kind), {requireData: true});
+                return rows;
+            }).toEqual([{owner_id: teacher.id, uploaded_by: staff.id, status: "clean"}]);
+        }
+
+        await page.getByLabel("Thema für diese Person", {exact: true}).selectOption(topicId);
+        await page.getByRole("button", {name: "Expertise hinzufügen", exact: true}).click();
+        await expect.poll(async () => {
+            const rows = await checked(service.from("lecturer_topics").select("verified")
+                .eq("user_id", teacher.id).eq("topic_id", topicId), {requireData: true});
+            return rows;
+        }).toEqual([{verified: false}]);
+    });
+}

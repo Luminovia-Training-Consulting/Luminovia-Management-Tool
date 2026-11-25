@@ -158,21 +158,20 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
         },
     );
     await check(
-        "Foreign certificate reservation fails before allocation; CV administration stays independent",
+        "Delegated certificates retain the lecturer owner and the authorised uploader",
         async () => {
-            const before = await sql("select count(*) from public.document_versions");
-            await assert.rejects(
-                actor(
-                    manager,
-                    `select public.reserve_document('Proof.txt','text/plain',3,'personal','certificate',null,null,${q(randomUUID())},null,${q(teacher)})`,
-                    "aal1",
-                ),
-                /42501/,
-            );
-            assert.equal(
-                await sql("select count(*) from public.document_versions"),
-                before,
-            );
+            const request = randomUUID();
+            const reserve = (owner, client) =>
+                `select public.reserve_document('Proof.txt','text/plain',3,'personal','certificate',null,null,${q(client)},null,${q(owner)})`;
+            const first = JSON.parse(await actor(manager, reserve(teacher, request), "aal1"));
+            assert.equal(first.status, "quarantined");
+            assert.deepEqual(JSON.parse(await actor(manager, reserve(teacher, request), "aal1")), first);
+            assert.equal(await sql(`select owner_id || ':' || uploaded_by from public.documents where id=${q(first.document_id)}`), `${teacher}:${manager}`);
+            assert.equal(await actor(manager, `select count(*) from public.document_versions where id=${q(first.version_id)}`), "1");
+            assert.equal(await actor(teacher, `select count(*) from public.documents where id=${q(first.document_id)}`), "1");
+            assert.equal(await actor(peer, `select count(*) from public.documents where id=${q(first.document_id)}`), "0");
+            await assert.rejects(actor(peer, reserve(teacher, randomUUID())), /42501/);
+            await assert.rejects(actor(manager, reserve(randomUUID(), randomUUID())), /42501/);
         },
     );
     await check(

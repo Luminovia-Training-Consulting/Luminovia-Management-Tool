@@ -12,10 +12,12 @@ import "./i18n";
 export function ProfileEvidence({
   ownerId,
   readOnly = false,
+  onBehalf = false,
   kinds = ["cv", "certificate"],
 }: {
   ownerId: string;
   readOnly?: boolean;
+  onBehalf?: boolean;
   kinds?: ("cv" | "certificate")[];
 }) {
   const { t } = useTranslation("files");
@@ -23,11 +25,15 @@ export function ProfileEvidence({
   return (
     <div className="profile-evidence">
       {kinds.map((kind) => (
-        <section className="panel" key={kind}>
+        <section className="panel" key={kind} aria-label={t(kind)}>
           <h2>{t(kind)}</h2>
           {!readOnly && (
             <FileUpload
-              context={{ scope: "personal", kind }}
+              context={{
+                scope: "personal",
+                kind,
+                ...(onBehalf && { ownerId }),
+              }}
               onDone={
                 kind === "certificate"
                   ? () => {
