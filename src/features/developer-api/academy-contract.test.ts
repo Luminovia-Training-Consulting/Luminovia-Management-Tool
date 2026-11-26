@@ -35,6 +35,7 @@ const readPaths = [
   "/rest/v1/rpc/course_gradebook_export",
   "/rest/v1/rpc/course_question_bank",
   "/rest/v1/rpc/course_completion_status",
+  "/rest/v1/rpc/course_assignments",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -62,6 +63,7 @@ const writePaths = [
   "/rest/v1/rpc/set_course_material_metadata",
   "/rest/v1/rpc/reuse_course_material",
   "/rest/v1/rpc/course_question_bank_action",
+  "/rest/v1/rpc/course_assignment_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -769,6 +771,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-logo",
                 "academy-pwa-icon",
                 "course-submission",
+                "assignment-submission",
                 "exam-submission",
               ],
             },

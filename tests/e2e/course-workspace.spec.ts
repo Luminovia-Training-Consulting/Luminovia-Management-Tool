@@ -1033,6 +1033,87 @@ test("current instructor publishes a meeting link for a consented participant", 
     }
 });
 
+test("Versioned assignment uses the scanner, requests a revision and releases private feedback", async ({page, browser}, info) => {
+    test.setTimeout(120_000);
+    const f = await fixture({upcoming: true});
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    const workspace = `/courses/${f.run}/workspace#course-submissions`;
+    const scope = (target: Page) => target.getByRole("region", {name: "Kursaufgaben", exact: true});
+    const prepare = async (target: Page) => {
+        if (target.url().endsWith(workspace)) await target.reload();
+        else await target.goto(workspace);
+        await scope(target).getByRole("combobox", {name: "Aufgabe auswählen", exact: true})
+            .selectOption({label: "Fiktive Laboraufgabe"});
+    };
+    await login(page, f.manager.email);
+    await page.goto(workspace);
+    const author = scope(page);
+    await author.getByRole("button", {name: "Aufgabe erstellen", exact: true}).click();
+    await author.getByLabel("Titel der Aufgabe", {exact: true}).fill("Fiktive Laboraufgabe");
+    await author.getByLabel("Arbeitsauftrag", {exact: true}).fill("Lade ein fiktives Laborprotokoll hoch.");
+    await author.getByLabel("Name des Kriteriums", {exact: true}).fill("Protokoll");
+    const bands = author.getByLabel("Name der Stufe", {exact: true});
+    await bands.nth(0).fill("Offen");
+    await bands.nth(1).fill("Vollständig");
+    await author.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
+    await author.getByRole("button", {name: "Aufgabe veröffentlichen", exact: true}).click();
+    await expect(author.getByText("Version 1 veröffentlicht", {exact: true})).toBeVisible();
+    const learnerContext = await browser.newContext({
+        viewport: page.viewportSize() ?? undefined,
+        isMobile: info.project.use.isMobile,
+        hasTouch: info.project.use.hasTouch,
+    });
+    try {
+        const learner = await learnerContext.newPage();
+        await login(learner, f.learner.email, /\/learning$/);
+        await prepare(learner);
+        const submission = scope(learner);
+        const submit = async (name: string, body: string) => {
+            await submission.getByLabel("Datei auswählen", {exact: true}).setInputFiles({
+                name, mimeType: "text/plain", buffer: Buffer.from(body),
+            });
+            await submission.getByRole("button", {name: "Datei abgeben", exact: true}).click();
+            await expect(submission.getByText(name, {exact: true})).toBeVisible();
+        };
+        const firstFile = "fiktives-protokoll.txt";
+        const firstBytes = "Fiktives Laborprotokoll Teil 1\n";
+        await submit(firstFile, firstBytes);
+
+        await prepare(page);
+        const first = author.getByRole("listitem").filter({hasText: firstFile});
+        const [download] = await Promise.all([
+            page.waitForEvent("download", {timeout: 15_000}),
+            first.getByRole("button", {name: "Herunterladen", exact: true}).click(),
+        ]);
+        expect(await readFile(await download.path(), "utf8")).toBe(firstBytes);
+        await first.getByLabel("Rückmeldung für Teilnehmende", {exact: true}).fill("Bitte ergänze die Beobachtungen.");
+        await first.getByLabel("Private Notiz für das Kursteam", {exact: true}).fill("Nur im Kursteam sichtbar");
+        await first.getByLabel("Veröffentlichung", {exact: true}).selectOption("revision_requested");
+        await first.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
+        await expect(first.getByText("Überarbeitung erbeten", {exact: true})).toBeVisible();
+
+        await prepare(learner);
+        await expect(submission.getByText("Bitte ergänze die Beobachtungen.")).toBeVisible();
+        await expect(submission.getByText("Nur im Kursteam sichtbar")).toHaveCount(0);
+        const secondFile = "fiktive-ueberarbeitung.txt";
+        await submit(secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
+        await prepare(page);
+        const second = author.getByRole("listitem").filter({hasText: secondFile});
+        await second.getByLabel("Protokoll", {exact: true}).selectOption("1");
+        await second.getByLabel("Veröffentlichung", {exact: true}).selectOption("released");
+        await second.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
+        await expect(second.getByText("Rückmeldung freigegeben", {exact: true})).toBeVisible();
+        await prepare(learner);
+        await expect(submission.getByText("1 / 1 Punkte", {exact: true})).toBeVisible();
+        await expect(submission.getByRole("button", {name: "Datei abgeben", exact: true})).toHaveCount(0);
+    } finally {
+        await learnerContext.close();
+    }
+});
+
 test("Private course submission uses the real scanner, current staff access and withdrawal", async ({page, browser}, info) => {
     test.setTimeout(120_000);
     const f = await fixture({upcoming: true});

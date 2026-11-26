@@ -67,6 +67,7 @@ import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
+import { CourseAssignments } from "./course-assignments";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
@@ -1546,6 +1547,18 @@ function CourseWorkspaceLayout({
               className={sectionClass("course-submissions")}
               id="course-submissions"
             >
+              {currentSection === "course-submissions" &&
+                (learner || course.access.staff) && (
+                  <CourseAssignments
+                    key={`${actor}:${course.id}:assignments`}
+                    actor={actor}
+                    course={course.id}
+                    zone={course.time_zone}
+                    staff={course.access.staff}
+                    participants={course.roster}
+                    readOnly={academy === "grace"}
+                  />
+                )}
               <CourseSubmissions
                 key={`${actor}:${course.id}`}
                 actor={actor}

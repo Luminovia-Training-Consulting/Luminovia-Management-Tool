@@ -174,6 +174,7 @@ import {
   courseClassAssignment,
   courseClassOptions,
 } from "../learning/course-classes-schema.ts";
+import { courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
@@ -503,7 +504,7 @@ const fileGateway = {
     tags: ["Files"],
     summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. Use ?mode=exam-submission for a scanned draft during the current exam window, then confirm it with submit_course_exam. Both modes accept only course_run_id, client_id and file.",
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. Use ?mode=exam-submission for a scanned draft during the current exam window, then confirm it with submit_course_exam. Use ?mode=assignment-submission for the current published assignment, with assignment_id as an additional field. Confirm the exact scan-bound version with course_assignment_action. The two other scoped modes accept only course_run_id, client_id and file.",
     parameters: [
       gatewayOriginHeader,
       {
@@ -511,7 +512,11 @@ const fileGateway = {
         in: "query",
         required: false,
         schema: {
-          enum: ["course-submission", "exam-submission"],
+          enum: [
+            "course-submission",
+            "exam-submission",
+            "assignment-submission",
+          ],
           type: "string",
         },
       },
@@ -527,10 +532,14 @@ const fileGateway = {
             properties: {
               file: { type: "string", format: "binary" },
               client_id: uuid,
+              assignment_id: {
+                ...uuid,
+                description: "Required only for assignment-submission.",
+              },
               course_run_id: {
                 ...uuid,
                 description:
-                  "Required for course-submission and exam-submission. Omit for generic transfers.",
+                  "Required for assignment-submission, course-submission, and exam-submission. Omit for generic transfers.",
               },
               contract_organisation_id: {
                 ...uuid,
@@ -4470,6 +4479,33 @@ const nativePaths = {
     "Current course staff only. Returns a single snapshot of up to 5,000 latest published grades for current enrolled and completed learners, with no previews or correction reasons.",
     course,
     courseGradebookExportResult,
+  ),
+  "/rest/v1/rpc/course_assignments": rpc(
+    "courseAssignments",
+    "Premium LMS",
+    "Read course assignments and feedback",
+    "Scoped staff see the authoring definition and a bounded attempt page. An enrolled participant sees published definitions, their own attempts and released feedback.",
+    {
+      ...course,
+      p_assignment_id: { type: ["string", "null"], format: "uuid" },
+      p_offset: version,
+    },
+    z.toJSONSchema(courseAssignmentsProjection),
+    ["p_assignment_id", "p_offset"],
+  ),
+  "/rest/v1/rpc/course_assignment_action": rpc(
+    "courseAssignmentAction",
+    "Premium LMS",
+    "Save, publish, submit or assess a course assignment",
+    "Staff can save and publish versioned rubrics, grant an extension or record a review. Participants submit the exact clean reservation assigned to their own course attempt. Writes compare the last read version.",
+    {
+      ...course,
+      p_assignment_id: uuid,
+      p_action: { enum: ["save", "publish", "extend", "submit", "review"] },
+      p_payload: { type: "object" },
+      p_expected_version: version,
+    },
+    object({ id: uuid }),
   ),
   "/rest/v1/rpc/course_submissions": rpc(
     "courseSubmissions",

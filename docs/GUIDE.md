@@ -319,6 +319,12 @@ In **Lernaktivitäten / Learning activities**, open **Mein Abschlussdokument / M
 
 Course staff can open **Abschlussstatus / Completion status** in the same workspace section and select a currently enrolled or completed participant. The displayed date and time use the course's time zone. Previously issued, unrevoked completion documents remain available to authorised learners.
 
+### Course assignments and feedback
+
+Open **Dateiabgaben / File submissions** in a course workspace, then **Kursaufgaben / Course assignments**. The course staff can save a draft with instructions, an attempt limit, a deadline in the course's time zone and an assessment rubric. Add at least two levels to each criterion, beginning at zero points, then publish the saved definition. Staff can grant a later deadline to an individual enrolled participant.
+
+The participant chooses a published assignment and submits a file. The file is accepted after the scan and the server confirms the attempt. The recorded attempt keeps the rubric and the exact file version from submission. To allow another attempt within the applicable deadline and limit, choose **Überarbeitung anfordern / Request revision** in the review form. The participant can find the feedback and submit a new version in the same assignment. Choose **Freigeben / Release feedback** to share the final evaluation. The private note stays in the staff review, and each released revision appears in the learner's course notifications.
+
 ### Timed exams and results
 
 In the course workspace, open **Klausur / Exam**. Choose **Klausur planen / Schedule exam**, enter the title, announcement time, start, submission deadline and pass threshold, then save. The times use the course's time zone. Start and deadline must be on course dates. Upload and publish the scanned student PDF after saving the schedule. Already published papers from before timed exams keep their previous access until the course has a schedule. Use the existing exam setting to mark a course exam-free.

@@ -1,6 +1,8 @@
 import i18n from "../../lib/i18n";
+import assignmentTexts from "./course-assignments-i18n";
 
 const pairs: Record<string, [string, string]> = {
+  ...assignmentTexts,
   submissions: ["Dateiabgaben", "File submissions"],
   submissionOnline: [
     "Dateiabgaben sind online verfügbar.",

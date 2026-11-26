@@ -83,6 +83,28 @@ Deno.test('private submission multipart requires the exact scoped transport and 
     }
 });
 
+Deno.test('assignment intake requires precisely one additional assignment field', () => {
+    const id = '52b7ddee-2166-485a-bcee-04d0eea958d1';
+    const form = new FormData();
+    form.set('course_run_id', id);
+    form.set('client_id', id);
+    form.set('file', new File(['fictional assignment'], 'lab.txt'));
+    const rejectsIntake = (assignment: boolean) => {
+        try {
+            courseSubmissionRun(form, true, assignment);
+            return false;
+        } catch (error) {
+            return error instanceof Error && error.message === 'invalid_request';
+        }
+    };
+    assert(rejectsIntake(true));
+    form.set('assignment_id', id);
+    assert(courseSubmissionRun(form, true, true) === id);
+    assert(rejectsIntake(false));
+    form.append('assignment_id', id);
+    assert(rejectsIntake(true));
+});
+
 Deno.test('normalizes names without paths, controls or unsafe download headers', () => {
     assert(safeName('../folder\\lesson\r\n.txt') === 'lesson.txt');
     const header = downloadDisposition('lesson\r\n".pdf');

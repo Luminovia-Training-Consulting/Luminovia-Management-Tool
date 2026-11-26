@@ -17,7 +17,7 @@ import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-log
 import {serveAcademyPwaAsset} from './academy-pwa-assets.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
 import {readJobSource} from './job-source.ts';
-import {academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
+import {assignmentSubmissionQuery, academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -137,7 +137,8 @@ Deno.serve(async (request: Request) => {
         const academyAttendance = query === academyAttendanceQuery;
         const academyIntake = academyChat || academyAttendance || examReservation !== null || query === academyMaterialQuery;
         const examSubmission = query === '?mode=exam-submission';
-        const submissionIntake = query === courseSubmissionQuery || examSubmission;
+        const assignmentSubmission = query === assignmentSubmissionQuery;
+        const submissionIntake = query === courseSubmissionQuery || examSubmission || assignmentSubmission;
         const scopedIntake = academyIntake || submissionIntake;
         const multipart = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data';
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
@@ -166,7 +167,9 @@ Deno.serve(async (request: Request) => {
             const materialRun = academyMaterialCourse(form, academyIntake && !academyChat && !academyAttendance);
             const chatRoom = academyChatRoom(form, academyChat);
             const attendanceSession = academyAttendanceSession(form, academyAttendance);
-            const submissionRun = courseSubmissionRun(form, submissionIntake);
+            const submissionRun = courseSubmissionRun(form, submissionIntake, assignmentSubmission);
+            const assignmentId = form.get('assignment_id');
+            if (assignmentSubmission ? !uuid(assignmentId) : assignmentId !== null) return json(400, {error: 'invalid_request'});
             const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession || submissionRun);
             const file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
@@ -196,7 +199,12 @@ Deno.serve(async (request: Request) => {
             const reserved = companyUpload
                 ? await user.rpc('reserve_organisation_contract', {p_organisation_id: company, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : submissionRun
-                ? await user.rpc(examSubmission ? 'reserve_course_exam_submission' : 'reserve_course_submission', {p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc(assignmentSubmission ? 'reserve_course_assignment_submission'
+                    : examSubmission ? 'reserve_course_exam_submission' : 'reserve_course_submission', {
+                    p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length,
+                    p_client_id: clientId, p_sha256: incomingDigest,
+                    ...(assignmentSubmission ? {p_assignment_id: assignmentId} : {}),
+                })
                 : attendanceSession
                 ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : chatRoom

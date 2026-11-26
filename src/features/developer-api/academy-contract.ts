@@ -67,6 +67,7 @@ import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
+import { courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { humanAuthPaths } from "./human-auth-contract.ts";
@@ -387,7 +388,7 @@ const materialUpload = {
     tags: ["Licensed course profile"],
     summary:
       "Upload and scan course files, assessments, attendance evidence, chat attachments or the academy logo",
-    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. Use exam-submission with course_run_id to scan an enrolled participant’s draft during the current exam window, then call submit_course_exam to confirm the exact version. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan. Use academy-pwa-icon with expected_version and the three named PNG variants. All three are scanned before the active local administrator publishes one replacement.`,
+    description: `${writeAccess} Send one file of up to 10 MiB from an allowlisted Origin. Use academy-material to upload course material as a current course manager, assigned lecturer or authorised contact of the exact course company. Use academy-student-exam to upload a PDF as an assigned lecturer, authorised course staff member or contact for the course company while the exam is required. Retry an interrupted upload with the same mode, client ID, course, name and bytes. Use academy-answer-key for a restricted PDF as a currently assigned lecturer or course manager while the exam is required. The response confirms a clean scan of the exact stored version. Pass document.current_version_id to publishAcademyCourseMaterial or to publishAcademyStudentExamPdf with the matching audience. An answer-key upload never publishes to students. Use academy-course-chat with academy_room_id for a draft in a current participant-room membership. Submit the exact file and version IDs through sendAcademyCourseChatAttachment to publish it with one message. Use academy-attendance with academy_session_id for a PDF attendance record and attachAcademyAttendanceEvidence with the exact scanned version. Use course-submission with course_run_id for an enrolled participant to submit a private file to an explicitly open course. Use exam-submission with course_run_id to scan an enrolled participant’s draft during the current exam window, then call submit_course_exam to confirm the exact version. Set assignment-submission with course_run_id and assignment_id to scan an assignment draft; confirm the exact version with course_assignment_action. In academy-logo mode send canonical RGB/RGBA PNG bytes (256 KiB and 512 pixels per edge) as image/png with expected_version and the current local administrator session. The PNG replaces the public logo only after a clean scan. Use academy-pwa-icon with expected_version and the three named PNG variants. All three are scanned before the active local administrator publishes one replacement.`,
     security: credentials,
     "x-portal-licence": "active",
     parameters: [
@@ -406,6 +407,7 @@ const materialUpload = {
             "academy-logo",
             "academy-pwa-icon",
             "course-submission",
+            "assignment-submission",
             "exam-submission",
           ],
         },
@@ -441,6 +443,10 @@ const materialUpload = {
                     academy_room_id: uuid,
                     academy_session_id: uuid,
                     course_run_id: uuid,
+                    assignment_id: {
+                      ...uuid,
+                      description: "Required only for assignment-submission.",
+                    },
                     client_id: uuid,
                     file: {
                       ...string,
@@ -1123,6 +1129,32 @@ const coursePaths = {
     z.toJSONSchema(courseWithdrawalWindowSchema),
   ),
   "/rest/v1/rpc/cancel_own_course_enrolment": learnerWithdrawal,
+  "/rest/v1/rpc/course_assignments": courseOperation(
+    "readAcademyCourseAssignments",
+    "Read course assignments and feedback",
+    "Staff receive a bounded attempt page. Learners receive published definitions, their own submissions and released feedback.",
+    "active-or-grace",
+    record(
+      { ...run, p_assignment_id: nullable(uuid), p_offset: expectedVersion },
+      ["p_run_id"],
+    ),
+    z.toJSONSchema(courseAssignmentsProjection),
+  ),
+  "/rest/v1/rpc/course_assignment_action": courseOperation(
+    "writeAcademyCourseAssignment",
+    "Save, publish, submit or assess a course assignment",
+    "Staff use version-checked publication, extensions and review. Learners confirm their own clean scanned assignment version.",
+    "active",
+    record({
+      ...run,
+      p_assignment_id: uuid,
+      p_action: { enum: ["save", "publish", "extend", "submit", "review"] },
+      p_payload: { type: "object" },
+      p_expected_version: expectedVersion,
+    }),
+    record({ id: uuid }),
+    true,
+  ),
   "/rest/v1/rpc/course_submissions": courseOperation(
     "readAcademyCourseSubmissions",
     "List private participant file submissions",

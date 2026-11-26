@@ -118,6 +118,23 @@ export function uploadCourseSubmission(
   );
 }
 
+/** Quarantine an exact version for the caller's published assignment. */
+export function uploadCourseAssignmentSubmission(
+  file: File,
+  courseId: string,
+  assignmentId: string,
+  clientId: string,
+) {
+  if (file.size < 1 || file.size > courseSubmissionMaxBytes)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set("course_run_id", courseId);
+  form.set("assignment_id", assignmentId);
+  form.set("client_id", clientId);
+  return transferUpload(form, endpoint() + "?mode=assignment-submission");
+}
+
 /** Upload a single exact version through the assigned lecturer's course scope. */
 export function uploadAcademyCourseMaterial(
   file: File,

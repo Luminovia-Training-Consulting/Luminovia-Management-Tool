@@ -49,11 +49,10 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-05 — rubrics, assignments, resubmission and feedback
 
-- **Priority / status:** P0 · planned; current private participant submissions and quiz results are partial foundations.
-- **Dependencies / affected modules:** Existing course submissions, file scanner, notifications, assessment records and authoring.
-- **Data and security:** Preserve each submission/attempt and rubric version; validate every workflow transition server-side; separate participant-visible feedback from private staff notes; use exact scanned file versions.
-- **Tasks / acceptance:** Add rubric criteria/levels, assignment publication/deadlines/attempts, individual/group rules, extensions, revision requests, resubmission, grading and feedback revision/publication notifications. Test timezone deadlines, participant-only access, private notes, malware scans, concurrent submissions and history.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Existing generic submission controls do not count as full assignment lifecycle.
+- **Priority / status:** P0 · individual assignment workflow implemented in both portal editions. Course staff create and publish versioned instructions, deadlines, attempt limits and scoring rubrics. Learners submit an exact scanned file. Course staff save private review drafts, grant individual extensions, request revision and release feedback to the learner.
+- **Data and security:** Attempts pin the published rubric and scan-confirmed file version. Deadline instants, attempt cap, release state and current permissions are checked by PostgreSQL. A revised rubric does not change old attempts. Learners cannot read other submissions, staff notes or unreleased feedback. Course contacts retain their existing generic submission rights. Dedicated licence grace permits reads.
+- **Verification:** Disposable PostgreSQL tests cover drafts, malicious-file verdicts, exact retry, independent learner scopes, release notification records, extensions, concurrent resubmissions and revocation. Component checks cover upload-confirmation retries and the learner's read-only projection. The focused real-browser exercise covers authoring, rescanning, review, private notes and feedback release. See the user guide for the workflow.
+- **Remaining acceptance:** Groups and group-specific policy are open. The complete LMS journey and external deployment acceptance are tracked separately.
 
 ### LMS-P0-06 — authoritative completion and next-step engine
 
