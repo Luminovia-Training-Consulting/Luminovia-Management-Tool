@@ -21,6 +21,13 @@ const labels = {
     "Fassung dem Kurs zuordnen",
     "Assign revision to course",
   ],
+  competencyArchiveFramework: ["Rahmen archivieren", "Archive framework"],
+  competencyRestoreFramework: ["Rahmen wiederherstellen", "Restore framework"],
+  competencyFrameworkArchived: ["Archiviert", "Archived"],
+  competencyArchiveHelp: [
+    "Bestehende Kurszuordnungen und Beurteilungen behalten ihre Rahmenfassung.",
+    "Existing courses and assessments keep their assigned revision.",
+  ],
   competencyFrameworkVersion: [
     "{{title}} · Fassung {{revision}}",
     "{{title}} · revision {{revision}}",
@@ -59,6 +66,11 @@ const labels = {
   competencyAssignmentEvidence: [
     "{{title}} · {{score}} %",
     "{{title}} · {{score}}%",
+  ],
+  competencyTextExam: ["Freigegebene Textprüfung", "Released text exam"],
+  competencyExamEvidence: [
+    "{{title}} · {{score}} von {{max_points}} Punkten",
+    "{{title}} · {{score}} of {{max_points}} points",
   ],
   competencyPublishDecision: ["Beurteilung freigeben", "Release assessment"],
   competencyHistory: ["Freigegebene Beurteilungen", "Released assessments"],
