@@ -315,6 +315,12 @@ Choose **Note korrigieren / Correct grade** to enter an adjusted mark and an int
 
 **Freigegebene Noten als CSV exportieren / Export published grades as CSV** produces one current snapshot for enrolled and completed learners, up to 5,000 published grades. The export covers the full course rather than the displayed roster page. Quiz pass and certificate eligibility continue to use their established assessment and completion rules. Academy grace supports read and export access for currently authorised users. Publication and correction require an active licence.
 
+### Private learning portfolio
+
+Open **Mein Portfolio / My portfolio** from the learning area. Create a text entry and save. Later edits retain earlier versions in the entry's revision history. **Mein Portfolio exportieren / Export my portfolio** downloads your own versions and share receipts as JSON.
+
+Choose **Fassung teilen / Share revision**, select the course and instructor, and confirm the numbered revision. Only that named instructor can read the chosen snapshot under **Geteilte Portfolios / Shared portfolios** in the course workspace, while both actors retain the required course access. Edits stay private until you share a new revision. **Freigabe widerrufen / Revoke share** removes subsequent access to the old snapshot. Academy grace permits reads and personal exports.
+
 ### Programme access prerequisites
 
 Before the first participant joins, open an existing **Lernprogramme / Learning programmes** entry and choose **Voraussetzungen für Kurszugang / Course access prerequisites**. Select a course, choose which earlier courses count and set the rule to require them all or at least one. Saving without selected prerequisites restores the programme's normal order for that course. Clear explicit rules before changing the course order.

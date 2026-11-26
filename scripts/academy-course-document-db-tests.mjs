@@ -677,11 +677,32 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(staffExport.map(({ user_id, grade }) => ({ user_id, grade })), [{ user_id: learner, grade: mark }]);
     await assert.rejects(gradebookExport(learner), /42501/);
 
+    // The portfolio recipient is one named current instructor; licence grace is read-only.
+    const portfolioEntry = randomUUID();
+    const portfolio = (who, course = null, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/learning_portfolio") : "") +
+        `select public.learning_portfolio(${course === null ? "null" : q(course)})`).then(JSON.parse);
+    const portfolioEdit = (who, operation, payload, version = 0) =>
+      actor(who, gate("/rpc/learning_portfolio_command") +
+        `select public.learning_portfolio_command(${q(portfolioEntry)},${q(operation)},${q(JSON.stringify(payload))},${version})`).then(JSON.parse);
+    const note = {title: "Fictional private learning notes", body: "Reviewed practice exercise"};
+    await portfolioEdit(learner, "save", note);
+    const receipt = await portfolioEdit(learner, "share", {course_id: run, teacher_id: teacher}, 1);
+    const sharedPortfolio = await portfolio(teacher, run);
+    assert.equal(sharedPortfolio.shares[0].id, receipt.share_id);
+    assert.equal(sharedPortfolio.shares[0].body, note.body);
+    await assert.rejects(portfolio(manager, run), /42501/);
+    assert.deepEqual((await portfolio(teacher)).entries, []);
+    const personalPortfolio = await portfolio(learner);
+
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
       expires_at: date(-2),
     });
+    assert.deepEqual(await portfolio(teacher, run), sharedPortfolio);
+    assert.deepEqual(await portfolio(learner), personalPortfolio);
+    await assert.rejects(portfolioEdit(learner, "revoke", {share_id: receipt.share_id}), /42501/);
     const graceGradebook = { ...publishedGradebook, can_manage: false };
     assert.deepEqual(await gradebook(teacher), graceGradebook);
     assert.deepEqual(await gradebook(learner), learnerGradebook);
@@ -734,6 +755,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       expires_at: date(-2),
       grace_until: date(-1),
     });
+    await assert.rejects(portfolio(learner), /42501/);
+    await assert.rejects(portfolio(teacher, run, false), /42501/);
     await assert.rejects(access(learner), /42501/);
     await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);

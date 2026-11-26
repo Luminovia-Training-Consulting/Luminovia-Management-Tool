@@ -74,6 +74,7 @@ import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
 import { CourseGradebook } from "./course-gradebook";
+import { CoursePortfolio } from "./portfolio";
 import {
   CompletionRequirements,
   StaffCompletionRequirements,
@@ -1144,6 +1145,7 @@ function CourseWorkspaceLayout({
   const hasCurriculum =
     course.lms_enabled && (learner || (canEdit && course.access.staff));
   const hasGradebook = course.lms_enabled && (learner || course.access.staff);
+  const hasPortfolioShares = course.lms_enabled && course.access.teacher;
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
     ...(hasCurriculum
@@ -1169,6 +1171,9 @@ function CourseWorkspaceLayout({
       : []),
     ...(hasRatingSection
       ? [{ id: "course-evaluations", label: t("evaluations") }]
+      : []),
+    ...(hasPortfolioShares
+      ? [{ id: "course-portfolio", label: t("portfolioShared") }]
       : []),
     ...(hasGradebook
       ? [{ id: "course-gradebook", label: t("gradebookTitle") }]
@@ -1440,6 +1445,18 @@ function CourseWorkspaceLayout({
                 roster={course.roster}
                 resources={course.resources}
                 zone={course.time_zone}
+              />
+            </div>
+          )}
+          {hasPortfolioShares && currentSection === "course-portfolio" && (
+            <div
+              id="course-portfolio"
+              className={sectionClass("course-portfolio")}
+            >
+              <CoursePortfolio
+                key={course.id}
+                actor={actor}
+                course={course.id}
               />
             </div>
           )}

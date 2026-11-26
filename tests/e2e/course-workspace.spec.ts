@@ -1503,3 +1503,56 @@ test("completion status explains blockers for course staff and lets the learner 
         await context.close();
     }
 });
+
+/** Exercise private authoring, a named frozen share, own export and revocation in real sessions. */
+test("a personal portfolio shares only the reviewed revision with the chosen course instructor", async ({page, browser, baseURL}, info) => {
+    test.setTimeout(100_000);
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    await login(page, f.learner.email, /\/learning$/);
+    await page.getByRole("link", {name: "Mein Portfolio", exact: true}).click();
+    const ownPortfolio = page.getByRole("region", {name: "Mein Portfolio", exact: true});
+    await ownPortfolio.getByRole("button", {name: "Eintrag erstellen", exact: true}).click();
+    await ownPortfolio.getByLabel("Titel des Eintrags").fill("Fictional reflection");
+    await ownPortfolio.getByLabel("Inhalt des Eintrags").fill("Version one. Shared with chosen instructor.");
+    await ownPortfolio.getByRole("button", {name: "Eintrag speichern", exact: true}).click();
+    await ownPortfolio.getByRole("button", {name: "Fassung teilen", exact: true}).click();
+    await ownPortfolio.getByLabel("Lehrkraft und Kurs").selectOption(f.run + ":" + f.teacher.id);
+    await ownPortfolio.getByRole("button", {name: "Fassung 1 freigeben", exact: true}).click();
+    await expect(ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true})).toBeVisible();
+
+    const instructor = await browser.newContext({baseURL, viewport: info.project.use.viewport,
+        isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch});
+    try {
+        const teacher = await instructor.newPage();
+        await login(teacher, f.teacher.email);
+        await teacher.goto(`/courses/${f.run}/workspace#course-portfolio`);
+        const assigned = teacher.getByRole("region", {name: "Geteilte Portfolios", exact: true});
+        await expect(assigned.getByText("Version one. Shared with chosen instructor.")).toBeVisible();
+
+        await ownPortfolio.getByRole("button", {name: "Eintrag bearbeiten", exact: true}).click();
+        await ownPortfolio.getByLabel("Inhalt des Eintrags").fill("Version two. Private.");
+        await ownPortfolio.getByRole("button", {name: "Eintrag speichern", exact: true}).click();
+        await expect(ownPortfolio.getByText("Version two. Private.", {exact: true})).toBeVisible();
+        await teacher.reload();
+        await expect(assigned.getByText("Version one. Shared with chosen instructor.")).toBeVisible();
+        await expect(assigned.getByText("Version two. Private.")).toHaveCount(0);
+
+        const download = page.waitForEvent("download");
+        await ownPortfolio.getByRole("button", {name: "Mein Portfolio exportieren"}).click();
+        const exported = JSON.parse(await readFile(await (await download).path(), "utf8"));
+        expect(exported[0].history).toMatchObject([
+            {revision: 2, body: "Version two. Private."},
+            {revision: 1, body: "Version one. Shared with chosen instructor."},
+        ]);
+        await ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true}).click();
+        await expect(ownPortfolio.getByText("Widerrufen", {exact: true})).toBeVisible();
+        await teacher.reload();
+        await expect(assigned.getByText("Für dich sind keine Portfolioeinträge freigegeben.")).toBeVisible();
+    } finally {
+        await instructor.close();
+    }
+});

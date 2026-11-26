@@ -1,0 +1,85 @@
+/** Actor-owned portfolio and named-instructor snapshot contracts. */
+import { z } from "zod";
+
+const uuid = z.uuid();
+const revisionNumber = z.number().int().min(1).max(30);
+const date = z.iso.datetime({ offset: true });
+const revision = z.strictObject({
+  revision: revisionNumber,
+  title: z.string(),
+  body: z.string(),
+  created_at: date,
+});
+export const portfolioEntry = z.strictObject({
+  id: uuid,
+  current: revision,
+  history: z.array(revision).nullable(),
+  shares: z.array(
+    z.strictObject({
+      id: uuid,
+      revision: revisionNumber,
+      shared_at: date,
+      revoked_at: date.nullable(),
+      course: z.string().nullable(),
+      teacher: z.string().nullable(),
+    }),
+  ),
+});
+export type PortfolioEntry = z.infer<typeof portfolioEntry>;
+
+const shareTarget = z.strictObject({
+  course_id: uuid,
+  course: z.string(),
+  teacher_id: uuid,
+  teacher: z.string(),
+});
+export type PortfolioShareTarget = z.infer<typeof shareTarget>;
+export const portfolioOwner = z.strictObject({
+  entries: z.array(portfolioEntry),
+  targets: z.array(shareTarget),
+});
+export const portfolioTeacher = z.strictObject({
+  shares: z.array(
+    z.strictObject({
+      id: uuid,
+      title: z.string(),
+      body: z.string(),
+      revision: revisionNumber,
+      shared_at: date,
+      learner: z.string(),
+    }),
+  ),
+  has_more: z.boolean(),
+});
+export const portfolioReadRequest = z.strictObject({
+  p_course_id: uuid.nullable().optional(),
+  p_entry_id: uuid.nullable().optional(),
+  p_export: z.boolean().optional(),
+  p_offset: z.number().int().nonnegative().optional(),
+});
+
+const commandKey = {
+  p_entry_id: uuid,
+  p_expected_revision: z.number().int().min(0).max(30),
+};
+export const portfolioCommand = z.discriminatedUnion("p_action", [
+  z.strictObject({
+    ...commandKey,
+    p_action: z.literal("save"),
+    p_payload: z.strictObject({
+      title: z.string().trim().min(1).max(140),
+      body: z.string().trim().min(1).max(4000),
+    }),
+  }),
+  z.strictObject({
+    ...commandKey,
+    p_action: z.literal("share"),
+    p_payload: z.strictObject({ course_id: uuid, teacher_id: uuid }),
+  }),
+  z.strictObject({
+    ...commandKey,
+    p_action: z.literal("revoke"),
+    p_payload: z.strictObject({ share_id: uuid }),
+  }),
+]);
+export type PortfolioCommand = z.infer<typeof portfolioCommand>;

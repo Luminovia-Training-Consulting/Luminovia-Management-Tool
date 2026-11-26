@@ -1002,6 +1002,45 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             );
         },
     );
+    await check("Portfolio entries are private and named shares provide exactly one immutable revision", async () => {
+        const id = randomUUID();
+        const read = (who, course = null, entry = null, full = false) =>
+            rpc(who, "learning_portfolio", [course ? q(course) : "null", entry ? q(entry) : "null", full]);
+        const edit = (who, name, payload, version) =>
+            rpc(who, "learning_portfolio_command", [q(id), q(name), q(JSON.stringify(payload)), version]);
+        const first = {title: "Fictional learning reflection", body: "Revision one notes"};
+        assert.equal((await edit(learner, "save", first, 0)).revision, 1);
+        assert.equal((await edit(learner, "save", first, 0)).revision, 1);
+        assert.equal((await read(learner)).entries[0].history, null);
+        assert.ok((await read(learner)).targets.some(({course_id, teacher_id}) => course_id === run && teacher_id === teacher));
+        for (const who of [admin, teacher, second, client]) {
+            assert.deepEqual((await read(who)).entries, []);
+            await assert.rejects(read(who, null, id), /42501/);
+            await assert.rejects(edit(who, "save", first, 1), /42501/);
+        }
+        assert.deepEqual((await read(teacher, run)).shares, []);
+        await assert.rejects(read(admin, run), /42501/);
+        await assert.rejects(edit(learner, "share", {course_id: run, teacher_id: admin}, 1), /42501/);
+        const recipient = {course_id: run, teacher_id: teacher};
+        const receipt = (await edit(learner, "share", recipient, 1)).share_id;
+        assert.equal((await edit(learner, "share", recipient, 1)).share_id, receipt);
+        const secondRevision = {title: "New private title", body: "Revision two remains private"};
+        assert.equal((await edit(learner, "save", secondRevision, 1)).revision, 2);
+        await assert.rejects(edit(learner, "save", first, 1), /PT409/);
+        await assert.rejects(edit(learner, "share", recipient, 1), /PT409/);
+        const shared = (await read(teacher, run)).shares;
+        assert.equal(shared.length, 1);
+        assert.equal(shared[0].id, receipt);
+        assert.equal(shared[0].revision, 1);
+        assert.equal(shared[0].body, first.body);
+        assert.equal(shared[0].title, first.title);
+        const exportEntry = (await read(learner, null, null, true)).entries[0];
+        assert.deepEqual(exportEntry.history.map(({body}) => body), [secondRevision.body, first.body]);
+        await assert.rejects(edit(admin, "revoke", {share_id: receipt}, 0), /42501/);
+        await edit(learner, "revoke", {share_id: receipt}, 0);
+        assert.deepEqual((await read(teacher, run)).shares, []);
+        assert.ok((await read(learner, null, id)).entries[0].shares[0].revoked_at);
+    });
     await check(
         "Membership and account revocation remove course documents with existing identities",
         async () => {

@@ -34,6 +34,7 @@ import { CompanyInvitations } from "./company-invitations";
 import { MaterialLibrary } from "./material-library";
 import { AcademyCourseDraft } from "./academy-draft";
 import { LearningPrograms } from "./learning-programs";
+import { PersonalPortfolio } from "./portfolio";
 import "./i18n";
 import "./learning.css";
 
@@ -131,11 +132,12 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const materials = params.get("view") === "materials";
   const results = params.get("view") === "results";
   const programmes = params.get("view") === "programmes";
-  const dashboard = !materials && !results && !programmes;
+  const portfolio = params.get("view") === "portfolio";
+  const dashboard = !materials && !results && !programmes && !portfolio;
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
-    enabled: !programmes,
+    enabled: !programmes && !portfolio,
     staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: 10_000,
@@ -167,6 +169,16 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
               {t("title", { ns: "learningPrograms" })}
             </Link>
           </Button>
+          {(academy || roles.data?.includes("participant")) && (
+            <Button asChild variant={portfolio ? "default" : "secondary"}>
+              <Link
+                to="/learning?view=portfolio"
+                aria-current={portfolio ? "page" : undefined}
+              >
+                {t("portfolio")}
+              </Link>
+            </Button>
+          )}
           <Button asChild variant={results ? "default" : "secondary"}>
             <Link
               to="/learning?view=results"
@@ -186,6 +198,8 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
       )}
       {programmes ? (
         <LearningPrograms actor={actor} />
+      ) : portfolio ? (
+        <PersonalPortfolio actor={actor} readOnly={academy === "grace"} />
       ) : results ? (
         <PublishedExamResults actor={actor} />
       ) : query.isPending || !query.isFetchedAfterMount ? (

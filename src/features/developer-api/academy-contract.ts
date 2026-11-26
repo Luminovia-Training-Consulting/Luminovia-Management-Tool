@@ -83,6 +83,7 @@ import { academySupportPaths } from "./academy-support-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { courseSeriesPaths } from "./course-series-contract.ts";
 import { learningProgramPaths } from "./learning-program-contract.ts";
+import { portfolioPaths } from "./portfolio-contract.ts";
 import { academyClassPaths } from "./academy-class-contract.ts";
 import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
 import { academyMailPaths } from "./academy-mail-contract.ts";
@@ -962,6 +963,7 @@ const coursePaths = {
   ...academyClassPaths,
   ...courseSeriesPaths(true),
   ...learningProgramPaths(true),
+  ...portfolioPaths(true),
   ...academyChatProtectionPaths,
   ...courseEvaluationPaths(true),
   ...learningAnalyticsPaths(true),

@@ -95,6 +95,10 @@ const groups = {
     ],
     "setAcademyCourseExamRequirement listAcademyStudentExamPdfOptions publishAcademyStudentExamPdf withdrawAcademyExamPdf saveAcademyLearningActivity readAcademyCourseGradebook readAcademyCourseGradebookHistory exportAcademyCourseGradebook readAcademyCourseQuestionBank saveAcademyCourseQuestionBank saveAcademyCourseQuizDraft readAcademyCourseCompletionStatus readAcademyCourseAssignments writeAcademyCourseAssignment readAcademyCourseCompetencies saveAcademyCourseCompetency course_exam_state save_course_exam_schedule set_course_exam_extra_time submit_course_exam save_course_exam_grades published_course_exam_results",
   ],
+  portfolio: [
+    ["Private Lernportfolios", "Private learning portfolios"],
+    "readLearningPortfolio changeLearningPortfolio",
+  ],
   chat: [
     ["Kurschat und Anhänge", "Course chat and attachments"],
     "readAcademyCourseChatProtection setAcademyCourseChatProtection ensureAcademyCourseChat listAcademyCourseChatRooms readAcademyCourseChatMessages sendAcademyCourseChatAttachment sendAcademyCourseChatMessage",

@@ -37,6 +37,7 @@ const readPaths = [
   "/rest/v1/rpc/course_completion_status",
   "/rest/v1/rpc/course_assignments",
   "/rest/v1/rpc/course_competencies",
+  "/rest/v1/rpc/learning_portfolio",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -67,6 +68,8 @@ const writePaths = [
   "/rest/v1/rpc/course_assignment_action",
   "/rest/v1/rpc/save_course_quiz_draft",
   "/rest/v1/rpc/course_competency_action",
+  "/rest/v1/rpc/learning_portfolio_command",
+  "/rest/v1/rpc/set_learning_program_prerequisite",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -229,7 +232,6 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "/rest/v1/rpc/learning_program_class_progress",
           "/rest/v1/rpc/set_company_participant_class",
           "/rest/v1/rpc/save_learning_program",
-          "/rest/v1/rpc/set_learning_program_prerequisite",
           "/rest/v1/rpc/enrol_learning_program",
           "/rest/v1/rpc/start_learning_program_course",
           ...personalPaths,
