@@ -6,6 +6,10 @@ import {
   scormRuntimeWriteRequest,
 } from "./scorm-contract.ts";
 import {
+  readH5pPackages,
+  h5pPlaybackCommand,
+} from "./h5p-playback-contract.ts";
+import {
   competencyAction,
   competencyActionResult,
   competencyRead,
@@ -4624,6 +4628,34 @@ const nativePaths = {
       description:
         "Current staff publish the exact scanned package version. Current learners record their own completion.",
       requestBody: { required: true, content: json(scormCourseCommand) },
+      responses: {
+        "200": {
+          description: "Confirmed action",
+          content: json({ const: true }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
+  "/rest/v1/rpc/course_h5p_packages": rpc(
+    "readCourseH5pPackages",
+    "Premium LMS",
+    "List published H5P activities",
+    "Current authorised learners and staff can list clean H5P packages and their own progress.",
+    course,
+    readH5pPackages,
+  ),
+  "/rest/v1/rpc/course_h5p_action": {
+    post: {
+      operationId: "writeCourseH5pPackage",
+      tags: ["Premium LMS"],
+      summary: "Publish or withdraw H5P and persist learner progress",
+      description:
+        "Current staff publish the exact scanned H5P package version. Enrolled learners retain completion and best reported playback score.",
+      requestBody: { required: true, content: json(h5pPlaybackCommand) },
       responses: {
         "200": {
           description: "Confirmed action",

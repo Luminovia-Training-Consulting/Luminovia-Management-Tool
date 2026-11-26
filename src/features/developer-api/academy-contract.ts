@@ -6,6 +6,10 @@ import {
   scormRuntimeWriteRequest,
 } from "./scorm-contract.ts";
 import {
+  readH5pPackages,
+  h5pPlaybackCommand,
+} from "./h5p-playback-contract.ts";
+import {
   competencyAction,
   competencyActionResult,
   competencyRead,
@@ -1279,6 +1283,26 @@ const coursePaths = {
     "active",
     {
       ...scormCourseCommand,
+      required: ["p_run_id", "p_version_id", "p_action", "p_payload"],
+    },
+    { const: true },
+    true,
+  ),
+  "/rest/v1/rpc/course_h5p_packages": courseOperation(
+    "readAcademyH5pPackages",
+    "List published H5P activities",
+    "Current authorised learners and staff can list clean H5P packages and their own progress.",
+    "active-or-grace",
+    record(run),
+    readH5pPackages,
+  ),
+  "/rest/v1/rpc/course_h5p_action": courseOperation(
+    "writeAcademyH5pPackage",
+    "Publish or withdraw H5P and persist learner progress",
+    "Current staff publish the exact scanned H5P package version. Enrolled learners retain completion and best reported playback score.",
+    "active",
+    {
+      ...h5pPlaybackCommand,
       required: ["p_run_id", "p_version_id", "p_action", "p_payload"],
     },
     { const: true },

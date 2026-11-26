@@ -126,6 +126,11 @@ const CourseScormPlayer = lazy(() =>
     default: module.CourseScormPlayer,
   })),
 );
+const CourseH5pPlayback = lazy(() =>
+  import("./course-h5p-playback").then((module) => ({
+    default: module.CourseH5pPlayback,
+  })),
+);
 const CourseCompletionPolicyEditor = lazy(() =>
   import("./course-completion-policy").then((module) => ({
     default: module.CourseCompletionPolicyEditor,
@@ -1667,6 +1672,11 @@ function CourseWorkspaceLayout({
                 <Suspense fallback={<Loading />}>
                   <CourseScormPlayer
                     key={`${actor}:${course.id}:scorm`}
+                    actor={actor}
+                    course={course.id}
+                  />
+                  <CourseH5pPlayback
+                    key={`${actor}:${course.id}:h5p`}
                     actor={actor}
                     course={course.id}
                   />

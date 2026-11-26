@@ -171,8 +171,9 @@ export function uploadAcademyCourseChatAttachment(
   );
 }
 
-/** A SCORM ZIP uses its own scan scope and returns only the verified upload version. */
-export async function uploadCourseScormPackage(
+/** Dedicated course learning archives return only the exact version after scanning. */
+export async function uploadCourseArchive(
+  format: "scorm" | "h5p",
   file: File,
   run: string,
   clientId: string,
@@ -181,15 +182,23 @@ export async function uploadCourseScormPackage(
     throw new Error("file_size");
   const form = new FormData();
   form.set("file", file);
-  form.set("scorm_course_id", run);
+  form.set(`${format}_course_id`, run);
   form.set("client_id", clientId);
   const document = await transferUpload(
     form,
-    endpoint() + "?mode=scorm-package",
+    endpoint() + `?mode=${format}-package`,
   );
-  if (document.kind !== "scorm_package" || !document.current_version_id)
+  if (document.kind !== `${format}_package` || !document.current_version_id)
     throw new Error("upload_failed");
   return document.current_version_id;
+}
+
+export function uploadCourseScormPackage(
+  file: File,
+  run: string,
+  clientId: string,
+) {
+  return uploadCourseArchive("scorm", file, run, clientId);
 }
 
 /** Upload protected attendance evidence for one exact academy session. */
@@ -342,8 +351,18 @@ export function downloadCourseScormPackage(
   version: string,
   signal: AbortSignal,
 ) {
+  return downloadCourseArchive("scorm", run, version, signal);
+}
+
+/** Download only the clean published archive authorized for the active account. */
+export function downloadCourseArchive(
+  format: "scorm" | "h5p",
+  run: string,
+  version: string,
+  signal: AbortSignal,
+) {
   return downloadFile(
-    { action: "course_scorm_download", run_id: run, version_id: version },
+    { action: `course_${format}_download`, run_id: run, version_id: version },
     signal,
   );
 }
