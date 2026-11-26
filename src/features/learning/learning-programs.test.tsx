@@ -22,6 +22,7 @@ const fixture = vi.hoisted(() => ({
   detail: undefined as LearningProgramDetail | undefined,
   start: vi.fn(),
   save: vi.fn(),
+  gate: vi.fn(),
   place: vi.fn(),
 }));
 vi.mock("./learning-program-api", () => ({
@@ -64,6 +65,7 @@ vi.mock("./learning-program-api", () => ({
   startLearningProgramCourse: fixture.start,
   placeLearningProgramParticipant: fixture.place,
   saveLearningProgram: fixture.save,
+  setLearningProgramPrerequisite: fixture.gate,
   enrolLearningProgram: vi.fn(),
 }));
 
@@ -163,7 +165,20 @@ it("saves an ordered programme of distinct selected course runs", async () => {
 
 it("shows locked prerequisites without exposing a link or completion proof", async () => {
   fixture.detail = learner();
+  fixture.detail.progress!.steps[1].prerequisites = {
+    mode: "any",
+    items: [
+      {
+        position: 1,
+        title: "Fictional foundation to complete",
+        completed: false,
+      },
+    ],
+  };
   mount(id);
+  expect(
+    await screen.findByText("Fictional foundation to complete"),
+  ).toBeVisible();
   expect(await screen.findByText(/Voraussetzungen offen/)).toBeVisible();
   expect(
     screen.getByRole("link", { name: "Kurs öffnen" }).getAttribute("href"),

@@ -332,6 +332,71 @@ await Promise.all(
         `PASS ${edition} canonical attendance and completion unlock the next module, and revocation withdraws the programme proof`,
       );
 
+      // An alternative gate uses receipt authority without making its
+      // non-selected courses optional for the whole-programme certificate.
+      const alternative = randomUUID();
+      const last = randomUUID();
+      await sql(`insert into public.course_runs(id,template_id,organisation_id,published,time_zone)
+        values (${q(last)},${q(templateOne)},${q(org)},true,'UTC');`);
+      const saveAlternative = (ids, version = 0) =>
+        invoke(company, "save_learning_program",
+          `${q(alternative)},${q(org)},'Alternative path','',true,${courses(ids)},false,${version}`);
+      const setGate = (who, mode, required, version) =>
+        invoke(who, "set_learning_program_prerequisite",
+          `${q(alternative)},3,${q(mode)},array[${required.join(",")}]::integer[],${version}`);
+      const activateAlternative = (who) => invoke(who, "start_learning_program_course", `${q(alternative)},${q(last)}`);
+      const enrolAlternative = (who, version) => invoke(company, "enrol_learning_program", `${q(alternative)},${q(who)},${version}`);
+      await saveAlternative([first, second, last]);
+      await assert.rejects(setGate(otherCompany, "all", [1, 2], 1), /42501/);
+      await assert.rejects(setGate(learner, "all", [1, 2], 1), /42501/);
+      await assert.rejects(setGate(company, "all", [2, 3], 1), /22023/);
+      await assert.rejects(setGate(company, "all", [1, 1], 1), /22023/);
+      await setGate(company, "all", [2, 1], 1);
+      assert.equal((await view(company, alternative)).detail.version, 2);
+      await assert.rejects(setGate(company, "any", [1, 2], 1), /PT409/);
+      await assert.rejects(saveAlternative([second, first, last], 2), /PT409/);
+      const concurrentRules = await Promise.allSettled([
+        setGate(company, "any", [2, 1], 2),
+        setGate(admin, "all", [1], 2),
+      ]);
+      assert.equal(concurrentRules.filter(({status}) => status === "fulfilled").length, 1);
+      assert.match(concurrentRules.find(({status}) => status === "rejected").reason.message, /PT409/);
+      if (concurrentRules[0].status === "rejected") await setGate(company, "any", [1, 2], 3);
+      // An identical retry returns success without adding another revision.
+      const version = (await view(company, alternative)).detail.version;
+      await setGate(company, "any", [1, 2], version - 1);
+      const alternativeProgramme = (await view(company, alternative)).detail;
+      assert.equal(alternativeProgramme.version, version);
+      assert.deepEqual(alternativeProgramme.path_rules, {3: { mode: "any", positions: [1, 2] }});
+      await enrolAlternative(learner, version);
+      await enrolAlternative(colleague, version);
+      await assert.rejects(setGate(company, "all", [], version), /PT409/);
+      const learnerPath = (await view(learner, alternative)).detail;
+      assert.equal(learnerPath.path_rules, null);
+      assert.equal(learnerPath.progress.completed, 1);
+      assert.equal(learnerPath.progress.completed_at, null);
+      assert.equal(learnerPath.progress.steps[2].state, "ready");
+      const blocked = (await view(colleague, alternative)).detail.progress.steps[2];
+      assert.equal(blocked.state, "locked");
+      assert.deepEqual(blocked.prerequisites, {
+        mode: "any",
+        items: [
+          {position: 1, title: "Module one", completed: false},
+          {position: 2, title: "Module two", completed: false},
+        ],
+      });
+      await assert.rejects(activateAlternative(colleague), /PT409/);
+      await activateAlternative(learner);
+      assert.equal((await view(learner, alternative)).detail.progress.steps[2].state, "in_progress");
+      await invoke(
+        admin,
+        lessonAction,
+        `${q(first)},'completion_revoke',${q(JSON.stringify({id: firstReceipt, reason: "Fictional alternative prerequisite review"}))},0`,
+      );
+      assert.equal((await view(learner, alternative)).detail.progress.steps[2].state, "locked");
+      await assert.rejects(activateAlternative(learner), /PT409/);
+      console.log(`PASS ${edition} alternative prerequisites are versioned, scoped and revoked against current receipts`);
+
       await save(company, { archive: true, version: 1 });
       assert.equal((await view(learner)).detail.archived, true);
       await assert.rejects(enrol(company, colleague), /PT409/);

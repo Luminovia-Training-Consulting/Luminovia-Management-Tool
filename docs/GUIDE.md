@@ -313,6 +313,12 @@ Choose **Note korrigieren / Correct grade** to enter an adjusted mark and an int
 
 **Freigegebene Noten als CSV exportieren / Export published grades as CSV** produces one current snapshot for enrolled and completed learners, up to 5,000 published grades. The export covers the full course rather than the displayed roster page. Quiz pass and certificate eligibility continue to use their established assessment and completion rules. Academy grace supports read and export access for currently authorised users. Publication and correction require an active licence.
 
+### Programme access prerequisites
+
+Before the first participant joins, open an existing **Lernprogramme / Learning programmes** entry and choose **Voraussetzungen für Kurszugang / Course access prerequisites**. Select a course, choose which earlier courses count and set the rule to require them all or at least one. Saving without selected prerequisites restores the programme's normal order for that course. Clear explicit rules before changing the course order.
+
+Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
+
 ### Course completion status
 
 In **Lernaktivitäten / Learning activities**, open **Mein Abschlussdokument / My completion document**. The status lists current requirements still open, including enrolment completion, course end, verified attendance, a published quiz or an attendance review after revocation. Use **Aktualisieren / Refresh** after the evidence changes. Once all requirements are met, choose **Voraussetzungen prüfen und Dokument ausstellen / Check eligibility and issue document**. The server checks the same requirements again before issuance.

@@ -7,6 +7,7 @@ import {
   readLearningProgramClassProgressRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
+  programmePrerequisiteRequest,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
 } from "../learning/learning-program-schema.ts";
@@ -165,6 +166,12 @@ export function learningProgramPaths(academy = false) {
       false,
       learningProgramId,
     ),
+    "/rest/v1/rpc/set_learning_program_prerequisite": write(
+      "setLearningProgrammePrerequisite",
+      "Set explicit prerequisites for a programme step",
+      "Managers can set an all or any completion rule targeting distinct earlier programme positions before any programme enrolment. Supply the reviewed version. An empty list restores the programme's existing sequential or unordered behaviour for that step.",
+      programmePrerequisiteRequest,
+    ),
     "/rest/v1/rpc/enrol_learning_program": write(
       "enrolLearningProgramme",
       "Assign a learning programme to a current learner",
@@ -174,7 +181,7 @@ export function learningProgramPaths(academy = false) {
     "/rest/v1/rpc/start_learning_program_course": write(
       "startLearningProgrammeCourse",
       "Activate an unlocked course for the current learner",
-      "Requires the current learner's programme enrolment. For ordered programmes, previous courses require unrevoked completion records. Existing active course access is retained; a removed enrolment is not restored.",
+      "Requires the current learner's programme enrolment. Explicit all/any prerequisites are evaluated against unrevoked course completion receipts. Ordered steps without an explicit rule require receipts for all earlier courses. Existing active course access is retained; a removed enrolment is not restored.",
       startLearningProgramCourseRequest,
       true,
     ),

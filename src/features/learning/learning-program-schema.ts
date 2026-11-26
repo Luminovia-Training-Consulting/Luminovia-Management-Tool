@@ -8,6 +8,23 @@ const programCourse = z.strictObject({
   title: z.string(),
 });
 
+const prerequisiteMode = z.enum(["all", "any"]);
+const programmePosition = z.number().int().min(1).max(30);
+const prerequisiteRule = z.strictObject({
+  mode: prerequisiteMode,
+  positions: z.array(programmePosition).min(1).max(29),
+});
+export const programmePrerequisiteRequest = z.strictObject({
+  p_program_id: learningProgramId,
+  p_position: programmePosition.min(2),
+  p_mode: prerequisiteMode,
+  p_requires: z.array(programmePosition).max(29),
+  p_expected_version: z.number().int().positive(),
+});
+export type ProgrammePrerequisiteRequest = z.infer<
+  typeof programmePrerequisiteRequest
+>;
+
 export const learningProgramStates = [
   "completed",
   "unavailable",
@@ -24,6 +41,18 @@ export const learningProgramProgress = z.strictObject({
       receipt_id: learningProgramId.nullable(),
       state: z.enum(learningProgramStates),
       can_open: z.boolean(),
+      prerequisites: z
+        .strictObject({
+          mode: prerequisiteMode,
+          items: z.array(
+            z.strictObject({
+              position: programmePosition,
+              title: z.string(),
+              completed: z.boolean(),
+            }),
+          ),
+        })
+        .optional(),
     }),
   ),
 });
@@ -56,6 +85,7 @@ const programDetail = program.extend({
   can_write: z.boolean(),
   can_edit: z.boolean(),
   steps: z.array(programCourse).nullable(),
+  path_rules: z.record(z.string(), prerequisiteRule).nullable().optional(),
   progress: learningProgramProgress.nullable(),
   learner_name: z.string().nullable(),
   roster: z.array(learnerEntry).nullable(),

@@ -10,6 +10,8 @@ import {
   readLearningProgramClassProgressRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
+  programmePrerequisiteRequest,
+  type ProgrammePrerequisiteRequest,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
   type EnrolLearningProgramRequest,
@@ -69,6 +71,18 @@ export async function saveLearningProgram(input: SaveLearningProgramRequest) {
   );
   if (error) throw error;
   return learningProgramId.parse(data);
+}
+
+/** Save one programme step's explicit gates against the version shown in the editor. */
+export async function setLearningProgramPrerequisite(
+  input: ProgrammePrerequisiteRequest,
+) {
+  requireOnline();
+  const { error } = await db().rpc(
+    "set_learning_program_prerequisite",
+    programmePrerequisiteRequest.parse(input),
+  );
+  if (error) throw error;
 }
 
 export async function enrolLearningProgram(input: EnrolLearningProgramRequest) {

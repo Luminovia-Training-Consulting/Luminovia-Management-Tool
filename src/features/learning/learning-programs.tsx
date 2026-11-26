@@ -18,6 +18,7 @@ import {
   saveLearningProgramRequest,
   type LearningProgramDetail,
 } from "./learning-program-schema";
+import { ProgrammePrerequisites } from "./programme-prerequisites";
 import "./learning-program-i18n";
 import "./learning-programs.css";
 
@@ -50,6 +51,7 @@ function ProgramEditor({
   const [modules, setModules] = useState<Module[]>(program?.steps ?? []);
   const [search, setSearch] = useState("");
   const [choice, setChoice] = useState("");
+  const hasPathRules = Boolean(Object.keys(program?.path_rules ?? {}).length);
   const courses = useQuery({
     ...learningProgramsQuery(actor, {
       p_organisation_id: organisation,
@@ -180,7 +182,7 @@ function ProgramEditor({
             <Button
               type="button"
               variant="secondary"
-              disabled={!selected || modules.length >= 30}
+              disabled={hasPathRules || !selected || modules.length >= 30}
               onClick={() => {
                 if (!selected) return;
                 setModules([
@@ -194,6 +196,7 @@ function ProgramEditor({
             </Button>
           </div>
         )}
+        {hasPathRules && <p>{t("pathLockedRule")}</p>}
         <h4>{t("selectedCourses")}</h4>
         <ol className="programme-steps">
           {modules.map((module, index) => (
@@ -204,7 +207,7 @@ function ProgramEditor({
                   <Button
                     variant="ghost"
                     type="button"
-                    disabled={index === 0}
+                    disabled={hasPathRules || index === 0}
                     onClick={() => move(index, -1)}
                   >
                     {t("moveUp")}
@@ -212,7 +215,7 @@ function ProgramEditor({
                   <Button
                     variant="ghost"
                     type="button"
-                    disabled={index === modules.length - 1}
+                    disabled={hasPathRules || index === modules.length - 1}
                     onClick={() => move(index, 1)}
                   >
                     {t("moveDown")}
@@ -220,6 +223,7 @@ function ProgramEditor({
                   <Button
                     variant="secondary"
                     type="button"
+                    disabled={hasPathRules}
                     onClick={() =>
                       setModules(
                         modules.filter((_, itemIndex) => itemIndex !== index),
@@ -556,6 +560,9 @@ function ProgramManager({
         )}
         {archive.isError && <Notice kind="error">{t("saveFailed")}</Notice>}
       </section>
+      {program.can_edit && !program.archived && (
+        <ProgrammePrerequisites program={program} refresh={refresh} />
+      )}
       <ProgrammeClassProgress actor={actor} program={program.id} />
       <section className="panel programme-panel">
         {program.can_write && !program.archived && <h3>{t("enrolment")}</h3>}
@@ -705,6 +712,24 @@ function LearnerProgram({
                   </Button>
                 )}
               </div>
+              {step.prerequisites && (
+                <div>
+                  <p>
+                    {t(
+                      step.prerequisites.mode === "any"
+                        ? "pathAlternatives"
+                        : "pathRequired",
+                    )}
+                  </p>
+                  <ul className="list-disc ps-5">
+                    {step.prerequisites.items
+                      .filter((item) => !item.completed)
+                      .map((item) => (
+                        <li key={item.position}>{item.title}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
             </li>
           ))}
         </ol>

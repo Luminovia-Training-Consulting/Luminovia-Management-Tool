@@ -15,6 +15,21 @@ i18n.addResourceBundle("de", "learningPrograms", {
   sequential: "Vorherige Kurse müssen abgeschlossen sein",
   sequentialHint:
     "Teilnehmende erhalten den nächsten Kurszugang, sobald gültige Nachweise für die vorherigen Kurse vorliegen.",
+  pathRules: "Voraussetzungen für Kurszugang",
+  pathRulesHint:
+    "Wähle frühere Kurse, deren Abschluss für den Zugang zählt. Ohne Auswahl gilt die allgemeine Programmreihenfolge.",
+  pathTarget: "Kurs mit Zugangsvoraussetzungen",
+  pathMode: "Regel für den Kurszugang",
+  pathAll: "Alle gewählten Kurse abschließen",
+  pathAny: "Mindestens einen gewählten Kurs abschließen",
+  pathSave: "Voraussetzungen speichern",
+  pathSaved: "Voraussetzungen gespeichert.",
+  pathError:
+    "Die Voraussetzungen konnten nicht gespeichert werden. Lade den aktuellen Programmstand.",
+  pathLockedRule:
+    "Für dieses Programm sind Voraussetzungen festgelegt. Entferne sie, bevor du die Kursreihenfolge änderst.",
+  pathRequired: "Noch benötigte Kursabschlüsse",
+  pathAlternatives: "Schließe mindestens einen dieser Kurse ab",
   courseSearch: "Veröffentlichte Kurse suchen",
   course: "Kursdurchlauf",
   selectCourse: "Kursdurchlauf auswählen",
@@ -100,6 +115,20 @@ i18n.addResourceBundle("en", "learningPrograms", {
   sequential: "Previous courses must be completed",
   sequentialHint:
     "Learners receive access to the next course once valid completion records exist for the previous courses.",
+  pathRules: "Course access prerequisites",
+  pathRulesHint:
+    "Choose earlier courses whose completion counts for access. A step without an explicit rule follows the programme's general order.",
+  pathTarget: "Course with prerequisites",
+  pathMode: "Course access rule",
+  pathAll: "Complete all selected courses",
+  pathAny: "Complete at least one selected course",
+  pathSave: "Save prerequisites",
+  pathSaved: "Prerequisites saved.",
+  pathError: "The prerequisites could not be saved. Reload the programme.",
+  pathLockedRule:
+    "This programme has explicit prerequisites. Clear them before changing the course order.",
+  pathRequired: "Required course completions",
+  pathAlternatives: "Complete at least one of these courses",
   courseSearch: "Find a published course",
   course: "Course run",
   selectCourse: "Select a course run",

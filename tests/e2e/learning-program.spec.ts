@@ -44,34 +44,36 @@ test("a complete learning programme unlocks its next course and produces whole-p
     checked,
   });
   const courses = await Promise.all(
-    ["First course", "Second course"].map(async (part, index) => {
-      const id = randomUUID(),
-        template = randomUUID(),
-        session = randomUUID();
-      await checked(
-        service
-          .from("course_templates")
-          .insert({ id: template, title: `${name} ${part}` }),
-      );
-      await checked(
-        service.from("course_runs").insert({
-          id,
-          template_id: template,
-          organisation_id: organisation,
-          published: true,
-        }),
-      );
-      const ends = Date.now() - (4 - index) * 86_400_000;
-      await checked(
-        service.from("course_sessions").insert({
-          id: session,
-          course_run_id: id,
-          starts_at: new Date(ends - 3_600_000).toISOString(),
-          ends_at: new Date(ends).toISOString(),
-        }),
-      );
-      return { id, session };
-    }),
+    ["First course", "Second course", "Conditional course"].map(
+      async (part, index) => {
+        const id = randomUUID(),
+          template = randomUUID(),
+          session = randomUUID();
+        await checked(
+          service
+            .from("course_templates")
+            .insert({ id: template, title: `${name} ${part}` }),
+        );
+        await checked(
+          service.from("course_runs").insert({
+            id,
+            template_id: template,
+            organisation_id: organisation,
+            published: true,
+          }),
+        );
+        const ends = Date.now() - (4 - index) * 86_400_000;
+        await checked(
+          service.from("course_sessions").insert({
+            id: session,
+            course_run_id: id,
+            starts_at: new Date(ends - 3_600_000).toISOString(),
+            ends_at: new Date(ends).toISOString(),
+          }),
+        );
+        return { id, session };
+      },
+    ),
   );
 
   const className = `${name} · Class A`;
@@ -100,6 +102,17 @@ test("a complete learning programme unlocks its next course and produces whole-p
   }
   await page.getByRole("button", { name: "Programm speichern" }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await page.getByLabel("Kurs mit Zugangsvoraussetzungen").selectOption("3");
+  await page.getByLabel("Regel für den Kurszugang").selectOption("any");
+  await page
+    .getByRole("checkbox", { name: `${name} First course`, exact: true })
+    .check();
+  await page
+    .getByRole("checkbox", { name: `${name} Second course`, exact: true })
+    .check();
+  await page.getByRole("button", { name: "Voraussetzungen speichern" }).click();
+  await expect(page.getByText("Voraussetzungen gespeichert.")).toBeVisible();
+  await page.reload();
   await page.getByLabel("Teilnehmende Person").selectOption(learner.id);
   await page.getByRole("button", { name: "Für Programm einschreiben" }).click();
   await expect(
@@ -117,7 +130,7 @@ test("a complete learning programme unlocks its next course and produces whole-p
     page.getByText("Die Klassenzuordnung wurde gespeichert."),
   ).toBeVisible();
   await expect(
-    page.getByText("0 von 2 Kursabschlüssen erreicht."),
+    page.getByText("0 von 3 Kursabschlüssen erreicht."),
   ).toBeVisible();
 
   const href = new URL(page.url()).pathname + new URL(page.url()).search;
@@ -132,13 +145,15 @@ test("a complete learning programme unlocks its next course and produces whole-p
     const student = await context.newPage();
     await login(student, learner.email, /\/learning$/);
     await student.goto(href);
-    await expect(student.getByText(/Voraussetzungen offen/)).toBeVisible();
+    await expect(
+      student.getByText(/Schließe mindestens einen dieser Kurse ab/),
+    ).toBeVisible();
     await expect(
       student.getByRole("button", { name: "Kurs freischalten" }),
     ).toHaveCount(0);
     const denied = await learnerClient.rpc("start_learning_program_course", {
       p_program_id: programme,
-      p_course_id: courses[1].id,
+      p_course_id: courses[2].id,
     });
     expect(denied.status).toBe(409);
 
@@ -174,20 +189,37 @@ test("a complete learning programme unlocks its next course and produces whole-p
     };
     await complete(courses[0]);
     await student.reload();
-    await student.getByRole("button", { name: "Kurs freischalten" }).click();
+    const unlock = (title: string) =>
+      student
+        .getByRole("listitem")
+        .filter({
+          has: student.getByText(`${name} ${title}`, { exact: true }),
+        })
+        .getByRole("button", { name: "Kurs freischalten" });
+    // A first receipt unlocks the conditional course even while the second is incomplete.
+    await unlock("Conditional course").click();
     await expect(
       student.getByRole("link", { name: "Kurs öffnen" }),
     ).toHaveCount(2);
+    await expect(
+      student.getByRole("heading", { name: "Programmabschluss" }),
+    ).toHaveCount(0);
+    await complete(courses[2]);
+    await student.reload();
+    await unlock("Second course").click();
+    await expect(
+      student.getByRole("link", { name: "Kurs öffnen" }),
+    ).toHaveCount(3);
     await complete(courses[1]);
     await student.reload();
     await expect(
       student.getByRole("heading", { name: "Programmabschluss" }),
     ).toBeVisible();
     await expect(
-      student.getByText("2 von 2 Kursen abgeschlossen"),
+      student.getByText("3 von 3 Kursen abgeschlossen"),
     ).toBeVisible();
     await page.reload();
-    await expect(page.getByText("2 von 2 Kursen abgeschlossen")).toBeVisible();
+    await expect(page.getByText("3 von 3 Kursen abgeschlossen")).toBeVisible();
     const classProgress = page.getByRole("region", {
       name: "Gesamtfortschritt pro Klasse",
     });
@@ -203,7 +235,7 @@ test("a complete learning programme unlocks its next course and produces whole-p
       ),
     ).toBeVisible();
     await expect(
-      classProgress.getByText("2 von 2 Kursabschlüssen erreicht."),
+      classProgress.getByText("3 von 3 Kursabschlüssen erreicht."),
     ).toBeVisible();
   } finally {
     await context.close();
