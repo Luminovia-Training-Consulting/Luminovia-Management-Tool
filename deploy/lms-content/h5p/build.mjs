@@ -56,7 +56,7 @@ async function officialPackage(library, expectedHash) {
   return bytes;
 }
 
-const libraryFolder = /^(?:H5P(?:Editor)?\.[A-Za-z0-9]+|FontAwesome)-\d+\.\d+$/;
+const libraryFolder = /^(?:H5P(?:Editor)?\.[A-Za-z0-9]+|FontAwesome|jQuery\.ui)-\d+\.\d+$/;
 const safePart = /^[a-zA-Z0-9._-]+$/;
 const catalogue = new Set();
 const written = new Map();

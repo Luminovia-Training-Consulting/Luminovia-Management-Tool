@@ -59,7 +59,7 @@ const droppedTags = new Set([
 ]);
 const filePattern = /^content\/(?:[a-zA-Z0-9_ .-]+\/)*[a-zA-Z0-9_ .-]+$/;
 const dependencyPattern =
-  /^(?:H5P(?:Editor)?\.[a-zA-Z0-9]+|FontAwesome)-\d{1,3}\.\d{1,3}$/;
+  /^(?:H5P(?:Editor)?\.[a-zA-Z0-9]+|FontAwesome|jQuery\.ui)-\d{1,3}\.\d{1,3}$/;
 
 export function mediaType(path) {
   if (

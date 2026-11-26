@@ -24,9 +24,17 @@ export default tseslint.config(
     js.configs.recommended,
     ...tseslint.configs.recommended,
     {
-        files: ["scripts/**/*.mjs", "deploy/hostinger/**/*.mjs", "*.{js,ts}"],
+        files: ["scripts/**/*.mjs", "deploy/hostinger/**/*.mjs", "deploy/lms-content/h5p/{build,serve}.mjs", "*.{js,ts}"],
         // Maintenance and test programs run in Node, not in the browser.
         languageOptions: {globals: globals.node},
+    },
+    {
+        files: ["deploy/lms-content/h5p/{content-policy,launch}.mjs"],
+        languageOptions: {globals: globals.browser},
+    },
+    {
+        files: ["deploy/lms-content/h5p/virtual-files.js"],
+        languageOptions: {globals: globals.serviceworker},
     },
     {
         files: ["scripts/local-capture.mjs"],
