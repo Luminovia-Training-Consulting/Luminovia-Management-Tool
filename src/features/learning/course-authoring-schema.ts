@@ -37,6 +37,55 @@ export function newCourseContentId() {
   return globalThis.crypto.randomUUID();
 }
 
+/** Apply the authoring safety and size rules to one lesson before it is inserted in a draft. */
+export function normalizeCourseLesson(lessonCandidate: unknown): CourseLesson {
+  if (
+    !lessonCandidate ||
+    typeof lessonCandidate !== "object" ||
+    Array.isArray(lessonCandidate)
+  )
+    throw new Error("Invalid course lesson");
+  const lesson = lessonCandidate as Record<string, unknown>;
+  if (
+    typeof lesson.id !== "string" ||
+    !uuid.test(lesson.id) ||
+    (lesson.archived !== undefined && typeof lesson.archived !== "boolean") ||
+    typeof lesson.title !== "string" ||
+    lesson.title.trim().length < 1 ||
+    lesson.title.trim().length > 150 ||
+    typeof lesson.objectives !== "string" ||
+    lesson.objectives.length > 1000 ||
+    typeof lesson.duration_minutes !== "number" ||
+    !Number.isInteger(lesson.duration_minutes) ||
+    lesson.duration_minutes < 0 ||
+    lesson.duration_minutes > 1440
+  )
+    throw new Error("Invalid course lesson");
+  const materials = lesson.material_ids;
+  if (
+    materials !== undefined &&
+    (!Array.isArray(materials) ||
+      materials.length > maxLessonMaterials ||
+      materials.some(
+        (id: unknown) =>
+          typeof id !== "string" || !uuid.test(id) || id !== id.toLowerCase(),
+      ) ||
+      new Set(materials).size !== materials.length)
+  )
+    throw new Error("Invalid lesson material references");
+  const body = normalizedDocument(lesson.body as JSONContent);
+  if (!contentIsValid(body, true)) throw new Error("Invalid lesson content");
+  return {
+    id: lesson.id,
+    title: lesson.title.trim(),
+    objectives: lesson.objectives,
+    duration_minutes: lesson.duration_minutes,
+    body,
+    ...(lesson.archived && { archived: true }),
+    ...(materials?.length && { material_ids: [...materials] }),
+  };
+}
+
 export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Invalid course curriculum");
@@ -65,58 +114,12 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
       throw new Error("Invalid course module");
     ids.add(module.id.toLowerCase());
 
-    const lessons = module.lessons.map((lessonCandidate): CourseLesson => {
-      if (
-        !lessonCandidate ||
-        typeof lessonCandidate !== "object" ||
-        Array.isArray(lessonCandidate)
-      )
-        throw new Error("Invalid course lesson");
-      const lesson = lessonCandidate as Record<string, unknown>;
-      if (
-        typeof lesson.id !== "string" ||
-        !uuid.test(lesson.id) ||
-        ids.has(lesson.id.toLowerCase()) ||
-        (lesson.archived !== undefined &&
-          typeof lesson.archived !== "boolean") ||
-        typeof lesson.title !== "string" ||
-        lesson.title.trim().length < 1 ||
-        lesson.title.trim().length > 150 ||
-        typeof lesson.objectives !== "string" ||
-        lesson.objectives.length > 1000 ||
-        typeof lesson.duration_minutes !== "number" ||
-        !Number.isInteger(lesson.duration_minutes) ||
-        lesson.duration_minutes < 0 ||
-        lesson.duration_minutes > 1440
-      )
-        throw new Error("Invalid course lesson");
-      ids.add(lesson.id.toLowerCase());
-      const materials = lesson.material_ids;
-      if (
-        materials !== undefined &&
-        (!Array.isArray(materials) ||
-          materials.length > maxLessonMaterials ||
-          materials.some(
-            (id: unknown) =>
-              typeof id !== "string" ||
-              !uuid.test(id) ||
-              id !== id.toLowerCase(),
-          ) ||
-          new Set(materials).size !== materials.length)
-      )
-        throw new Error("Invalid lesson material references");
-      const body = normalizedDocument(lesson.body as JSONContent);
-      if (!contentIsValid(body, true))
-        throw new Error("Invalid lesson content");
-      return {
-        id: lesson.id,
-        title: lesson.title.trim(),
-        objectives: lesson.objectives,
-        duration_minutes: lesson.duration_minutes,
-        body,
-        ...(lesson.archived && { archived: true }),
-        ...(materials?.length && { material_ids: [...materials] }),
-      };
+    const lessons = module.lessons.map((candidate) => {
+      const lesson = normalizeCourseLesson(candidate);
+      const id = lesson.id.toLowerCase();
+      if (ids.has(id)) throw new Error("Invalid course lesson");
+      ids.add(id);
+      return lesson;
     });
 
     return {

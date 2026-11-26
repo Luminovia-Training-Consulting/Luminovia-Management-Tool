@@ -78,6 +78,7 @@ const featureFixtureOperations = new Map([
     "academy-course-text-exam-db-tests.mjs",
     ["course_text_exam", "course_text_exam_action"],
   ],
+  ["course-curriculum-catalogue-db-tests.mjs", ["course_curriculum_catalogue"]],
 ]);
 const featureFixturePaths = new Set(
   [...featureFixtureOperations.values()]

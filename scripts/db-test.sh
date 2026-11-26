@@ -8,6 +8,7 @@ node scripts/company-lecturer-access-db-tests.mjs
 node scripts/crm-pipeline-db-tests.mjs
 node scripts/course-authoring-db-tests.mjs
 node scripts/academy-course-authoring-db-tests.mjs
+node scripts/course-curriculum-catalogue-db-tests.mjs
 node scripts/course-question-bank-db-tests.mjs
 node scripts/course-quiz-pool-db-tests.mjs
 node scripts/academy-course-quiz-pool-db-tests.mjs

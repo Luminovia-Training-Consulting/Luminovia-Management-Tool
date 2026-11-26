@@ -1,5 +1,5 @@
 /** Course-run authoring and participant projection for versioned curricula. */
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -36,6 +36,12 @@ import {
 } from "./course-authoring-schema";
 import "../knowledge/knowledge.css";
 import "./i18n";
+
+const CourseCurriculumCatalogue = lazy(() =>
+  import("./course-curriculum-catalogue").then(
+    ({ CourseCurriculumCatalogue }) => ({ default: CourseCurriculumCatalogue }),
+  ),
+);
 
 /** Resolve only currently projected, exact-version shares. Hidden and withdrawn shares are omitted. */
 function CourseContents({
@@ -424,6 +430,8 @@ export function CourseAuthoring({
   } | null>(null);
   const [preview, setPreview] = useState(false);
   const [compactPreview, setCompactPreview] = useState(false);
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [copiedLessonTitle, setCopiedLessonTitle] = useState<string>();
   const [moduleId, setModuleId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState("");
@@ -492,13 +500,30 @@ export function CourseAuthoring({
   }, [localDraft]);
 
   useEffect(() => {
-    if (!dirty || !online || !draftPayload || conflict || isPending || isError)
+    if (
+      !dirty ||
+      !online ||
+      !draftPayload ||
+      conflict ||
+      isPending ||
+      isError ||
+      catalogueOpen
+    )
       return;
     const timer = window.setTimeout(() => {
       mutate({ action: "save_draft", payload: draftPayload });
     }, 1800);
     return () => window.clearTimeout(timer);
-  }, [dirty, online, draftPayload, conflict, isPending, isError, mutate]);
+  }, [
+    dirty,
+    online,
+    draftPayload,
+    conflict,
+    isPending,
+    isError,
+    mutate,
+    catalogueOpen,
+  ]);
 
   useEffect(() => {
     if (!dirty && !mutation.isPending) return;
@@ -601,9 +626,13 @@ export function CourseAuthoring({
       { ...createCourseModule(), title: t("newCourseModule") },
       curriculum.modules.length,
     );
-  const insertLesson = (next: CourseLesson, index: number) => {
-    if (!activeModule || !canAddLesson) return;
-    updateCurriculum((value) => ({
+  const insertLesson = (
+    next: CourseLesson,
+    index: number,
+    fromCatalogue = false,
+  ) => {
+    if (!activeModule || !canAddLesson) return false;
+    const withLesson = (value: CourseCurriculum) => ({
       modules: value.modules.map((item) =>
         item.id === activeModule.id
           ? {
@@ -616,9 +645,18 @@ export function CourseAuthoring({
             }
           : item,
       ),
-    }));
-    setLessonId(next.id);
+    });
+    if (fromCatalogue) {
+      try {
+        normalizeCourseCurriculum(withLesson(curriculum));
+      } catch {
+        return false;
+      }
+    }
+    updateCurriculum(withLesson);
+    if (!fromCatalogue) setLessonId(next.id);
     setPreview(false);
+    return true;
   };
   const addLesson = () => {
     if (activeModule)
@@ -772,6 +810,34 @@ export function CourseAuthoring({
         mutation.variables?.action === "save_draft" && (
           <Notice>{t("curriculumSaved")}</Notice>
         )}
+      {copiedLessonTitle && (
+        <p role="status">
+          {t("curriculumCatalogueCopied", { title: copiedLessonTitle })}
+        </p>
+      )}
+      {catalogueOpen && activeModule && (
+        <Suspense fallback={<Loading />}>
+          <CourseCurriculumCatalogue
+            actor={actor}
+            course={courseId}
+            unavailable={
+              draftLocked ||
+              conflict ||
+              isPending ||
+              !canAddLesson ||
+              Boolean(activeModule.archived)
+            }
+            onClose={() => setCatalogueOpen(false)}
+            onCopy={(lesson) => {
+              if (!insertLesson(lesson, activeModule.lessons.length, true))
+                return false;
+              setCopiedLessonTitle(lesson.title);
+              setCatalogueOpen(false);
+              return true;
+            }}
+          />
+        </Suspense>
+      )}
 
       {preview ? (
         <div>
@@ -1123,6 +1189,19 @@ export function CourseAuthoring({
                   <p>{t("curriculumAddFirstLesson")}</p>
                 )}
                 <div className="form-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      !online ||
+                      !canAddLesson ||
+                      activeModule.archived ||
+                      conflict
+                    }
+                    onClick={() => setCatalogueOpen(true)}
+                  >
+                    {t("curriculumCatalogue")}
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"

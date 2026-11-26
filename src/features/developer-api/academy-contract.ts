@@ -5,6 +5,7 @@ import {
   competencyReadResult,
 } from "./competency-contract.ts";
 import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
+import { curriculumCatalogueParameters, curriculumCatalogueResult } from "./course-content-operation-documentation.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
@@ -1062,6 +1063,15 @@ const coursePaths = {
     "active-or-grace",
     record(materialHistoryParameters),
     materialHistoryResult,
+  ),
+  "/rest/v1/rpc/course_curriculum_catalogue": courseOperation(
+    "browseAcademyPublishedLessons",
+    "Browse published lessons for reuse in another course",
+    "Current course staff can search published lessons in other authorised courses of the same organisation. Send the source course, publication version and lesson ID together to retrieve the exact lesson. Existing learner-visible destination shares are reused for matching scanned file versions. Grace permits reads; saving the destination draft requires an active licence.",
+    "active-or-grace",
+    record(curriculumCatalogueParameters, ["p_run_id"]),
+    curriculumCatalogueResult,
+    true,
   ),
   "/rest/v1/rpc/course_material_reuse_targets": courseOperation(
     "listAcademyCourseMaterialReuseTargets",

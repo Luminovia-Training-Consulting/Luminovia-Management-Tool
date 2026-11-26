@@ -29,6 +29,7 @@ const readPaths = [
   "/rest/v1/rpc/course_submissions",
   "/rest/v1/rpc/search_course_materials",
   "/rest/v1/rpc/course_material_metadata_history",
+  "/rest/v1/rpc/course_curriculum_catalogue",
   "/rest/v1/rpc/course_material_reuse_targets",
   "/rest/v1/rpc/course_attendance_summary",
   "/rest/v1/rpc/course_gradebook",

@@ -181,6 +181,51 @@ const actionPayload = {
   ],
 };
 
+export const curriculumCatalogueParameters = {
+  p_run_id: uuid,
+  p_search: { type: "string", maxLength: 150 },
+  p_offset: { ...revision, maximum: 10000 },
+  p_source_run_id: uuid,
+  p_source_version: positiveRevision,
+  p_lesson_id: uuid,
+};
+
+const catalogueItem = {
+  source_run_id: uuid,
+  source_version: positiveRevision,
+  course_title: { type: "string" },
+  module_title: { type: "string" },
+  title: { type: "string" },
+  lesson_id: uuid,
+};
+export const curriculumCatalogueResult = {
+  oneOf: [
+    {
+      type: "object",
+      required: ["items", "next_offset"],
+      properties: {
+        items: {
+          type: "array",
+          maxItems: 20,
+          items: {
+            type: "object",
+            properties: catalogueItem,
+            required: Object.keys(catalogueItem),
+          },
+        },
+        next_offset: { type: ["integer", "null"] },
+      },
+    },
+    {
+      type: "object",
+      required: ["lesson"],
+      properties: {
+        lesson: courseContent.properties.modules.items.properties.lessons.items,
+      },
+    },
+  ],
+};
+
 export const courseContentOperationDocumentation = {
   course_content_action: {
     summary: "Manage drafts, reviews and published course content revisions",
@@ -225,6 +270,19 @@ export const courseContentOperationDocumentation = {
     errors: {
       "403":
         "The course is unavailable, LMS access is disabled, or the caller lacks current staff or enrolled participant access.",
+    },
+  },
+  course_curriculum_catalogue: {
+    summary: "Browse or read published lessons for use in another course",
+    description:
+      "Current teaching staff can search published lessons from other authorised courses in the same organisation. The listing is metadata only. Send the source course, publication version and lesson ID together to retrieve a specific active lesson. Copies use the existing version-checked draft save and receive a new lesson ID. Material links are returned only for eligible destination shares of the exact scanned version. A newer source publication returns 409.",
+    parameters: curriculumCatalogueParameters,
+    required: ["p_run_id"],
+    result: curriculumCatalogueResult,
+    errors: {
+      "403":
+        "Either course or the requested lesson is unavailable to the current author.",
+      "409": "The source course published another curriculum revision (PT409).",
     },
   },
 };
