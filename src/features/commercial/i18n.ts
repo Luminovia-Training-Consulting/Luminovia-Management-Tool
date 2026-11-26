@@ -39,11 +39,6 @@ const pairs: Record<string, [string, string]> = {
     "Lade den ausgeführten Vertrag für die ausgewählte Person hoch oder wähle eine bereits geprüfte Datei aus. Eine Empfangsbestätigung ersetzt keine rechtsverbindliche Unterzeichnung.",
     "Upload the executed contract for the selected lecturer or choose an existing checked file. A portal receipt acknowledgement does not replace a legally binding signature.",
   ],
-  ownContractUploadHint: [
-    "Lade deinen ausgeführten Vertrag selbst hoch. Die Verwaltung kann ihn für den Vertragseintrag auswählen, aber nicht herunterladen.",
-    "Upload your executed contract yourself. Management can select it for the contract record but cannot download it.",
-  ],
-  ownContractFiles: ["Meine Vertragsdateien", "My contract files"],
   contractCandidate: ["Hochgeladene Vertragsdatei", "Uploaded contract file"],
   contractCandidateHint: [
     "Die Datei ist für die dozierende Person und die Person zugänglich, die sie berechtigt für sie hochgeladen hat.",

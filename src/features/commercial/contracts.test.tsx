@@ -23,11 +23,6 @@ const fake = vi.hoisted(() => ({
   saveDownload: vi.fn(),
   uploadDocument: vi.fn(),
 }));
-vi.mock("../files/files", () => ({
-  SubjectDocuments: ({ ownerId, kind }: { ownerId: string; kind: string }) => (
-    <p>{`Fictional file listing for ${ownerId}: ${kind}`}</p>
-  ),
-}));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: fake.rpc,
@@ -90,7 +85,11 @@ function record(id: string, user: string, title: string): ContractRecord {
 }
 
 /** Mount either the legacy page or the same contextual action used on a selected person's profile. */
-async function show(manager: boolean, contextual = false) {
+async function show(
+  manager: boolean,
+  contextual = false,
+  location = `/contracts?user=${target}`,
+) {
   await i18n.changeLanguage("de");
   fake.rpc.mockImplementation(
     async (name: string, args?: { p_all?: boolean; p_user_id?: string }) => {
@@ -135,7 +134,7 @@ async function show(manager: boolean, contextual = false) {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = (id: string) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/contracts?user=${target}`]}>
+      <MemoryRouter initialEntries={[location]}>
         {contextual ? (
           <PersonContractAction
             actor="actor"
@@ -178,37 +177,19 @@ it("does not grant management authority to a contract link", async () => {
   });
 });
 
-it("files an own PDF without registering a contract or selecting the URL target as owner", async () => {
-  await show(false);
-  fake.uploadDocument.mockResolvedValue({
-    original_name: "Own.pdf",
-    current_version_id: "own-clean-version",
-  });
-  const pdf = new File(["%PDF"], "Own.pdf", { type: "application/pdf" });
-  await userEvent.upload(
-    await screen.findByLabelText("Ausgeführter Vertrag als PDF"),
-    pdf,
-  );
-  await waitFor(() =>
-    expect(fake.uploadDocument).toHaveBeenCalledWith(
-      pdf,
-      expect.objectContaining({
-        kind: "contract",
-        ownerId: "actor",
-        scope: "personal",
-      }),
-      expect.any(Function),
-    ),
-  );
-  expect(fake.rpc).not.toHaveBeenCalledWith(
-    "register_executed_contract",
-    expect.anything(),
-  );
-  await userEvent.click(screen.getByText("Meine Vertragsdateien"));
-  expect(
-    await screen.findByText("Fictional file listing for actor: contract"),
-  ).toBeVisible();
-});
+it.each([false, true])(
+  "shows registered personal contracts without a standalone upload (manager: %s)",
+  async (manager) => {
+    await show(manager, false, "/contracts");
+    expect(
+      await screen.findByRole("heading", { name: "Personal contract" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByLabelText("Ausgeführter Vertrag als PDF"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Meine Vertragsdateien")).not.toBeInTheDocument();
+  },
+);
 
 async function openContext(user: ReturnType<typeof userEvent.setup>) {
   await user.click(

@@ -2,7 +2,7 @@
  * Browser workflows for executed-contract evidence, original currencies and invoice/payment states.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
-import {expect, type Browser, type Page, test, type TestInfo} from "@playwright/test";
+import {expect, type Browser, type Locator, type Page, test, type TestInfo} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {createHash, randomUUID} from "node:crypto";
@@ -206,6 +206,20 @@ async function finishAcceptedJob(
     expect(assigned.error).toBeNull();
 }
 
+async function uploadContractInRegistration(dialog: Locator, name: string, pdf: Buffer) {
+    await dialog.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
+        name,
+        mimeType: "application/pdf",
+        buffer: pdf,
+    });
+    await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible({
+        timeout: 45_000,
+    });
+    const file = dialog.getByLabel("Hochgeladene Vertragsdatei");
+    await expect(file.locator("option", {hasText: name})).toHaveCount(1);
+    await file.selectOption({label: name});
+}
+
 test("executed PDF receipt, original-currency earnings, invoice review and recorded payment corrections work through the UI", async ({
                                                                                                                                          page,
                                                                                                                                          browser,
@@ -232,16 +246,8 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     await expect(contractsLink).toBeVisible();
     await contractsLink.click();
     await expect(page).toHaveURL(/\/contracts$/);
-    await page
-        .getByLabel("Ausgeführter Vertrag als PDF", {exact: true})
-        .setInputFiles({
-            name: "fictional-contract.pdf",
-            mimeType: "application/pdf",
-            buffer: pdf,
-        });
-    await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({
-        timeout: 45_000,
-    });
+    await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
+    await expect(page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true})).toHaveCount(0);
     await login(adminPage, administrator);
     await adminPage.goto(`/contracts?user=${lecturer.id}`);
     await adminPage
@@ -257,14 +263,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     );
     await dialog.getByLabel("Titel", {exact: true}).fill(title);
     await dialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
-    await expect(
-        dialog
-            .getByLabel("Hochgeladene Vertragsdatei")
-            .locator("option", {hasText: "fictional-contract.pdf"}),
-    ).toHaveCount(1);
-    await dialog
-        .getByLabel("Hochgeladene Vertragsdatei")
-        .selectOption({label: "fictional-contract.pdf"});
+    await uploadContractInRegistration(dialog, "fictional-contract.pdf", pdf);
     await dialog
         .getByRole("button", {name: "Vertrag speichern", exact: true})
         .click();
@@ -752,15 +751,6 @@ test("a scanned exceptional invoice can be submitted and downloaded through the 
     });
     try {
         await login(page, lecturer);
-        await page.goto("/contracts");
-        await page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
-            name: contractFile,
-            mimeType: "application/pdf",
-            buffer: pdf,
-        });
-        await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({
-            timeout: 45_000,
-        });
         const financePage = await financeContext.newPage();
         await login(financePage, administrator);
         await financePage.goto("/contracts");
@@ -769,9 +759,7 @@ test("a scanned exceptional invoice can be submitted and downloaded through the 
         await contract.getByLabel("Dozent:in", {exact: true}).selectOption(lecturer.id);
         await contract.getByLabel("Titel", {exact: true}).fill(`Fiktiver Rahmenvertrag ${tag}`);
         await contract.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
-        const contractFileField = contract.getByLabel("Hochgeladene Vertragsdatei");
-        await expect(contractFileField.locator("option", {hasText: contractFile})).toHaveCount(1);
-        await contractFileField.selectOption({label: contractFile});
+        await uploadContractInRegistration(contract, contractFile, pdf);
         await contract.getByRole("button", {name: "Vertrag speichern"}).click();
         await expect(contract).not.toBeVisible();
 
@@ -926,13 +914,6 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
     try {
         const financePage = await financeContext.newPage();
         await login(page, lecturer);
-        await page.goto("/contracts");
-        await page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true}).setInputFiles({
-            name: contractFile,
-            mimeType: "application/pdf",
-            buffer: pdf,
-        });
-        await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({timeout: 45_000});
         await login(financePage, administrator);
         await financePage.goto("/contracts");
         await financePage.getByRole("button", {name: "Ausgeführten Vertrag hinterlegen"}).click();
@@ -940,9 +921,7 @@ async function checkInvoiceSeries(page: Page, browser: Browser, testInfo: TestIn
         await managementDialog.getByLabel("Dozent:in", {exact: true}).selectOption(lecturer.id);
         await managementDialog.getByLabel("Titel", {exact: true}).fill(`Fiktiver Vertrag für Abschläge ${tag}`);
         await managementDialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
-        const contractFileField = managementDialog.getByLabel("Hochgeladene Vertragsdatei");
-        await expect(contractFileField.locator("option", {hasText: contractFile})).toHaveCount(1);
-        await contractFileField.selectOption({label: contractFile});
+        await uploadContractInRegistration(managementDialog, contractFile, pdf);
         await managementDialog.getByRole("button", {name: "Vertrag speichern", exact: true}).click();
         await expect(managementDialog).not.toBeVisible();
         const job = await acceptedJob(lecturer, "EUR", 300, 16, false, [17]);
