@@ -20,7 +20,7 @@ import {
 } from "../../components/common";
 import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
-import { userRolesQuery } from "../../lib/queries";
+import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
 import { AcademyCompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { courseHubQuery, type CourseOverview } from "./api";
@@ -31,11 +31,16 @@ import {
 } from "./course-phase";
 import { CoursePhaseFilter } from "./course-phase-filter";
 import { CompanyInvitations } from "./company-invitations";
-import { MaterialLibrary } from "./material-library";
 import { AcademyCourseDraft } from "./academy-draft";
 import { LearningPrograms } from "./learning-programs";
 import "./i18n";
 import "./learning.css";
+
+const MaterialLibrary = lazy(() =>
+  import("./material-library").then(({ MaterialLibrary }) => ({
+    default: MaterialLibrary,
+  })),
+);
 
 const PersonalPortfolio = lazy(() =>
   import("./portfolio").then((module) => ({
@@ -132,9 +137,19 @@ export function LearningHubPage({ academy }: { academy?: "active" | "grace" }) {
 function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const actor = useAuth().session!.user.id;
   const { t } = useTranslation("learning");
-  const roles = useQuery({ ...userRolesQuery(actor), enabled: !academy });
   const [params] = useSearchParams();
   const materials = params.get("view") === "materials";
+  const roles = useQuery({
+    ...userRolesQuery(actor),
+    enabled: !academy || materials,
+  });
+  const permissions = useQuery({
+    ...permissionsQuery(actor),
+    enabled: materials,
+  });
+  const canBrowseCatalogue =
+    roles.data?.includes("lecturer") === true ||
+    permissions.data?.includes("courses.manage") === true;
   const results = params.get("view") === "results";
   const programmes = params.get("view") === "programmes";
   const portfolio = params.get("view") === "portfolio";
@@ -214,11 +229,15 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
       ) : query.isError ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : materials ? (
-        <MaterialLibrary
-          actor={actor}
-          courses={query.data.filter((course) => course.lms_enabled)}
-          readOnly={academy === "grace"}
-        />
+        <Suspense fallback={<Loading />}>
+          <MaterialLibrary
+            actor={actor}
+            courses={query.data.filter((course) => course.lms_enabled)}
+            readOnly={academy === "grace"}
+            academy={academy === "active"}
+            canBrowseCatalogue={canBrowseCatalogue}
+          />
+        </Suspense>
       ) : query.data.length === 0 ? (
         <div className="empty-state">{t("noCourses")}</div>
       ) : (

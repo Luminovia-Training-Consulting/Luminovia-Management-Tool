@@ -29,6 +29,8 @@ export const materialMetadataSchema = z.strictObject({
         links.length,
     )
     .optional(),
+  library_archived: z.boolean().optional(),
+  library_master: z.boolean().optional(),
   tags: z
     .array(
       z

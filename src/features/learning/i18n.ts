@@ -942,6 +942,61 @@ const pairs: Record<string, [string, string]> = {
     "No current shares found in your course scope.",
   ],
   materialUsageMore: ["Weitere Kurse anzeigen", "Show more courses"],
+  materialLibraryArchive: ["Archivierte Materialien", "Archived materials"],
+  materialLibraryMasters: ["Materialvorlagen", "Master materials"],
+  materialLibraryManage: [
+    "Bibliothekseintrag verwalten",
+    "Manage library entry",
+  ],
+  materialLibraryStatusHelp: [
+    "Das Archivieren blendet den Eintrag in der Materialbibliothek aus. Bestehende Kursfreigaben gelten weiter.",
+    "Archiving hides the entry from the active material library. Existing course access still applies.",
+  ],
+  materialLibraryArchiveAction: [
+    "In der Bibliothek archivieren",
+    "Archive in library",
+  ],
+  materialLibraryRestore: [
+    "In der Bibliothek wiederherstellen",
+    "Restore in library",
+  ],
+  materialLibraryArchived: [
+    "Der Bibliothekseintrag wurde archiviert.",
+    "Library entry archived.",
+  ],
+  materialLibraryRestored: [
+    "Der Bibliothekseintrag wurde wiederhergestellt.",
+    "Library entry restored.",
+  ],
+  materialLibraryMarkMaster: [
+    "Als Materialvorlage markieren",
+    "Mark as master material",
+  ],
+  materialLibraryRemoveMaster: [
+    "Vorlagenmarkierung entfernen",
+    "Remove master designation",
+  ],
+  materialLibraryMasterAdded: [
+    "Materialvorlage markiert.",
+    "Master material marked.",
+  ],
+  materialLibraryMasterRemoved: [
+    "Vorlagenmarkierung entfernt.",
+    "Master designation removed.",
+  ],
+  materialLibraryMasterSource: ["Materialvorlage", "Master material"],
+  materialReuseIndependent: [
+    "Datei als unabhängige Kopie übernehmen",
+    "Create an independent file copy",
+  ],
+  materialReuseIndependentConfirm: [
+    "Kopie erstellen und freigeben",
+    "Create and publish copy",
+  ],
+  materialReuseIndependentSuccess: [
+    "Die Kopie ist im Zielkurs freigegeben.",
+    "The copy is available in the destination course.",
+  ],
   materialReuse: ["In weiterem Kurs verwenden", "Use in another course"],
   materialReuseHelp: [
     "Die geprüfte Fassung von {{name}} wird im Zielkurs für dieselbe Zielgruppe freigegeben.",

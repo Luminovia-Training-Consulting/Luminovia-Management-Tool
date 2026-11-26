@@ -80,7 +80,10 @@ export const materialHistoryResult = {
 export const materialSearchParameters = {
   p_course_id: nullable(uuid),
   p_search: nullable({ ...text, maxLength: 200 }),
-  p_category: nullable(materialCategory),
+  p_category: nullable({
+    type: "string",
+    enum: ["material", "report", "archived", "master"],
+  }),
   p_offset: integer,
 };
 export const materialSearchResult = {
@@ -93,6 +96,10 @@ export const materialSearchResult = {
       name: text,
       version: integer,
       category: materialCategory,
+      audience: {
+        type: "string",
+        enum: ["all", "staff", "client", "participants"],
+      },
       can_upload: boolean,
       can_edit_metadata: boolean,
       can_read_metadata_history: boolean,

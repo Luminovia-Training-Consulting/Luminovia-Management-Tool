@@ -1070,7 +1070,7 @@ const coursePaths = {
   "/rest/v1/rpc/search_course_materials": courseOperation(
     "searchAcademyCourseMaterials",
     "Search clean materials in authorised Academy courses",
-    "Filters by course ID, category and a case-insensitive substring in file name, title, description, subject, learning objectives or tags. Use null to omit a filter. Returns up to 25 rows ordered by file name and resource ID. Metadata has the file's audience. Grace permits reads and clears can_upload and can_edit_metadata.",
+    "Filters by course ID, category and a case-insensitive substring in file name, title, description, subject, learning objectives, competency names or tags. Archived shares appear only in the staff-scoped archived filter. The master filter shows active, designated reusable sources to staff. Use null to omit an ordinary filter. Returns up to 25 rows ordered by file name and resource ID. Metadata has the file's audience. Grace permits reads and clears can_upload and can_edit_metadata.",
     "active-or-grace",
     record(materialSearchParameters),
     materialSearchResult,
@@ -1078,7 +1078,7 @@ const coursePaths = {
   "/rest/v1/rpc/set_course_material_metadata": courseOperation(
     "setAcademyCourseMaterialMetadata",
     "Revise educational metadata on an exact course share",
-    "Requires an active licence and course staff editing their own scanned material. Send the last read metadata_revision (zero if missing). Stale changes return 409. Does not change file access or content.",
+    "Requires an active licence and course staff editing their own scanned material. Send the last read metadata_revision (zero if missing). Stale changes return 409. Set library_archived to change catalogue visibility and library_master to designate an owned reusable source. These options preserve the current course share.",
     "active",
     record(materialMetadataParameters),
     materialMetadataRevision,

@@ -345,6 +345,8 @@ export default defineConfig(({ mode }) => {
             "**/curriculum-merge-*.js",
             "**/competencies-*.js",
             "**/course-h5p-playback-*.js",
+            // The learning hub requests current course and file rights online.
+            "**/material-library-*.js",
             "**/h5p-playback-i18n-*.js",
             "**/h5p-playback-schema-*.js",
             "**/h5p-runtime-package-*.js",
