@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   learningProgramClassProgressResult,
+  learningProgramGradeReport,
   learningProgramsResult,
 } from "../src/features/learning/learning-program-schema.ts";
 import {
@@ -49,6 +50,7 @@ await Promise.all(
         [colleague, "participant"],
       ];
       const internal = edition === "internal";
+      let checkGradeLicence;
       if (!internal) {
         const now = Date.now();
         const date = (days) => new Date(now + days * 86_400_000).toISOString();
@@ -76,6 +78,17 @@ await Promise.all(
         };
         await prepareAcademyInstallation(setup, sql);
         await configureAcademyCourseAccess({ ...setup, enabled: true }, sql);
+        const renew = (changes) => sql(`select private.apply_verified_installation_licence(${q(JSON.stringify({ ...expected, ...changes }))}::jsonb);`);
+        checkGradeLicence = async (readOwn, readStaff, report) => {
+          await renew({ issued_at: date(-2.75), starts_at: date(-2.5), expires_at: date(-1) });
+          assert.deepEqual(await readOwn(), report);
+          assert.deepEqual(await readStaff(), report);
+          await renew({ issued_at: date(-2.5), starts_at: date(-2.25), expires_at: date(-1), grace_until: date(-0.5) });
+          await assert.rejects(readOwn(), /42501/);
+          await assert.rejects(readStaff(), /42501/);
+          await renew({ issued_at: date(-2.25), starts_at: date(-2) });
+          assert.deepEqual(await readOwn(), report);
+        };
       }
       await sql(`
       insert into auth.users (id,email,email_confirmed_at) values
@@ -193,6 +206,10 @@ await Promise.all(
         : "academy_learning_action";
       const progress = async (who = learner) =>
         (await view(who)).detail.progress;
+      const grades = async (who = learner, target, verb = "GET") =>
+        learningProgramGradeReport.parse(JSON.parse(await invoke(
+          who, "learning_program_grade_report", `${q(program)}${target ? `,${q(target)}` : ""}`, verb,
+        )));
 
       await assert.rejects(save(otherCompany), /42501/);
       await assert.rejects(save(company, { ids: [first, otherRun] }), /42501/);
@@ -208,6 +225,7 @@ await Promise.all(
       assert.equal((await view(otherCompany, null)).programs.length, 0);
       await assert.rejects(view(otherCompany), /42501/);
       await assert.rejects(view(learner), /42501/);
+      await assert.rejects(grades(), /42501/);
       await assert.rejects(enrol(company, otherLearner), /42501/);
       console.log(
         `PASS ${edition} programme writes are retry-safe and reject foreign, draft and duplicate modules`,
@@ -292,6 +310,45 @@ await Promise.all(
       assert.equal((await view(learner)).detail.classes, null);
       assert.equal((await view(learner)).detail.roster, null);
 
+      // Retained reports use only the latest released rounded score for each
+      // programme course. These frozen rows include a newer unpublished review.
+      const emptyGrades = { grade_count: 0, mean_percent: null, grades: [] };
+      assert.deepEqual(await grades(), emptyGrades);
+      assert.equal((await view(admin)).detail.can_read_grades, true);
+      assert.equal((await view(company)).detail.can_read_grades, false);
+      assert.equal((await view(learner)).detail.can_read_grades, false);
+      await assert.rejects(grades(company, learner), /42501/);
+      await assert.rejects(grades(otherCompany, learner), /42501/);
+      await assert.rejects(grades(learner, colleague), /42501/);
+      await assert.rejects(grades(admin, otherLearner), /42501/);
+      await sql(`
+        insert into private.course_weighted_policies(run_id,version,threshold,missing_required,separate_reviewer,items,created_by)
+          select run,1,70,'block',false,'[{"key":"quiz","treatment":"required","weight":100,"label":null}]',${q(admin)}
+          from (values (${q(first)}::uuid),(${q(second)}::uuid)) course(run);
+        insert into private.course_weighted_reviews(run_id,user_id,revision,policy_version,prior_release,fingerprint,snapshot,reason,reviewed_by)
+          select course.run,${q(learner)},course.revision,1,0,repeat('f',64),
+            jsonb_build_object('percent',course.mark,'passed',course.mark >= 70,
+              'basis',jsonb_build_object('private','Fictional review evidence')),'Fictional staff note',${q(admin)}
+          from (values (${q(first)}::uuid,1,49),(${q(first)}::uuid,2,82.25),(${q(first)}::uuid,3,99),
+            (${q(second)}::uuid,1,65.50)) course(run,revision,mark);
+        insert into private.course_weighted_releases(run_id,user_id,revision,review_revision,released_by)
+          select course.run,${q(learner)},course.revision,course.revision,${q(admin)}
+          from (values (${q(first)}::uuid,1),(${q(first)}::uuid,2),(${q(second)}::uuid,1)) course(run,revision);
+      `);
+      const report = await grades();
+      assert.deepEqual(await grades(admin, learner, "POST"), report);
+      assert.equal(report.grade_count, 2);
+      assert.equal(report.mean_percent, 73.88);
+      assert.deepEqual(report.grades.map(({ course_id, revision, percent, passed }) =>
+        [course_id, revision, percent, passed]), [[first, 2, 82.25, true], [second, 1, 65.5, false]]);
+      assert.deepEqual(await grades(colleague), emptyGrades);
+      assert.deepEqual(await grades(admin, colleague), emptyGrades);
+      await sql(`update public.course_enrolments set status='removed' where course_run_id=${q(first)} and user_id=${q(learner)}`);
+      assert.deepEqual((await grades()).grades.map(({ course_id }) => course_id), [second]);
+      assert.deepEqual((await grades(admin, learner)).grades.map(({ course_id }) => course_id), [second]);
+      await sql(`update public.course_enrolments set status='completed' where course_run_id=${q(first)} and user_id=${q(learner)}`);
+      console.log(`PASS ${edition} programme grade reports use frozen scoped releases, exclude drafts, and hide removed enrolments`);
+
       await place(company, colleague, null, 3);
       assert.deepEqual(await classes(), [groupA(1, 1, 2)]);
       await place(company, colleague, classA, 4);
@@ -303,6 +360,7 @@ await Promise.all(
       );
       const hiddenCourseProgress = await progress();
       assert.equal(hiddenCourseProgress.steps[1].can_open, false);
+      assert.deepEqual((await grades()).grades.map(({ course_id }) => course_id), [first]);
       assert.equal(hiddenCourseProgress.completed, 2);
       assert.deepEqual(await classes(), [groupA(2, 1, 2)]);
       await sql(
@@ -399,10 +457,18 @@ await Promise.all(
 
       await save(company, { archive: true, version: 1 });
       assert.equal((await view(learner)).detail.archived, true);
+      assert.deepEqual(await grades(), report);
+      if (checkGradeLicence) {
+        await checkGradeLicence(grades, () => grades(admin, learner), report);
+        console.log(`PASS ${edition} programme grade reports are readable in grace, denied after expiry, and retained after renewal`);
+      }
       await assert.rejects(enrol(company, colleague), /PT409/);
       await sql(`update private.company_participant_memberships set status='removed',removed_at=now()
       where organisation_id=${q(org)} and user_id=${q(learner)}`);
       await assert.rejects(view(learner), /42501/);
+      await assert.rejects(grades(), /42501/);
+      await assert.rejects(grades(admin, learner), /42501/);
+      assert.equal(await sql(`select count(*) from private.course_weighted_releases where user_id=${q(learner)}`), "3");
       assert.deepEqual(await classes(), [groupA(1, 0, 0)]);
       if (internal) {
         await actor(
@@ -411,11 +477,16 @@ await Promise.all(
         );
         await assert.rejects(view(company), /42501/);
         await assert.rejects(classes(), /42501/);
+        await assert.rejects(grades(admin, colleague), /42501/);
       }
       assert.equal(
         await sql(
           `select has_function_privilege('anon','public.learning_programs(uuid,uuid,text)','EXECUTE')`,
         ),
+        "f",
+      );
+      assert.equal(
+        await sql(`select has_function_privilege('anon','public.learning_program_grade_report(uuid,uuid)','EXECUTE')`),
         "f",
       );
       console.log(

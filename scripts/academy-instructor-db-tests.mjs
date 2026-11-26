@@ -18,7 +18,10 @@ const configure = (id, release, enabled = true) =>
 // These operations need state owned by the listed SQL fixtures, such as a
 // published quiz, a confirmed scan or a registered external tool.
 const featureFixtureOperations = new Map([
-  ["learning-program-db-tests.mjs", ["set_learning_program_prerequisite"]],
+  [
+    "learning-program-db-tests.mjs",
+    ["set_learning_program_prerequisite", "learning_program_grade_report"],
+  ],
   [
     "academy-course-document-db-tests.mjs",
     [

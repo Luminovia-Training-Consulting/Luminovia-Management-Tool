@@ -82,6 +82,7 @@ const programDetail = program.extend({
   sequential: z.boolean(),
   version: z.number().int().positive(),
   manage: z.boolean(),
+  can_read_grades: z.boolean().optional(),
   can_write: z.boolean(),
   can_edit: z.boolean(),
   steps: z.array(programCourse).nullable(),
@@ -120,6 +121,30 @@ export const learningProgramClassProgressResult = z.array(
 );
 export const readLearningProgramClassProgressRequest = z.strictObject({
   p_program_id: learningProgramId,
+});
+
+/** A report projects the currently visible release for each course, with no review evidence. */
+export const learningProgramGradeReport = z.strictObject({
+  grade_count: z.number().int().min(0).max(30),
+  mean_percent: z.number().min(0).max(100).nullable(),
+  grades: z
+    .array(
+      z.strictObject({
+        position: programmePosition,
+        course_id: learningProgramId,
+        title: z.string(),
+        revision: z.number().int().positive(),
+        policy_version: z.number().int().positive(),
+        released_at: dateTime,
+        percent: z.number().min(0).max(100),
+        passed: z.boolean(),
+      }),
+    )
+    .max(30),
+});
+export const readLearningProgramGradeReportRequest = z.strictObject({
+  p_program_id: learningProgramId,
+  p_user_id: learningProgramId.nullable().optional(),
 });
 
 export const readLearningProgramsRequest = z.strictObject({

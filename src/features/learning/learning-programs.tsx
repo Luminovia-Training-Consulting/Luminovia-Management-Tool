@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,12 @@ import {
 import { ProgrammePrerequisites } from "./programme-prerequisites";
 import "./learning-program-i18n";
 import "./learning-programs.css";
+
+const ProgrammeGradeReport = lazy(() =>
+  import("./programme-grade-report").then((module) => ({
+    default: module.ProgrammeGradeReport,
+  })),
+);
 
 const programUrl = (id: string) =>
   `/learning?view=programmes&program=${encodeURIComponent(id)}`;
@@ -645,6 +651,15 @@ function ProgramManager({
           />
         )}
       </section>
+      {program.can_read_grades && (
+        <Suspense fallback={<Loading />}>
+          <ProgrammeGradeReport
+            actor={actor}
+            program={program.id}
+            learners={(roster ?? []).filter(({ active }) => active)}
+          />
+        </Suspense>
+      )}
     </>
   );
 }
@@ -819,12 +834,21 @@ export function LearningPrograms({ actor }: { actor: string }) {
           />
         )}
         {detail.progress && (
-          <LearnerProgram
-            key={`${detail.id}-learner`}
-            program={detail}
-            writable={writable}
-            refresh={refresh}
-          />
+          <>
+            <LearnerProgram
+              key={`${detail.id}-learner`}
+              program={detail}
+              writable={writable}
+              refresh={refresh}
+            />
+            <Suspense fallback={<Loading />}>
+              <ProgrammeGradeReport
+                key={`${detail.id}-grade-report`}
+                actor={actor}
+                program={detail.id}
+              />
+            </Suspense>
+          </>
         )}
       </section>
     );

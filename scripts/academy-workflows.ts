@@ -65,7 +65,7 @@ const groups = {
   ],
   programmes: [
     ["Lernprogramme", "Learning programmes"],
-    "getLearningProgrammes readLearningProgrammes getLearningProgrammeClassProgress readLearningProgrammeClassProgress setAcademyCompanyParticipantClass saveLearningProgramme setLearningProgrammePrerequisite enrolLearningProgramme startLearningProgrammeCourse",
+    "getLearningProgrammes readLearningProgrammes getLearningProgrammeClassProgress readLearningProgrammeClassProgress getLearningProgrammeGradeReport readLearningProgrammeGradeReport setAcademyCompanyParticipantClass saveLearningProgramme setLearningProgrammePrerequisite enrolLearningProgramme startLearningProgrammeCourse",
   ],
   enrolment: [
     [

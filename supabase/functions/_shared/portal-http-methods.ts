@@ -159,6 +159,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   knowledge_access: "GET",
   knowledge_categories: "GET",
   learning_portfolio: "GET",
+  learning_program_grade_report: "GET",
   learning_analytics_access: "GET",
   learning_analytics_report: "GET",
   lecturer_compensation: "GET",

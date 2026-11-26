@@ -5,9 +5,11 @@ import {
   enrolLearningProgramRequest,
   learningProgramId,
   learningProgramClassProgressResult,
+  learningProgramGradeReport,
   learningProgramClassPlacementRequest,
   type LearningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
+  readLearningProgramGradeReportRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
@@ -57,6 +59,35 @@ export const learningProgramClassProgressQuery = (
         .abortSignal(signal);
       if (error) throw error;
       return learningProgramClassProgressResult.parse(data);
+    },
+    staleTime: 0,
+    refetchOnMount: "always" as const,
+    retry: false,
+  });
+
+/** Share the programme invalidation scope while separating staff selections and self reports. */
+export const learningProgramGradeReportQuery = (
+  actor: string,
+  program: string,
+  learner?: string,
+) =>
+  queryOptions({
+    queryKey: [
+      ...learningProgramsKey(actor),
+      "grade-report",
+      program,
+      learner ?? null,
+    ],
+    queryFn: async ({ signal }) => {
+      const args = readLearningProgramGradeReportRequest.parse({
+        p_program_id: program,
+        p_user_id: learner,
+      });
+      const { data, error } = await db()
+        .rpc("learning_program_grade_report", args, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return learningProgramGradeReport.parse(data);
     },
     staleTime: 0,
     refetchOnMount: "always" as const,

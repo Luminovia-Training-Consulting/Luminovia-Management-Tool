@@ -21,6 +21,7 @@ it("lists typed learning programme operations and separates Academy write entitl
     for (const rpc of [
       "learning_programs",
       "learning_program_class_progress",
+      "learning_program_grade_report",
       "save_learning_program",
       "enrol_learning_program",
       "start_learning_program_course",
@@ -30,6 +31,7 @@ it("lists typed learning programme operations and separates Academy write entitl
           operationalSession: true,
           participantSession:
             rpc === "learning_programs" ||
+            rpc === "learning_program_grade_report" ||
             rpc === "start_learning_program_course",
           guestSession: false,
         },
@@ -38,6 +40,7 @@ it("lists typed learning programme operations and separates Academy write entitl
           : {
               "x-portal-licence":
                 rpc === "learning_programs" ||
+                rpc === "learning_program_grade_report" ||
                 rpc === "learning_program_class_progress"
                   ? "active-or-grace"
                   : "active",
@@ -47,6 +50,17 @@ it("lists typed learning programme operations and separates Academy write entitl
     expect(paths[base + "learning_programs"].get).toMatchObject({
       parameters: expect.arrayContaining([
         expect.objectContaining({ name: "p_program_id" }),
+      ]),
+      responses: {
+        "200": {
+          content: { "application/json": { schema: { type: "object" } } },
+        },
+      },
+    });
+    expect(paths[base + "learning_program_grade_report"].get).toMatchObject({
+      parameters: expect.arrayContaining([
+        expect.objectContaining({ name: "p_program_id", required: true }),
+        expect.objectContaining({ name: "p_user_id" }),
       ]),
       responses: {
         "200": {

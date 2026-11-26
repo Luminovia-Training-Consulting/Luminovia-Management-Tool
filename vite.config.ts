@@ -332,6 +332,7 @@ export default defineConfig(({ mode }) => {
             "**/course-assignments-*.js",
             "**/lti-course-*.js",
             "**/course-weighted-gradebook-*.js",
+            "**/programme-grade-report-*.js",
             // Shared by the on-demand archive tools and XLSX import/export.
             "**/zip.js-*.js",
           ],

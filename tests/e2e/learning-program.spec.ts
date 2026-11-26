@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { enablePremiumAndLinkParticipant } from "../../scripts/testing/company-participant.mjs";
 import { actor, api, checked, login } from "./helpers/accounts-support";
@@ -12,7 +13,7 @@ test("a complete learning programme unlocks its next course and produces whole-p
   page,
   browser,
 }, info) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const manager = await actor("Fictional programme planner", "admin");
   const learner = await actor("Fictional programme learner", "participant");
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -157,6 +158,155 @@ test("a complete learning programme unlocks its next course and produces whole-p
     });
     expect(denied.status).toBe(409);
 
+    // Publish real assessment evidence; a privately reviewed programme result
+    // must remain absent until the course-level weighted grade is released.
+    const course = courses[0].id;
+    const courseAction = (
+      p_action: string,
+      p_payload: object,
+      p_expected_version: number,
+    ) =>
+      checked(
+        managerClient.rpc("course_workspace_action", {
+          p_run_id: course,
+          p_action,
+          p_payload,
+          p_expected_version,
+        }),
+      );
+    await courseAction(
+      "quiz_config",
+      {
+        questions: [
+          { prompt: "Print a file?", options: ["cat", "pwd"], correct: 0 },
+          {
+            prompt: "Show the working directory?",
+            options: ["cat", "pwd"],
+            correct: 1,
+          },
+        ],
+        published: true,
+        pass_percent: 50,
+        max_attempts: 1,
+      },
+      0,
+    );
+    const attempt = await checked(
+      learnerClient.rpc("course_workspace_action", {
+        p_run_id: course,
+        p_action: "quiz_attempt",
+        p_expected_version: 1,
+        p_payload: { answers: [0, 0], request_id: randomUUID() },
+      }),
+      { requireData: true },
+    );
+    await courseAction(
+      "gradebook_policy",
+      { scheme: "percentage", bands: [] },
+      0,
+    );
+    await courseAction(
+      "gradebook_publish",
+      {
+        user_id: learner.id,
+        attempt_id: attempt.id,
+        expected_revision: 0,
+        reason: "",
+      },
+      1,
+    );
+    const weighted = (
+      p_action: string,
+      p_payload: object,
+      p_expected_policy = 1,
+    ) =>
+      checked(
+        managerClient.rpc("course_weighted_gradebook_command", {
+          p_run_id: course,
+          p_action,
+          p_payload,
+          p_expected_policy,
+        }),
+      );
+    await weighted(
+      "policy",
+      {
+        threshold: 60,
+        missing_required: "block",
+        separate_reviewer: false,
+        items: [{ key: "quiz", weight: 100, treatment: "required" }],
+      },
+      0,
+    );
+    const preview = await checked(
+      managerClient.rpc("course_weighted_gradebook", {
+        p_run_id: course,
+        p_user_id: learner.id,
+      }),
+      { requireData: true },
+    );
+    await weighted("review", {
+      user_id: learner.id,
+      expected_review: 0,
+      expected_release: 0,
+      fingerprint: preview.fingerprint,
+      reason: "",
+    });
+    const selfReport = student.getByText("Meine freigegebenen Programmnoten", {
+      exact: true,
+    });
+    await selfReport.press("Enter");
+    await expect(
+      student.getByText(
+        "Für diese Person sind noch keine Kursnoten im Programm freigegeben.",
+      ),
+    ).toBeVisible();
+    await weighted("release", {
+      user_id: learner.id,
+      expected_review: 1,
+      expected_release: 0,
+    });
+    await student.reload();
+    await selfReport.press("Enter");
+    const studentGrades = student.getByRole("list", {
+      name: "Freigegebene Noten je Kurs",
+    });
+    await expect(
+      studentGrades.getByText(/50\s*% · Nicht bestanden/),
+    ).toBeVisible();
+    await expect(
+      student.getByRole("button", {
+        name: "Notenbericht als CSV herunterladen",
+      }),
+    ).toHaveCount(0);
+    await page
+      .getByText("Freigegebene Programmnoten", { exact: true })
+      .press("Enter");
+    await page
+      .getByLabel("Notenbericht für teilnehmende Person", { exact: true })
+      .selectOption(learner.id);
+    const staffGrades = page.getByRole("list", {
+      name: "Freigegebene Noten je Kurs",
+    });
+    await expect(
+      staffGrades.getByText(/50\s*% · Nicht bestanden/),
+    ).toBeVisible();
+    expect(
+      await staffGrades.evaluate(
+        (list) => list.scrollWidth <= list.clientWidth + 1,
+      ),
+    ).toBe(true);
+    const [csv] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Notenbericht als CSV herunterladen" })
+        .press("Enter"),
+    ]);
+    expect(csv.suggestedFilename()).toBe(`programme-grades-${programme}.csv`);
+    const rows = await readFile((await csv.path())!, "utf8");
+    expect(rows).toContain(`"${name} First course","50","Nicht bestanden"`);
+    expect(rows).not.toContain("Second course");
+
     const complete = async ({ id, session }: (typeof courses)[number]) => {
       await checked(
         managerClient.rpc("manage_course_enrolment", {
@@ -236,6 +386,18 @@ test("a complete learning programme unlocks its next course and produces whole-p
     ).toBeVisible();
     await expect(
       classProgress.getByText("3 von 3 Kursabschlüssen erreicht."),
+    ).toBeVisible();
+    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page
+      .getByText("Released programme grades", { exact: true })
+      .press("Enter");
+    await page
+      .getByLabel("Learner for grade report", { exact: true })
+      .selectOption(learner.id);
+    await expect(
+      page
+        .getByRole("list", { name: "Released grades by course" })
+        .getByText("50% · Failed"),
     ).toBeVisible();
   } finally {
     await context.close();

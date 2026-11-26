@@ -3,8 +3,10 @@ import {
   enrolLearningProgramRequest,
   learningProgramId,
   learningProgramClassProgressResult,
+  learningProgramGradeReport,
   learningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
+  readLearningProgramGradeReportRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
@@ -62,6 +64,22 @@ export function learningProgramPaths(academy = false) {
         description:
           "Authorised aggregate class progress for the requested programme.",
         content: jsonContent(learningProgramClassProgressResult),
+      },
+      "400": failed["400"],
+      "401": failed["401"],
+      "403": failed["403"],
+    },
+  };
+  const gradeReport = {
+    ...access(true, false),
+    summary: "Read released course grades for an enrolled programme learner",
+    description:
+      "Omit the learner ID to read your own grades. Only course management can select another current learner. Each row is the latest released weighted grade of a currently accessible enrolled course in the programme. A descriptive mean uses those released percentages. Course review evidence, private reasons and draft grades are excluded.",
+    responses: {
+      "200": {
+        description:
+          "Current released grades and descriptive programme summary.",
+        content: jsonContent(learningProgramGradeReport),
       },
       "400": failed["400"],
       "401": failed["401"],
@@ -145,6 +163,33 @@ export function learningProgramPaths(academy = false) {
         requestBody: {
           required: true,
           content: jsonContent(readLearningProgramClassProgressRequest),
+        },
+      },
+    },
+    "/rest/v1/rpc/learning_program_grade_report": {
+      get: {
+        ...gradeReport,
+        operationId: "getLearningProgrammeGradeReport",
+        parameters: [
+          {
+            in: "query",
+            name: "p_program_id",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            in: "query",
+            name: "p_user_id",
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+      },
+      post: {
+        ...gradeReport,
+        operationId: "readLearningProgrammeGradeReport",
+        requestBody: {
+          required: true,
+          content: jsonContent(readLearningProgramGradeReportRequest),
         },
       },
     },

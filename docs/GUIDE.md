@@ -337,6 +337,12 @@ Before the first participant joins, open an existing **Lernprogramme / Learning 
 
 Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
 
+### Released programme grades
+
+Open a learning programme and expand **Meine freigegebenen Programmnoten / My released programme grades**. Each accessible course with a released weighted grade shows its current percentage, course result and release revision. The displayed average gives equal weight to the grades shown and uses their released percentages. The average does not determine programme completion.
+
+Course managers can expand **Freigegebene Programmnoten / Released programme grades**, select an active learner from the programme roster and download their report as CSV. Use the existing roster search to find a learner. Only current course enrolments in the programme can appear, and the download checks current access again. An archived programme retains its grade report while the applicable course, enrolment and company access continue. Academy grace permits reports and downloads.
+
 ### External LTI learning tools
 
 A course manager can enter the client ID, login URL, registered return URL and resource URL from a manually exchanged LTI 1.3 registration. The three addresses require HTTPS. After saving, copy the displayed **LTI-Deployment-ID / LTI deployment ID** into the tool registration. The course manager can enable or disable the deployment under **Externe Lernwerkzeuge / External learning tools**. A current learner or assigned instructor can start an enabled resource from there.
