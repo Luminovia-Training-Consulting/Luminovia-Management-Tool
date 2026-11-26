@@ -1,3 +1,4 @@
+import { isInternalExplorerRequest } from "./request-boundary.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -7,11 +8,7 @@ import {
 import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
-import {
-  isPortalHttpAliasRequest,
-  portalHttpAliasPrefix,
-  withPortalHttpAliases,
-} from "./portal-http-contract.ts";
+import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import { legacyHandoverOperations } from "../jobs/handover-schema.ts";
 import {
   searchKinds,
@@ -5544,43 +5541,15 @@ function internalDocument(
   };
 }
 
-/** Compare the rendered operation with the exact configured backend and method. */
+/** Apply the same protective route matching used by the compiled explorer. */
 export function isDocumentedRequest(
   rawUrl: string,
   method: string,
   backend: string,
 ) {
-  const target = URL.parse(rawUrl, backend.replace(/\/+$/, "") + "/");
-  const base = URL.parse(backend);
-  if (!target || !base) return false;
-  const verb = method.toLowerCase();
-  if (
-    target.origin !== base.origin ||
-    target.username ||
-    target.password ||
-    target.hash
-  )
-    return false;
-  const prefix = base.pathname.replace(/\/+$/, "");
-  if (!target.pathname.startsWith(prefix + "/")) return false;
-  const route = target.pathname.slice(prefix.length);
-  if (route.startsWith(portalHttpAliasPrefix))
-    return isPortalHttpAliasRequest(target, route, verb, interactivePaths);
-  if (legacyHandover.has(route)) return false;
-  if (Object.hasOwn(paths, route)) return Object.hasOwn(paths[route], verb);
-  return Object.entries(paths).some(([path, operations]) => {
-    if (!path.includes("{") || !Object.hasOwn(operations, verb)) return false;
-    const segments = path.split("/");
-    const candidate = route.split("/");
-    return (
-      segments.length === candidate.length &&
-      segments.every((part, index) =>
-        /^\{(?:id|organisationId)\}$/.test(part)
-          ? /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
-              candidate[index],
-            )
-          : part === candidate[index],
-      )
-    );
-  });
+  return isInternalExplorerRequest(
+    { url: rawUrl, method },
+    backend,
+    interactivePaths,
+  );
 }

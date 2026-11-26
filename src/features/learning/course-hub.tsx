@@ -1,6 +1,6 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
 import { PublishedExamResults } from "./timed-exam";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -34,9 +34,14 @@ import { CompanyInvitations } from "./company-invitations";
 import { MaterialLibrary } from "./material-library";
 import { AcademyCourseDraft } from "./academy-draft";
 import { LearningPrograms } from "./learning-programs";
-import { PersonalPortfolio } from "./portfolio";
 import "./i18n";
 import "./learning.css";
+
+const PersonalPortfolio = lazy(() =>
+  import("./portfolio").then((module) => ({
+    default: module.PersonalPortfolio,
+  })),
+);
 
 function CourseCard({
   course,
@@ -199,7 +204,9 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
       {programmes ? (
         <LearningPrograms actor={actor} />
       ) : portfolio ? (
-        <PersonalPortfolio actor={actor} readOnly={academy === "grace"} />
+        <Suspense fallback={<Loading />}>
+          <PersonalPortfolio actor={actor} readOnly={academy === "grace"} />
+        </Suspense>
       ) : results ? (
         <PublishedExamResults actor={actor} />
       ) : query.isPending || !query.isFetchedAfterMount ? (

@@ -70,11 +70,10 @@ afterEach(() => {
 it("requires a named recipient and sends the reviewed immutable revision", async () => {
   mount();
   fireEvent.click(
-    await screen.findByRole("button", { name: "Share revision", exact: true }),
+    await screen.findByRole("button", { name: /^Share revision$/ }),
   );
   const share = screen.getByRole("button", {
-    name: "Share revision 2",
-    exact: true,
+    name: /^Share revision 2$/,
   });
   expect(share).toBeDisabled();
   fireEvent.change(

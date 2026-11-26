@@ -44,8 +44,6 @@ import "./i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseCompetencies } from "./competencies";
-import { CoursePeerFeedback } from "./peer-feedback";
-import { CourseXapiExport } from "./course-xapi-export";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizAttempt } from "./quiz-attempt";
 import { QuestionBank } from "./question-bank";
@@ -76,7 +74,6 @@ import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
 import { CourseGradebook } from "./course-gradebook";
-import { CoursePortfolio } from "./portfolio";
 import {
   CompletionRequirements,
   StaffCompletionRequirements,
@@ -84,6 +81,19 @@ import {
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
+const CoursePeerFeedback = lazy(() =>
+  import("./peer-feedback").then((module) => ({
+    default: module.CoursePeerFeedback,
+  })),
+);
+const CoursePortfolio = lazy(() =>
+  import("./portfolio").then((module) => ({ default: module.CoursePortfolio })),
+);
+const CourseXapiExport = lazy(() =>
+  import("./course-xapi-export").then((module) => ({
+    default: module.CourseXapiExport,
+  })),
+);
 const CourseOfferForm = __PORTAL_INTERNAL_EDITION__
   ? lazy(() =>
       import("../admin/admin").then((module) => ({
@@ -1455,11 +1465,13 @@ function CourseWorkspaceLayout({
               id="course-portfolio"
               className={sectionClass("course-portfolio")}
             >
-              <CoursePortfolio
-                key={course.id}
-                actor={actor}
-                course={course.id}
-              />
+              <Suspense fallback={<Loading />}>
+                <CoursePortfolio
+                  key={course.id}
+                  actor={actor}
+                  course={course.id}
+                />
+              </Suspense>
             </div>
           )}
           {hasGradebook && (
@@ -1644,20 +1656,24 @@ function CourseWorkspaceLayout({
               )}
               {(course.access.staff || learner) &&
                 currentSection === "course-learning" && (
-                  <CoursePeerFeedback
-                    course={course.id}
-                    actor={actor}
-                    staff={course.access.staff}
-                  />
+                  <Suspense fallback={<Loading />}>
+                    <CoursePeerFeedback
+                      course={course.id}
+                      actor={actor}
+                      staff={course.access.staff}
+                    />
+                  </Suspense>
                 )}
               {course.access.manager &&
                 course.lms_enabled &&
                 currentSection === "course-learning" && (
-                  <CourseXapiExport
-                    key={course.id}
-                    runId={course.id}
-                    zone={course.time_zone}
-                  />
+                  <Suspense fallback={<Loading />}>
+                    <CourseXapiExport
+                      key={`xapi-export:${course.id}`}
+                      runId={course.id}
+                      zone={course.time_zone}
+                    />
+                  </Suspense>
                 )}
               {learner && (
                 <Completion
@@ -1671,14 +1687,14 @@ function CourseWorkspaceLayout({
                 course.lms_enabled &&
                 currentSection === "course-learning" && (
                   <StaffCompletionRequirements
-                    key={course.id}
+                    key={`staff-completion:${course.id}`}
                     course={course}
                     actor={actor}
                   />
                 )}
               {academy && editor && (
                 <AcademyCompletionRegister
-                  key={course.id}
+                  key={`academy-completion:${course.id}`}
                   course={course}
                   actor={actor}
                   academy={academy}

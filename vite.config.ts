@@ -9,11 +9,15 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "node:path";
-import { portalOpenApi } from "./src/features/developer-api/contract.ts";
+import {
+  internalExplorerDocument,
+  portalOpenApi,
+} from "./src/features/developer-api/contract.ts";
 import {
   academyExplorerOpenApi,
   academyOpenApi,
 } from "./src/features/developer-api/academy-contract.ts";
+import { internalExplorerPath } from "./src/features/developer-api/catalogue-url.ts";
 import { academyWorkflowIndex } from "./scripts/academy-workflows.ts";
 import { academyClientAssets } from "./scripts/academy-client-assets.mjs";
 import { recordAcademyBrowserModules } from "./scripts/academy-browser-inventory.ts";
@@ -81,6 +85,9 @@ export default defineConfig(({ mode }) => {
     academyDocument ?? portalOpenApi(backend, true, brand);
   const openApi =
     JSON.stringify(openApiDocument, null, internal ? 0 : 2) + "\n";
+  const internalExplorer = internal
+    ? JSON.stringify(internalExplorerDocument(backend, brand)) + "\n"
+    : null;
   if (academyDocument) {
     assets.set(
       "api/workflows.json",
@@ -225,13 +232,20 @@ export default defineConfig(({ mode }) => {
         name: "portal-openapi-document",
         configureServer(server) {
           server.middlewares.use((req, res, next) => {
+            const path = req.url?.split("?")[0];
+            const document =
+              path === openApiPath
+                ? openApi
+                : path === internalExplorerPath
+                  ? internalExplorer
+                  : null;
             if (
-              req.url?.split("?")[0] !== openApiPath ||
+              document === null ||
               (req.method !== "GET" && req.method !== "HEAD")
             )
               return next();
             res.setHeader("Content-Type", "application/json; charset=utf-8");
-            res.end(req.method === "HEAD" ? undefined : openApi);
+            res.end(req.method === "HEAD" ? undefined : document);
           });
         },
         generateBundle() {
@@ -240,6 +254,12 @@ export default defineConfig(({ mode }) => {
             fileName: openApiPath.slice(1),
             source: openApi,
           });
+          if (internalExplorer !== null)
+            this.emitFile({
+              fileName: internalExplorerPath.slice(1),
+              type: "asset",
+              source: internalExplorer,
+            });
         },
       },
       {
@@ -297,6 +317,10 @@ export default defineConfig(({ mode }) => {
             "**/attendance-xlsx-*.js",
             // Private company contracts cannot be viewed or filed offline.
             "**/company-contracts-*.js",
+            // These private LMS workflows require a live session and load on entry.
+            "**/portfolio-*.js",
+            "**/peer-feedback-*.js",
+            "**/course-xapi-export-*.js",
           ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,
@@ -310,7 +334,7 @@ export default defineConfig(({ mode }) => {
             /^\/storage\//,
             /^\/functions\//,
             /^\/realtime\//,
-            /^\/api\/openapi\.json$/,
+            /^\/api\/(?:openapi|explorer)\.json$/,
             /^\/api\/client\.(?:ts|py)(?:\?|$)/,
             ...(!internal
               ? [

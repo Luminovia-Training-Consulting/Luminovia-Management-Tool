@@ -1,4 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { internalInstallationBrand } from "../../lib/installation-brand";
+import { internalExplorerDocument } from "./contract";
+import { internalExplorerPath } from "./catalogue-url";
 import { type ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -39,7 +42,10 @@ vi.mock("./swagger-view", () => ({
   },
 }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ i18n: { language: fake.language } }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: fake.language },
+  }),
 }));
 
 const backend = "https://academy.example.invalid/backend";
@@ -73,12 +79,24 @@ beforeEach(() => {
   fake.language = "en";
   fake.swagger.mockClear();
   fake.getSession.mockReset().mockResolvedValue(session);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url) => {
+      expect(url).toBe(internalExplorerPath);
+      return new Response(
+        JSON.stringify(
+          internalExplorerDocument(backend, internalInstallationBrand),
+        ),
+      );
+    }),
+  );
   vi.stubEnv("VITE_SUPABASE_URL", backend);
   vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "fictional-publishable");
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 it("shows the academy RPCs and full JSON download, with live requests off until approved", async () => {
