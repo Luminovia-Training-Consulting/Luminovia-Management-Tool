@@ -102,7 +102,11 @@ it("reviews a spreadsheet replacement against its captured examination version",
     await dialog.findByRole("checkbox", { name: "Replace 1 saved draft" }),
   );
   rpc.mockResolvedValue({ data: 1, error: null });
-  await user.click(apply);
+  const applyCurrent = dialog.getByRole("button", {
+    name: "Save 1 grade as draft",
+  });
+  expect(applyCurrent).toBeEnabled();
+  await user.click(applyCurrent);
   expect(await dialog.findByText("1 grade was saved as draft.")).toBeVisible();
   expect(rpc).toHaveBeenCalledExactlyOnceWith("import_course_exam_grades", {
     p_run_id: run,
