@@ -12,8 +12,8 @@ test.skip(
   "Text exam fixtures require the canonical disposable services.",
 );
 
-/** Move the newly created fixture beyond its deadline without a wall-clock wait. */
-function closeFixtureExam(run: string) {
+/** Move only this isolated exam fixture through its extended submission window. */
+function moveFixtureExam(run: string, stage: "extra-time" | "closed") {
   const project = /^project_id\s*=\s*"(luminovia-portal-test-[a-f0-9]+)"/m.exec(
     readFileSync("supabase/config.toml", "utf8"),
   )?.[1];
@@ -40,8 +40,10 @@ function closeFixtureExam(run: string) {
       "ON_ERROR_STOP=1",
     ],
     {
-      input: `update private.course_text_exam_versions set closes_at=clock_timestamp()
-        where run_id='${run}' and closes_at > clock_timestamp()`,
+      input: `update private.course_text_exam_versions
+        set opens_at=clock_timestamp()-interval '1 hour',
+            closes_at=clock_timestamp()-interval '${stage === "extra-time" ? 1 : 36} minutes'
+        where run_id='${run}'`,
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 20_000,
     },
@@ -70,8 +72,8 @@ test("a learner recovers private text, submits once and sees only the released g
   const staffExam = page.locator("#course-learning");
   await page.getByText("Freitextprüfung", { exact: true }).click();
   await page.getByLabel("Prüfungstitel").fill(title);
-  await page.getByLabel("Öffnet").fill(localMinute(-3_600_000));
-  await page.getByLabel("Schließt").fill(localMinute(3_600_000));
+  await page.getByLabel("Öffnet").fill(localMinute(3_600_000));
+  await page.getByLabel("Schließt").fill(localMinute(7_200_000));
   await page.getByLabel("Aufgabentext").fill(prompt);
   await page.getByLabel("Maximale Punktzahl").fill("10");
   await staffExam
@@ -89,6 +91,26 @@ test("a learner recovers private text, submits once and sees only the released g
     .getByRole("button", { name: "Prüfung veröffentlichen", exact: true })
     .click();
   await expect.poll(async () => (await readExam()).exam?.title).toBe(title);
+  const initial = (await readExam()).exam;
+  expect(initial.questions).toBeNull();
+  await staffExam
+    .getByText("Zusatzzeit verwalten", { exact: true })
+    .press("Enter");
+  await staffExam
+    .getByLabel("Teilnehmende Person für Zusatzzeit")
+    .selectOption(learner.id);
+  const minutes = staffExam.getByRole("spinbutton", {
+    name: "Zusatzzeit in Minuten",
+  });
+  await expect(minutes).toHaveValue("0");
+  await minutes.fill("35");
+  await staffExam
+    .getByRole("button", { name: "Zusatzzeit speichern" })
+    .press("Enter");
+  await expect
+    .poll(async () => Date.parse((await readExam()).exam.deadline))
+    .toBe(Date.parse(initial.closes_at) + 35 * 60_000);
+  moveFixtureExam(run, "extra-time");
 
   const learnerContext = await browser.newContext({
     baseURL,
@@ -101,10 +123,51 @@ test("a learner recovers private text, submits once and sees only the released g
     await login(candidate, learner.email, /\/learning$/);
     await candidate.goto(workspace);
     const learnerExam = candidate.locator("#course-learning");
-    await candidate.getByText("Freitextprüfung", { exact: true }).click();
+    const examDisclosure = candidate.getByText("Freitextprüfung", {
+      exact: true,
+    });
+    await examDisclosure.press("Enter");
     await expect(candidate.getByText(prompt, { exact: true })).toBeVisible();
     const answer = "The router forwards traffic using the default route.";
-    await candidate.getByLabel("Antwort", { exact: true }).fill(answer);
+    const answerField = candidate.getByRole("textbox", {
+      name: "Antwort zu Aufgabe 1",
+      exact: true,
+    });
+    await expect(answerField).toHaveAccessibleDescription(prompt);
+    await candidate.keyboard.press("Tab");
+    await expect(answerField).toBeFocused();
+    const viewport = candidate.viewportSize()!;
+    await candidate.setViewportSize({ width: 320, height: viewport.height });
+    await expect
+      .poll(() =>
+        learnerExam.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      )
+      .toBe(true);
+    await candidate.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await candidate.getByLabel("Theme", { exact: true }).selectOption("dark");
+    await expect(candidate.locator("html")).toHaveAttribute(
+      "data-theme",
+      "dark",
+    );
+    const englishAnswer = candidate.getByRole("textbox", {
+      name: "Answer to question 1",
+      exact: true,
+    });
+    await expect(englishAnswer).toHaveAccessibleDescription(prompt);
+    const learnerScan = await new AxeBuilder({ page: candidate })
+      .include("#course-learning")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(learnerScan.violations).toEqual([]);
+    await learnerExam.screenshot({
+      path: info.outputPath("learner-exam-320-dark.png"),
+    });
+    await candidate.getByLabel("Theme", { exact: true }).selectOption("light");
+    await candidate.getByLabel("Language", { exact: true }).selectOption("de");
+    await candidate.setViewportSize(viewport);
+    await answerField.fill(answer);
     await learnerExam
       .getByRole("button", { name: "Entwurf speichern", exact: true })
       .click();
@@ -113,25 +176,30 @@ test("a learner recovers private text, submits once and sees only the released g
     ).toBeVisible();
     await candidate.reload();
     await candidate.getByText("Freitextprüfung", { exact: true }).click();
-    await expect(candidate.getByLabel("Antwort", { exact: true })).toHaveValue(
-      answer,
-    );
-    await candidate
-      .getByRole("button", { name: "Prüfung abgeben", exact: true })
-      .click();
+    await expect(answerField).toHaveValue(answer);
+    const submit = candidate.getByRole("button", {
+      name: "Prüfung abgeben",
+      exact: true,
+    });
+    await submit.press("Enter");
+    await expect(candidate.getByRole("dialog")).toBeVisible();
+    await candidate.keyboard.press("Escape");
+    await expect(submit).toBeFocused();
+    await submit.press("Enter");
     await candidate
       .getByRole("dialog")
       .getByRole("button", { name: "Prüfung abgeben", exact: true })
       .click();
     await expect(candidate.getByText(/Abgegeben am/)).toBeVisible();
+    await expect(answerField).not.toBeEditable();
     await expect(
-      candidate.getByLabel("Antwort", { exact: true }),
-    ).not.toBeEditable();
+      learnerExam.getByRole("status").filter({ hasText: /Abgegeben am/ }),
+    ).toBeVisible();
     await expect(
       candidate.getByText("Die Bewertung steht noch aus."),
     ).toBeVisible();
 
-    closeFixtureExam(run);
+    moveFixtureExam(run, "closed");
     await page.reload();
     await page.getByText("Freitextprüfung", { exact: true }).click();
     const attempt = page.getByLabel("Abgabe zur Bewertung auswählen", {

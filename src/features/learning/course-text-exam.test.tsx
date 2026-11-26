@@ -1,6 +1,12 @@
 /** Native exam state, disclosure and read-only policies at the component boundary. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { textExamCommand, type TextExamState } from "./course-text-exam-schema";
@@ -92,9 +98,9 @@ it("allows reading an active exam during licence grace and disables editing", as
   });
   openExam();
   expect(await screen.findByText("This exam is read-only.")).toBeVisible();
-  expect(screen.getByRole("textbox", { name: "Answer" })).toHaveAttribute(
-    "readonly",
-  );
+  expect(
+    screen.getByRole("textbox", { name: "Answer to question 1" }),
+  ).toHaveAttribute("readonly");
   expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
 });
 
@@ -105,6 +111,31 @@ it("does not request private exam data offline", async () => {
     await screen.findByText("Text exams are available online."),
   ).toBeVisible();
   expect(fake.rpc).not.toHaveBeenCalled();
+});
+
+it("gives every answer a distinct name and associates the correct prompt", async () => {
+  backend({
+    ...beforeOpening,
+    now: "2026-11-26T05:15:00+00:00",
+    exam: {
+      ...beforeOpening.exam!,
+      questions: [
+        { prompt: "Describe the default route.", max_points: 10 },
+        { prompt: "Explain route priority.", max_points: 8 },
+      ],
+    },
+  });
+  openExam();
+  const first = await screen.findByRole("textbox", {
+    name: "Answer to question 1",
+  });
+  expect(first).toHaveAccessibleDescription("Describe the default route.");
+  expect(
+    screen.getByRole("textbox", { name: "Answer to question 2" }),
+  ).toHaveAccessibleDescription("Explain route priority.");
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Saved drafts remain open until you submit them.",
+  );
 });
 
 it("accepts only the action-specific schema and exact revision input", () => {
@@ -125,4 +156,54 @@ it("accepts only the action-specific schema and exact revision input", () => {
       p_payload: { ...command.p_payload, learner_id: run },
     }).success,
   ).toBe(false);
+});
+
+it("saves the selected sitting and the selected allowance revision from the manager form", async () => {
+  const learner = "633c3d79-6851-4638-b2e5-6a05cc9fd24a";
+  backend({
+    ...beforeOpening,
+    staff: true,
+    can_author: true,
+    head_revision: 1,
+    time_allowances: {
+      rows: [
+        {
+          learner_id: learner,
+          name: "Fictional learner",
+          revision: 3,
+          extra_minutes: 15,
+        },
+      ],
+      has_more: false,
+    },
+  });
+  openExam();
+  const disclosure = await screen.findByText("Manage extra time");
+  disclosure.closest("details")!.open = true;
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Learner receiving extra time" }),
+    {
+      target: { value: learner },
+    },
+  );
+  const minutes = screen.getByRole("spinbutton", {
+    name: "Extra time in minutes",
+  });
+  expect(minutes).toHaveValue(15);
+  fireEvent.change(minutes, { target: { value: "481" } });
+  expect(
+    screen.getByRole("button", { name: "Save extra time" }),
+  ).toBeDisabled();
+  fireEvent.change(minutes, { target: { value: "0" } });
+  fake.rpc.mockResolvedValueOnce({ data: 4, error: null });
+  fireEvent.click(screen.getByRole("button", { name: "Save extra time" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("course_text_exam_action", {
+      p_run_id: run,
+      p_action: "set_extra_time",
+      p_revision: 1,
+      p_expected: 3,
+      p_payload: { learner_id: learner, extra_minutes: 0 },
+    }),
+  );
 });

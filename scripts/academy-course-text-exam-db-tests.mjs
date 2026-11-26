@@ -88,7 +88,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       actor(who, gate("course_text_exam_action", "POST") + sql);
     const paper = {
       title: "Fictional Academy exam",
-      opens_at: new Date(now - 3_600_000).toISOString(),
+      opens_at: new Date(now + 1_800_000).toISOString(),
       closes_at: new Date(now + 3_600_000).toISOString(),
       pass_percent: 70,
       questions: [{ prompt: "Explain a default route.", max_points: 10 }],
@@ -96,6 +96,33 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await action(admin, command("save_exam", "null", 0, paper));
     await action(admin, command("publish", "null", 1, {}));
     await assert.rejects(() => read(absentTeacher), /42501/);
+    const extraTime = (expected, extra_minutes) =>
+      command("set_extra_time", 1, expected, {
+        learner_id: learner,
+        extra_minutes,
+      });
+    assert.equal((await read(learner)).time_allowances, null);
+    assert.equal((await read(admin)).time_allowances.rows[0].revision, 0);
+    await assert.rejects(() => action(learner, extraTime(0, 30)), /42501/);
+    await assert.rejects(
+      () => action(absentTeacher, extraTime(0, 30)),
+      /42501/,
+    );
+    assert.equal((await action(admin, extraTime(0, 30))).trim(), "1");
+    assert.equal(
+      Date.parse((await read(learner)).exam.deadline),
+      Date.parse(paper.closes_at) + 30 * 60_000,
+    );
+    await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
+      where installation_id=${q(installation)}`);
+    assert.equal((await read(admin)).time_allowances, null);
+    await assert.rejects(() => action(admin, extraTime(1, 40)), /42501/);
+    await assert.rejects(() => actor(admin, extraTime(1, 40)), /42501/);
+    await sql(`update private.installation_verified_licence set expires_at=${q(date(2))}
+      where installation_id=${q(installation)};
+      update private.course_text_exam_versions set opens_at=clock_timestamp()-interval '1 minute'
+      where run_id=${q(run)} and revision=1`);
+    await assert.rejects(() => action(admin, extraTime(1, 40)), /PT409/);
     assert.equal(
       (await read(learner)).exam.questions[0].prompt,
       paper.questions[0].prompt,
@@ -110,7 +137,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         answers: ["It forwards otherwise unmatched traffic."],
       }),
     );
-    await sql(`update private.course_text_exam_versions set closes_at=now()-interval '1 second'
+    await sql(`update private.course_text_exam_versions set opens_at=now()-interval '32 minutes', closes_at=now()-interval '31 minutes'
       where run_id=${q(run)} and revision=1`);
     const reviewed = (revision, points) =>
       command("import_reviews", 1, 0, {

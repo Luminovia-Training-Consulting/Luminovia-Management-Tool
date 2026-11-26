@@ -141,6 +141,40 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   assert.equal(await action(admin, "publish", null, 1), 1);
   assert.equal(await action(admin, "publish", null, 1), 1);
   assert.equal((await read(learner)).exam.questions, null);
+  const setTime = (who, expected, minutes, subject = learner) =>
+    action(who, "set_extra_time", 1, expected, {
+      learner_id: subject,
+      extra_minutes: minutes,
+    });
+  const initialAllowance = (await read(admin, 1)).time_allowances.rows.find(
+    (row) => row.learner_id === learner,
+  );
+  assert.equal(initialAllowance.revision, 0);
+  assert.equal(initialAllowance.extra_minutes, 0);
+  assert.equal(
+    (await read(admin, 1, "null", 25)).time_allowances.rows.length,
+    0,
+  );
+  assert.equal((await read(teacher, 1)).time_allowances, null);
+  assert.equal((await read(learner, 1)).time_allowances, null);
+  await assert.rejects(() => setTime(teacher, 0, 30), /42501/);
+  await assert.rejects(() => setTime(learner, 0, 30), /42501/);
+  await assert.rejects(() => setTime(admin, 0, 30, admin), /42501/);
+  await assert.rejects(() => setTime(admin, 0, 481), /22023/);
+  await assert.rejects(() => setTime(admin, 0, 1.5), /22023/);
+  assert.equal(await setTime(admin, 0, 20), 1);
+  assert.equal(await setTime(admin, 0, 20), 1);
+  await assert.rejects(() => setTime(admin, 0, 25), /PT409/);
+  assert.equal(await setTime(admin, 1, 25), 2);
+  await assert.rejects(() => setTime(admin, 0, 25), /PT409/);
+  assert.equal(
+    Date.parse((await read(learner, 1)).exam.deadline),
+    Date.parse(window.closes_at) + 25 * 60_000,
+  );
+  assert.equal(
+    Date.parse((await read(secondLearner, 1)).exam.deadline),
+    Date.parse(window.closes_at),
+  );
   const answers = [
     "Traffic with no more specific prefix uses this route.",
     "It provides a stable logical address.",
@@ -150,7 +184,9 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
     /PT409/,
   );
   const edited = {
-    ...window, title: "Network fundamentals revised", second_reviewer_required: true,
+    ...window,
+    title: "Network fundamentals revised",
+    second_reviewer_required: true,
   };
   assert.equal(await action(admin, "save_exam", null, 1, edited), 2);
   assert.equal((await read(learner)).exam.title, window.title);
@@ -172,6 +208,15 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   await assert.rejects(() => action(learner, "submit", 1, 1, draft), /22023/);
   await assert.rejects(
     () => action(learner, "submit", 1, 0, { answers }),
+    /PT409/,
+  );
+  await assert.rejects(() => setTime(admin, 2, 30), /PT409/);
+  assert.equal((await read(admin, 1)).time_allowances, null);
+  await sql(`update private.course_text_exam_versions
+    set closes_at=clock_timestamp()-interval '1 second'
+    where run_id=${q(run)} and revision=1`);
+  await assert.rejects(
+    () => action(secondLearner, "submit", 1, 0, { answers }),
     /PT409/,
   );
   const receipts = await Promise.all(
@@ -203,7 +248,9 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   const importReview = (who, rows, version = 1) =>
     action(who, "import_reviews", version, 0, { rows });
   const candidate = (learnerId, revision, points) => ({
-    learner_id: learnerId, expected_revision: revision, points,
+    learner_id: learnerId,
+    expected_revision: revision,
+    points,
   });
   assert.equal((await read(teacher, 1)).submissions[0].import_draft, null);
   await assert.rejects(
@@ -212,7 +259,7 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   );
 
   await sql(`update private.course_text_exam_versions
-    set opens_at=clock_timestamp()-interval '6 minutes', closes_at=clock_timestamp()-interval '1 minute'
+    set opens_at=clock_timestamp()-interval '31 minutes', closes_at=clock_timestamp()-interval '26 minutes'
     where run_id=${q(run)} and revision=1`);
   await assert.rejects(
     () => action(secondLearner, "submit", 1, 0, { answers }),
@@ -235,7 +282,8 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
     /42501/,
   );
   assert.deepEqual((await read(teacher, 1)).submissions[0].import_draft, {
-    revision: 0, points: null,
+    revision: 0,
+    points: null,
   });
   await assert.rejects(
     () => importReview(learner, [candidate(learner, 0, [5, 2])]),
@@ -251,7 +299,11 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   );
   // The valid row runs first. The later duplicate aborts the whole transaction.
   await assert.rejects(
-    () => importReview(teacher, [candidate(learner, 0, [3, 2]), candidate(learner, 0, [5, 2])]),
+    () =>
+      importReview(teacher, [
+        candidate(learner, 0, [3, 2]),
+        candidate(learner, 0, [5, 2]),
+      ]),
     /22023/,
   );
   assert.equal((await read(teacher, 1, q(learner))).review, null);
@@ -261,13 +313,19 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   );
   assert.equal(await importReview(teacher, [candidate(learner, 0, [3, 2])]), 1);
   assert.equal((await read(teacher, 1, q(learner))).review.score, 5);
-  assert.equal(await action(teacher, "save_review", 1, 1, { ...score, points: [3, 2] }), 2);
+  assert.equal(
+    await action(teacher, "save_review", 1, 1, { ...score, points: [3, 2] }),
+    2,
+  );
   await assert.rejects(
     () => importReview(teacher, [candidate(learner, 1, [5, 2])]),
     /PT409/,
   );
   assert.equal(await importReview(teacher, [candidate(learner, 2, [5, 2])]), 1);
-  assert.equal((await read(teacher, 1, q(learner))).review.feedback, score.feedback);
+  assert.equal(
+    (await read(teacher, 1, q(learner))).review.feedback,
+    score.feedback,
+  );
   assert.equal((await read(learner)).review, null);
   const xapi = async () =>
     courseXapiArchiveSchema
@@ -287,8 +345,10 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
         `select to_jsonb(private.course_weighted_source(${q(run)},${q(learner)},'text_exam'))`,
       )) || "null",
     );
-  const gradeNotices = async (who) => (await rpc(who, "notification_inbox")).items
-    .filter(({ kind }) => kind === "course_text_exam_graded");
+  const gradeNotices = async (who) =>
+    (await rpc(who, "notification_inbox")).items.filter(
+      ({ kind }) => kind === "course_text_exam_graded",
+    );
   assert.deepEqual(await xapi(), []);
   assert.equal(await weightedEvidence(), null);
   assert.deepEqual(await gradeNotices(learner), []);
@@ -329,7 +389,10 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   assert.equal((await read(learner)).review.passed, false);
   assert.equal((await weightedEvidence()).score, 50);
   const correctedNotices = await gradeNotices(learner);
-  assert.deepEqual(correctedNotices.map(({id}) => id), [receipt.id]);
+  assert.deepEqual(
+    correctedNotices.map(({ id }) => id),
+    [receipt.id],
+  );
   const scored = await xapi();
   assert.deepEqual(
     scored.map((entry) => entry.result.score.raw),
@@ -352,14 +415,20 @@ await withTestDatabase("course_text_exams", async ({ sql, actor }) => {
   assert.equal(await action(learner, "submit", 2, 0, { answers }), 1);
   await sql(`update private.course_text_exam_versions set closes_at=clock_timestamp()-interval '1 second'
     where run_id=${q(run)} and revision=2`);
-  assert.equal(await importReview(teacher, [candidate(learner, 0, [5, 4])], 2), 1);
+  assert.equal(
+    await importReview(teacher, [candidate(learner, 0, [5, 4])], 2),
+    1,
+  );
   assert.equal((await read(teacher, 2, q(learner))).review.can_release, false);
   await assert.rejects(
     () => action(teacher, "release", 2, 1, { learner_id: learner }),
     /42501/,
   );
   assert.equal((await read(learner, 2)).review, null);
-  assert.equal(await action(otherTeacher, "release", 2, 1, { learner_id: learner }), 1);
+  assert.equal(
+    await action(otherTeacher, "release", 2, 1, { learner_id: learner }),
+    1,
+  );
   assert.equal((await read(learner, 2)).review.score, 9);
 
   await actor(
