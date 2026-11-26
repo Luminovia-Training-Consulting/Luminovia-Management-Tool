@@ -109,7 +109,7 @@ function allows(condition, github, inputs = {}, needs = {}) {
     const remaining = expression
         .replace(/'[^']*'/g, "")
         .replace(
-            /\b(?:github\.(?:event_name|ref|sha)|inputs\.(?:publish_release|expected_commit)|needs\.scope\.outputs\.profile)\b/g,
+            /\b(?:github\.(?:event_name|ref|sha|repository|event\.workflow_run\.(?:event|head_branch|head_repository\.full_name|conclusion|head_sha))|inputs\.(?:publish_release|expected_commit)|needs\.scope\.outputs\.profile)\b/g,
             "",
         )
         .replace(/\b(?:true|false)\b/g, "")
@@ -306,6 +306,7 @@ test("only an explicitly requested exact-main release passes the delivery gate",
     ]);
     const sha = "a".repeat(40);
     const github = {
+        repository: "Luminovia-Training-Consulting/Luminovia-Management-Tool",
         event_name: "workflow_dispatch",
         ref: "refs/heads/main",
         sha,
@@ -381,15 +382,26 @@ test("release shell preflight independently rejects missing or mismatched revisi
     }
 });
 
-test("automatic CMS publication follows current main without consulting CI results", () => {
+test("automatic CMS publication only consumes trusted exact-main push completions", () => {
     const automatic = workflow("automatic-cms-release");
-    assert.deepEqual(automatic.on.push.branches, ["main"]);
+    assert.deepEqual(automatic.on, {workflow_run: {
+        workflows: ["Portal checks", "Security analysis"],
+        branches: ["main"],
+        types: ["completed"],
+    }});
     const job = automatic.jobs.publish;
-    assert.match(job.if, /github\.event_name == 'push'/);
-    assert.match(job.if, /github\.ref == 'refs\/heads\/main'/);
-    assert.doesNotMatch(job.if, /workflow_run|conclusion|success/);
-    assert.equal(job.permissions.contents, "write");
-    assert.equal(job.permissions.actions, undefined);
+    const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+    const sha = "a".repeat(40);
+    const run = {event: "push", head_branch: "main", head_repository: {full_name: repository}, conclusion: "success", head_sha: sha};
+    const github = {repository, ref: "refs/heads/main", sha, event_name: "workflow_run", event: {workflow_run: run}};
+    assert.equal(allows(job.if, github), true);
+    for (const change of [{event: "pull_request"}, {event: "workflow_dispatch"}, {head_branch: "topic"},
+        {head_repository: {full_name: "fictional/fork"}}, {conclusion: "failure"}, {head_sha: "b".repeat(40)}]) {
+        assert.equal(allows(job.if, {...github, event: {workflow_run: {...run, ...change}}}), false, JSON.stringify(change));
+    }
+    assert.equal(allows(job.if, {...github, event_name: "push"}), false);
+    assert.equal(allows(job.if, {...github, repository: "fictional/fork"}), false);
+    assert.deepEqual(job.permissions, {actions: "read", contents: "write", "pull-requests": "read"});
     assert.equal(
         job.concurrency.group,
         "cms-release-${{ github.sha }}",
@@ -398,102 +410,82 @@ test("automatic CMS publication follows current main without consulting CI resul
         workflow("ci").jobs["release-cms"].concurrency.group,
         "cms-release-${{ github.sha }}",
     );
-    const gate = job.steps[0];
+    const [checkout, gate] = job.steps;
     assert.equal(gate.id, "gate");
-    assert.match(job.steps[1].uses, /^actions\/checkout@/);
-    assert.equal(job.steps[1].if, "steps.gate.outputs.publish == 'true'");
-    assert.equal(job.steps[1].with.ref, "refs/heads/main");
-    assert.equal(job.steps[1].with["persist-credentials"], "false");
-    const source = job.steps[2];
-    assert.equal(source.id, "source");
-    assert.equal(source.if, job.steps[1].if);
-    for (const step of job.steps.slice(3))
-        assert.equal(step.if, "steps.source.outputs.verified == 'true'");
+    assert.match(checkout.uses, /^actions\/checkout@[a-f0-9]{40}$/);
+    assert.deepEqual(checkout.with, {ref: "${{ github.sha }}", "persist-credentials": "false"});
+    assert.match(gate.run, /test "\$\(git rev-parse HEAD\)" = "\$TARGET_SHA"\nif bash scripts\/verify-cms-release\.sh/);
+    for (const step of job.steps.slice(2))
+        assert.equal(step.if, "steps.gate.outputs.publish == 'true'");
+    assert.ok(job.steps.some((step) => step.run?.includes("npm run build")));
+    for (const publisher of [job, workflow("ci").jobs["release-cms"]]) {
+        assert.ok(publisher.steps.slice(0, -1).some((step) => step.run?.includes("bash scripts/verify-cms-release.sh")));
+        const publication = publisher.steps.at(-1).run;
+        assert.match(publication, /bash scripts\/verify-cms-release\.sh\nRELEASE_TAG="cms-dev-\$TARGET_SHA"/);
+        assert.match(publication, /bash scripts\/verify-cms-release\.sh\ngh release edit .*--draft=false/);
+        assert.match(publication, /existing draft requires operator inspection/);
+        assert.doesNotMatch(publication, /--clobber/);
+    }
+});
+
+test("release metadata gate requires exact merged PR and both current push suites", () => {
     const dir = mkdtempSync(join(tmpdir(), "cms-gate-"));
     try {
         const gh = join(dir, "gh");
-        writeFileSync(
-            gh,
-            '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; else exit 7; fi\n',
-        );
+        writeFileSync(gh, `#!/usr/bin/env bash
+set -eu
+case "$*" in
+  *"/branches/main"*)
+    if [[ -f "$FAKE_BRANCH_ACCESSED" ]]; then printf '%s\n' "$FAKE_MAIN_FINAL";
+    else touch "$FAKE_BRANCH_ACCESSED"; printf '%s\n' "$FAKE_MAIN"; fi ;;
+  *"/commits/$TARGET_SHA/pulls"*) printf '%s\n' "$FAKE_PULLS" ;;
+  *"/ci.yml/runs?branch=main&event=push&head_sha=$TARGET_SHA&"*) printf '%s\n' "$FAKE_CI" ;;
+  *"/security.yml/runs?branch=main&event=push&head_sha=$TARGET_SHA&"*) printf '%s\n' "$FAKE_SECURITY" ;;
+  *) exit 7 ;;
+esac
+`);
         chmodSync(gh, 0o700);
-        const git = join(dir, "git");
-        writeFileSync(git, '#!/usr/bin/env bash\ntest "$*" = "rev-parse HEAD" || exit 7\nprintf "%s\\n" "$FAKE_CHECKOUT"\n');
-        chmodSync(git, 0o700);
         const sha = "a".repeat(40);
-        const output = join(dir, "output");
-        for (const [changes, allowed] of [
-            [{}, true],
-            [{FAKE_MAIN: "b".repeat(40)}, false],
-        ]) {
-            writeFileSync(output, "");
-            const result = spawnSync(
-                "bash",
-                ["-e", "-u", "-o", "pipefail", "-c", gate.run],
-                {
-                    env: {
-                        PATH: `${dir}:${process.env.PATH}`,
-                        GH_REPO: "fictional/example",
-                        TARGET_SHA: sha,
-                        GITHUB_OUTPUT: output,
-                        FAKE_MAIN: sha,
-                        ...changes,
-                    },
-                    encoding: "utf8",
-                    timeout: 1000,
-                },
-            );
-            assert.ifError(result.error);
-            assert.equal(result.status, 0, result.stderr);
-            assert.equal(
-                readFileSync(output, "utf8").trim(),
-                `publish=${allowed}`,
-                JSON.stringify(changes),
-            );
-        }
-        for (const checkout of [sha, "b".repeat(40)]) {
-            writeFileSync(output, "");
-            const result = spawnSync("bash", ["-e", "-c", source.run], {
-                env: {
-                    PATH: `${dir}:${process.env.PATH}`,
-                    TARGET_SHA: sha,
-                    GITHUB_OUTPUT: output,
-                    FAKE_CHECKOUT: checkout,
-                },
+        const otherSha = "b".repeat(40);
+        const repo = {full_name: "Luminovia-Training-Consulting/Luminovia-Management-Tool"};
+        const pr = {base: {ref: "main", repo}, state: "closed", merged_at: "2026-11-26T03:00:00Z", merge_commit_sha: sha};
+        const ci = {id: 1, created_at: "2026-11-26T03:00:00Z", head_sha: sha, head_branch: "main",
+            event: "push", path: ".github/workflows/ci.yml", repository: repo, head_repository: repo,
+            status: "completed", conclusion: "success"};
+        const runs = (...workflow_runs) => JSON.stringify({workflow_runs});
+        const security = {...ci, path: ".github/workflows/security.yml"};
+        const cases = [
+            ["two exact green push runs and merged PR", {}, 0],
+            ["stale target", {FAKE_MAIN: otherSha}, 3],
+            ["main advances during check", {FAKE_MAIN_FINAL: otherSha}, 3],
+            ["missing PR", {FAKE_PULLS: "[[]]"}, 3],
+            ["open PR", {FAKE_PULLS: JSON.stringify([[{...pr, state: "open", merged_at: null}]])}, 3],
+            ["different merged commit", {FAKE_PULLS: JSON.stringify([[{...pr, merge_commit_sha: otherSha}]])}, 3],
+            ["missing application suite", {FAKE_CI: runs()}, 3],
+            ["wrong SHA on security suite", {FAKE_SECURITY: runs({...security, head_sha: otherSha})}, 3],
+            ["manual security run", {FAKE_SECURITY: runs({...security, event: "workflow_dispatch"})}, 3],
+            ["wrong workflow path", {FAKE_SECURITY: runs(ci)}, 3],
+            ["fork workflow run", {FAKE_SECURITY: runs({...security, head_repository: {full_name: "fictional/fork"}})}, 3],
+            ["pending security suite", {FAKE_SECURITY: runs({...security, status: "in_progress", conclusion: null})}, 3],
+            ["cancelled application suite", {FAKE_CI: runs({...ci, conclusion: "cancelled"})}, 3],
+            ["newer failed run wins", {FAKE_CI: runs({...ci, id: 2, conclusion: "failure"}, ci)}, 3],
+            ["malformed input", {TARGET_SHA: "invalid"}, 1],
+            ["malformed response", {FAKE_SECURITY: "not json"}, 1],
+        ];
+        for (const [label, overrides, status] of cases) {
+            const marker = join(dir, "branch-accessed");
+            rmSync(marker, {force: true});
+            const result = spawnSync("bash", ["scripts/verify-cms-release.sh"], {
+                cwd: new URL("../", import.meta.url),
+                env: {PATH: `${dir}:${process.env.PATH}`, GH_REPO: repo.full_name, TARGET_SHA: sha,
+                    FAKE_BRANCH_ACCESSED: marker, FAKE_MAIN: sha, FAKE_MAIN_FINAL: sha,
+                    FAKE_PULLS: JSON.stringify([[pr]]), FAKE_CI: runs(ci), FAKE_SECURITY: runs(security), ...overrides},
                 encoding: "utf8",
-                timeout: 1000,
+                timeout: 3000,
             });
             assert.ifError(result.error);
-            assert.equal(result.status, 0, result.stderr);
-            assert.equal(readFileSync(output, "utf8"), checkout === sha ? "verified=true\n" : "");
+            assert.equal(result.status, status, `${label}: ${result.stderr}`);
         }
-        const rejected = spawnSync(
-            "bash",
-            ["-e", "-u", "-o", "pipefail", "-c", gate.run],
-            {
-                env: {
-                    PATH: `${dir}:${process.env.PATH}`,
-                    GH_REPO: "fictional/example",
-                    TARGET_SHA: "bad",
-                    GITHUB_OUTPUT: output,
-                    FAKE_MAIN: sha,
-                },
-                encoding: "utf8",
-                timeout: 1000,
-            },
-        );
-        assert.notEqual(rejected.status, 0);
-        const publication = job.steps.at(-1);
-        assert.match(publication.run, /branches\/main/);
-        assert.match(publication.run, /test .*TARGET_SHA/);
-        assert.match(publication.run, /cms-dev-\$TARGET_SHA/);
-        assert.match(publication.run, /--draft=false/);
-        assert.match(
-            publication.run,
-            /existing draft requires operator inspection/,
-        );
-        assert.doesNotMatch(publication.run, /--clobber/);
-        assert.ok(job.steps.some((step) => step.run?.includes("npm run build")));
     } finally {
         rmSync(dir, {recursive: true, force: true});
     }

@@ -1,6 +1,6 @@
 # Scope only reduces verified Draft UI/docs work. Ready PRs, backend/auth/delivery
 # changes and all main/manual runs retain complete acceptance; uncertain is full.
-# Every release still requires explicit exact-main approval and complete gates.
+# Development publication separately requires a merged PR and exact-main gates.
 name: Portal checks
 on:
   push:
@@ -397,11 +397,13 @@ jobs:
       group: cms-release-${{ github.sha }}
       cancel-in-progress: false
     needs: [quality, coverage, verify, verify-selfhost, verify-browser]
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
+    if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      actions: read
       contents: write
+      pull-requests: read
     steps:
       - name: Confirm explicit exact-revision publication request
         env:
@@ -416,6 +418,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Require current main, merged PR and successful push suites
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          bash scripts/verify-cms-release.sh
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".node-version"
@@ -435,16 +446,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
+          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          RELEASE_TAG="cms-dev-$GITHUB_SHA"
+          bash scripts/verify-cms-release.sh
+          RELEASE_TAG="cms-dev-$TARGET_SHA"
           if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/cms-existing-release.json" 2>/dev/null; then
             if test "$(jq -r .isDraft "$RUNNER_TEMP/cms-existing-release.json")" = false; then
               echo "The immutable release is already published."
               exit 0
             fi
+            echo 'An existing draft requires operator inspection; it will not be overwritten.' >&2
+            exit 1
           else
-            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --prerelease --title "CMS development $GITHUB_SHA" --notes "Explicitly published from this successfully verified main commit."
+            gh release create "$RELEASE_TAG" --target "$TARGET_SHA" --draft --prerelease --title "CMS development $TARGET_SHA" --notes "Explicitly published after successful application and security checks for this exact main commit."
           fi
-          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json" --clobber
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json"
+          bash scripts/verify-cms-release.sh
           gh release edit "$RELEASE_TAG" --draft=false
