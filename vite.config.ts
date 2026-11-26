@@ -329,6 +329,7 @@ export default defineConfig(({ mode }) => {
             // Packet review and conversion are loaded when explicitly used.
             "**/scorm-package-*.js",
             "**/scorm-package-review-*.js",
+            "**/scorm-package-i18n-*.js",
             "**/course-scorm-player-*.js",
             "**/scorm-course-api-*.js",
             "**/scorm-static-package-*.js",
@@ -338,6 +339,7 @@ export default defineConfig(({ mode }) => {
             "**/course-package-archive-*.js",
             "**/course-assignment-teams-*.js",
             "**/course-assignments-*.js",
+            "**/course-assignments-i18n-*.js",
             "**/course-curriculum-catalogue-*.js",
             "**/curriculum-merge-*.js",
             "**/competencies-*.js",

@@ -1,10 +1,6 @@
-import i18n from "../../lib/i18n";
-import { scormReviewTexts } from "./scorm-package-i18n";
-import assignmentTexts from "./course-assignments-i18n";
+import { registerLearningTranslations } from "./register-learning-translations";
 
 const pairs: Record<string, [string, string]> = {
-  ...scormReviewTexts,
-  ...assignmentTexts,
   submissions: ["Dateiabgaben", "File submissions"],
   submissionOnline: [
     "Dateiabgaben sind online verfügbar.",
@@ -1588,16 +1584,4 @@ const pairs: Record<string, [string, string]> = {
     "View request in company portal",
   ],
 };
-for (const [language, index] of [
-  ["de", 0],
-  ["en", 1],
-] as const)
-  i18n.addResourceBundle(
-    language,
-    "learning",
-    Object.fromEntries(
-      Object.entries(pairs).map(([key, value]) => [key, value[index]]),
-    ),
-    true,
-    true,
-  );
+registerLearningTranslations(pairs);

@@ -1,4 +1,5 @@
 /** Send an exact archived SCO to an isolated origin without transferring a portal credential. */
+import "./scorm-package-i18n";
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

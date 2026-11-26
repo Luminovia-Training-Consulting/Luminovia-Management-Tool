@@ -24,7 +24,12 @@ const featureFixtureOperations = new Map([
   ],
   [
     "learning-program-db-tests.mjs",
-    ["set_learning_program_prerequisite", "learning_program_grade_report"],
+    [
+      "set_learning_program_prerequisite",
+      "learning_program_grade_report",
+      "set_learning_program_path_exception",
+      "learning_program_cohort_grades",
+    ],
   ],
   [
     "academy-course-document-db-tests.mjs",
@@ -45,6 +50,7 @@ const featureFixtureOperations = new Map([
     "course-workspace-db-tests.mjs",
     [
       "course_material_metadata_history",
+      "course_material_usage",
       "course_material_reuse_targets",
       "reuse_course_material",
       "course_lti_tools",
@@ -55,11 +61,16 @@ const featureFixtureOperations = new Map([
       "configure_course_lti_ags",
       "course_lti_ags_grades",
       "course_xapi_statements",
+      "course_xapi_delivery_monitor",
+      "report_course_xapi_delivery",
     ],
   ],
   ["course-submissions-db-tests.mjs", ["set_course_exam_extra_time"]],
   ["academy-course-quiz-pool-db-tests.mjs", ["start_course_quiz_pool"]],
-  ["academy-course-h5p-import-db-tests.mjs", ["course_h5p_question_import", "course_h5p_collection_import"]],
+  [
+    "academy-course-h5p-import-db-tests.mjs",
+    ["course_h5p_question_import", "course_h5p_collection_import"],
+  ],
   [
     "academy-question-bank-db-tests.mjs",
     [
@@ -92,7 +103,15 @@ const featureFixtureOperations = new Map([
   ],
   [
     "academy-course-text-exam-db-tests.mjs",
-    ["course_text_exam", "course_text_exam_action"],
+    [
+      "course_text_exam",
+      "course_text_exam_action",
+      "course_text_exam_grade_export",
+    ],
+  ],
+  [
+    "course-h5p-playback-db-tests.mjs",
+    ["course_h5p_packages", "course_h5p_action"],
   ],
   ["course-curriculum-catalogue-db-tests.mjs", ["course_curriculum_catalogue"]],
 ]);

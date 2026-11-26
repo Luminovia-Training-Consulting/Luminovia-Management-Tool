@@ -1,3 +1,4 @@
+import "./course-assignments-i18n";
 import { useId, useState, type ComponentType, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { DateTime } from "luxon";

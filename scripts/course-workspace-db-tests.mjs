@@ -324,6 +324,13 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(reused, retried);
             assert.notEqual(reused, resource);
             assert.equal((await workspace(learner, current)).resources[0].version_id, versionId);
+            const usage = (who, after = "null") => rpc(who, "course_material_usage", [q(resource), after]);
+            const useReport = await usage(admin);
+            assert.deepEqual(new Set(useReport.items.map(({id}) => id)), new Set([run, current]));
+            assert.equal(useReport.next, null);
+            assert.deepEqual(await usage(admin, q(useReport.items.at(-1).id)), {items: [], next: null});
+            for (const who of [learner, client, foreign]) await assert.rejects(usage(who), /42501/);
+
             assert.equal((await materialSearch(admin, current))[0].metadata.description, metadata.description);
             assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, true]]);
             await revise(admin, 1, { ...metadata, title: "Destination-only title" }, reused);
@@ -725,6 +732,22 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 await assert.rejects(xapi(who), /42501/);
             }
             await assert.rejects(xapi(admin, "2020-01-01T00:00:00Z", "2026-01-01T00:00:00Z"), /22023/);
+            const monitor = (who) => rpc(who, "course_xapi_delivery_monitor", [q(run)]);
+            const report = (who, through, failure = "null") =>
+                rpc(who, "report_course_xapi_delivery", [q(run), q(through), "2", "1", failure]);
+            assert.equal(await monitor(admin), null);
+            for (const who of [learner, teacher, client, foreign]) {
+                await assert.rejects(monitor(who), /42501/);
+                await assert.rejects(report(who, "2026-11-26T12:00:00Z"), /42501/);
+            }
+            assert.equal(await report(admin, "2026-11-26T12:00:00Z", q("delivery")), true);
+            assert.equal((await monitor(admin)).failure, "delivery");
+            assert.equal(await report(admin, "2026-11-26T12:05:00Z"), true);
+            const delivered = await monitor(admin);
+            assert.equal(delivered.failure, null);
+            assert.equal(delivered.retries, 1);
+            assert.equal(await report(admin, "2026-11-26T12:00:00Z", q("delivery")), true);
+            assert.deepEqual(await monitor(admin), delivered);
             const archive = courseXapiArchiveSchema.parse(await xapi(admin));
             assert.deepEqual(await xapi(admin), archive);
             const completedStatement = archive.statements.find((entry) => entry.verb.id.endsWith("/completed"));

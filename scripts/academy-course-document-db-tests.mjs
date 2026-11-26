@@ -723,7 +723,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "select public.notification_inbox()").then(JSON.parse).then(({items}) =>
       items.filter(({kind}) => kind === "course_weighted_grade_released"));
     const weightedPolicy = {threshold:80,missing_required:"block",separate_reviewer:false,
+      categories: [
+        {id: randomUUID(), label: "Programme marks"},
+        {id: randomUUID(), label: "Assessment"},
+      ],
       items:[{key:"quiz",weight:100,treatment:"required"}]};
+    weightedPolicy.categories[1].parent_id = weightedPolicy.categories[0].id;
+    weightedPolicy.items[0].category_id = weightedPolicy.categories[1].id;
+    await assert.rejects(weightedWrite(teacher, "policy", 0, {
+      ...weightedPolicy, categories: weightedPolicy.categories.toReversed(),
+    }), /22023/);
     await assert.rejects(weightedWrite(learner,"policy",0,weightedPolicy), /42501/);
     await weightedWrite(teacher,"policy",0,weightedPolicy);
     const weightedPreview = await weighted(teacher,learner);
@@ -735,6 +744,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await weightedWrite(teacher,"release",1,{...weightedLearner,expected_review:1});
     const weightedReleased = await weighted(learner);
     assert.equal(weightedReleased.history[0].result.percent,90);
+    assert.deepEqual(weightedReleased.history[0].result.categories, weightedPolicy.categories);
+    assert.equal(weightedReleased.history[0].result.components[0].category_id, weightedPolicy.categories[1].id);
     const releasedReceipt = await gradeInbox(learner);
     assert.equal(releasedReceipt.length, 1);
     assert.equal(releasedReceipt[0].href, `/courses/${run}/workspace#course-weighted-gradebook`);

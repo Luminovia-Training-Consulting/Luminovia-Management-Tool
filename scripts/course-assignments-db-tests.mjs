@@ -300,6 +300,16 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     title: "Lab team",
     member_ids: [learner, peer],
     due_at: extended,
+    max_attempts: 1,
+    rubric: [
+      {
+        label: "Independent team rubric",
+        levels: [
+          { label: "Missing", points: 0 },
+          { label: "Complete", points: 12 },
+        ],
+      },
+    ],
   };
   const teamAction = (id, command, input, version) =>
     action(id, command, input, version, teamAssignment);
@@ -374,7 +384,22 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     attempt_id: submitted.id,
     state: "revision_requested",
   };
-  await teamAction(admin, "review", teamReview, 0);
+  assert.deepEqual((await teamView(peer)).attempts[0].rubric, team.rubric);
+  await assert.rejects(teamAction(admin, "review", teamReview, 0), /22023/);
+  await teamAction(admin, "review", { ...teamReview, scores: [12] }, 0);
+  assert.equal((await teamView(peer)).can_submit, false);
+  await assert.rejects(
+    teamAction(peer, "submit", { file_version_id: otherFile.version_id }, 1),
+    /42501/,
+  );
+  await teamAction(
+    admin,
+    "save_team",
+    { ...team, max_attempts: 2, rubric: null },
+    1,
+  );
+  assert.equal((await teamView(peer)).can_submit, true);
+  assert.deepEqual((await teamView(peer)).attempts[0].rubric, team.rubric);
   const revised = await teamAction(
     peer,
     "submit",

@@ -1,3 +1,5 @@
+import { registerLearningTranslations } from "./register-learning-translations";
+
 /** Bilingual assignment authoring, deadline, submission, and feedback labels. */
 const assignmentTexts = {
   assignmentsTitle: ["Kursaufgaben", "Course assignments"],
@@ -144,4 +146,4 @@ const assignmentTexts = {
   ],
 } satisfies Record<string, [string, string]>;
 
-export default assignmentTexts;
+registerLearningTranslations(assignmentTexts);

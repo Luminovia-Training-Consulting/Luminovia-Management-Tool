@@ -1,4 +1,5 @@
 /** Course assignment drafts, scanned attempts and scoped assessment on the workspace. */
+import "./course-assignments-i18n";
 import { lazy, Suspense, useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

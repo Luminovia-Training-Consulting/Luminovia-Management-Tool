@@ -1,4 +1,5 @@
 /** Learner or staff projection of verified, script-free course packages. */
+import "./scorm-package-i18n";
 import { lazy, Suspense, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

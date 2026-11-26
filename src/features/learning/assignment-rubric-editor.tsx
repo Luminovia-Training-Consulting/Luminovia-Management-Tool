@@ -1,4 +1,5 @@
 /** Shared rubric editor for assignment definitions and team overrides. */
+import "./course-assignments-i18n";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import type { AssignmentDefinition } from "./course-assignment-schema";

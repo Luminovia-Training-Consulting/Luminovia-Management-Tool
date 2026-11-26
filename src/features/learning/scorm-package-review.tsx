@@ -1,4 +1,5 @@
 /** Inspect a selected SCORM archive in memory without exposing its contents as HTML or URLs. */
+import "./scorm-package-i18n";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

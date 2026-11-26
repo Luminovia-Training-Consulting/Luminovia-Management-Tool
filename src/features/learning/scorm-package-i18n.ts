@@ -1,5 +1,7 @@
+import { registerLearningTranslations } from "./register-learning-translations";
+
 /** Bilingual strings for the SCORM package review, publishing and playback. */
-export const scormReviewTexts = {
+const scormReviewTexts: Record<string, [string, string]> = {
   scormReviewTitle: ["SCORM-1.2-Paketprüfung", "SCORM 1.2 package review"],
   scormReviewHint: [
     "Die Prüfung liest das Archiv lokal im Browser. Sie zeigt die Kursstruktur und den SHA-256-Fingerabdruck der geprüften ZIP-Datei. Erst die Veröffentlichung startet Upload und Dateiprüfung.",
@@ -119,3 +121,5 @@ export const scormReviewTexts = {
     "At least one resource referenced by the manifest is missing from the ZIP.",
   ],
 } satisfies Record<string, [string, string]>;
+
+registerLearningTranslations(scormReviewTexts);

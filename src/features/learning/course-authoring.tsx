@@ -1081,7 +1081,7 @@ export function CourseAuthoring({
                   />
                 </Field>
                 <KnowledgeEditor
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":editor"}
                   value={activeLesson.body}
                   onChange={(body) => reviseLesson({ body })}
                   label={t("lessonContent")}
@@ -1192,13 +1192,13 @@ export function CourseAuthoring({
                   </Button>
                 </div>
                 <LessonMaterials
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":materials"}
                   selected={activeLesson.material_ids ?? []}
                   materials={materials}
                   onChange={(material_ids) => reviseLesson({ material_ids })}
                 />
                 <LessonDestination
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":destination"}
                   modules={curriculum.modules}
                   sourceId={activeModule.id}
                   onMove={(destination) => {
