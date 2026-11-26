@@ -17,6 +17,20 @@ export function createConfiguration(options) {
     const api = checkedUrl(options.apiOrigin, false);
     const dataDirectory = options.dataDirectory;
     const network = options.network ?? "luminovia-portal-backend";
+    const authenticatorEnabled = options.enableAuthenticator ?? false;
+    const authenticatorSecurityNoticesEnabled =
+        options.enableAuthenticatorSecurityNotices ?? false;
+    if (
+        typeof authenticatorEnabled !== "boolean" ||
+        typeof authenticatorSecurityNoticesEnabled !== "boolean"
+    ) {
+        throw new Error("Authenticator options must be boolean values.");
+    }
+    if (authenticatorSecurityNoticesEnabled && !authenticatorEnabled) {
+        throw new Error(
+            "Authenticator security notices require authenticator transport.",
+        );
+    }
     if (
         !isAbsolute(dataDirectory ?? "") ||
         !/^\/[A-Za-z0-9/_-]+$/.test(dataDirectory)
@@ -99,8 +113,10 @@ export function createConfiguration(options) {
         PORTAL_BACKEND_NETWORK: network,
         PORTAL_DATA_DIR: dataDirectory,
         PORTAL_INVITES_ENABLED: "true",
-        PORTAL_TOTP_ENABLED: "false",
-        PORTAL_TOTP_SECURITY_MAIL_ENABLED: "false",
+        PORTAL_TOTP_ENABLED: String(authenticatorEnabled),
+        PORTAL_TOTP_SECURITY_MAIL_ENABLED: String(
+            authenticatorSecurityNoticesEnabled,
+        ),
         // Provision no intake credential implicitly; public Website activation is separate.
         PORTAL_WEBSITE_ENQUIRIES_ENABLED: "false",
         PORTAL_WEBSITE_ORIGIN: "",
@@ -251,23 +267,34 @@ if (
         const args = process.argv.slice(2);
         if (args.length === 1 && args[0] === "--help") {
             console.log(
-                "Usage: node generate-env.mjs --output PRIVATE_FILE --portal-origin HTTPS_ORIGIN --api-origin HTTPS_API_BASE --data-dir ABSOLUTE_DATA_DIR [--network DOCKER_NETWORK]",
+                "Usage: node generate-env.mjs --output PRIVATE_FILE --portal-origin HTTPS_ORIGIN --api-origin HTTPS_API_BASE --data-dir ABSOLUTE_DATA_DIR [--network DOCKER_NETWORK] [--enable-authenticator] [--enable-authenticator-security-notices]",
             );
         } else {
-            if (args.length % 2)
-                throw new Error("Arguments require explicit values.");
             const parsed = {};
-            const allowed = new Set([
+            const valueOptions = new Set([
                 "--output",
                 "--portal-origin",
                 "--api-origin",
                 "--data-dir",
                 "--network",
             ]);
-            for (let index = 0; index < args.length; index += 2) {
-                if (!allowed.has(args[index]) || parsed[args[index]])
+            const booleanOptions = new Set([
+                "--enable-authenticator",
+                "--enable-authenticator-security-notices",
+            ]);
+            for (let index = 0; index < args.length;) {
+                const argument = args[index];
+                if (Object.hasOwn(parsed, argument))
                     throw new Error("Unknown or repeated argument.");
-                parsed[args[index]] = args[index + 1];
+                if (booleanOptions.has(argument)) {
+                    parsed[argument] = true;
+                    index++;
+                    continue;
+                }
+                if (!valueOptions.has(argument) || index + 1 >= args.length)
+                    throw new Error("Unknown argument or missing value.");
+                parsed[argument] = args[index + 1];
+                index += 2;
             }
             if (!parsed["--output"])
                 throw new Error("A private output filename is required.");
@@ -276,6 +303,9 @@ if (
                 apiOrigin: parsed["--api-origin"],
                 dataDirectory: parsed["--data-dir"],
                 network: parsed["--network"],
+                enableAuthenticator: parsed["--enable-authenticator"] ?? false,
+                enableAuthenticatorSecurityNotices:
+                    parsed["--enable-authenticator-security-notices"] ?? false,
             });
             const paths = writeConfiguration(parsed["--output"], configuration);
             console.log(
