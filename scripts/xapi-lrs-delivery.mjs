@@ -8,10 +8,9 @@ import { courseXapiArchiveSchema } from "../src/features/learning/xapi-schema.ts
 const retryable = new Set([408, 429, 500, 502, 503, 504]);
 const maxBytes = 4 * 1024 * 1024;
 
-/** Deliver stable IDs sequentially. A retry sends the same body and never follows redirects. */
-export async function deliverXapiArchive(archive, configuration) {
-  const { statements, xapi_version } = courseXapiArchiveSchema.parse(archive);
-  const target = new URL(configuration.endpoint);
+/** Validate an operator-supplied xAPI service URL before sending credentials. */
+export function xapiServiceUrl(value) {
+  const target = new URL(value);
   if (
     target.username ||
     target.password ||
@@ -23,8 +22,15 @@ export async function deliverXapiArchive(archive, configuration) {
         ["127.0.0.1", "[::1]", "localhost"].includes(target.hostname)
       ))
   ) {
-    throw new Error("The LRS endpoint must use HTTPS, or HTTP on loopback");
+    throw new Error("The service URL must use HTTPS, or HTTP on loopback");
   }
+  return target;
+}
+
+/** Deliver stable IDs sequentially. A retry sends the same body and never follows redirects. */
+export async function deliverXapiArchive(archive, configuration) {
+  const { statements, xapi_version } = courseXapiArchiveSchema.parse(archive);
+  const target = xapiServiceUrl(configuration.endpoint);
   if (
     !configuration.username ||
     configuration.username.includes(":") ||

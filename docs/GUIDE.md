@@ -363,6 +363,14 @@ Course managers can open **Lernaktivitäten / Learning activities** and download
 
 An operator with an authorised xAPI 1.0.3 Learning Record Store can submit an exported file with `node scripts/xapi-lrs-delivery.mjs <archive.json>`. Configure `LMS_XAPI_LRS_ENDPOINT`, `LMS_XAPI_LRS_USERNAME` and `LMS_XAPI_LRS_PASSWORD` in the operator environment. The command uses HTTPS for remote services and reports confirmed writes, retries and pending statements. Repeating the same archive preserves statement IDs. This workflow uses the [ADL statement data model](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Data.md) and [statement transport](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Communication.md).
 
+To schedule delivery, configure `LMS_XAPI_PORTAL_URL`, `LMS_XAPI_PORTAL_PUBLISHABLE_KEY`, `LMS_XAPI_PORTAL_EMAIL` and `LMS_XAPI_PORTAL_PASSWORD` in the operator's private service environment alongside the LRS credentials. Use a portal account with current management access to the selected courses. The portal URL is the installation's Supabase API base, including `/backend` on the supplied ingress. The private configuration lists each course ID and its earliest permitted export timestamp.
+
+```json
+{"courses":[{"id":"0af5df12-b77d-4ad4-bdea-7d53193756ab","from":"2026-11-01T00:00:00Z"}]}
+```
+
+Run `node scripts/xapi-lrs-dispatch.mjs <courses.json> <checkpoint.json>` as a recurring job with one process per checkpoint. On Linux, the scheduler can use `flock -n` with a private lock file. The worker advances a course checkpoint after the LRS acknowledges its entire window, retries a partially delivered window with the original statement IDs, rechecks current management access and subdivides exports that exceed the statement limit. Each run reports confirmed writes, retries, the checkpoint and a failure code per course. The worker allows a short delay and a one-hour overlap for late commits. Older corrections may require an explicit bounded export. Keep the checkpoint on persistent storage accessible to the operator account.
+
 ### Review a SCORM 1.2 package
 
 Course staff can open **Materialien → SCORM-1.2-Paketprüfung / Materials → SCORM 1.2 package review**. Choose the ZIP produced by the authoring tool and review its file checksums, default organisation and local HTML entry points. Copy the displayed SHA-256 to record the exact ZIP you reviewed.
