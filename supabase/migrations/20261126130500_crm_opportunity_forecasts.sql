@@ -4,7 +4,9 @@ alter table public.crm_opportunities
   add column close_probability numeric(5, 2),
   add column expected_close_date date,
   add constraint crm_opportunities_close_probability_range
-    check (close_probability is null or close_probability between 0 and 100);
+    check (close_probability is null or close_probability between 0 and 100),
+  add constraint crm_opportunities_expected_close_date_range
+    check (expected_close_date between date '0001-01-01' and date '9999-12-31');
 
 alter table public.crm_opportunity_events
   add column from_close_probability numeric(5, 2),
@@ -67,6 +69,7 @@ begin
   end if;
   if p_organisation_id is null or p_opportunity_id is null or p_request_id is null
      or p_expected_version is null or p_expected_version < 1
+     or (p_expected_close_date not between date '0001-01-01' and date '9999-12-31')
      or (p_close_probability is not null and (
        p_close_probability < 0 or p_close_probability > 100
        or p_close_probability <> round(p_close_probability, 2)
@@ -92,7 +95,7 @@ begin
     if v_event.opportunity_id = p_opportunity_id
        and v_event.organisation_id = p_organisation_id
        and v_event.event_type = 'forecast_updated'
-       and v_event.version = p_expected_version + 1
+       and v_event.version - 1 = p_expected_version
        and v_event.to_close_probability is not distinct from p_close_probability
        and v_event.to_expected_close_date is not distinct from p_expected_close_date then
       return;

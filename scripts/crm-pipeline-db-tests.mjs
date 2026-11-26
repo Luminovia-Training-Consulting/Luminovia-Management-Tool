@@ -15,11 +15,8 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     insert into auth.users(id,email,email_confirmed_at) values
       (${q(manager)},${q(`${manager}@example.invalid`)},now()),
       (${q(companyMember)},${q(`${companyMember}@example.invalid`)},now());
-    update public.profiles set display_name = case id
-      when ${q(manager)} then 'Fictional CRM Manager'
-      when ${q(companyMember)} then 'Fictional Company Member'
-      else display_name end
-    where id in (${q(manager)},${q(companyMember)});
+    update public.profiles set display_name = 'Fictional CRM Manager' where id = ${q(manager)};
+    update public.profiles set display_name = 'Fictional Company Member' where id = ${q(companyMember)};
     insert into public.user_roles(user_id,role) values
       (${q(manager)},'management'),
       (${q(companyMember)},'client');
@@ -185,6 +182,14 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     2,
     forecastRequest,
   ];
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", [
+      foreignOrganisation,
+      ...forecastArgs.slice(1),
+    ]),
+    /P0002|CRM opportunity not found/,
+    "a forecast write binds the opportunity to the selected company",
+  );
   await call(manager, "update_crm_opportunity_forecast", forecastArgs);
   await call(manager, "update_crm_opportunity_forecast", forecastArgs);
   await assert.rejects(
@@ -240,6 +245,19 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
         opportunityId,
         invalidProbability,
         "2026-12-15",
+        3,
+        randomUUID(),
+      ]),
+      /22023|Invalid CRM opportunity forecast/,
+    );
+  }
+  for (const invalidDate of ["infinity", "10000-01-01", "0001-01-01 BC"]) {
+    await assert.rejects(
+      call(manager, "update_crm_opportunity_forecast", [
+        activeOrganisation,
+        opportunityId,
+        25,
+        invalidDate,
         3,
         randomUUID(),
       ]),
@@ -568,12 +586,10 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
   await sql(
     `update public.organisations set archived_at=clock_timestamp() where id=${q(activeOrganisation)}`,
   );
-  const archivedRows = await rows(manager, "list_crm_opportunities", [
-    activeOrganisation,
-    100,
-  ]);
   assert.equal(
-    archivedRows.find((row) => row.id === opportunityId)?.stage,
+    (
+      await rows(manager, "list_crm_opportunities", [activeOrganisation, 100])
+    ).find(({ id }) => id === opportunityId)?.stage,
     "contacted",
     "archiving retains read access to the organisation's sales history",
   );
@@ -626,6 +642,24 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
       ])
     ).length,
     5,
+  );
+
+  await sql(
+    `delete from public.user_roles where user_id=${q(manager)} and role='management'`,
+  );
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", forecastArgs),
+    /organisations.manage required/,
+    "a formerly authorised actor cannot replay a forecast after role revocation",
+  );
+  await assert.rejects(
+    rows(manager, "list_crm_opportunity_events", [
+      activeOrganisation,
+      opportunityId,
+      50,
+    ]),
+    /organisations.manage required/,
+    "role revocation also removes forecast history access",
   );
 });
 
