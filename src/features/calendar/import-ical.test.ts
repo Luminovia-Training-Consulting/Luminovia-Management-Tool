@@ -11,6 +11,72 @@ const file = (...events: string[]) =>
 const parse = (source: string, from = "2026-03-01", until = "2026-03-31") =>
   parseCalendarImport(source, "Europe/Berlin", from, until, "Termin");
 describe("reviewed ICS import", () => {
+  it("uses the same inclusive local dates for single and recurring starts", () => {
+    const events = parse(
+      file(
+        "UID:overlap\r\nDTSTART:20260328T225959Z\r\nDTEND:20260329T003000Z",
+        "UID:first\r\nDTSTART:20260328T230000Z\r\nDTEND:20260328T233000Z\r\nSUMMARY:Erster Einzeltermin",
+        "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260328T000000\r\nDTEND;TZID=Europe/Berlin:20260328T003000\r\nRRULE:FREQ=DAILY;COUNT=4\r\nSUMMARY:Serie",
+        "UID:last\r\nDTSTART:20260329T215959Z\r\nDTEND:20260329T230000Z\r\nSUMMARY:Letzter Einzeltermin",
+        "UID:next\r\nDTSTART:20260329T220000Z\r\nDTEND:20260329T223000Z",
+      ),
+      "2026-03-29",
+      "2026-03-29",
+    );
+    expect(events.map(({ title }) => title).sort()).toEqual([
+      "Erster Einzeltermin",
+      "Letzter Einzeltermin",
+      "Serie",
+    ]);
+    expect(events.map(({ starts_at }) => starts_at)).toEqual([
+      "2026-03-28T23:00:00.000Z",
+      "2026-03-28T23:00:00.000Z",
+      "2026-03-29T21:59:59.000Z",
+    ]);
+  });
+  it("reports an empty window when all single starts are outside it", () => {
+    expect(() =>
+      parse(
+        file(
+          "UID:outside\r\nDTSTART:20260401T090000Z\r\nDTEND:20260401T100000Z",
+        ),
+      ),
+    ).toThrow("empty_window");
+  });
+  it("skips cancelled singles, series and exceptions without a start", () => {
+    const events = parse(
+      file(
+        "UID:single\r\nSTATUS:CANCELLED",
+        "UID:cancelled-series\r\nRRULE:FREQ=DAILY\r\nSTATUS:CANCELLED",
+        "UID:series\r\nDTSTART:20260301T090000Z\r\nDTEND:20260301T100000Z\r\nRRULE:FREQ=DAILY\r\nSUMMARY:Serie",
+        "UID:series\r\nRECURRENCE-ID:20260302T090000Z\r\nSTATUS:CANCELLED",
+        "UID:series\r\nRECURRENCE-ID;RANGE=THISANDFUTURE:20260304T090000Z\r\nSTATUS:CANCELLED",
+        "UID:series\r\nRECURRENCE-ID:20260305T090000Z\r\nDTSTART:20260305T120000Z\r\nDTEND:20260305T130000Z\r\nSUMMARY:Ausnahme",
+      ),
+      "2026-03-01",
+      "2026-03-06",
+    );
+    expect(events.map(({ starts_at }) => starts_at)).toEqual([
+      "2026-03-01T09:00:00.000Z",
+      "2026-03-03T09:00:00.000Z",
+      "2026-03-05T12:00:00.000Z",
+    ]);
+  });
+  it("does not apply an exception to another series with the same start", () => {
+    const events = parse(
+      file(
+        "UID:first\r\nDTSTART:20260301T090000Z\r\nDTEND:20260301T100000Z\r\nRRULE:FREQ=DAILY;COUNT=2\r\nSUMMARY:Erste Serie",
+        "UID:second\r\nDTSTART:20260301T090000Z\r\nDTEND:20260301T100000Z\r\nRRULE:FREQ=DAILY;COUNT=2\r\nSUMMARY:Zweite Serie",
+        "UID:first\r\nRECURRENCE-ID:20260302T090000Z\r\nDTSTART:20260302T120000Z\r\nDTEND:20260302T130000Z\r\nSUMMARY:Verschoben",
+      ),
+    );
+    expect(events.map(({ title }) => title)).toEqual([
+      "Erste Serie",
+      "Zweite Serie",
+      "Zweite Serie",
+      "Verschoben",
+    ]);
+  });
   it("includes an exception moved into the window from a later occurrence", () => {
     const events = parse(
       file(

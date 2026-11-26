@@ -86,6 +86,37 @@ describe("interoperable private calendar snapshots", () => {
     expect(unfolded).not.toContain("\u0000");
     expect(unfolded).not.toContain("\uFFFD");
   });
+  it.each([
+    ["A", 1],
+    ["ä", 2],
+    ["€", 3],
+    ["👩", 4],
+  ])(
+    "folds %s exactly at the byte boundary without splitting it",
+    (char, bytes) => {
+      const head = `SUMMARY:${"x".repeat(75 - "SUMMARY:".length - bytes)}${char}`;
+      const tail = `${char}${"x".repeat(74 - bytes)}`;
+      const file = calendarFile(
+        [{ ...event, title: `${head.slice("SUMMARY:".length)}${tail}!` }],
+        "Calendar",
+      );
+      expect(file).toContain(`\r\n${head}\r\n ${tail}\r\n !\r\n`);
+    },
+  );
+  it("shares one UTC snapshot timestamp and leaves empty snapshots timestamp-free", () => {
+    const generatedAt = "2026-11-16T02:30:00+01:00";
+    const file = calendarFile(
+      [event, { ...event, id: "1911b233-f4ce-419f-9f3b-88773417ed90" }],
+      "Calendar",
+      generatedAt,
+    );
+    expect(
+      file.split("\r\n").filter((line) => line.startsWith("DTSTAMP:")),
+    ).toEqual(["DTSTAMP:20261116T013000Z", "DTSTAMP:20261116T013000Z"]);
+    expect(calendarFile([], "Calendar", "not a date")).not.toContain(
+      "DTSTAMP:",
+    );
+  });
   it("rejects malformed identities, nonfinite dates, reversed intervals and unbounded exports", () => {
     for (const invalid of [
       { id: "injected\r\nBEGIN:VEVENT" },

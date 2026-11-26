@@ -26,11 +26,12 @@ function text(value: string) {
 
 // RFC 5545 limits content lines to 75 octets. Never split a UTF-8 character.
 function fold(line: string) {
-  const encoder = new TextEncoder();
   let result = "";
   let length = 0;
   for (const char of line) {
-    const bytes = encoder.encode(char).length;
+    const point = char.codePointAt(0)!;
+    const bytes =
+      point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4;
     if (length + bytes > 75) {
       result += "\r\n ";
       length = 1;
@@ -61,13 +62,15 @@ function formatCalendar(
     // METHOD:PUBLISH would require an ORGANIZER (RFC 5546 section 3.2.1).
     `X-WR-CALNAME:${text(name)}`,
   ];
+  let stamp: string | undefined;
   for (const event of events) {
     if (Date.parse(event.ends_at) <= Date.parse(event.starts_at))
       throw new Error("Invalid calendar interval");
+    stamp ??= instant(generatedAt);
     lines.push(
       "BEGIN:VEVENT",
       `UID:${event.kind}.${event.id}@luminovia.org`,
-      `DTSTAMP:${instant(generatedAt)}`,
+      `DTSTAMP:${stamp}`,
       `DTSTART:${instant(event.starts_at)}`,
       `DTEND:${instant(event.ends_at)}`,
       `SUMMARY:${text(event.title)}`,

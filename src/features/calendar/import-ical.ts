@@ -12,6 +12,10 @@ export interface ImportedAppointment {
   time_zone: string;
 }
 
+function isCancelled(component: ICAL.Component) {
+  return component.getFirstPropertyValue("status") === "CANCELLED";
+}
+
 /** Return the bounded, reviewed import preview using the file's explicit zones. */
 export function parseCalendarImport(
   source: string,
@@ -31,6 +35,8 @@ export function parseCalendarImport(
     windowEnd.diff(windowStart, "days").days > 732
   )
     throw new Error("invalid_window");
+  const inWindow = (start: DateTime) =>
+    start >= windowStart && start < windowEnd;
   const calendar = new ICAL.Component(ICAL.parse(source));
   if (calendar.name !== "vcalendar") throw new Error("invalid_file");
   const components = calendar.getAllSubcomponents("vevent");
@@ -71,32 +77,46 @@ export function parseCalendarImport(
     return { value, zone: timeZone };
   }
 
+  // ICAL's implicit exception discovery does not match series UIDs.
+  const exceptionsByUid = new Map<string, ICAL.Component[]>();
+  for (const component of components) {
+    if (!component.hasProperty("recurrence-id")) continue;
+    const uid = component.getFirstPropertyValue("uid");
+    if (typeof uid !== "string") continue;
+    const exceptions = exceptionsByUid.get(uid);
+    if (exceptions) exceptions.push(component);
+    else exceptionsByUid.set(uid, [component]);
+  }
+
   const result = new Map<string, ImportedAppointment>();
   for (const component of components) {
     if (component.hasProperty("recurrence-id")) continue;
-    const event = new ICAL.Event(component);
-    if (!event.uid || event.uid.length > 800) throw new Error("invalid_file");
+    const uid = component.getFirstPropertyValue("uid");
+    if (typeof uid !== "string" || !uid || uid.length > 800)
+      throw new Error("invalid_file");
+    if (isCancelled(component)) continue;
+    const event = new ICAL.Event(component, {
+      exceptions: exceptionsByUid.get(uid) ?? [],
+    });
     /** Store one confirmed occurrence using its already resolved start instant. */
     const append = (
       begins: ReturnType<typeof instant>,
       end: ICAL.Time,
       item: ICAL.Event,
     ) => {
-      if (item.component.getFirstPropertyValue("status") === "CANCELLED")
-        return;
       const finishes = instant(end, item.component, "dtend", begins.zone);
       if (finishes.value <= begins.value) throw new Error("invalid_time");
       const starts = begins.value.toUTC().toISO()!;
       const ends = finishes.value.toUTC().toISO()!;
-      const uid = `${event.uid}\n${starts}`;
+      const occurrenceUid = `${uid}\n${starts}`;
       const title = item.summary || untitled;
       const description = [item.description, item.location]
         .filter(Boolean)
         .join("\n\n");
       if (title.length > 200 || description.length > 10000)
         throw new Error("invalid_file");
-      result.set(uid, {
-        uid,
+      result.set(occurrenceUid, {
+        uid: occurrenceUid,
         title,
         description,
         starts_at: starts,
@@ -106,19 +126,21 @@ export function parseCalendarImport(
       if (result.size > 500) throw new Error("too_many");
     };
     if (!event.isRecurring()) {
-      if (component.getFirstPropertyValue("status") === "CANCELLED") continue;
-      append(
-        instant(event.startDate, component, "dtstart"),
-        event.endDate,
-        event,
-      );
+      const begins = instant(event.startDate, component, "dtstart");
+      if (inWindow(begins.value)) append(begins, event.endDate, event);
     } else {
       // An exception can move a later recurrence into the review window. Extend
       // the original-time horizon before stopping the ordered iterator. A range
       // exception may shift subsequent occurrences as well; keep the existing
       // iteration cap so a distant exception fails explicitly instead of hanging.
       let horizon = windowEnd;
-      for (const exception of Object.values(event.exceptions)) {
+      let hasCancellation = false;
+      const exceptions = new Map(Object.entries(event.exceptions));
+      for (const exception of exceptions.values()) {
+        if (isCancelled(exception.component)) {
+          hasCancellation = true;
+          continue;
+        }
         if (!exception.component.hasProperty("dtstart")) continue;
         const original = instant(
           exception.recurrenceId,
@@ -130,12 +152,7 @@ export function parseCalendarImport(
           exception.component,
           "dtstart",
         ).value;
-        if (
-          adjusted >= windowStart &&
-          adjusted < windowEnd &&
-          original > horizon
-        )
-          horizon = original;
+        if (inWindow(adjusted) && original > horizon) horizon = original;
         if (exception.modifiesFuture() && adjusted < windowEnd) {
           const shiftedEnd = windowEnd.plus({
             milliseconds: Math.max(
@@ -158,6 +175,21 @@ export function parseCalendarImport(
         // subsequent original occurrences still fall inside it. The iterator
         // is ordered by the original recurrence, not by the adjusted start.
         const scheduled = instant(next, component, "dtstart");
+        if (hasCancellation) {
+          // Match ICAL's direct/UTC/range precedence before it reads dates
+          // from a cancellation. In ical.js 2.2.1 the range lookup returns a key.
+          const exception =
+            exceptions.get(next.toString()) ??
+            exceptions.get(
+              next.convertToZone(ICAL.Timezone.utcTimezone).toString(),
+            ) ??
+            exceptions.get(String(event.findRangeException(next) ?? ""));
+          if (exception && isCancelled(exception.component)) {
+            if (scheduled.value <= horizon) continue;
+            exhausted = true;
+            break;
+          }
+        }
         const occurrence = event.getOccurrenceDetails(next);
         const begins =
           occurrence.item === event && occurrence.startDate === next
@@ -171,7 +203,7 @@ export function parseCalendarImport(
           exhausted = true;
           break;
         }
-        if (begins.value >= windowStart && begins.value < windowEnd)
+        if (inWindow(begins.value))
           append(begins, occurrence.endDate, occurrence.item);
       }
       if (!exhausted) throw new Error("too_many");

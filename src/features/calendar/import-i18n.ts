@@ -3,11 +3,11 @@ import i18n from "../../lib/i18n";
 const pairs = {
   title: ["ICS-Datei importieren", "Import ICS file"],
   help: [
-    "Importiere Termine als private Kalendereinträge. Termine ohne Zeitzone verwenden {{zone}}. Serien werden im ausgewählten Zeitraum als einzelne Termine übernommen, ohne laufende Synchronisierung. Bereits importierte Termine werden übersprungen. Prüfe die Vorschau vor dem Speichern.",
-    "Import appointments as private calendar entries. Dates without a time zone use {{zone}}. Recurrences become individual appointments within the selected window, without ongoing synchronisation. Previously imported appointments are skipped. Review the preview before saving.",
+    "Importiere Termine als private Kalendereinträge. Berücksichtigt werden nur Termine, die im gewählten Zeitraum in {{zone}} beginnen. Termine ohne eigene Zeitzone verwenden ebenfalls {{zone}}. Serien werden als einzelne Termine übernommen, ohne laufende Synchronisierung. Bereits importierte Termine werden übersprungen. Prüfe die Vorschau vor dem Speichern.",
+    "Import appointments as private calendar entries. Only appointments that start within the selected dates in {{zone}} are included. Appointments without a time zone also use {{zone}}. Recurrences become individual appointments, without ongoing synchronisation. Previously imported appointments are skipped. Review the preview before saving.",
   ],
-  from: ["Serientermine ab", "Recurring appointments from"],
-  until: ["Serientermine bis", "Recurring appointments until"],
+  from: ["Termine ab", "Appointments from"],
+  until: ["Termine bis (einschließlich)", "Appointments through (inclusive)"],
   file: ["Kalenderdatei (.ics, bis 2 MB)", "Calendar file (.ics, up to 2 MB)"],
   untitled: ["Importierter Termin", "Imported appointment"],
   review: ["Vorschau aktualisieren", "Update preview"],
@@ -30,16 +30,16 @@ const pairs = {
     "The file contains an unknown time zone. Export it using an IANA time zone or UTC.",
   ],
   invalid_window: [
-    "Wähle einen gültigen Serienzeitraum von höchstens zwei Jahren.",
-    "Choose a valid recurrence window of up to two years.",
+    "Wähle einen gültigen Importzeitraum von höchstens zwei Jahren.",
+    "Choose a valid import window of up to two years.",
   ],
   too_many: [
     "Die Serie enthält zu viele Termine. Importiere einen kleineren Kalender oder einen kürzeren Zeitraum.",
     "The recurrence contains too many appointments. Import a smaller calendar or a shorter window.",
   ],
   empty_window: [
-    "Im gewählten Zeitraum gibt es keine Serientermine.",
-    "There are no recurring appointments in the selected window.",
+    "Im gewählten Zeitraum beginnen keine Termine.",
+    "No appointments start within the selected window.",
   ],
   failed: [
     "Der Import wurde nicht bestätigt. Prüfe deine Verbindung, Berechtigung und mögliche Überschneidungen mit bestätigten Aufträgen. Du kannst es erneut versuchen; bereits importierte Termine werden übersprungen.",

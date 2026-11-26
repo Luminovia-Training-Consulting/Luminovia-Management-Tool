@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -26,6 +26,12 @@ async function setup(source = content) {
     </QueryClientProvider>,
   );
   await user.click(screen.getByText("ICS-Datei importieren"));
+  fireEvent.change(screen.getByLabelText("Termine ab"), {
+    target: { value: "2040-01-01" },
+  });
+  fireEvent.change(screen.getByLabelText("Termine bis (einschließlich)"), {
+    target: { value: "2040-01-01" },
+  });
   const file = new File([source], "fictional.ics", { type: "text/calendar" });
   Object.defineProperty(file, "text", { value: async () => source });
   await user.upload(
