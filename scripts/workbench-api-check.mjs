@@ -48,6 +48,13 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
             }),
             "Create own real task",
         );
+    const taskList = async ({client}) =>
+        (await checked(client.rpc("work_tasks"))).items;
+    // Operations tasks from other fixtures may be legitimately visible to an admin.
+    const [peerBefore, adminBefore] = await Promise.all([
+        taskList(peer),
+        taskList(admin),
+    ]);
     const request = randomUUID(),
         task = await create({}, request),
         repeated = await create({}, request);
@@ -64,8 +71,9 @@ await withApiFixture(async ({actor, service, checked, sql, defer}) => {
         await checked(admin.client.rpc("work_task_detail", {p_id: task.id})),
         null,
     );
-    assert.deepEqual((await checked(peer.client.rpc("work_tasks"))).items, []);
-    assert.deepEqual((await checked(admin.client.rpc("work_tasks"))).items, []);
+    assert.ok((await taskList(owner)).some(({id}) => id === task.id));
+    assert.deepEqual(await taskList(peer), peerBefore);
+    assert.deepEqual(await taskList(admin), adminBefore);
     const saves = await Promise.all(
         ["doing", "done"].map((state) =>
             owner.client.rpc("save_work_task", {

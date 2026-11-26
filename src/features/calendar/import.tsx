@@ -91,10 +91,14 @@ export function CalendarImport({
     },
   });
 
-  function review(text = source) {
+  function clearReview() {
     save.reset();
     setError("");
     setPreview(null);
+  }
+
+  function review(text = source) {
+    clearReview();
     try {
       setPreview(parseCalendarImport(text, zone, from, until, t("untitled")));
     } catch (cause) {
@@ -148,7 +152,7 @@ export function CalendarImport({
               disabled={reading || save.isPending}
               onChange={(e) => {
                 setFrom(e.target.value);
-                setPreview(null);
+                clearReview();
               }}
             />
           </Field>
@@ -160,7 +164,7 @@ export function CalendarImport({
               disabled={reading || save.isPending}
               onChange={(e) => {
                 setUntil(e.target.value);
-                setPreview(null);
+                clearReview();
               }}
             />
           </Field>
@@ -172,12 +176,10 @@ export function CalendarImport({
             accept=".ics,text/calendar"
             disabled={reading || save.isPending}
             onChange={async (e) => {
-              const input = e.currentTarget;
-              const file = input.files?.[0];
+              const file = e.currentTarget.files?.[0];
               if (!file) return;
-              setPreview(null);
-              save.reset();
-              setError("");
+              e.currentTarget.value = "";
+              clearReview();
               setSource("");
               if (
                 file.size > 2_000_000 ||
@@ -195,7 +197,6 @@ export function CalendarImport({
                 setError("invalid_file");
               } finally {
                 setReading(false);
-                input.value = "";
               }
             }}
           />

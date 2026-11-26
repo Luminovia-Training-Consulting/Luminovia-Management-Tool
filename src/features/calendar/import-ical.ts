@@ -26,15 +26,28 @@ export function parseCalendarImport(
 ): ImportedAppointment[] {
   if (!validZone(zone) || source.length > 2_000_000)
     throw new Error("invalid_file");
-  const windowStart = DateTime.fromISO(from, { zone });
-  const windowEnd = DateTime.fromISO(until, { zone }).plus({ days: 1 });
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateOnly.test(from) || !dateOnly.test(until))
+    throw new Error("invalid_window");
+  // Advance the civil date before applying its zone, so a midnight DST gap
+  // cannot carry a shifted hour into the following day's boundary.
+  const firstDay = DateTime.fromISO(from, { zone: "UTC" });
+  const lastDay = DateTime.fromISO(until, { zone: "UTC" });
+  const afterLastDay = lastDay.plus({ days: 1 });
   if (
-    !windowStart.isValid ||
-    !windowEnd.isValid ||
-    windowEnd <= windowStart ||
-    windowEnd.diff(windowStart, "days").days > 732
+    !firstDay.isValid ||
+    !lastDay.isValid ||
+    lastDay < firstDay ||
+    afterLastDay.diff(firstDay, "days").days > 732
   )
     throw new Error("invalid_window");
+  const startOfLocalDay = (day: DateTime) =>
+    day
+      .setZone(zone, { keepLocalTime: true })
+      .getPossibleOffsets()
+      .reduce((first, candidate) => (candidate < first ? candidate : first));
+  const windowStart = startOfLocalDay(firstDay);
+  const windowEnd = startOfLocalDay(afterLastDay);
   const inWindow = (start: DateTime) =>
     start >= windowStart && start < windowEnd;
   const calendar = new ICAL.Component(ICAL.parse(source));

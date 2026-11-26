@@ -43,6 +43,41 @@ describe("reviewed ICS import", () => {
       ),
     ).toThrow("empty_window");
   });
+  it("ends at local midnight even if the selected day started at one am", () => {
+    const events = parseCalendarImport(
+      file(
+        "UID:last\r\nDTSTART:20260907T025959Z\r\nDTEND:20260907T040000Z\r\nSUMMARY:Letzter Termin",
+        "UID:next\r\nDTSTART:20260907T030000Z\r\nDTEND:20260907T040000Z",
+      ),
+      "America/Santiago",
+      "2026-09-06",
+      "2026-09-06",
+      "Termin",
+    );
+    expect(events.map(({ title }) => title)).toEqual(["Letzter Termin"]);
+  });
+  it("uses the first of two local midnights when the clock goes back", () => {
+    const events = parseCalendarImport(
+      file(
+        "UID:before\r\nDTSTART:20261101T035959Z\r\nDTEND:20261101T050000Z",
+        "UID:first\r\nDTSTART:20261101T040000Z\r\nDTEND:20261101T041500Z",
+        "UID:second\r\nDTSTART:20261101T050000Z\r\nDTEND:20261101T051500Z",
+      ),
+      "America/Havana",
+      "2026-11-01",
+      "2026-11-01",
+      "Termin",
+    );
+    expect(events.map(({ starts_at }) => starts_at)).toEqual([
+      "2026-11-01T04:00:00.000Z",
+      "2026-11-01T05:00:00.000Z",
+    ]);
+  });
+  it("rejects time components in date-only import boundaries", () => {
+    expect(() => parse(file("UID:invalid"), "2026-03-01T12:00")).toThrow(
+      "invalid_window",
+    );
+  });
   it("skips cancelled singles, series and exceptions without a start", () => {
     const events = parse(
       file(

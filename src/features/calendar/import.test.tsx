@@ -82,3 +82,19 @@ it("rejects malformed files before making any request", async () => {
   ).not.toBeInTheDocument();
   expect(rpc).not.toHaveBeenCalled();
 });
+it("clears a previous window error when the user edits the dates", async () => {
+  const { user } = await setup(content.replaceAll("20400101", "20400102"));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Im gewählten Zeitraum beginnen keine Termine.",
+  );
+  fireEvent.change(screen.getByLabelText("Termine bis (einschließlich)"), {
+    target: { value: "2040-01-02" },
+  });
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByText("Fiktiver Testtermin")).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Vorschau aktualisieren" }),
+  );
+  expect(await screen.findByText("Fiktiver Testtermin")).toBeVisible();
+  expect(rpc).not.toHaveBeenCalled();
+});

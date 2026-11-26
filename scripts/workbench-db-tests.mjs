@@ -300,6 +300,43 @@ await withTestDatabase("workbench_test", async ({sql, actor}) => {
         },
     );
     await check(
+        "Organisation suggestions keep course, customer and management scope and exclude archives",
+        async () => {
+            const [client, visible, customer, hidden, archived, template, run, job, claim] =
+                Array.from({length: 9}, randomUUID);
+            await sql(`
+                insert into auth.users(id,email) values(${q(client)},'work-client@example.invalid');
+                insert into public.user_roles(user_id,role) values(${q(client)},'client');
+                insert into public.organisations(id,name,archived_at) values
+                    (${q(visible)},'Workbench suggestion A',null),
+                    (${q(customer)},'Workbench suggestion B',null),
+                    (${q(hidden)},'Workbench suggestion C',null),
+                    (${q(archived)},'Workbench suggestion D',now());
+                insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(client)},${q(customer)});
+                insert into public.course_templates(id,title) values(${q(template)},'Fictional workbench catalogue');
+                insert into public.course_runs(id,template_id,organisation_id)
+                    values(${q(run)},${q(template)},${q(visible)});
+                insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
+                    values(${q(job)},${q(run)},'Fictional teaching offer','Workbench suggestion A','online','published',100,'EUR','fixed_total',100,'Fictional teaching terms');
+            `);
+            const suggestions = async (id, search = "WORKBENCH SUGGESTION") =>
+                (await rpc(id, "my_favourites", [q(search)])).organisations.map(
+                    (row) => row.id,
+                );
+            assert.deepEqual(await suggestions(owner), []);
+            assert.deepEqual(await suggestions(client), [customer]);
+            assert.deepEqual(await suggestions(admin), [visible, customer, hidden]);
+            await sql(`insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,currency,rate_unit,total_amount,terms,terms_version)
+                values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',100,'EUR','fixed_total',100,'Fictional teaching terms',1)`);
+            assert.deepEqual(await suggestions(owner), [visible]);
+            assert.deepEqual(await suggestions(owner, "suggestion B"), []);
+            await sql(
+                `update public.job_claims set status='cancelled' where id=${q(claim)}`,
+            );
+            assert.deepEqual(await suggestions(owner), []);
+        },
+    );
+    await check(
         "Recommendations rank self-selected subject area and recheck scheduling conflicts",
         async () => {
             const topic = randomUUID(),
