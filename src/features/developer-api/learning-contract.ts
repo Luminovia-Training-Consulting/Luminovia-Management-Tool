@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
+import { materialMetadataSchema } from "../learning/material-metadata-schema.ts";
 import {
   courseWelcomePublishRequestSchema,
   courseWelcomeRevisionSchema,
@@ -44,6 +45,13 @@ const record = <Fields extends Record<string, unknown>>(
 });
 
 const materialCategory = { type: "string", enum: ["material", "report"] };
+const materialMetadata = z.toJSONSchema(materialMetadataSchema);
+export const materialMetadataParameters = {
+  p_resource_id: uuid,
+  p_expected_revision: integer,
+  p_metadata: materialMetadata,
+};
+export const materialMetadataRevision = { ...integer, minimum: 1 };
 export const materialSearchParameters = {
   p_course_id: nullable(uuid),
   p_search: nullable({ ...text, maxLength: 200 }),
@@ -61,6 +69,9 @@ export const materialSearchResult = {
       version: integer,
       category: materialCategory,
       can_upload: boolean,
+      can_edit_metadata: boolean,
+      metadata_revision: integer,
+      metadata: nullable(materialMetadata),
     }),
   ),
   maxItems: 25,

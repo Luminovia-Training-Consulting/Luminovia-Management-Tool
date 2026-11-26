@@ -17,6 +17,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import type { CourseOverview } from "./api";
 import { LearningHubPage } from "./course-hub";
+import type { MaterialMetadata } from "./material-metadata-schema";
 
 const fixture = vi.hoisted(() => ({
   courses: [] as CourseOverview[],
@@ -34,7 +35,11 @@ const fixture = vi.hoisted(() => ({
     category: string;
     version: number;
     can_upload: boolean;
+    can_edit_metadata?: boolean;
+    metadata_revision?: number;
+    metadata?: MaterialMetadata;
   }[],
+  revise: vi.fn(),
   nextPageForbidden: false,
   calls: [] as {
     p_course_id?: string;
@@ -48,33 +53,40 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: (name: string, args: (typeof fixture.calls)[number] = {}) => ({
-      abortSignal: async () => {
-        await fixture.courseRead;
-        if (name === "search_course_materials") {
-          fixture.calls.push(args);
-          const offset = args.p_offset ?? 0;
-          if (offset && fixture.nextPageForbidden)
-            return { data: null, error: { code: "42501" }, status: 403 };
-          const matches = fixture.materials.filter(
-            (file) =>
-              (!args.p_course_id || args.p_course_id === file.course_id) &&
-              (!args.p_category || args.p_category === file.category) &&
-              file.name
-                .toLowerCase()
-                .includes((args.p_search ?? "").toLowerCase()),
-          );
-          return { data: matches.slice(offset, offset + 25), error: null };
-        }
-        return {
-          data:
-            name === "my_course_workspaces"
-              ? fixture.courses
-              : fixture.invitations,
-          error: null,
-        };
-      },
-    }),
+    rpc: (name: string, args: (typeof fixture.calls)[number] = {}) =>
+      name === "set_course_material_metadata"
+        ? fixture.revise(args)
+        : {
+            abortSignal: async () => {
+              await fixture.courseRead;
+              if (name === "search_course_materials") {
+                fixture.calls.push(args);
+                const offset = args.p_offset ?? 0;
+                if (offset && fixture.nextPageForbidden)
+                  return { data: null, error: { code: "42501" }, status: 403 };
+                const matches = fixture.materials.filter(
+                  (file) =>
+                    (!args.p_course_id ||
+                      args.p_course_id === file.course_id) &&
+                    (!args.p_category || args.p_category === file.category) &&
+                    file.name
+                      .toLowerCase()
+                      .includes((args.p_search ?? "").toLowerCase()),
+                );
+                return {
+                  data: matches.slice(offset, offset + 25),
+                  error: null,
+                };
+              }
+              return {
+                data:
+                  name === "my_course_workspaces"
+                    ? fixture.courses
+                    : fixture.invitations,
+                error: null,
+              };
+            },
+          },
     from: () => ({
       select: () => ({
         eq: async () => ({ data: [{ role: "participant" }], error: null }),
@@ -94,6 +106,7 @@ beforeEach(async () => {
   fixture.invitations = [];
   fixture.materials = [];
   fixture.calls = [];
+  fixture.revise.mockReset();
   fixture.nextPageForbidden = false;
   const base = {
     description: "",
@@ -307,6 +320,99 @@ it("searches beyond the course overview, applies all three filters and preserves
   expect(
     await screen.findByText("Keine passenden Dateien gefunden."),
   ).toBeVisible();
+});
+
+it("validates catalogue tags and preserves unsaved input on a revision conflict", async () => {
+  await i18n.changeLanguage("en");
+  const file = {
+    id: "a",
+    course_id: "soon",
+    course_title: "Fictional course",
+    name: "Workshop.pdf",
+    category: "material",
+    version: 1,
+    can_upload: true,
+    can_edit_metadata: true,
+    metadata_revision: 1,
+    metadata: {
+      title: "First metadata",
+      description: "",
+      subject: "",
+      licence: "",
+      language: "en" as const,
+      tags: ["Linux"],
+    },
+  };
+  fixture.materials = [file];
+  fixture.revise.mockImplementationOnce(async () => {
+    fixture.materials = [
+      {
+        ...file,
+        metadata_revision: 2,
+        metadata: { ...file.metadata, title: "Newer metadata" },
+      },
+    ];
+    return { error: { code: "PT409" } };
+  });
+  fixture.revise.mockImplementationOnce(async () => {
+    fixture.materials = [
+      {
+        ...file,
+        metadata_revision: 3,
+        metadata: { ...file.metadata, title: "Reviewed metadata" },
+      },
+    ];
+    return { error: null };
+  });
+
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/learning?view=materials"]}>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const edit = await screen.findByRole("button", { name: "Edit metadata" });
+  fireEvent.click(edit);
+  const title = screen.getByRole("textbox", { name: "Title" });
+  const tags = screen.getByRole("textbox", { name: "Tags" });
+  const save = screen.getByRole("button", { name: "Save metadata" });
+  fireEvent.change(title, { target: { value: "  My notes  " } });
+  fireEvent.change(tags, { target: { value: "Linux, linux" } });
+  fireEvent.click(save);
+  expect(tags).toHaveAttribute("aria-invalid", "true");
+  expect(fixture.revise).not.toHaveBeenCalled();
+
+  fireEvent.change(tags, { target: { value: " Linux , Storage " } });
+  fireEvent.click(save);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "The metadata has changed",
+  );
+  expect(title).toHaveValue("  My notes  ");
+  expect(save).toBeDisabled();
+  expect(fixture.revise).toHaveBeenCalledWith({
+    p_resource_id: file.id,
+    p_expected_revision: 1,
+    p_metadata: {
+      ...file.metadata,
+      title: "My notes",
+      tags: ["Linux", "Storage"],
+    },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(edit).toHaveFocus();
+  await screen.findByRole("heading", { name: "Newer metadata" });
+  fireEvent.click(edit);
+  fireEvent.change(screen.getByRole("textbox", { name: "Title" }), {
+    target: { value: "Reviewed metadata" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save metadata" }));
+  await screen.findByText("The metadata was saved.");
+  expect(
+    await screen.findByRole("heading", { name: "Reviewed metadata" }),
+  ).toBeVisible();
+  expect(fixture.revise.mock.lastCall?.[0].p_expected_revision).toBe(2);
 });
 
 it("paginates matching files and uses the result to filter a course outside the overview", async () => {

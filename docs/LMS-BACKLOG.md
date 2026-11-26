@@ -1,6 +1,6 @@
 # LMS delivery backlog
 
-This ledger tracks the educational-only LMS extension from the implementation directive. It extends the existing Luminovia course run, enrolment, assessment, document, attendance, certificate and analytics authorities; it does not create parallel registries. The reviewed upstream base is `main` at `9d1dbdba`; the first deliverable is limited to the authoring and publication workflow below. This document distinguishes source implementation, local verification, browser verification, external interoperability and production acceptance.
+This ledger tracks the educational-only LMS extension from the implementation directive. It extends the existing Luminovia course run, enrolment, assessment, document, attendance, certificate and analytics authorities; it does not create parallel registries. The authoring baseline was `main` at `9d1dbdba`; the catalogue branch starts at `26431400`, now on `main`. This document distinguishes source implementation, local verification, browser verification, external interoperability and production acceptance.
 
 ## Coordination and ownership
 
@@ -25,11 +25,11 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-02 — shared educational content library
 
-- **Priority / status:** P0 · planned; existing scanned documents and course resources are reusable only within their present resource workflows.
-- **Dependencies / affected modules:** LMS-P0-01 and existing document/version/virus-scan owners; `src/features/learning/resources.tsx`, document discovery and secure course-document gateways; additive metadata/indexing only after defining canonical resource ownership.
-- **Data and security:** Reuse exact scanned file versions and existing audience permissions; define master/reference versus independent copy without changing historical course evidence; keep lecturer-only solutions out of participant projections.
-- **Tasks / acceptance:** Add categories, subjects, tags, language, owner, review/licensing metadata, search/preview, reuse/copy, consumer usage view, revision comparison, outdated review and archive. Verify organisation/course/private scopes, exact-version downloads, malware quarantine, permissions after revocation and historical snapshots.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Requires a resource identity and usage model approved before schema work.
+- **Priority / status:** P0 · partially implemented. The existing exact-version Materials Library now supports versioned titles, descriptions, subjects, tags, languages and licence notes in DE/EN. Search covers filename, title, description, subject and tags; course and category filters remain available.
+- **Dependencies / affected modules:** `material-library.tsx`, the existing material library RPC and native API contracts, `private.course_material_metadata_revisions`, and the existing document/version/scan authorities. Curriculum insertion depends on LMS-P0-01 and a resource usage model.
+- **Data and security:** Append-only writes through the authenticated `set_course_material_metadata` RPC keep independent metadata per share and audit the actor and revision. Stale changes cannot overwrite newer edits. Metadata is projected only to the existing file audience; no change to the file, scan status, audience or download gateway. Internal editing uses existing scoped course staff rights; Academy edits are active-licence only and scoped to the upload owner. Grace is read-only.
+- **Acceptance / local evidence:** All 1,918 Vitest tests passed, including conflict recovery. The isolated PostgreSQL replay passed 15 course-workspace groups, 11 API-surface checks and the document suite in both Academy editions. It covers editable and read-only roles, duplicate tags, identical retries, concurrent edits, historical revisions and revocation. The focused Materials Library flow passed in desktop and mobile Chromium with an isolated stack, scan-to-download, staff-only search exclusion and exact-byte verification. Full browser, CI and accessibility acceptance remain open.
+- **Commits / remaining work:** `codex/lms-p0-material-catalogue`, based on authoring commit `26431400`. Central masters, cross-course pinning and copies, usage and history UI, review dates, learning objectives/competencies, archive and broader library scopes still need implementation and verification.
 
 ### LMS-P0-03 — gradebook and configurable grading policies
 
