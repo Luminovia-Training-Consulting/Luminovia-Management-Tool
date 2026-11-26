@@ -14,29 +14,38 @@ export async function subscribeToRoom(client, room, table, eventTypes, events) {
       (payload) => events.push(payload.new),
     );
   }
-  await new Promise((resolve, reject) => {
-    const fail = (reason) => {
-      clearTimeout(timeout);
-      void client.removeChannel(channel);
-      reject(reason);
-    };
-    const timeout = setTimeout(
-      () => fail(new Error(`Realtime subscription timeout: ${table}`)),
-      25_000,
-    );
-    channel.subscribe((status, error) => {
-      if (status === "SUBSCRIBED") {
+  try {
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
-        resolve();
-      } else if (
-        status === "CHANNEL_ERROR" ||
-        status === "TIMED_OUT" ||
-        status === "CLOSED"
-      ) {
-        fail(error ?? new Error(status));
-      }
+        if (error) reject(error);
+        else resolve();
+      };
+      const timeout = setTimeout(
+        () => finish(new Error(`Realtime subscription timeout: ${table}`)),
+        25_000,
+      );
+      channel.subscribe((status, error) => {
+        if (status === "SUBSCRIBED") {
+          finish();
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          finish(error ?? new Error(status));
+        }
+      });
     });
-  });
+  } catch (error) {
+    // Unsubscribing fires CLOSED, including during ordinary fixture teardown.
+    // Do it outside the status callback and only for a failed initial join.
+    await client.removeChannel(channel);
+    throw error;
+  }
 }
 
 /** Fail if a real event has not arrived before the test's bounded deadline. */
