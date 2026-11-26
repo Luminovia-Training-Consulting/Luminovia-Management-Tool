@@ -1,6 +1,7 @@
 /** Import and publish a real H5P ZIP question on the disposable QA stack. */
 import { TextReader, Uint8ArrayWriter, ZipWriter } from "@zip.js/zip.js";
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { checked, login } from "./helpers/accounts-support";
 import { createAssessmentCourse } from "./helpers/assessment-course";
 
@@ -306,15 +307,34 @@ for (const library of ["H5P.SingleChoiceSet", "H5P.QuestionSet"]) {
           second.getByText(embeddedName, { exact: true }),
         ).toBeVisible();
       }
-      await learnerQuiz
-        .getByRole("radio", { name: "Arbeitsverzeichnis", exact: true })
-        .check();
-      await learnerQuiz
-        .getByRole("radio", { name: "Richtig", exact: true })
-        .check();
-      await learnerQuiz
-        .getByRole("button", { name: "Antworten verbindlich abgeben" })
-        .click();
+      const scan = await new AxeBuilder({ page: learnerPage })
+        .include('[aria-label="Mini-Quiz"]')
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+      expect(
+        scan.violations.map(({ id, nodes }) => ({
+          id,
+          targets: nodes.map(({ target }) => target),
+        })),
+      ).toEqual([]);
+
+      const firstAnswer = learnerQuiz.getByRole("radio", {
+        name: "Arbeitsverzeichnis",
+        exact: true,
+      });
+      await firstAnswer.press("Space");
+      await expect(firstAnswer).toBeChecked();
+      const secondAnswer = learnerQuiz.getByRole("radio", {
+        name: "Richtig",
+        exact: true,
+      });
+      await secondAnswer.press("Space");
+      await expect(secondAnswer).toBeChecked();
+      const submit = learnerQuiz.getByRole("button", {
+        name: "Antworten verbindlich abgeben",
+      });
+      await expect(submit).toBeEnabled();
+      await submit.press("Enter");
       await expect(
         learnerQuiz.getByText(/Ergebnis: 100 %.*Bestanden/),
       ).toBeVisible();
@@ -343,7 +363,7 @@ for (const library of ["H5P.SingleChoiceSet", "H5P.QuestionSet"]) {
         );
         expect(event.result).toEqual({
           completion: true,
-          response: "choice-1",
+          response: !isChoiceSet && index === 0 ? "choice-2" : "choice-1",
           success: true,
         });
         expect(JSON.stringify(event)).not.toContain(learner.email);
