@@ -29,7 +29,7 @@ declare
   source_anchor constant text := '    where program.id = p_program';
   met_anchor constant text := '    select target.*, requirements.items, requirements.met';
   projection_anchor constant text := '      ''can_open'', available';
-  manager_anchor constant text := '''manage'', manager, ''can_write'', manager and writable,';
+  manager_anchor constant text := '''manage'', manager,';
   ingress text := pg_catalog.pg_get_functiondef('private.require_academy_course_access()'::regprocedure);
   ingress_anchor constant text := '''/rpc/set_learning_program_prerequisite''';
 begin
