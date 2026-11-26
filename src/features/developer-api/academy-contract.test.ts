@@ -39,9 +39,12 @@ const readPaths = [
   "/rest/v1/rpc/course_assignments",
   "/rest/v1/rpc/course_competencies",
   "/rest/v1/rpc/learning_portfolio",
+  "/rest/v1/rpc/course_weighted_gradebook",
   "/rest/v1/rpc/course_peer_feedback",
+  "/rest/v1/rpc/course_text_exam",
   "/rest/v1/rpc/course_xapi_statements",
   "/rest/v1/rpc/course_lti_tools",
+  "/rest/v1/rpc/course_completion_policy",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -72,11 +75,15 @@ const writePaths = [
   "/rest/v1/rpc/course_h5p_question_import",
   "/rest/v1/rpc/course_assignment_action",
   "/rest/v1/rpc/save_course_quiz_draft",
+  "/rest/v1/rpc/start_course_quiz_pool",
   "/rest/v1/rpc/course_competency_action",
   "/rest/v1/rpc/learning_portfolio_command",
+  "/rest/v1/rpc/course_weighted_gradebook_command",
   "/rest/v1/rpc/set_learning_program_prerequisite",
   "/rest/v1/rpc/course_peer_feedback_action",
+  "/rest/v1/rpc/course_text_exam_action",
   "/rest/v1/rpc/save_course_lti_tool",
+  "/rest/v1/rpc/course_completion_policy_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

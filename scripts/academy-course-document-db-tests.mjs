@@ -695,6 +695,34 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual((await portfolio(teacher)).entries, []);
     const personalPortfolio = await portfolio(learner);
 
+    const weighted = (who, target = null, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_weighted_gradebook") : "") +
+        `select public.course_weighted_gradebook(${q(run)},${target === null ? "null" : q(target)})`).then(JSON.parse);
+    const weightedWrite = (who, actionName, version, payload) =>
+      actor(who, gate("/rpc/course_weighted_gradebook_command") +
+        `select public.course_weighted_gradebook_command(${q(run)},${q(actionName)},${q(JSON.stringify(payload))},${version})`).then(JSON.parse);
+    const gradeInbox = (who) => actor(who, gate("/rpc/notification_inbox") +
+      "select public.notification_inbox()").then(JSON.parse).then(({items}) =>
+      items.filter(({kind}) => kind === "course_weighted_grade_released"));
+    const weightedPolicy = {threshold:80,missing_required:"block",separate_reviewer:false,
+      items:[{key:"quiz",weight:100,treatment:"required"}]};
+    await assert.rejects(weightedWrite(learner,"policy",0,weightedPolicy), /42501/);
+    await weightedWrite(teacher,"policy",0,weightedPolicy);
+    const weightedPreview = await weighted(teacher,learner);
+    assert.equal(weightedPreview.preview.percent,90);
+    const weightedLearner = {user_id:learner,expected_review:0,expected_release:0};
+    await weightedWrite(teacher,"review",1,{...weightedLearner,reason:"",fingerprint:weightedPreview.fingerprint});
+    assert.deepEqual((await weighted(learner)).history,[]);
+    assert.deepEqual(await gradeInbox(learner), []);
+    await weightedWrite(teacher,"release",1,{...weightedLearner,expected_review:1});
+    const weightedReleased = await weighted(learner);
+    assert.equal(weightedReleased.history[0].result.percent,90);
+    const releasedReceipt = await gradeInbox(learner);
+    assert.equal(releasedReceipt.length, 1);
+    assert.equal(releasedReceipt[0].href, `/courses/${run}/workspace#course-weighted-gradebook`);
+    assert.deepEqual(await gradeInbox(teacher), []);
+    await assert.rejects(weighted(client,learner), /42501/);
+
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
@@ -706,6 +734,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(portfolioEdit(learner, "archive", {state_revision: 0}, 1), /42501/);
     await assert.rejects(actor(learner,
       `select public.learning_portfolio_command(${q(portfolioEntry)},'archive','{"state_revision":0}',1)`), /42501/);
+    assert.deepEqual(await weighted(learner),weightedReleased);
+    assert.deepEqual(await gradeInbox(learner), releasedReceipt);
+    assert.equal((await weighted(teacher,learner)).can_manage,false);
+    await assert.rejects(weightedWrite(teacher,"policy",1,weightedPolicy), /42501/);
     const graceGradebook = { ...publishedGradebook, can_manage: false };
     assert.deepEqual(await gradebook(teacher), graceGradebook);
     assert.deepEqual(await gradebook(learner), learnerGradebook);
@@ -761,6 +793,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(portfolio(learner), /42501/);
     await assert.rejects(portfolio(teacher, run, false), /42501/);
     await assert.rejects(portfolioEdit(learner, "delete", {state_revision: 0, title: note.title}, 1), /42501/);
+    await assert.rejects(weighted(learner), /42501/);
+    await assert.rejects(gradeInbox(learner), /42501/);
+    await assert.rejects(weighted(teacher,learner,false), /42501/);
     await assert.rejects(access(learner), /42501/);
     await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);

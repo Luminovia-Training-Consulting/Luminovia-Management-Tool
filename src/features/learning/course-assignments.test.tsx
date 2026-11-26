@@ -83,6 +83,7 @@ beforeEach(async () => {
     published_version: 1,
     can_submit: true,
     extensions: [],
+    teams: [],
     attempts: [],
   };
   rpc.mockImplementation(async (name, args) =>
@@ -170,6 +171,7 @@ it("shows released feedback in grace with no mutation controls or private notes"
       id: attempt,
       user_id: student,
       display_name: "Fictional learner",
+      team_title: null,
       attempt_no: 1,
       file_version_id: fileVersion,
       file_name: "fixture.pdf",

@@ -51,8 +51,10 @@ import {
 } from "./enquiries-support-contract.ts";
 import { courseSeriesPaths } from "./course-series-contract.ts";
 import { learningProgramPaths } from "./learning-program-contract.ts";
+import { weightedGradebookPaths } from "./weighted-gradebook-contract.ts";
 import { portfolioPaths } from "./portfolio-contract.ts";
 import { ltiCoursePaths } from "./lti-contract.ts";
+import { manualTextExamPaths } from "./manual-text-exam-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
@@ -117,6 +119,10 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseCompletionPolicyAction,
+  courseCompletionPolicyRead,
+  courseCompletionPolicyResult,
+  courseCompletionPolicyRevision,
   courseCompletionStatusParameters,
   courseCompletionStatusResult,
   courseGradebookExportResult,
@@ -134,6 +140,8 @@ import {
   questionBankActionResult,
   quizDraftParameters,
   quizDraftRevision,
+  quizPoolStartParameters,
+  quizPoolStartResult,
   courseWelcomePublishedResult,
   courseWelcomeResult,
   courseWelcomeWrite,
@@ -184,7 +192,7 @@ import {
   courseClassAssignment,
   courseClassOptions,
 } from "../learning/course-classes-schema.ts";
-import { courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
+import { assignmentActions, courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
@@ -1622,7 +1630,9 @@ const nativePaths = {
   ...courseSeriesPaths(),
   ...learningProgramPaths(),
   ...portfolioPaths(false),
+  ...weightedGradebookPaths(false),
   ...ltiCoursePaths(false),
+  ...manualTextExamPaths(false),
   ...courseEvaluationPaths(false),
   ...companyClassFeedbackPaths,
   ...learningAnalyticsPaths(false),
@@ -4421,6 +4431,14 @@ const nativePaths = {
     course,
     internalWorkspaceResult,
   ),
+  "/rest/v1/rpc/start_course_quiz_pool": rpc(
+    "startCourseQuizPool",
+    "Premium LMS",
+    "Start or recover the caller's current question pool draw",
+    "Requires the active course learner, a started course and a current published pool quiz. Draws a subset without replacement for the next permitted attempt. An exact start retry returns the same request ID and attempt number. The course workspace shows only that learner's draw.",
+    quizPoolStartParameters,
+    quizPoolStartResult,
+  ),
   "/rest/v1/rpc/save_course_quiz_draft": rpc(
     "saveCourseQuizDraft",
     "Premium LMS",
@@ -4452,7 +4470,7 @@ const nativePaths = {
       tags: ["Premium LMS"],
       summary: "Save question revisions or configure a quiz from the bank",
       description:
-        "Save, archive or restore an organisation question with its last-read revision. Configure pins selected revisions and saves the canonical quiz snapshot in one transaction. Optional shuffling covers the whole new quiz revision.",
+        "Save, archive or restore an organisation question with its last-read revision. Configure pins selected revisions and saves the canonical quiz snapshot in one transaction. Optional shuffling covers the whole new fixed quiz revision. A pool draw count smaller than the candidate list requires exact bank revisions for every entry.",
       requestBody: {
         required: true,
         content: json({
@@ -4482,6 +4500,34 @@ const nativePaths = {
     courseCompletionStatusResult,
     ["p_user_id"],
   ),
+  "/rest/v1/rpc/course_completion_policy": rpc(
+    "readCourseCompletionPolicy",
+    "Premium LMS",
+    "Read course completion policies and available criteria",
+    "Current course staff receive the latest version, published assignment choices and the current course competency framework. Existing enrolments keep their selected version.",
+    courseCompletionPolicyRead.properties,
+    courseCompletionPolicyResult,
+  ),
+  "/rest/v1/rpc/course_completion_policy_action": {
+    post: {
+      operationId: "saveCourseCompletionPolicy",
+      tags: ["Premium LMS"],
+      summary: "Publish, pin or review completion requirements",
+      description:
+        "Course managers publish revisions, explicitly pin the latest revision to one enrolment and record or withdraw reasoned assignment or competency exceptions. Current course staff can record or withdraw a reasoned verification. Each operation compares the last-read revision.",
+      requestBody: { required: true, content: json(courseCompletionPolicyAction) },
+      responses: {
+        "200": {
+          description: "Confirmed revision",
+          content: json(courseCompletionPolicyRevision),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_competencies": rpc(
     "readCourseCompetencies",
     "Premium LMS",
@@ -4544,7 +4590,7 @@ const nativePaths = {
     "readCourseXapiStatements",
     "Premium LMS",
     "Export pseudonymous xAPI learning records",
-    "Current course managers may export up to 2000 existing quiz attempts and completion or revocation statements in an interval up to 366 days. The end time is exclusive. No LRS connection is made.",
+    "Current course managers may export up to 2000 quiz attempts, released text exam and weighted course scores, or completion and revocation statements in an interval up to 366 days. The end time is exclusive. This returns an archive for local download.",
     {
       p_run_id: { type: "string", format: "uuid" },
       p_from: { type: "string", format: "date-time" },
@@ -4582,7 +4628,7 @@ const nativePaths = {
     "courseAssignments",
     "Premium LMS",
     "Read course assignments and feedback",
-    "Scoped staff see the authoring definition and a bounded attempt page. An enrolled participant sees published definitions, their own attempts and released feedback.",
+    "Scoped staff see the authoring definition, teams and a bounded attempt page. An enrolled participant sees published definitions and released feedback for their own or current team's attempts.",
     {
       ...course,
       p_assignment_id: { type: ["string", "null"], format: "uuid" },
@@ -4595,11 +4641,11 @@ const nativePaths = {
     "courseAssignmentAction",
     "Premium LMS",
     "Save, publish, submit or assess a course assignment",
-    "Staff can save and publish versioned rubrics, grant an extension or record a review. Participants submit the exact clean reservation assigned to their own course attempt. Writes compare the last read version.",
+    "Staff can save and publish versioned rubrics, grant an extension, record a review or configure teams. Pass team_id, title, member_ids and a nullable ISO timestamp due_at to save_team. Pass team_id to remove_team. Team membership is fixed after the first accepted submission. Participants submit their exact clean reservation to create an individual or shared team attempt. Writes compare the last read version.",
     {
       ...course,
       p_assignment_id: uuid,
-      p_action: { enum: ["save", "publish", "extend", "submit", "review"] },
+      p_action: { enum: [...assignmentActions] },
       p_payload: { type: "object" },
       p_expected_version: version,
     },

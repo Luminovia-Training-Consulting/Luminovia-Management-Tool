@@ -381,11 +381,15 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         occupied_seats: 3,
         used_storage_bytes: 27,
       });
-      assert.deepEqual(await readRetained(), before);
+      const retainedWithQuizState = {
+        ...before,
+        quiz: { ...before.quiz, draft: null, pool: null },
+      };
+      assert.deepEqual(await readRetained(), retainedWithQuizState);
       assert.equal(await submit(), message);
       assert.deepEqual(await savedQuiz(), quizAttempt);
       await apply(ledger);
-      assert.deepEqual(await readRetained(), before);
+      assert.deepEqual(await readRetained(), retainedWithQuizState);
       console.log(
         `PASS ${edition} upgrade from ef8a724f: retained accounts, enrolment, quiz progress, course chat and exact clean-file metadata; role and idempotency checks`,
       );

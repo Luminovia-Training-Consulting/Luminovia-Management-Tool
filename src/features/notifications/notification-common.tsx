@@ -13,78 +13,10 @@ import { Button } from "../../components/ui/button";
 import { dateTime } from "../../lib/dates";
 import {
   notificationCategories,
+  notificationCategory,
   type NotificationCategory,
 } from "./categories";
 import type { NotificationItem } from "./api";
-
-/** Known notification kinds for translated labels; unknown kinds use the defined fallback. */
-const knownKinds = new Set([
-  "assignment_change",
-  "claim_confirmed",
-  "claim_cancelled",
-  "assignment_withdrawal_requested",
-  "assignment_withdrawal_approved",
-  "assignment_withdrawal_rejected",
-  "assignment_withdrawal_withdrawn",
-  "job_reopened",
-  "job_matching",
-  "course_offer_published",
-  "chat_message",
-  "forum_reply",
-  "session_reminder",
-  "calendar_invitation",
-  "contract_expiring",
-  "contract_available",
-  "support_update",
-  "readiness_task",
-  "website_enquiry",
-  "replacement_available",
-  "replacement_completed",
-  "delivery_submitted",
-  "delivery_confirmed",
-  "delivery_disputed",
-  "delivery_correction_requested",
-  "delivery_customer_confirmed",
-  "job_waitlist_available",
-  "substitution_proposed",
-  "substitution_closed",
-  "task_assigned",
-  "task_due",
-  "timesheet_reviewed",
-  "qualification_expiring",
-  "course_preparation_updated",
-  "course_question",
-  "course_answer",
-  "course_resource_shared",
-  "course_quiz_published",
-  "course_assignment_feedback",
-  "course_attendance_updated",
-  "course_schedule_changed",
-  "course_start_due",
-  "course_start_escalated",
-  "academy_course_enrolled",
-  "course_completion_issued",
-  "course_completion_revoked",
-  "portal_announcement",
-  "invoice_review_requested",
-  "invoice_exception_available",
-  "invoice_exception_revoked",
-  "invoice_series_available",
-  "invoice_series_revoked",
-  "invoice_correction_proposed",
-  "invoice_correction_acknowledged",
-  "invoice_correction_disputed",
-  "invoice_correction_withdrawn",
-  "invoice_correction_repayment_recorded",
-  "invoice_correction_repayment_voided",
-  "invoice_submitted",
-  "invoice_approved",
-  "invoice_paid",
-  "invoice_fully_credited",
-  "invoice_rejected",
-  "invoice_cancelled",
-  "payment_received",
-]);
 
 /** Categories filter only already-loaded authorized rows; neither totals nor server cursors change. */
 export function CategorySelector({
@@ -154,7 +86,7 @@ export const NotificationRow = memo(function NotificationRow({
         {t(
           item.assignment_replaced
             ? "lecturerReplaced"
-            : knownKinds.has(item.kind)
+            : notificationCategory(item.kind) !== "other"
               ? item.kind
               : "activity",
         )}

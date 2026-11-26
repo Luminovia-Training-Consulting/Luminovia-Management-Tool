@@ -14,6 +14,7 @@ const groups: Record<
 > = {
   messages: ["chat_message", "forum_reply", "portal_announcement"],
   courses: [
+    "academy_course_enrolled",
     "claim_confirmed",
     "claim_cancelled",
     "assignment_change",
@@ -36,6 +37,8 @@ const groups: Record<
     "course_resource_shared",
     "course_quiz_published",
     "course_assignment_feedback",
+    "course_weighted_grade_released",
+    "course_text_exam_graded",
     "course_attendance_updated",
     "course_schedule_changed",
     "course_start_due",

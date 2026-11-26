@@ -4,6 +4,11 @@
  */
 import { z } from "zod";
 import {
+  courseCompletionPinnedPolicy,
+  courseCompletionPolicyActionSchema,
+  courseCompletionPolicyProjection,
+} from "../learning/course-completion-policy-schema.ts";
+import {
   h5pAttributionSchema,
   h5pQuestionImportSchema,
 } from "../learning/h5p-import-schema.ts";
@@ -235,17 +240,21 @@ export const questionBankActionVariants = [
   ["set_archived", record({ id: uuid, archived: boolean })],
   [
     "configure",
-    record({
-      entries: {
-        ...itemList({ oneOf: [questionBankItem, questionBankSource] }),
-        minItems: 1,
-        maxItems: 20,
+    record(
+      {
+        entries: {
+          ...itemList({ oneOf: [questionBankItem, questionBankSource] }),
+          minItems: 1,
+          maxItems: 20,
+        },
+        pass_percent: { ...score, minimum: 50 },
+        max_attempts: { ...integer, minimum: 1, maximum: 10 },
+        published: boolean,
+        shuffle: boolean,
+        draw_count: { ...integer, minimum: 1, maximum: 19 },
       },
-      pass_percent: { ...score, minimum: 50 },
-      max_attempts: { ...integer, minimum: 1, maximum: 10 },
-      published: boolean,
-      shuffle: boolean,
-    }),
+      ["entries", "pass_percent", "max_attempts", "published", "shuffle"],
+    ),
   ],
 ].map(([action, payload]) =>
   record({
@@ -273,6 +282,14 @@ export const quizDraftParameters = {
   p_answers: quizDraftAnswers,
 };
 export const quizDraftRevision = { ...integer, minimum: 1 };
+export const quizPoolStartParameters = {
+  p_run_id: uuid,
+  p_quiz_version: { ...integer, minimum: 1 },
+};
+export const quizPoolStartResult = record({
+  request_id: uuid,
+  attempt_number: { ...integer, minimum: 1, maximum: 10 },
+});
 
 const dateRange = { starts_at: dateTime, ends_at: dateTime };
 const resourceReference = { id: uuid, name: text, version: integer };
@@ -376,6 +393,13 @@ const workspaceFields = {
       attempts: integer,
       passed: boolean,
       last_score: nullable(score),
+      pool: nullable(
+        record({
+          draw_count: { ...integer, minimum: 1, maximum: 19 },
+          request_id: nullable(uuid),
+        }),
+      ),
+
       draft: nullable(
         record({
           request_id: uuid,
@@ -481,7 +505,7 @@ export const courseCompletionStatusParameters = record(
   { p_run_id: uuid, p_user_id: nullable(uuid) },
   ["p_run_id"],
 );
-export const courseCompletionStatusResult = record({
+const completionStatusFields = {
   enrolment_completed: boolean,
   session_count: integer,
   ended_count: integer,
@@ -492,7 +516,18 @@ export const courseCompletionStatusResult = record({
   reverify_required: boolean,
   rule_version: { ...integer, minimum: 1 },
   state: { type: "string", enum: ["pending", "ready", "issued"] },
-});
+};
+export const courseCompletionStatusResult = record(
+  { ...completionStatusFields, policy: z.toJSONSchema(courseCompletionPinnedPolicy) },
+  Object.keys(completionStatusFields) as (keyof typeof completionStatusFields)[],
+);
+export const courseCompletionPolicyRead = record({ p_run_id: uuid });
+export const courseCompletionPolicyResult = z.toJSONSchema(courseCompletionPolicyProjection);
+export const courseCompletionPolicyAction = {
+  ...z.toJSONSchema(courseCompletionPolicyActionSchema),
+  required: ["p_run_id", "p_action", "p_payload", "p_expected_version"],
+};
+export const courseCompletionPolicyRevision = { ...integer, minimum: 1 };
 
 const gradebookBand = record({
   minimum: { ...integer, maximum: 100 },

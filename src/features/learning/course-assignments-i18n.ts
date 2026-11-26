@@ -33,6 +33,43 @@ const assignmentTexts = {
     "Check the details. Each criterion starts at zero points. Level points must increase and names must be distinct.",
   ],
   assignmentsExtension: ["Fristverlängerung", "Deadline extension"],
+  assignmentsTeams: ["Abgabeteams", "Assignment teams"],
+  assignmentsTeamChoose: ["Team auswählen", "Choose team"],
+  assignmentsTeamNew: ["Neues Team", "New team"],
+  assignmentsTeamName: ["Teamname", "Team name"],
+  assignmentsTeamDue: [
+    "Eigene Teamfrist ({{zone}}, optional)",
+    "Team deadline ({{zone}}, optional)",
+  ],
+  assignmentsTeamMembers: ["Teammitglieder", "Team members"],
+  assignmentsTeamNoLearners: [
+    "Es sind keine eingeschriebenen Teilnehmenden verfügbar.",
+    "No enrolled participants are available.",
+  ],
+  assignmentsTeamLocked: [
+    "Die Mitglieder stehen seit der ersten Teamabgabe fest.",
+    "Team membership is fixed after the first team submission.",
+  ],
+  assignmentsTeamSave: ["Team speichern", "Save team"],
+  assignmentsTeamRemove: ["Team entfernen", "Remove team"],
+  assignmentsTeamConfirmRemove: [
+    "Möchtest du das Team {{title}} entfernen?",
+    "Remove the team {{title}}?",
+  ],
+  assignmentsTeamRemoveConfirm: ["Entfernen bestätigen", "Confirm removal"],
+  assignmentsTeamCancel: ["Abbrechen", "Cancel"],
+  assignmentsTeamEmpty: [
+    "Für diese Aufgabe wurden keine Teams eingerichtet.",
+    "No teams have been set up for this assignment.",
+  ],
+  assignmentsTeamInvalid: [
+    "Gib einen Namen, 1 bis 20 Mitglieder und bei Bedarf eine gültige Teamfrist an.",
+    "Enter a team name, select 1 to 20 members and check the optional deadline.",
+  ],
+  assignmentsTeamShared: [
+    "Team {{title}}. Dein Team teilt sich die Abgaben und Rückmeldungen.",
+    "Team {{title}}. Your team shares submissions and feedback.",
+  ],
   assignmentsParticipant: ["Teilnehmende Person", "Participant"],
   assignmentsExtend: ["Verlängerung speichern", "Save extension"],
   assignmentsExtensionCurrent: [

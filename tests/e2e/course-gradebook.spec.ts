@@ -24,12 +24,8 @@ async function authenticatedActor(name: string, role: string) {
   return { ...account, client };
 }
 
-test("staff save the default quiz grading scale and release a grade to the enrolled learner", async ({
-  page,
-  browser,
-  baseURL,
-}, info) => {
-  test.setTimeout(120_000);
+/** Use a separate fictional course and scored attempt for every project. */
+async function quizGradeFixture() {
   // Use a fresh course and actors on each project. The isolated runner disposes
   // of their records; the test never modifies shared fixture or grading history.
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -126,6 +122,16 @@ test("staff save the default quiz grading scale and release a grade to the enrol
   );
   expect(attempt).toMatchObject({ score: 50 });
 
+  return { manager, learner, run };
+}
+
+test("staff save the default quiz grading scale and release a grade to the enrolled learner", async ({
+  page,
+  browser,
+  baseURL,
+}, info) => {
+  test.setTimeout(120_000);
+  const { manager, learner, run } = await quizGradeFixture();
   const workspace = `/courses/${run}/workspace#course-gradebook`;
   const title = { name: "Quiz-Notenbuch", exact: true };
   const saveScale = { name: "Notenskala speichern", exact: true };
@@ -315,4 +321,90 @@ test("staff save the default quiz grading scale and release a grade to the enrol
   } finally {
     await context.close();
   }
+});
+
+/** Keep staff review and learner publication on separate authenticated sessions. */
+test("staff review and publish one weighted course grade to the enrolled learner", async ({
+  page,
+  browser,
+  baseURL,
+}, info) => {
+  test.setTimeout(120_000);
+  const duplicateKeys: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("same key"))
+      duplicateKeys.push(message.text());
+  });
+  const { manager, learner, run } = await quizGradeFixture();
+  const workspace = `/courses/${run}/workspace`;
+
+  await login(page, manager.email);
+  await page.goto(workspace + "#course-gradebook");
+  const quiz = page.getByRole("region", { name: "Quiz-Notenbuch", exact: true });
+  await quiz.getByRole("button", { name: "Notenskala speichern" }).click();
+  await quiz.getByRole("button", { name: "Note freigeben", exact: true }).click();
+  await expect(quiz.getByText(/Freigegebene Note: 50\s*%/)).toBeVisible();
+
+  await page.goto(workspace + "#course-weighted-gradebook");
+  const weighted = page.getByRole("region", { name: "Gewichtete Kursnoten" });
+  await weighted.getByRole("button", { name: "Bewertungsrichtlinie bearbeiten" }).click();
+  await weighted.getByLabel("Bestehensgrenze (%)").fill("25");
+  await weighted.getByLabel("Fehlende Pflichtleistungen").selectOption("zero");
+  await weighted.getByRole("group", { name: "Leistung 1" })
+    .getByLabel("Gewicht (%) oder Bonuspunkte").fill("50");
+  await weighted.getByRole("button", { name: "Leistung hinzufügen" }).click();
+  const exam = weighted.getByRole("group", { name: "Leistung 2" });
+  await exam.getByLabel("Leistung", { exact: true }).selectOption("exam");
+  await exam.getByLabel("Gewicht (%) oder Bonuspunkte").fill("50");
+  await weighted.getByRole("button", { name: "Richtlinie als neue Fassung speichern" }).press("Enter");
+  await weighted.getByLabel("Teilnehmende Person", { exact: true }).selectOption(learner.id);
+  const preview = weighted.getByRole("region", { name: "Vorschau der Kursnote" });
+  await expect(preview.getByRole("status")).toHaveText(/25\s*% · Bestanden/);
+  await expect(preview.getByText("Fehlende Pflichtleistung mit 0 gewertet")).toBeVisible();
+
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  const staff = page.getByRole("region", { name: "Weighted course grades" });
+  const latest = staff.getByRole("region", { name: "Course grade preview" });
+  await expect(latest.getByRole("status")).toHaveText("25% · Passed");
+  expect(await staff.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  const audit = await new AxeBuilder({ page })
+    .include(".course-gradebook")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(audit.violations).toEqual([]);
+
+  const learnerContext = await browser.newContext({
+    baseURL,
+    viewport: info.project.use.viewport,
+    isMobile: info.project.use.isMobile,
+    hasTouch: info.project.use.hasTouch,
+  });
+  try {
+    const learnerPage = await learnerContext.newPage();
+    await login(learnerPage, learner.email, /\/learning$/);
+    await learnerPage.goto(workspace + "#course-weighted-gradebook");
+    const learnerGrades = learnerPage.getByRole("region", { name: "Gewichtete Kursnoten" });
+    const unpublished = learnerGrades.getByText("Für diese Person ist noch keine Kursnote freigegeben.");
+    await expect(unpublished).toBeVisible();
+    const publish = staff.getByRole("button", { name: "Publish reviewed course grade" });
+    await expect(publish).toHaveCount(0);
+    await staff.getByRole("button", { name: "Save reviewed preview" }).press("Enter");
+    await expect(publish).toBeEnabled();
+    await learnerPage.reload();
+    await expect(unpublished).toBeVisible();
+    await publish.press("Enter");
+    await expect(staff.getByRole("region", { name: "Course grade release history" })
+      .getByRole("status")).toHaveText("25% · Passed");
+    await learnerPage.goto("/notifications");
+    const notice = learnerPage.getByRole("listitem").filter({hasText: "Kursnote freigegeben"});
+    const resultLink = notice.getByRole("link", {name: "Öffnen", exact: true});
+    await expect(resultLink).toHaveAttribute("href", workspace + "#course-weighted-gradebook");
+    await resultLink.click();
+    await expect(learnerGrades.getByRole("status")).toHaveText(/25\s*% · Bestanden/);
+    await expect(learnerGrades.getByRole("button", { name: "Bewertungsrichtlinie bearbeiten" })).toHaveCount(0);
+  } finally {
+    await learnerContext.close();
+  }
+  expect(duplicateKeys).toEqual([]);
 });

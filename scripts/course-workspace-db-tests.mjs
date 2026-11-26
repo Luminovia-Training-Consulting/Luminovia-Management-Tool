@@ -1164,6 +1164,123 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);
     });
+    await check("Weighted course grades hold current assessment evidence and versioned review and release rules", async () => {
+        const assignment = randomUUID(), bonus = randomUUID(), mainAttempt = randomUUID(), bonusAttempt = randomUUID();
+        // Set up fictional source facts with their exact rubric and review versions.
+        const rubric = JSON.stringify([{label: "Fictional score", levels: [0, 5, 8, 9, 10].map((points) => ({label: String(points), points}))}]);
+        await sql(`
+          insert into private.course_assignments(id,run_id,current_version,published_version)
+            values (${q(assignment)},${q(run)},1,1),(${q(bonus)},${q(run)},1,1);
+          insert into private.course_assignment_definitions(assignment_id,version,title,instructions,due_at,max_attempts,rubric)
+            values (${q(assignment)},1,'Fictional graded work','Instructions',now(),2,${q(rubric)}),
+                   (${q(bonus)},1,'Fictional bonus work','Instructions',now(),2,${q(rubric)});
+          insert into private.course_assignment_attempts(id,assignment_id,assignment_version,user_id,attempt_no,file_name)
+            values (${q(mainAttempt)},${q(assignment)},1,${q(learner)},1,'fictional.pdf'),
+                   (${q(bonusAttempt)},${q(bonus)},1,${q(learner)},1,'bonus.pdf');
+          insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+            values (${q(mainAttempt)},1,'released','[9]','','private feedback'),
+                   (${q(mainAttempt)},2,'draft','[5]','','private draft'),
+                   (${q(bonusAttempt)},1,'released','[5]','','private bonus feedback');
+          insert into private.course_timed_exams(run_id,title,visible_from,starts_at,ends_at,pass_percent)
+            values (${q(run)},'Fictional numeric exam',now()-interval '3 days',now()-interval '2 days',now()-interval '1 day',60);
+          insert into private.course_exam_results(run_id,participant_id,score) values (${q(run)},${q(learner)},80);
+        `);
+        const readWeighted = (who, target = null, before = null) => rpc(who, "course_weighted_gradebook", [
+            q(run), target === null ? "null" : q(target), before ?? "null",
+        ]);
+        const changeWeighted = (who, actionName, version, payload) => rpc(who, "course_weighted_gradebook_command", [
+            q(run), q(actionName), q(JSON.stringify(payload)), version,
+        ]);
+        const items = [
+            {key: "quiz", weight: 40, treatment: "required"},
+            {key: assignment, weight: 35, treatment: "required"},
+            {key: "exam", weight: 25, treatment: "required"},
+            {key: bonus, weight: 10, treatment: "bonus"},
+        ];
+        const policy = {threshold: 47, missing_required: "block", separate_reviewer: true, items};
+        await assert.rejects(changeWeighted(learner, "policy", 0, policy), /42501/);
+        await assert.rejects(readWeighted(client, learner), /42501/);
+        await assert.rejects(readWeighted(second, learner), /42501/);
+        await assert.rejects(changeWeighted(teacher, "policy", 0, {...policy, items: [...items, items[0]]}), /22023/);
+        await assert.rejects(changeWeighted(teacher, "policy", 0, {...policy, items: items.slice(0, 2)}), /22023/);
+        assert.deepEqual(await changeWeighted(teacher, "policy", 0, policy), {version: 1});
+        await assert.rejects(changeWeighted(admin, "policy", 0, policy), /PT409/);
+        const staffView = await readWeighted(teacher, learner);
+        assert.equal(staffView.preview.percent, null); // saved, unpublished exam
+        assert.equal(staffView.preview.components.find(({key}) => key === assignment).score, 90);
+        assert.equal(staffView.preview.components.find(({key}) => key === "exam").status, "missing");
+        const exempt = {user_id: learner, key: "exam", excused: true, reason: "Fictional approved exemption", expected_exemption: 0};
+        assert.deepEqual(await changeWeighted(teacher, "exempt", 1, exempt), {version: 1});
+        await assert.rejects(changeWeighted(teacher, "exempt", 1, exempt), /PT409/);
+        const proposed = await readWeighted(teacher, learner);
+        const quiz = proposed.preview.components.find(({key}) => key === "quiz").score;
+        assert.ok(Number.isInteger(quiz));
+        const initialPercent = Number(((quiz*40 + 90*35)/75 + 5).toFixed(2));
+        assert.equal(proposed.preview.percent, initialPercent);
+        assert.equal(proposed.preview.passed, initialPercent >= 47);
+        assert.equal(proposed.preview.components.find(({key}) => key === "exam").status, "excused");
+        const reviewed = {user_id: learner, expected_review: 0, expected_release: 0, fingerprint: proposed.fingerprint, reason: ""};
+        await assert.rejects(changeWeighted(teacher,"review",1,{...reviewed,fingerprint:"0".repeat(64)}), /PT409/);
+        assert.deepEqual(await changeWeighted(teacher,"review",1,reviewed), {version: 1});
+        const release = {user_id: learner, expected_review: 1, expected_release: 0};
+        assert.deepEqual((await readWeighted(learner)).history, []);
+        assert.equal((await readWeighted(learner)).review,null);
+        await assert.rejects(changeWeighted(teacher,"release",1,release), /42501/);
+        // A newly released grade invalidates the reviewed preview without disclosing the draft.
+        await sql(`insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+          values (${q(mainAttempt)},3,'released','[8]','','private correction')`);
+        await assert.rejects(changeWeighted(admin,"release",1,release), /PT409/);
+        const corrected = await readWeighted(teacher, learner);
+        assert.equal(corrected.preview.percent, Number(((quiz*40 + 80*35)/75 + 5).toFixed(2)));
+        await changeWeighted(teacher,"review",1,{...reviewed,expected_review:1,fingerprint:corrected.fingerprint});
+        const published = await Promise.allSettled([
+            changeWeighted(admin,"release",1,{...release,expected_review:2}),
+            changeWeighted(admin,"release",1,{...release,expected_review:2}),
+        ]);
+        assert.deepEqual(published.filter(({status}) => status === "fulfilled").map(({value}) => value), [{version:1}]);
+        assert.match(published.find(({status}) => status === "rejected").reason.message, /PT409/);
+        const firstRelease = (await readWeighted(learner)).history[0];
+        assert.equal(firstRelease.result.percent, corrected.preview.percent);
+        assert.equal(firstRelease.reason,null);
+        assert.ok(!Object.hasOwn(firstRelease.result,"basis"));
+        assert.deepEqual((await readWeighted(second)).history, []);
+        assert.deepEqual(await changeWeighted(teacher,"policy",1,{...policy,missing_required:"zero",separate_reviewer:false}),{version:2});
+        const zeroPreview = (await readWeighted(teacher, learner)).preview;
+        assert.equal(zeroPreview.components.find(({key}) => key === "exam").status,"zero");
+        assert.equal(zeroPreview.percent, Number(((quiz*40 + 80*35)/100 + 5).toFixed(2)));
+        await sql(`update private.course_timed_exams set version=2,published_at=clock_timestamp() where run_id=${q(run)}`);
+        const examPreview = await readWeighted(teacher, learner);
+        const secondPercent = Number(((quiz*40 + 80*35 + 80*25)/100 + 5).toFixed(2));
+        assert.equal(examPreview.preview.percent, secondPercent);
+        assert.equal(examPreview.preview.components.find(({key}) => key === "exam").score,80);
+        assert.deepEqual((await readWeighted(learner)).history,[firstRelease]);
+        const replacement = {user_id: learner, expected_review:2, expected_release:1,
+            fingerprint: examPreview.fingerprint, reason:""};
+        await assert.rejects(changeWeighted(teacher,"review",2,replacement), /22023/);
+        await changeWeighted(teacher,"review",2,{...replacement,reason:"Fictional numeric exam released"});
+        await changeWeighted(teacher,"release",2,{user_id:learner,expected_review:3,expected_release:1});
+        const official = (await readWeighted(learner)).history;
+        assert.equal(official[0].result.percent,secondPercent);
+        assert.equal(official[0].reason,null);
+        assert.deepEqual(await readWeighted(learner,null,2).then(({history}) => history),[firstRelease]);
+        assert.equal((await readWeighted(teacher,learner)).history[0].reason,"Fictional numeric exam released");
+        const xapi = async () => courseXapiArchiveSchema.parse(await rpc(admin, "course_xapi_statements", [
+            q(run), q(new Date(Date.now() - 86400000).toISOString()), q(new Date(Date.now() + 86400000).toISOString()),
+        ]));
+        const archive = await xapi();
+        const scored = archive.statements.filter((entry) => entry.verb.id.endsWith("/scored"));
+        assert.deepEqual(scored.map((entry) => entry.result.score.raw), [firstRelease.result.percent, secondPercent]);
+        assert.ok(scored.every((entry) => entry.object.id.endsWith("/weighted-grade")));
+        assert.ok(!JSON.stringify(scored).includes("Fictional numeric exam released"));
+        assert.deepEqual(await xapi(), archive);
+        // Optional missing work is reweighted, while the numeric base remains separate from bonus points.
+        const optionalItems = items.map((item) => item.key === "exam" ? {...item,treatment:"optional"} : item);
+        await sql(`update private.course_timed_exams set published_at=null where run_id=${q(run)}`);
+        await changeWeighted(admin,"policy",2,{...policy,items:optionalItems});
+        const optional = (await readWeighted(teacher,learner)).preview;
+        assert.equal(optional.percent, corrected.preview.percent);
+        assert.equal(optional.components.find(({key}) => key === "exam").status,"missing");
+    });
     await check(
         "Membership and account revocation remove course documents with existing identities",
         async () => {

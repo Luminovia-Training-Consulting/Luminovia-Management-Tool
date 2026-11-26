@@ -23,10 +23,35 @@ export const assignmentDefinition = z.object({
   rubric,
 });
 
+export const assignmentTeamInput = z.object({
+  team_id: z.uuid(),
+  title: z.string().trim().min(1).max(100),
+  due_at: instant.nullable(),
+  member_ids: z.array(z.uuid()).min(1).max(20),
+});
+
+const assignmentTeam = assignmentTeamInput.omit({ team_id: true }).extend({
+  id: z.uuid(),
+  version,
+  locked: z.boolean(),
+  member_ids: z.array(z.uuid()).max(20),
+});
+
+export const assignmentActions = [
+  "save",
+  "publish",
+  "extend",
+  "submit",
+  "review",
+  "save_team",
+  "remove_team",
+] as const;
+
 const attempt = z.object({
   id: z.uuid(),
   user_id: z.uuid(),
   display_name: z.string(),
+  team_title: z.string().nullable().default(null),
   attempt_no: version,
   file_version_id: z.uuid().nullable(),
   file_name: z.string(),
@@ -63,6 +88,7 @@ export const courseAssignmentsProjection = z.object({
       extensions: z.array(
         z.object({ user_id: z.uuid(), version, due_at: instant }),
       ),
+      teams: z.array(assignmentTeam).default([]),
       attempts: z.array(attempt),
     })
     .nullable(),
@@ -76,6 +102,7 @@ export type CourseAssignment = NonNullable<
   CourseAssignmentsProjection["detail"]
 >;
 export type CourseAssignmentAttempt = z.infer<typeof attempt>;
+export type CourseAssignmentTeam = z.infer<typeof assignmentTeam>;
 
 /** The server duplicates these shape/range checks and is the authority on scores. */
 export function rubricIsOrdered(value: AssignmentDefinition["rubric"]) {

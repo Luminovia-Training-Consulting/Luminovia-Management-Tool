@@ -435,6 +435,9 @@ const pairs: Record<string, [string, string]> = {
   "phase.unscheduled": ["Kurse ohne Termin", "Courses awaiting a schedule"],
   workspaceSection: ["Kursbereich", "Course section"],
   workspaceNavigation: ["Bereiche im Kursraum", "Course workspace sections"],
+  workspaceCourseGroup: ["Kurs & Materialien", "Course & materials"],
+  workspaceAssessmentGroup: ["Lernen & Bewertung", "Learning & assessment"],
+  workspaceManagementGroup: ["Organisation", "Administration"],
   workspaceMaterials: ["Materialien", "Materials"],
   courseClassHeading: ["Schulklasse", "Class"],
   courseClassSelect: ["Schulklasse auswählen", "Select class"],
@@ -737,6 +740,7 @@ const pairs: Record<string, [string, string]> = {
     "Der Vorgang konnte nicht abgeschlossen werden. Prüfe Berechtigung und Konfiguration. Starte den Kurslink bei Bedarf erneut.",
     "The request could not be completed. Check access and configuration. If needed, restart the course link.",
   ],
+  weightedTab: ["Kursnoten", "Course grades"],
   gradebookTitle: ["Quiz-Notenbuch", "Quiz gradebook"],
   gradebookOffline: [
     "Das Notenbuch ist nur online verfügbar.",
@@ -1312,6 +1316,7 @@ const pairs: Record<string, [string, string]> = {
     "Der aktuelle Abschlussstatus ist nur online verfügbar.",
     "Current completion status is available online.",
   ],
+  completionRefreshStatus: ["Abschlussstatus aktualisieren", "Refresh completion status"],
   completionIssuedStatus: [
     "Abschlussdokument ausgestellt.",
     "Completion document issued.",
@@ -1337,8 +1342,8 @@ const pairs: Record<string, [string, string]> = {
     "All sessions must have ended. Last course end: {{end}}.",
   ],
   completionRequirementAttendance: [
-    "Für jeden Termin sind mindestens 80 % bestätigte Anwesenheit erforderlich ({{verified}} von {{total}} bestätigt).",
-    "Each session requires at least 80% verified attendance ({{verified}} of {{total}} verified).",
+    "Für jeden Termin sind mindestens {{percent}} % bestätigte Anwesenheit erforderlich ({{verified}} von {{total}} bestätigt).",
+    "Each session requires at least {{percent}}% verified attendance ({{verified}} of {{total}} verified).",
   ],
   completionRequirementQuiz: [
     "Das veröffentlichte Quiz (Fassung {{version}}) muss bestanden sein.",
@@ -1349,8 +1354,8 @@ const pairs: Record<string, [string, string]> = {
     "After a revocation, staff must verify attendance again.",
   ],
   completionHelp: [
-    "Ein Abschlussdokument wird erst nach Kursende, abgeschlossenem Einschreibestatus, bestätigten mindestens 80 % Anwesenheit je Termin und bestandenem veröffentlichtem Quiz ausgestellt. Es dokumentiert diese Fakten und ist keine behauptete qualifizierte Signatur oder externe Zertifizierung.",
-    "A completion document is issued only after the course ends, enrolment is completed, at least 80% attendance is verified in each session and the published quiz is passed. It records those facts and does not claim a qualified signature or external certification.",
+    "Sobald alle Anforderungen erfüllt sind, kannst du das Abschlussdokument ausstellen und herunterladen.",
+    "Once you meet all requirements, you can issue and download the completion document.",
   ],
   issueCompletion: [
     "Voraussetzungen prüfen und Dokument ausstellen",

@@ -68,7 +68,7 @@ it("only requests the chosen learner and explains each active requirement", asyn
   expect(await screen.findByText(/outstanding requirements/)).toBeVisible();
   expect(screen.getByText(/enrolment must be marked completed/)).toBeVisible();
   expect(screen.getByText(/All sessions must have ended.*9:00/)).toBeVisible();
-  expect(screen.getByText(/1 of 2 verified/)).toBeVisible();
+  expect(screen.getByText(/80% verified attendance \(1 of 2 verified\)/)).toBeVisible();
   expect(screen.getByText(/published quiz \(version 2\)/)).toBeVisible();
   expect(screen.getByText(/staff must verify attendance again/)).toBeVisible();
   expect(rpc).toHaveBeenCalledWith("course_completion_status", {
@@ -98,4 +98,52 @@ it("preserves issued status in view and discards the displayed evidence offline"
   expect(
     screen.queryByText("Completion document issued."),
   ).not.toBeInTheDocument();
+});
+
+it("shows a scoped exception and refreshes after the learner issues the document", async () => {
+  const ready: CourseCompletionStatus = {
+    ...pending,
+    enrolment_completed: true,
+    ended_count: 2,
+    verified_count: 2,
+    quiz_passed: true,
+    reverify_required: false,
+    rule_version: 2,
+    state: "ready",
+    policy: {
+      version: 1,
+      attendance_percent: 60,
+      assignment: {
+        title: "Fictional assignment",
+        met: false,
+        exception: { accepted: true, revision: 1 },
+      },
+      competency: null,
+      verification: null,
+      target_at: null,
+    },
+  };
+  rpc.mockImplementationOnce(() => ({
+    abortSignal: async () => ({ data: ready, error: null }),
+  }));
+  rpc.mockImplementationOnce(() => ({
+    abortSignal: async () => ({
+      data: { ...ready, state: "issued" },
+      error: null,
+    }),
+  }));
+  mount();
+  fireEvent.change(screen.getByRole("combobox"), {
+    target: { value: "fictional-learner" },
+  });
+  expect(
+    await screen.findByText(
+      "Exception granted for the required assignment: Fictional assignment",
+    ),
+  ).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Refresh completion status" }),
+  );
+  expect(await screen.findByText("Completion document issued.")).toBeVisible();
+  expect(rpc).toHaveBeenCalledTimes(2);
 });

@@ -320,12 +320,18 @@ export default defineConfig(({ mode }) => {
             // These private LMS workflows require a live session and load on entry.
             "**/portfolio-*.js",
             "**/peer-feedback-*.js",
+            "**/course-text-exam-*.js",
             "**/course-xapi-export-*.js",
+            "**/course-completion-policy-*.js",
             // Packet review and conversion are loaded when explicitly used.
             "**/scorm-package-*.js",
             "**/h5p-import-*.js",
             "**/h5p-question-import-panel-*.js",
+            "**/course-package-archive-*.js",
+            "**/course-assignment-teams-*.js",
+            "**/course-assignments-*.js",
             "**/lti-course-*.js",
+            "**/course-weighted-gradebook-*.js",
             // Shared by the on-demand archive tools and XLSX import/export.
             "**/zip.js-*.js",
           ],

@@ -1,6 +1,10 @@
 /** Read only the two JSON members needed to convert a reviewed H5P question. */
 import { Uint8ArrayReader, ZipReader, type FileEntry } from "@zip.js/zip.js";
 import { z } from "zod";
+import {
+  consumePackageEntry,
+  coursePackageDigest,
+} from "./course-package-archive";
 import { objectiveQuestionInput } from "./question-bank-schema";
 import {
   h5pAttributionSchema,
@@ -102,19 +106,7 @@ async function readJson(entry: FileEntry | undefined): Promise<unknown> {
   )
     throw new H5pImportError("archive");
   const bytes = new Uint8Array(entry.uncompressedSize);
-  let offset = 0;
-  await entry.getData(
-    new WritableStream<Uint8Array>({
-      write(chunk) {
-        if (offset + chunk.length > bytes.length)
-          throw new H5pImportError("archive");
-        bytes.set(chunk, offset);
-        offset += chunk.length;
-      },
-    }),
-    { checkSignature: true },
-  );
-  if (offset !== bytes.length) throw new H5pImportError("archive");
+  await consumePackageEntry(entry, bytes);
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
@@ -321,11 +313,8 @@ export async function readH5pQuestion(file: File): Promise<H5pQuestionImport> {
       data.data.language,
     );
     const credits = attribution(data.data, library);
-    const sha256 = await crypto.subtle.digest("SHA-256", bytes);
     return {
-      package_sha256: Array.from(new Uint8Array(sha256), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join(""),
+      package_sha256: await coursePackageDigest(bytes),
       attribution: credits,
       question: item,
     };

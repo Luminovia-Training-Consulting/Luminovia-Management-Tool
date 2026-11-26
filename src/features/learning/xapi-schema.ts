@@ -20,27 +20,32 @@ const base = {
     }),
   }),
 };
-const score = z.number().int().min(0).max(100);
+const percent = z.number().min(0).max(100);
+const score = z.strictObject({
+  scaled: z.number().min(0).max(1),
+  raw: percent,
+  min: z.literal(0),
+  max: z.literal(100),
+});
+const scoredResult = z.strictObject({ score, success: z.boolean() });
 const statement = z.union([
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "attempted") }),
     object: activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/),
-    result: z.strictObject({
-      score: z.strictObject({
-        scaled: z.number().min(0).max(1),
-        raw: score,
-        min: z.literal(0),
-        max: z.literal(100),
-      }),
-      success: z.boolean(),
-    }),
+    result: scoredResult.extend({ score: score.extend({ raw: percent.int() }) }),
   }),
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "completed") }),
     object: activity(/\/[a-f0-9]{64}$/),
     result: z.strictObject({ completion: z.literal(true) }),
+  }),
+  z.strictObject({
+    ...base,
+    verb: z.strictObject({ id: z.literal(verbBase + "scored") }),
+    object: activity(/\/[a-f0-9]{64}\/(?:weighted-grade|text-exam\/[1-9][0-9]*)$/),
+    result: scoredResult,
   }),
   z.strictObject({
     ...base,

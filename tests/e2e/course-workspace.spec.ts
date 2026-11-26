@@ -171,6 +171,37 @@ async function linkWorkspaceLearner(f: Awaited<ReturnType<typeof fixture>>) {
     return learner;
 }
 
+test("the course menu groups tools and displays only the chosen section", async ({page}, info) => {
+    const f = await fixture();
+    const workspace = `/courses/${f.run}/workspace`;
+    await adminLogin(page, f.manager);
+    await page.goto(workspace);
+    const mobile = info.project.name.startsWith("mobile");
+    const nav = page.getByRole("navigation", {name: "Bereiche im Kursraum"});
+    await expect(page.getByRole("heading", {name: "Kursübersicht & Termine"})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Kursdateien"})).toBeHidden();
+    if (mobile) {
+        const menu = nav.getByRole("combobox", {name: "Kursbereich"});
+        await expect(menu.locator('optgroup[label="Kurs & Materialien"]')).toHaveCount(1);
+        await expect(menu.locator('optgroup[label="Organisation"]')).toHaveCount(1);
+        await menu.selectOption("course-materials");
+    } else {
+        const organisation = nav.getByText("Organisation", {exact: true});
+        await organisation.focus();
+        await organisation.press("Enter");
+        await expect(nav.getByRole("link", {name: "Teilnehmende", exact: true})).toBeVisible();
+        await expect(nav.getByRole("link", {name: "Materialien", exact: true})).toBeHidden();
+        await nav.getByText("Kurs & Materialien", {exact: true}).click();
+        await nav.getByRole("link", {name: "Materialien", exact: true}).click();
+    }
+    await expect(page).toHaveURL(workspace + "#course-materials");
+    await expect(page.getByRole("heading", {name: "Kursdateien"})).toBeVisible();
+    await expect(page.getByRole("heading", {name: "Kursübersicht & Termine"})).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole("heading", {name: "Kursdateien"})).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test("completed course evaluations and lecturer restrictions follow current roles", async ({page, browser}, info) => {
     test.setTimeout(90_000);
     const f = await fixture();
@@ -1034,13 +1065,20 @@ test("current instructor publishes a meeting link for a consented participant", 
     }
 });
 
-test("Versioned assignment uses the scanner, requests a revision and releases private feedback", async ({page, browser}, info) => {
+for (const asTeam of [false, true]) test(`${asTeam ? "Team" : "Versioned"} assignment uses the scanner, requests a revision and releases private feedback`, async ({page, browser}, info) => {
     test.setTimeout(120_000);
     const f = await fixture({upcoming: true});
     await linkWorkspaceLearner(f);
     await checked(f.adminClient.rpc("manage_course_enrolment", {
         p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
     }));
+    const teammate = asTeam ? await actor("Fictional lab teammate", "participant") : undefined;
+    if (teammate) {
+        await linkWorkspaceLearner({...f, learner: teammate});
+        await checked(f.adminClient.rpc("manage_course_enrolment", {
+            p_course_run_id: f.run, p_user_id: teammate.id, p_status: "enrolled",
+        }));
+    }
     const workspace = `/courses/${f.run}/workspace#course-submissions`;
     const scope = (target: Page) => target.getByRole("region", {name: "Kursaufgaben", exact: true});
     const prepare = async (target: Page) => {
@@ -1062,26 +1100,53 @@ test("Versioned assignment uses the scanner, requests a revision and releases pr
     await author.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
     await author.getByRole("button", {name: "Aufgabe veröffentlichen", exact: true}).click();
     await expect(author.getByText("Version 1 veröffentlicht", {exact: true})).toBeVisible();
-    const learnerContext = await browser.newContext({
+    if (teammate) {
+        await author.getByText("Abgabeteams", {exact: true}).click();
+        await author.getByLabel("Teamname", {exact: true}).fill("Fiktives Laborteam");
+        await author.getByRole("checkbox", {name: "Fictional Müller Μαρία Мария", exact: true}).check();
+        await author.getByRole("checkbox", {name: "Fictional lab teammate", exact: true}).check();
+        await author.getByRole("button", {name: "Team speichern", exact: true}).click();
+        await expect(author.getByRole("combobox", {name: "Team auswählen", exact: true})).toBeVisible();
+    }
+    const browserOptions = {
         viewport: page.viewportSize() ?? undefined,
         isMobile: info.project.use.isMobile,
         hasTouch: info.project.use.hasTouch,
-    });
+    };
+    const learnerContext = await browser.newContext(browserOptions);
+    const teamContext = teammate ? await browser.newContext(browserOptions) : undefined;
     try {
         const learner = await learnerContext.newPage();
+        const peerPage = await teamContext?.newPage();
         await login(learner, f.learner.email, /\/learning$/);
         await prepare(learner);
         const submission = scope(learner);
-        const submit = async (name: string, body: string) => {
-            await submission.getByLabel("Datei auswählen", {exact: true}).setInputFiles({
+        if (peerPage && teammate) {
+            await login(peerPage, teammate.email, /\/learning$/);
+            await prepare(peerPage);
+            await expect(scope(peerPage).getByText(/Team Fiktives Laborteam/)).toBeVisible();
+        }
+        const submit = async (target: Page, name: string, body: string) => {
+            const form = scope(target);
+            await form.getByLabel("Datei auswählen", {exact: true}).setInputFiles({
                 name, mimeType: "text/plain", buffer: Buffer.from(body),
             });
-            await submission.getByRole("button", {name: "Datei abgeben", exact: true}).click();
-            await expect(submission.getByText(name, {exact: true})).toBeVisible();
+            await form.getByRole("button", {name: "Datei abgeben", exact: true}).click();
+            await expect(form.getByText(name, {exact: true})).toBeVisible();
         };
         const firstFile = "fiktives-protokoll.txt";
         const firstBytes = "Fiktives Laborprotokoll Teil 1\n";
-        await submit(firstFile, firstBytes);
+        await submit(learner, firstFile, firstBytes);
+
+        if (peerPage) {
+            await prepare(peerPage);
+            const peerAttempt = scope(peerPage).getByRole("listitem").filter({hasText: firstFile});
+            const [sharedDownload] = await Promise.all([
+                peerPage.waitForEvent("download", {timeout: 15_000}),
+                peerAttempt.getByRole("button", {name: "Herunterladen", exact: true}).click(),
+            ]);
+            expect(await readFile(await sharedDownload.path(), "utf8")).toBe(firstBytes);
+        }
 
         await prepare(page);
         const first = author.getByRole("listitem").filter({hasText: firstFile});
@@ -1100,7 +1165,8 @@ test("Versioned assignment uses the scanner, requests a revision and releases pr
         await expect(submission.getByText("Bitte ergänze die Beobachtungen.")).toBeVisible();
         await expect(submission.getByText("Nur im Kursteam sichtbar")).toHaveCount(0);
         const secondFile = "fiktive-ueberarbeitung.txt";
-        await submit(secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
+        if (peerPage) await prepare(peerPage);
+        await submit(peerPage ?? learner, secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
         await prepare(page);
         const second = author.getByRole("listitem").filter({hasText: secondFile});
         await second.getByRole("combobox", {name: "Protokoll", exact: true}).selectOption("1");
@@ -1110,8 +1176,13 @@ test("Versioned assignment uses the scanner, requests a revision and releases pr
         await prepare(learner);
         await expect(submission.getByText("1 / 1 Punkte", {exact: true})).toBeVisible();
         await expect(submission.getByRole("button", {name: "Datei abgeben", exact: true})).toHaveCount(0);
+        if (peerPage) {
+            await prepare(peerPage);
+            await expect(scope(peerPage).getByText("1 / 1 Punkte", {exact: true})).toBeVisible();
+            expect((await new AxeBuilder({page: peerPage}).include("#course-submissions").analyze()).violations).toEqual([]);
+        }
     } finally {
-        await learnerContext.close();
+        await Promise.all([learnerContext.close(), teamContext?.close()]);
     }
 });
 
@@ -1546,11 +1617,31 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         pass_percent: 80, max_attempts: 2, published: true,
     });
     await page.goto(workspace);
+    const policy = page.getByRole("region", {name: "Abschlussregeln verwalten", exact: true});
+    await policy.getByLabel("Mindestanwesenheit je Termin (%)").fill("60");
+    await policy.getByLabel("Abgabe mit freigegebener Bewertung").selectOption({label: "Fiktive CLI-Übung"});
+    await policy.getByLabel("Erforderliche Kompetenz").selectOption(skill);
+    await policy.getByLabel("Mindestens erforderliche Kompetenzstufe").selectOption(independent);
+    await policy.getByLabel("Verifikation durch das Kursteam verlangen").check();
+    await policy.getByRole("button", {name: "Abschlussregeln veröffentlichen", exact: true}).click();
+    await expect(policy.getByText("Zuletzt veröffentlicht: Fassung 1", {exact: true})).toBeVisible();
     const staffStatus = page.getByRole("region", { name: "Abschlussstatus", exact: true });
     await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
     await expect(staffStatus.getByText(/Die Teilnahme muss als abgeschlossen/)).toBeVisible();
     await expect(staffStatus.getByText(/0 von 1 bestätigt/)).toBeVisible();
     await expect(staffStatus.getByText(/Das veröffentlichte Quiz/)).toBeVisible();
+    await expect(staffStatus.getByText("Diese Einschreibung nutzt die bisherigen Abschlussregeln.")).toBeVisible();
+    await staffStatus.getByRole("button", {name: "Einschreibung auf Fassung 1 umstellen"}).click();
+    await expect(staffStatus.getByText("Abschlussregeln, Fassung 1", {exact: true})).toBeVisible();
+    await expect(staffStatus.getByText("Verifikation durch das Kursteam steht aus")).toBeVisible();
+    await staffStatus.getByText("Individuelle Ausnahmen", {exact: true}).click();
+    const competencyException = staffStatus.getByRole("group", {name: "Ausnahme für die Kompetenz", exact: true});
+    await competencyException.getByLabel("Begründung für das Kursteam").fill("Gleichwertigen Kompetenznachweis geprüft.");
+    await competencyException.getByRole("button", {name: "Ausnahme erteilen", exact: true}).click();
+    await expect(staffStatus.getByText(/Ausnahme für die erforderliche Kompetenz erteilt/)).toBeVisible();
+    await competencyException.getByLabel("Begründung für das Kursteam").fill("Reguläre Kompetenzprüfung wieder eingeplant.");
+    await competencyException.getByRole("button", {name: "Ausnahme zurücknehmen", exact: true}).click();
+    await expect(staffStatus.getByText(/Kompetenzstufe steht aus/)).toBeVisible();
 
     const context = await browser.newContext({
         baseURL, viewport: info.project.use.viewport,
@@ -1587,7 +1678,10 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         await expect(submission.getByText(feedback, {exact: true})).toBeVisible();
         await learnerPage.goto(workspace);
         const learnerStatus = learnerPage.getByRole("region", { name: "Mein Abschlussdokument", exact: true });
-        await expect(learnerStatus.getByText(/0 von 1 bestätigt/)).toBeVisible();
+        await expect(learnerStatus.getByText(/60 % bestätigte Anwesenheit.*0 von 1 bestätigt/)).toBeVisible();
+        await expect(learnerStatus.getByText("Abschlussregeln, Fassung 1", {exact: true})).toBeVisible();
+        await expect(learnerStatus.getByText("Aufgabe bewertet und freigegeben: Fiktive CLI-Übung")).toBeVisible();
+        await expect(learnerStatus.getByText(/Kompetenzstufe steht aus/)).toBeVisible();
         const issue = learnerStatus.getByRole("button", {name: "Voraussetzungen prüfen und Dokument ausstellen", exact: true});
         await expect(issue).toBeDisabled();
 
@@ -1600,7 +1694,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
             level_id: independent, evidence_note: evidence, include_quiz: true});
         await enrol("completed");
         await action("attendance_verify", {
-            session_id: f.session, user_id: f.learner.id, state: "attended", minutes: 48,
+            session_id: f.session, user_id: f.learner.id, state: "attended", minutes: 36,
             reason: "Fictional attendance reviewed",
         });
         await learnerPage.reload();
@@ -1609,7 +1703,18 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         });
         await competencies.getByText("Kompetenzen", {exact: true}).click();
         await expect(competencies.getByText(evidence, {exact: true})).toBeVisible();
+        await expect(learnerStatus.getByText(/Kompetenzstufe erreicht/)).toBeVisible();
+        await expect(issue).toBeDisabled();
+        await page.goto(workspace);
+        await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
+        const verificationReason = "Aufgaben- und Kompetenznachweise geprüft.";
+        const verification = staffStatus.getByRole("group", {name: "Abschluss für die Einschreibung verifizieren", exact: true});
+        await verification.getByLabel("Begründung für das Kursteam").fill(verificationReason);
+        await staffStatus.getByRole("button", {name: "Verifikation bestätigen"}).click();
+        await expect(staffStatus.getByText("Verifikation durch das Kursteam erteilt")).toBeVisible();
+        await learnerPage.reload();
         await expect(learnerStatus.getByText(/Alle Voraussetzungen/)).toBeVisible();
+        await expect(learnerStatus.getByText(verificationReason)).toHaveCount(0);
         await issue.click();
         await expect(issue).toHaveCount(0);
         const pdf = learnerPage.waitForEvent("download");
@@ -1619,6 +1724,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         expect((await readFile(await downloaded.path())).subarray(0, 5).toString()).toBe("%PDF-");
         await page.goto(workspace);
         await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
+        await staffStatus.getByRole("button", {name: "Abschlussstatus aktualisieren", exact: true}).click();
         await expect(staffStatus.getByText("Abschlussdokument ausgestellt.")).toBeVisible();
         const exportPanel = page.getByRole("region", {name: "Lernaktivitäten exportieren"});
         const receipt = page.waitForEvent("download");
@@ -1632,6 +1738,8 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         expect(JSON.stringify(archive)).not.toContain(f.learner.id);
         await expect(learnerPage.getByRole("region", {name: "Lernaktivitäten exportieren"})).toHaveCount(0);
         await page.goto("/admin/finance/analytics/learning");
+        await page.getByRole("searchbox", {name: "Kurs oder Klasse suchen"}).fill(f.title);
+        await page.getByRole("button", {name: "Suchen", exact: true}).click();
         const report = page.getByRole("region", {name: "Bewertungen und Abgaben je Kurs"});
         const row = report.getByRole("row").filter({hasText: f.title});
         await expect(row).toBeVisible();

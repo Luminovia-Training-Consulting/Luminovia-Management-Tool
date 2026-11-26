@@ -5,6 +5,7 @@ import { saveBlob } from "../../lib/blob-download";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import type { WorkspaceAttendanceHistory } from "./attendance-schema";
+import type { CompletionPinnedPolicy } from "./course-completion-policy-schema";
 import type { CourseCurriculum } from "./course-authoring-schema";
 import {
   gradebookPageSize,
@@ -136,6 +137,7 @@ export interface CourseWorkspace {
     attempts: number;
     passed: boolean;
     last_score: number | null;
+    pool?: { draw_count: number; request_id: string | null } | null;
     draft?: {
       request_id: string;
       revision: number;
@@ -284,6 +286,7 @@ export interface CourseCompletionStatus {
   quiz_passed: boolean;
   reverify_required: boolean;
   rule_version: number;
+  policy?: CompletionPinnedPolicy;
   state: "pending" | "ready" | "issued";
 }
 export const courseCompletionStatusKey = (actor: string, run: string) =>

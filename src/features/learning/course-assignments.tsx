@@ -1,5 +1,5 @@
 /** Course assignment drafts, scanned attempts and scoped assessment on the workspace. */
-import { useId, useState, type FormEvent } from "react";
+import { lazy, Suspense, useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
@@ -12,6 +12,7 @@ import { acceptedFiles, uploadCourseAssignmentSubmission } from "../files/api";
 import { downloadPortalDocument, type CourseWorkspace } from "./api";
 import {
   assignmentDefinition,
+  type assignmentActions,
   courseAssignmentsProjection,
   rubricIsOrdered,
   type AssignmentDefinition,
@@ -19,7 +20,9 @@ import {
   type CourseAssignmentAttempt,
 } from "./course-assignment-schema";
 
-type Action = "save" | "publish" | "submit" | "review" | "extend";
+const AssignmentTeams = lazy(() => import("./course-assignment-teams"));
+
+type Action = (typeof assignmentActions)[number];
 type Command = (
   action: Action,
   input: unknown,
@@ -653,7 +656,7 @@ function AssignmentAttemptCard({
   return (
     <li className="space-y-2 border p-3">
       <h4>
-        {staff ? attempt.display_name + " · " : ""}
+        {staff ? (attempt.team_title ?? attempt.display_name) + " · " : ""}
         {t("assignmentsAttempt", { number: attempt.attempt_no })}
       </h4>
       <p>{formatDate(attempt.submitted_at, zone, i18n.language)}</p>
@@ -723,6 +726,7 @@ export function CourseAssignments({
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [openTeams, setOpenTeams] = useState<string | null>(null);
   const baseKey = ["course-assignments", actor, course];
   const query = useQuery({
     queryKey: [...baseKey, creating ? null : selected, offset],
@@ -850,6 +854,39 @@ export function CourseAssignments({
                   zone={zone}
                   language={i18n.language}
                 />
+              )}
+              {staff && (
+                <details
+                  key={assignment.assignment_id}
+                  onToggle={(event) =>
+                    setOpenTeams(
+                      event.currentTarget.open
+                        ? assignment.assignment_id
+                        : null,
+                    )
+                  }
+                >
+                  <summary>{t("assignmentsTeams")}</summary>
+                  {openTeams === assignment.assignment_id && (
+                    <Suspense fallback={<Loading />}>
+                      <AssignmentTeams
+                        teams={assignment.teams}
+                        command={command}
+                        participants={participants}
+                        zone={zone}
+                        canManage={canManage}
+                        ErrorMessage={AssignmentError}
+                      />
+                    </Suspense>
+                  )}
+                </details>
+              )}
+              {!staff && assignment.teams[0] && (
+                <Notice>
+                  {t("assignmentsTeamShared", {
+                    title: assignment.teams[0].title,
+                  })}
+                </Notice>
               )}
               {!staff && (
                 <details>

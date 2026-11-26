@@ -95,6 +95,27 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
           )
         ).trim(),
       );
+    const readCompletionPolicy = (who, withGate = true) =>
+      actor(
+        who,
+        (withGate ? gate("course_completion_policy", "GET") : "") +
+          `select public.course_completion_policy(${q(run)})`,
+      ).then(JSON.parse);
+    const policyPayload = {
+      attendance_percent: 65,
+      assignment_id: null,
+      competency_pin: null,
+      competency_id: null,
+      minimum_level_id: null,
+      lecturer_verification: true,
+      target_at: null,
+    };
+    const publishCompletionPolicy = (revision, withGate = true) =>
+      actor(
+        admin,
+        (withGate ? gate("course_completion_policy_action", "POST") : "") +
+          `select public.course_completion_policy_action(${q(run)},'publish',${q(JSON.stringify(policyPayload))},${revision})`,
+      );
     const [training, independent, item] = Array.from({ length: 3 }, randomUUID);
     const frame = {
       id,
@@ -118,6 +139,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
 
     assert.equal((await read(admin)).can_manage, true);
     await assert.rejects(read(absentTeacher), /42501/);
+    assert.equal((await readCompletionPolicy(admin)).can_manage, true);
+    await assert.rejects(readCompletionPolicy(absentTeacher), /42501/);
+    await assert.rejects(readCompletionPolicy(learner), /42501/);
+    assert.equal(await publishCompletionPolicy(0), "1");
     assert.equal((await write("save_framework", frame, 0)).revision, 1);
     assert.equal(
       (await write("pin", { framework_id: id, framework_revision: 1 }, 0))
@@ -133,6 +158,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     assert.equal((await read(admin)).can_manage, false);
+    assert.equal((await readCompletionPolicy(admin)).can_manage, false);
+    assert.equal(
+      (await readCompletionPolicy(admin)).head.attendance_percent,
+      65,
+    );
+    await assert.rejects(publishCompletionPolicy(1), /42501/);
+    await assert.rejects(publishCompletionPolicy(1, false), /42501/);
     assert.deepEqual((await read(learner)).decisions, own.decisions);
     await assert.rejects(
       write("assess", { ...decision, level_id: independent }, 1),
@@ -146,6 +178,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       where installation_id=${q(installation)}`);
     await assert.rejects(read(admin), /42501/);
     await assert.rejects(read(learner, false), /42501/);
+    await assert.rejects(readCompletionPolicy(admin), /42501/);
+    await assert.rejects(readCompletionPolicy(admin, false), /42501/);
     console.log(
       `PASS ${edition} competency mapping and own decisions across active, grace and expired licence`,
     );

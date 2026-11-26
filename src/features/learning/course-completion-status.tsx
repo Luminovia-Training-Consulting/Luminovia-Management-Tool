@@ -1,5 +1,5 @@
 /** Explain current course completion requirements to learners and scoped staff. */
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading } from "../../components/common";
 import { Button } from "../../components/ui/button";
@@ -9,6 +9,17 @@ import {
   type CourseCompletionStatus,
   type CourseWorkspace,
 } from "./api";
+
+const CompletionPolicySummary = lazy(() =>
+  import("./course-completion-policy").then((module) => ({
+    default: module.CompletionPolicySummary,
+  })),
+);
+const CompletionEnrolmentControls = lazy(() =>
+  import("./course-completion-policy").then((module) => ({
+    default: module.CompletionEnrolmentControls,
+  })),
+);
 
 type StatusQuery = ReturnType<typeof useCourseCompletionStatus>;
 
@@ -33,6 +44,7 @@ function useMissingRequirements(status: CourseCompletionStatus, zone: string) {
       t("completionRequirementAttendance", {
         verified: status.verified_count,
         total: status.session_count,
+        percent: status.policy?.attendance_percent ?? 80,
       }),
     );
   }
@@ -52,19 +64,47 @@ function CompletionChecklist({
   zone,
   refresh,
   fetching,
+  staff,
 }: {
   status: CourseCompletionStatus;
   zone: string;
   refresh: () => void;
   fetching: boolean;
+  staff: boolean;
 }) {
   const { t } = useTranslation("learning");
   const reasons = useMissingRequirements(status, zone);
+  const summary = status.policy ? (
+    <Suspense fallback={<Loading />}>
+      <CompletionPolicySummary policy={status.policy} zone={zone} />
+    </Suspense>
+  ) : null;
+  const refreshAction = (
+    <Button
+      type="button"
+      variant="secondary"
+      disabled={fetching}
+      onClick={refresh}
+    >
+      {t(staff ? "completionRefreshStatus" : "refresh")}
+    </Button>
+  );
   switch (status.state) {
     case "issued":
-      return <p role="status">{t("completionIssuedStatus")}</p>;
+      return (
+        <>
+          <p role="status">{t("completionIssuedStatus")}</p>
+          {staff && refreshAction}
+        </>
+      );
     case "ready":
-      return <p role="status">{t("completionReadyStatus")}</p>;
+      return (
+        <>
+          <p role="status">{t("completionReadyStatus")}</p>
+          {summary}
+          {staff && refreshAction}
+        </>
+      );
     case "pending":
       return (
         <div className="space-y-2">
@@ -74,14 +114,8 @@ function CompletionChecklist({
               <li key={reason}>{reason}</li>
             ))}
           </ul>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={fetching}
-            onClick={refresh}
-          >
-            {t("refresh")}
-          </Button>
+          {summary}
+          {refreshAction}
         </div>
       );
   }
@@ -91,9 +125,11 @@ function CompletionChecklist({
 export function CompletionRequirements({
   query,
   zone,
+  staff = false,
 }: {
   query: StatusQuery;
   zone: string;
+  staff?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -106,6 +142,7 @@ export function CompletionRequirements({
       zone={zone}
       refresh={() => void query.refetch()}
       fetching={query.isFetching}
+      staff={staff}
     />
   );
 }
@@ -114,10 +151,13 @@ export function CompletionRequirements({
 export function StaffCompletionRequirements({
   course,
   actor,
+  readOnly = false,
 }: {
   course: CourseWorkspace;
   actor: string;
+  readOnly?: boolean;
 }) {
+  const online = useOnline();
   const { t } = useTranslation("learning");
   const labelId = useId();
   const [learner, setLearner] = useState("");
@@ -152,7 +192,25 @@ export function StaffCompletionRequirements({
         </select>
       </label>
       {selected && (
-        <CompletionRequirements query={query} zone={course.time_zone} />
+        <>
+          <CompletionRequirements query={query} zone={course.time_zone} staff />
+          {online &&
+            !readOnly &&
+            query.isSuccess &&
+            query.data.state !== "issued" &&
+            (course.access?.manager || query.data.policy?.verification) && (
+              <Suspense fallback={<Loading />}>
+                <CompletionEnrolmentControls
+                  key={selected}
+                  actor={actor}
+                  course={course.id}
+                  learner={selected}
+                  manager={Boolean(course.access?.manager)}
+                  policy={query.data.policy}
+                />
+              </Suspense>
+            )}
+        </>
       )}
     </section>
   );

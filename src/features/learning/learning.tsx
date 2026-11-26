@@ -45,6 +45,8 @@ import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseCompetencies } from "./competencies";
 import { CourseWelcomeContent } from "./welcome-content";
+import { QuizPoolStart } from "./quiz-pool-start";
+import { quizPoolDrawCount } from "./quiz-pool-schema";
 import { QuizAttempt } from "./quiz-attempt";
 import { H5pAttribution } from "./h5p-attribution";
 import { QuestionBank } from "./question-bank";
@@ -70,7 +72,6 @@ import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
-import { CourseAssignments } from "./course-assignments";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
@@ -82,6 +83,21 @@ import {
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
+const CourseWeightedGradebook = lazy(() =>
+  import("./course-weighted-gradebook").then((module) => ({
+    default: module.CourseWeightedGradebook,
+  })),
+);
+const CourseAssignments = lazy(() =>
+  import("./course-assignments").then((module) => ({
+    default: module.CourseAssignments,
+  })),
+);
+const CourseTextExam = lazy(() =>
+  import("./course-text-exam").then((module) => ({
+    default: module.CourseTextExam,
+  })),
+);
 const CoursePeerFeedback = lazy(() =>
   import("./peer-feedback").then((module) => ({
     default: module.CoursePeerFeedback,
@@ -98,6 +114,11 @@ const CourseXapiExport = lazy(() =>
 const ScormPackageReview = lazy(() =>
   import("./scorm-package-review").then((module) => ({
     default: module.ScormPackageReview,
+  })),
+);
+const CourseCompletionPolicyEditor = lazy(() =>
+  import("./course-completion-policy").then((module) => ({
+    default: module.CourseCompletionPolicyEditor,
   })),
 );
 const CourseLtiTools = lazy(() =>
@@ -528,6 +549,9 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
   const online = useOnline();
   const save = useAction(course.id, actor, Boolean(academy));
   const [shuffle, setShuffle] = useState(false);
+  const [drawCount, setDrawCount] = useState<string | null>(
+    course.quiz?.pool ? String(course.quiz.pool.draw_count) : null,
+  );
   const cache = useQueryClient();
   const saveFromBank = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -564,6 +588,12 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
       question.source ? [question.source.question_id] : [],
     ),
   );
+  const canPool = selected.size >= 2 && selected.size === questions.length;
+  const validDraw =
+    drawCount === null
+      ? null
+      : quizPoolDrawCount(Number(drawCount), questions.length, selected.size);
+  const invalidPool = drawCount !== null && validDraw === null;
   const hasOnlyPlaceholder =
     questions.length === 1 &&
     !questions[0].source &&
@@ -595,7 +625,7 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
         className="learning-quiz-editor"
         onSubmit={(event) => {
           event.preventDefault();
-          if (pending || !online) return;
+          if (pending || !online || invalidPool) return;
           const settings = {
             pass_percent: pass,
             max_attempts: attempts,
@@ -606,7 +636,8 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
             saveFromBank.mutate({
               ...settings,
               entries: questions.map((question) => question.source ?? question),
-              shuffle,
+              shuffle: validDraw === null && shuffle,
+              ...(validDraw === null ? {} : { draw_count: validDraw }),
             });
           } else {
             saveFromBank.reset();
@@ -748,6 +779,36 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
           {t("publishQuiz")}
         </label>
         {course.lms_enabled && (
+          <>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={drawCount !== null}
+                disabled={pending || (drawCount === null && !canPool)}
+                onChange={(event) =>
+                  setDrawCount(event.target.checked ? "1" : null)
+                }
+              />
+              {t("quizPoolUse")}
+            </label>
+            <p>{t("quizPoolHelp")}</p>
+            {drawCount !== null && (
+              <label>
+                {t("quizPoolDrawCount")}
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.max(1, questions.length - 1)}
+                  required
+                  value={drawCount}
+                  disabled={pending}
+                  onChange={(event) => setDrawCount(event.target.value)}
+                />
+              </label>
+            )}
+          </>
+        )}
+        {course.lms_enabled && drawCount === null && (
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -757,7 +818,9 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
             {t("questionBankShuffle")}
           </label>
         )}
-        <Button disabled={!online || pending}>{t("saveQuiz")}</Button>
+        <Button disabled={!online || pending || invalidPool}>
+          {t("saveQuiz")}
+        </Button>
         {conflict && (
           <Notice kind="error">
             {t("questionBankConflict")}
@@ -820,12 +883,16 @@ function Quiz({ course, actor, academy }: ActivityProps) {
           academy={academy}
         />
       ) : course.quiz?.published && course.access.learner ? (
-        <QuizAttempt
-          key={`${course.quiz.version}:${course.quiz.attempts}`}
-          course={course}
-          actor={actor}
-          academy={academy === "active"}
-        />
+        course.quiz.pool && !course.quiz.pool.request_id ? (
+          <QuizPoolStart actor={actor} course={course} />
+        ) : (
+          <QuizAttempt
+            key={`${course.quiz.version}:${course.quiz.attempts}`}
+            course={course}
+            actor={actor}
+            academy={academy === "active"}
+          />
+        )
       ) : (
         <p>{t("noQuiz")}</p>
       )}
@@ -1177,42 +1244,51 @@ function CourseWorkspaceLayout({
   const hasGradebook = course.lms_enabled && (learner || course.access.staff);
   const hasPortfolioShares = course.lms_enabled && course.access.teacher;
   const hasLti = course.lms_enabled && (course.access.staff || learner);
-  const sections = [
-    { id: "course-overview", label: t("courseOverview") },
-    ...(hasCurriculum
-      ? [{ id: "course-curriculum", label: t("curriculum") }]
-      : []),
-    { id: "course-materials", label: t("workspaceMaterials") },
-    ...(hasSubmissions
-      ? [{ id: "course-submissions", label: t("submissions") }]
-      : []),
-    ...(examVisible ? [{ id: "course-exam", label: t("workspaceExam") }] : []),
-    ...(canManageEnrolments
-      ? [{ id: "course-enrolments", label: t("workspaceParticipants") }]
-      : []),
-    ...(hasRegister
-      ? [{ id: "course-register", label: t("workspaceRegister") }]
-      : []),
-    { id: "course-chat", label: t("courseChat") },
-    ...(hasCloseout
-      ? [{ id: "course-closeout", label: t("courseCloseout") }]
-      : []),
-    ...(hasActivities
-      ? [{ id: "course-learning", label: t("workspaceActivities") }]
-      : []),
-    ...(hasRatingSection
-      ? [{ id: "course-evaluations", label: t("evaluations") }]
-      : []),
-    ...(hasPortfolioShares
-      ? [{ id: "course-portfolio", label: t("portfolioShared") }]
-      : []),
-    ...(hasLti ? [{ id: "course-lti", label: t("ltiTools") }] : []),
-    ...(hasGradebook
-      ? [{ id: "course-gradebook", label: t("gradebookTitle") }]
-      : []),
-  ];
+  const groups = [
+    {
+      label: t("workspaceCourseGroup"),
+      sections: [
+        ["course-overview", t("courseOverview"), true],
+        ["course-curriculum", t("curriculum"), hasCurriculum],
+        ["course-materials", t("workspaceMaterials"), true],
+        ["course-chat", t("courseChat"), true],
+        ["course-lti", t("ltiTools"), hasLti],
+      ],
+    },
+    {
+      label: t("workspaceAssessmentGroup"),
+      sections: [
+        ["course-learning", t("workspaceActivities"), hasActivities],
+        ["course-submissions", t("submissions"), hasSubmissions],
+        ["course-exam", t("workspaceExam"), examVisible],
+        ["course-gradebook", t("gradebookTitle"), hasGradebook],
+        ["course-weighted-gradebook", t("weightedTab"), hasGradebook],
+        ["course-portfolio", t("portfolioShared"), hasPortfolioShares],
+        ["course-evaluations", t("evaluations"), hasRatingSection],
+      ],
+    },
+    {
+      label: t("workspaceManagementGroup"),
+      sections: [
+        ["course-enrolments", t("workspaceParticipants"), canManageEnrolments],
+        ["course-register", t("workspaceRegister"), hasRegister],
+        ["course-closeout", t("courseCloseout"), hasCloseout],
+      ],
+    },
+  ] as const;
+  const visibleGroups = groups
+    .map(({ label, sections }) => ({
+      label,
+      sections: sections
+        .filter(([, , visible]) => visible)
+        .map(([id, label]) => ({ id, label })),
+    }))
+    .filter(({ sections }) => sections.length > 0);
+  const activeGroup = visibleGroups.find(({ sections }) =>
+    sections.some(({ id }) => location.hash === "#" + id),
+  );
   const currentSection =
-    sections.find(({ id }) => location.hash === "#" + id)?.id ??
+    activeGroup?.sections.find(({ id }) => location.hash === "#" + id)?.id ??
     "course-overview";
   const sectionClass = (id: string) =>
     id === currentSection
@@ -1297,7 +1373,7 @@ function CourseWorkspaceLayout({
           </Button>
         )}
       </header>
-      {((showManagementActions && (canPrepareOffer || hasRegister || editor)) ||
+      {((showManagementActions && (canPrepareOffer || editor)) ||
         showReadiness) && (
         <div className="page-actions course-room-actions">
           {showManagementActions && canPrepareOffer && (
@@ -1308,11 +1384,6 @@ function CourseWorkspaceLayout({
               }}
             >
               {t("prepareOffer")}
-            </Button>
-          )}
-          {showManagementActions && hasRegister && (
-            <Button asChild variant="secondary">
-              <Link to="#course-register">{t("workspaceRegister")}</Link>
             </Button>
           )}
           {showManagementActions && editor && (
@@ -1362,10 +1433,14 @@ function CourseWorkspaceLayout({
                   })
                 }
               >
-                {sections.map(({ id, label }) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
+                {visibleGroups.map(({ label, sections }) => (
+                  <optgroup key={label} label={label}>
+                    {sections.map(({ id, label }) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </Field>
@@ -1381,22 +1456,35 @@ function CourseWorkspaceLayout({
                 </Link>
               )}
           </div>
-          <ul>
-            {sections.map(({ id, label }) => (
-              <li key={id}>
-                <Link
-                  to={{
-                    pathname: location.pathname,
-                    search: location.search,
-                    hash: "#" + id,
-                  }}
-                  aria-current={id === currentSection ? "location" : undefined}
-                >
-                  {label}
-                </Link>
-              </li>
+          <div className="course-room-desktop-navigation">
+            {visibleGroups.map(({ label, sections }) => (
+              <details
+                key={label}
+                name="course-room-sections"
+                open={sections.some(({ id }) => id === currentSection)}
+              >
+                <summary>{label}</summary>
+                <ul>
+                  {sections.map(({ id, label }) => (
+                    <li key={id}>
+                      <Link
+                        to={{
+                          pathname: location.pathname,
+                          search: location.search,
+                          hash: "#" + id,
+                        }}
+                        aria-current={
+                          id === currentSection ? "location" : undefined
+                        }
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             ))}
-          </ul>
+          </div>
         </nav>
         <div className="course-room-content">
           <div className={sectionClass("course-overview")} id="course-overview">
@@ -1505,6 +1593,20 @@ function CourseWorkspaceLayout({
               </Suspense>
             </div>
           )}
+          {hasGradebook && currentSection === "course-weighted-gradebook" && (
+            <div
+              id="course-weighted-gradebook"
+              className={sectionClass("course-weighted-gradebook")}
+            >
+              <Suspense fallback={<Loading />}>
+                <CourseWeightedGradebook
+                  key={course.id}
+                  actor={actor}
+                  course={course}
+                />
+              </Suspense>
+            </div>
+          )}
           {hasGradebook && (
             <div
               className={sectionClass("course-gradebook")}
@@ -1553,15 +1655,21 @@ function CourseWorkspaceLayout({
             >
               {currentSection === "course-submissions" &&
                 (learner || course.access.staff) && (
-                  <CourseAssignments
-                    key={`${actor}:${course.id}:assignments`}
-                    actor={actor}
-                    course={course.id}
-                    zone={course.time_zone}
-                    staff={course.access.staff}
-                    participants={course.roster}
-                    readOnly={academy === "grace"}
-                  />
+                  online ? (
+                    <Suspense fallback={<Loading />}>
+                      <CourseAssignments
+                        key={`${actor}:${course.id}:assignments`}
+                        actor={actor}
+                        course={course.id}
+                        zone={course.time_zone}
+                        staff={course.access.staff}
+                        participants={course.roster}
+                        readOnly={academy === "grace"}
+                      />
+                    </Suspense>
+                  ) : (
+                    <Notice>{t("submissionOnline")}</Notice>
+                  )
                 )}
               <CourseSubmissions
                 key={`${actor}:${course.id}`}
@@ -1693,6 +1801,17 @@ function CourseWorkspaceLayout({
                   editable={canEdit}
                 />
               )}
+              {course.lms_enabled &&
+                (course.access.staff || learner) &&
+                currentSection === "course-learning" && (
+                  <Suspense fallback={<Loading />}>
+                    <CourseTextExam
+                      actor={actor}
+                      course={course.id}
+                      zone={course.time_zone}
+                    />
+                  </Suspense>
+                )}
               {(course.access.staff || learner) &&
                 currentSection === "course-learning" && (
                   <Suspense fallback={<Loading />}>
@@ -1722,6 +1841,20 @@ function CourseWorkspaceLayout({
                   active={currentSection === "course-learning"}
                 />
               )}
+              {course.access.manager &&
+                course.lms_enabled &&
+                online &&
+                currentSection === "course-learning" && (
+                  <Suspense fallback={<Loading />}>
+                    <CourseCompletionPolicyEditor
+                      key={`course-completion-policy:${course.id}`}
+                      actor={actor}
+                      course={course.id}
+                      zone={course.time_zone}
+                      readOnly={!canEdit}
+                    />
+                  </Suspense>
+                )}
               {course.access.staff &&
                 course.lms_enabled &&
                 currentSection === "course-learning" && (
@@ -1729,6 +1862,7 @@ function CourseWorkspaceLayout({
                     key={`staff-completion:${course.id}`}
                     course={course}
                     actor={actor}
+                    readOnly={!canEdit}
                   />
                 )}
               {academy && editor && (

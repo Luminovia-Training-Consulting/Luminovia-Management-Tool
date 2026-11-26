@@ -75,7 +75,7 @@ import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
 import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
-import { courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
+import { assignmentActions, courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseWithdrawalWindowSchema } from "../learning/course-withdrawal-schema.ts";
 import { humanAuthPaths } from "./human-auth-contract.ts";
@@ -85,8 +85,10 @@ import { academySupportPaths } from "./academy-support-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { courseSeriesPaths } from "./course-series-contract.ts";
 import { learningProgramPaths } from "./learning-program-contract.ts";
+import { weightedGradebookPaths } from "./weighted-gradebook-contract.ts";
 import { portfolioPaths } from "./portfolio-contract.ts";
 import { ltiCoursePaths } from "./lti-contract.ts";
+import { manualTextExamPaths } from "./manual-text-exam-contract.ts";
 import { academyClassPaths } from "./academy-class-contract.ts";
 import { academyChatProtectionPaths } from "./academy-chat-protection-contract.ts";
 import { academyMailPaths } from "./academy-mail-contract.ts";
@@ -99,6 +101,10 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseCompletionPolicyAction,
+  courseCompletionPolicyRead,
+  courseCompletionPolicyResult,
+  courseCompletionPolicyRevision,
   courseCompletionStatusParameters,
   courseCompletionStatusResult,
   courseGradebookExportResult,
@@ -116,6 +122,8 @@ import {
   questionBankActionResult,
   quizDraftParameters,
   quizDraftRevision,
+  quizPoolStartParameters,
+  quizPoolStartResult,
   enrolmentState,
   courseWelcomePublishedResult,
   courseWelcomeResult,
@@ -969,7 +977,9 @@ const coursePaths = {
   ...courseSeriesPaths(true),
   ...learningProgramPaths(true),
   ...portfolioPaths(true),
+  ...weightedGradebookPaths(true),
   ...ltiCoursePaths(true),
+  ...manualTextExamPaths(true),
   ...academyChatProtectionPaths,
   ...courseEvaluationPaths(true),
   ...learningAnalyticsPaths(true),
@@ -1079,6 +1089,15 @@ const coursePaths = {
       }),
     }),
   ),
+  "/rest/v1/rpc/start_course_quiz_pool": courseOperation(
+    "startAcademyCourseQuizPool",
+    "Start or recover the caller's current question pool draw",
+    "Requires the active course learner, a started course and a current published pool quiz. Draws a subset without replacement for the next permitted attempt. An exact start retry returns the same request ID and attempt number. The course workspace shows only that learner's draw.",
+    "active",
+    record(quizPoolStartParameters),
+    quizPoolStartResult,
+    true,
+  ),
   "/rest/v1/rpc/save_course_quiz_draft": courseOperation(
     "saveAcademyCourseQuizDraft",
     "Save or recover a learner's in-progress quiz answers",
@@ -1113,7 +1132,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_question_bank_action": courseOperation(
     "saveAcademyCourseQuestionBank",
     "Save question revisions or configure a quiz from the bank",
-    "Save, archive and restore each append a question revision. Configure resolves the selected bank revisions and saves the canonical quiz snapshot atomically. Pass the last-read question or quiz version. Stale data returns 409. Shuffling changes the order for the whole new quiz revision.",
+    "Save, archive and restore each append a question revision. Configure resolves the selected bank revisions and saves the canonical quiz snapshot atomically. Pass the last-read question or quiz version. Stale data returns 409. Shuffling changes the order for the whole fixed quiz revision. A pool draw count smaller than the candidate list requires exact bank revisions for every entry.",
     "active",
     {
       ...record(questionBankActionParameters),
@@ -1129,6 +1148,23 @@ const coursePaths = {
     "active-or-grace",
     courseCompletionStatusParameters,
     courseCompletionStatusResult,
+  ),
+  "/rest/v1/rpc/course_completion_policy": courseOperation(
+    "readAcademyCourseCompletionPolicy",
+    "Read course completion policies and available criteria",
+    "Current course staff receive the latest revision, published assignment choices and the current course competency framework.",
+    "active-or-grace",
+    courseCompletionPolicyRead,
+    courseCompletionPolicyResult,
+  ),
+  "/rest/v1/rpc/course_completion_policy_action": courseOperation(
+    "saveAcademyCourseCompletionPolicy",
+    "Publish, pin or review completion requirements",
+    "Course managers publish revisions, explicitly pin the latest version to one enrolment and record or withdraw reasoned assignment or competency exceptions. Current course staff can record or withdraw a reasoned verification. Each operation compares the last-read revision.",
+    "active",
+    courseCompletionPolicyAction,
+    courseCompletionPolicyRevision,
+    true,
   ),
   "/rest/v1/rpc/course_competencies": courseOperation(
     "readAcademyCourseCompetencies",
@@ -1170,7 +1206,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_xapi_statements": courseOperation(
     "readAcademyCourseXapiStatements",
     "Export pseudonymous xAPI learning records",
-    "Current course managers may export up to 2000 existing quiz attempts and completion or revocation statements for a date interval up to 366 days. No LRS connection is made.",
+    "Current course managers may export up to 2000 quiz attempts, released text exam and weighted course scores, or completion and revocation statements for a date interval up to 366 days. This returns an archive for local download.",
     "active-or-grace",
     z.toJSONSchema(
       z.strictObject({
@@ -1217,7 +1253,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_assignments": courseOperation(
     "readAcademyCourseAssignments",
     "Read course assignments and feedback",
-    "Staff receive a bounded attempt page. Learners receive published definitions, their own submissions and released feedback.",
+    "Staff receive teams and a bounded attempt page. Learners receive published definitions and released feedback for their own submissions or their current team's attempts.",
     "active-or-grace",
     record(
       { ...run, p_assignment_id: nullable(uuid), p_offset: expectedVersion },
@@ -1228,12 +1264,12 @@ const coursePaths = {
   "/rest/v1/rpc/course_assignment_action": courseOperation(
     "writeAcademyCourseAssignment",
     "Save, publish, submit or assess a course assignment",
-    "Staff use version-checked publication, extensions and review. Learners confirm their own clean scanned assignment version.",
+    "Staff use version-checked publication, extensions, review and team management. Pass team_id, title, member_ids and nullable ISO timestamp due_at to save_team or team_id to remove_team. Membership is fixed after the first shared attempt. Learners confirm their own clean scanned version to submit to the individual or shared team attempt.",
     "active",
     record({
       ...run,
       p_assignment_id: uuid,
-      p_action: { enum: ["save", "publish", "extend", "submit", "review"] },
+      p_action: { enum: [...assignmentActions] },
       p_payload: { type: "object" },
       p_expected_version: expectedVersion,
     }),

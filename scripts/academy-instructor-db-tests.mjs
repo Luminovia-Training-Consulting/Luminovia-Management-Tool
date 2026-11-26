@@ -15,6 +15,85 @@ const gate = (name, method = "POST", headers = {}) =>
 const configure = (id, release, enabled = true) =>
   `select private.configure_academy_course_access(${q(id)},${q(release)},${enabled})`;
 
+// These operations need state owned by the listed SQL fixtures, such as a
+// published quiz, a confirmed scan or a registered external tool.
+const featureFixtureOperations = new Map([
+  ["learning-program-db-tests.mjs", ["set_learning_program_prerequisite"]],
+  [
+    "academy-course-document-db-tests.mjs",
+    [
+      "learning_portfolio",
+      "learning_portfolio_command",
+      "course_gradebook",
+      "course_gradebook_history",
+      "course_gradebook_export",
+      "course_weighted_gradebook",
+      "course_weighted_gradebook_command",
+      "set_course_material_metadata",
+      "course_completion_status",
+    ],
+  ],
+  [
+    "course-workspace-db-tests.mjs",
+    [
+      "course_material_metadata_history",
+      "course_material_reuse_targets",
+      "reuse_course_material",
+      "course_lti_tools",
+      "save_course_lti_tool",
+      "course_xapi_statements",
+    ],
+  ],
+  ["course-submissions-db-tests.mjs", ["set_course_exam_extra_time"]],
+  ["academy-course-quiz-pool-db-tests.mjs", ["start_course_quiz_pool"]],
+  ["academy-course-h5p-import-db-tests.mjs", ["course_h5p_question_import"]],
+  [
+    "academy-question-bank-db-tests.mjs",
+    [
+      "course_question_bank",
+      "course_question_bank_action",
+      "save_course_quiz_draft",
+    ],
+  ],
+  [
+    "academy-course-competency-db-tests.mjs",
+    ["course_competencies", "course_competency_action"],
+  ],
+  [
+    "academy-course-peer-feedback-db-tests.mjs",
+    ["course_peer_feedback", "course_peer_feedback_action"],
+  ],
+  [
+    "course-assignments-db-tests.mjs",
+    ["course_assignments", "course_assignment_action"],
+  ],
+  [
+    "course-completion-policy-db-tests.mjs",
+    ["course_completion_policy", "course_completion_policy_action"],
+  ],
+  [
+    "academy-course-text-exam-db-tests.mjs",
+    ["course_text_exam", "course_text_exam_action"],
+  ],
+]);
+const featureFixturePaths = new Set(
+  [...featureFixtureOperations.values()]
+    .flat()
+    .map((endpoint) => `/rest/v1/rpc/${endpoint}`),
+);
+await Promise.all(
+  [...featureFixtureOperations].map(async ([fixture, endpoints]) => {
+    const source = await readFile(new URL(fixture, import.meta.url), "utf8");
+    for (const endpoint of endpoints) {
+      assert.match(
+        source,
+        new RegExp(`\\b${endpoint}\\b`),
+        `${fixture} must exercise ${endpoint}`,
+      );
+    }
+  }),
+);
+
 const checkCourseAccess = async ({ sql, actor }, edition) => {
   const [
     installation,
@@ -35,12 +114,15 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
     installationId: installation,
     edition,
   });
+  for (const endpoint of featureFixturePaths)
+    assert.ok(paths[endpoint], endpoint);
   const responseSchemas = new Map(
     // These response fixtures invoke canonical SQL endpoints without HTTP.
     // Separate fixtures cover authoring, material, submissions, attendance,
     // exams, course series, learning programmes, administration and mail delivery recovery.
     Object.entries(paths)
       .filter(([path]) => !path.startsWith(portalHttpAliasPrefix))
+      .filter(([path]) => !featureFixturePaths.has(path))
       .filter(
         ([path]) =>
           ![
@@ -146,7 +228,10 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
         const operation = operations.get ?? operations.post;
         const schema =
           operation?.responses["200"]?.content?.["application/json"]?.schema;
-        assert.ok(schema, `Expected a documented SQL JSON response for ${path}`);
+        assert.ok(
+          schema,
+          `Expected a documented SQL JSON response for ${path}`,
+        );
         return [path.split("/").at(-1), z.fromJSONSchema(schema)];
       }),
   );
@@ -490,7 +575,9 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   const adminView = await workspace(admin, run);
   assert.equal(adminView.lms_enabled, true);
   assert.deepEqual(
-    JSON.parse(await call(admin, "search_course_materials", [run, "", "material", 0])),
+    JSON.parse(
+      await call(admin, "search_course_materials", [run, "", "material", 0]),
+    ),
     [],
   );
   await call(admin, "learning_analytics_access");
@@ -544,7 +631,12 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   const participantId = await sql(
     `select luminovia_user_id from public.profiles where id=${q(participant)}`,
   );
-  const importArgs = [randomUUID(), "enrolment", run, JSON.stringify({ id: participantId })];
+  const importArgs = [
+    randomUUID(),
+    "enrolment",
+    run,
+    JSON.stringify({ id: participantId }),
+  ];
   assert.equal(await call(admin, "import_table_row", importArgs), "t");
   assert.equal(await call(admin, "import_table_row", importArgs), "t");
   const participantView = await workspace(participant, run);
@@ -832,9 +924,14 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
   assert.match(String(staleRevision?.reason), /PT409/);
   const currentWelcome = await welcome(participant);
   assert.equal(currentWelcome.version, 2);
-  const rosterSummary = JSON.parse(await call(teacher, "course_attendance_summary", [run]));
-  assert.ok(rosterSummary.rows.some(({user_id}) => user_id === participant));
-  assert.equal((await workspace(companyContact, run)).meeting_link.can_edit, true);
+  const rosterSummary = JSON.parse(
+    await call(teacher, "course_attendance_summary", [run]),
+  );
+  assert.ok(rosterSummary.rows.some(({ user_id }) => user_id === participant));
+  assert.equal(
+    (await workspace(companyContact, run)).meeting_link.can_edit,
+    true,
+  );
   assert.deepEqual(await meeting(companyContact, initialLink, 0), {
     url: initialLink,
     version: 1,

@@ -1,5 +1,10 @@
 /** Inert, browser-local preflight for a bounded subset of SCORM 1.2 package interchange files. */
 import { Uint8ArrayReader, ZipReader, type FileEntry } from "@zip.js/zip.js";
+import {
+  consumePackageEntry,
+  coursePackageDigest,
+  PackageEntryOverflowError,
+} from "./course-package-archive";
 
 export const scormPackageMaxBytes = 10 * 1024 * 1024;
 const maxExpandedBytes = 64 * 1024 * 1024;
@@ -96,31 +101,6 @@ function scopedBase(element: Element, parent = ""): string {
   if (!base.endsWith("/") || /[?#]/.test(base))
     throw new ScormReviewError("unsupported_manifest");
   return referencePath(base.slice(0, -1), parent) + "/";
-}
-
-/** Count and discard file bytes except for the one bounded manifest buffer. */
-async function inspectEntry(
-  entry: FileEntry,
-  keepBytes: boolean,
-  signal?: AbortSignal,
-) {
-  const buffer = keepBytes ? new Uint8Array(entry.uncompressedSize) : null;
-  let total = 0;
-  await entry.getData(
-    new WritableStream<Uint8Array>({
-      write(chunk) {
-        signal?.throwIfAborted();
-        if (total + chunk.byteLength > entry.uncompressedSize)
-          throw new ScormReviewError("archive_limits");
-        buffer?.set(chunk, total);
-        total += chunk.byteLength;
-      },
-    }),
-    { checkSignature: true, checkOverlappingEntry: true, signal },
-  );
-  if (total !== entry.uncompressedSize)
-    throw new ScormReviewError("invalid_archive");
-  return buffer;
 }
 
 /** Recognize supported IMS elements by namespace, independent of author prefix choices. */
@@ -361,30 +341,31 @@ export async function reviewScormPackage(
 
     const manifest = files.get(manifestName);
     if (!manifest) throw new ScormReviewError("invalid_manifest");
-    const manifestBytes = await inspectEntry(manifest, true, signal);
+    const manifestBytes = new Uint8Array(manifest.uncompressedSize);
+    await consumePackageEntry(manifest, manifestBytes, signal);
     let text: string;
     try {
-      text = new TextDecoder("utf-8", { fatal: true }).decode(manifestBytes!);
+      text = new TextDecoder("utf-8", { fatal: true }).decode(manifestBytes);
     } catch {
       throw new ScormReviewError("invalid_manifest");
     }
     const structure = inspectManifest(text, new Set(files.keys()));
     for (const [name, entry] of files) {
-      if (name !== manifestName) await inspectEntry(entry, false, signal);
+      if (name !== manifestName) await consumePackageEntry(entry, null, signal);
     }
     signal?.throwIfAborted();
-    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+    const sha256 = await coursePackageDigest(bytes);
     signal?.throwIfAborted();
     return {
       ...structure,
-      sha256: Array.from(digest, (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join(""),
+      sha256,
       files: files.size,
       expandedBytes,
     };
   } catch (error) {
     signal?.throwIfAborted();
+    if (error instanceof PackageEntryOverflowError)
+      throw new ScormReviewError("archive_limits");
     if (error instanceof ScormReviewError) throw error;
     throw new ScormReviewError("invalid_archive");
   } finally {

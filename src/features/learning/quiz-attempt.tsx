@@ -22,7 +22,7 @@ type Answers = (number | null)[];
 function attemptDraft(quiz: Quiz) {
   return (
     quiz.draft ?? {
-      request_id: crypto.randomUUID(),
+      request_id: quiz.pool?.request_id ?? crypto.randomUUID(),
       revision: 0,
       answers: quiz.questions.map(() => null),
     }

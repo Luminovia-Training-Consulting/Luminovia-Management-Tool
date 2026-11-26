@@ -4,21 +4,30 @@ import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 await withTestDatabase("course_assignments", async ({ sql, actor }) => {
-  const [admin, learner, peer, client, org, template, run, assignment] =
-    Array.from({ length: 8 }, randomUUID);
+  const [
+    admin,
+    learner,
+    peer,
+    client,
+    org,
+    template,
+    run,
+    assignment,
+    outsider,
+  ] = Array.from({ length: 9 }, randomUUID);
   await sql(`
     insert into auth.users(id,email,email_confirmed_at) values
-      ${[admin, learner, peer, client].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
+      ${[admin, learner, peer, client, outsider].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
     insert into public.user_roles(user_id,role) values
-      (${q(admin)},'admin'),(${q(learner)},'participant'),(${q(peer)},'participant'),(${q(client)},'client');
+      (${q(admin)},'admin'),(${q(learner)},'participant'),(${q(peer)},'participant'),(${q(client)},'client'),(${q(outsider)},'participant');
     insert into public.organisations(id,name) values (${q(org)},'Fictional assignment company');
     insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(client)},${q(org)});
     insert into public.course_templates(id,title,syllabus) values(${q(template)},'Fictional course','Practical work');
     insert into public.course_runs(id,template_id,organisation_id) values(${q(run)},${q(template)},${q(org)});
     insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
-      values (${q(run)},${q(learner)},'enrolled',${q(admin)}),(${q(run)},${q(peer)},'enrolled',${q(admin)});
+      values (${q(run)},${q(learner)},'enrolled',${q(admin)}),(${q(run)},${q(peer)},'enrolled',${q(admin)}),(${q(run)},${q(outsider)},'enrolled',${q(admin)});
   `);
-  for (const participant of [learner, peer]) {
+  for (const participant of [learner, peer, outsider]) {
     const link = randomUUID();
     await sql(`
       insert into private.company_participant_link_requests(id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at)
@@ -38,20 +47,16 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     "0",
     q(randomUUID()),
   ]);
-  const action = (id, command, input, version) =>
+  const action = (id, command, input, version, target = assignment) =>
     rpc(id, "course_assignment_action", [
       q(run),
-      q(assignment),
+      q(target),
       q(command),
       q(JSON.stringify(input)),
       version,
     ]);
-  const view = (id, detail = true) =>
-    rpc(id, "course_assignments", [
-      q(run),
-      detail ? q(assignment) : "null",
-      "0",
-    ]);
+  const view = (id, detail = true, target = assignment) =>
+    rpc(id, "course_assignments", [q(run), detail ? q(target) : "null", "0"]);
   const dueAt = new Date(Date.now() + 60_000 * 60).toISOString();
   const rubric = [
     {
@@ -99,10 +104,10 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
   await assert.rejects(view(client), /42501/);
 
   const digest = "a".repeat(64);
-  const reserve = (id, token = randomUUID()) =>
+  const reserve = (id, token = randomUUID(), target = assignment) =>
     rpc(id, "reserve_course_assignment_submission", [
       q(run),
-      q(assignment),
+      q(target),
       q("evidence.pdf"),
       q("application/pdf"),
       "120",
@@ -287,10 +292,136 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     Date.parse((await view(learner)).detail.effective_due_at),
     Date.parse(dueAt),
   );
+
+  const teamAssignment = randomUUID();
+  const teamId = randomUUID();
+  const team = {
+    team_id: teamId,
+    title: "Lab team",
+    member_ids: [learner, peer],
+    due_at: extended,
+  };
+  const teamAction = (id, command, input, version) =>
+    action(id, command, input, version, teamAssignment);
+  const teamView = async (id) => (await view(id, true, teamAssignment)).detail;
+  const reserveForTeam = (id) => reserve(id, randomUUID(), teamAssignment);
+  const download = (id, version) =>
+    rpc(id, "course_submission_access", [q(run), q(version), "false"]);
+  await teamAction(admin, "save", { ...definition, title: "Shared lab" }, 0);
+  await teamAction(admin, "publish", {}, 1);
+  await assert.rejects(teamAction(learner, "save_team", team, 0), /42501/);
+  assert.equal((await teamAction(admin, "save_team", team, 0)).id, teamId);
+  await assert.rejects(
+    teamAction(
+      admin,
+      "save_team",
+      { ...team, title: "Competing team", team_id: randomUUID() },
+      0,
+    ),
+    /PT409/,
+  );
+  await assert.rejects(teamAction(admin, "save_team", team, 0), /PT409/);
+  assert.deepEqual(
+    new Set((await teamView(admin)).teams[0].member_ids),
+    new Set([learner, peer]),
+  );
+  assert.equal(
+    Date.parse((await teamView(peer)).effective_due_at),
+    Date.parse(extended),
+  );
+  assert.deepEqual((await teamView(peer)).teams[0].member_ids, []);
+  assert.deepEqual((await teamView(outsider)).teams, []);
+
+  const [teamFile, otherFile] = await Promise.all([
+    reserveForTeam(learner),
+    reserveForTeam(peer),
+  ]);
+  await promote(teamFile, "clean");
+  await promote(otherFile, "clean");
+  await assert.rejects(download(peer, teamFile.version_id), /42501/);
+  const submitted = await teamAction(
+    learner,
+    "submit",
+    { file_version_id: teamFile.version_id },
+    1,
+  );
+  await assert.rejects(
+    teamAction(peer, "submit", { file_version_id: otherFile.version_id }, 1),
+    /42501/,
+  );
+  assert.equal((await teamView(peer)).attempts[0].id, submitted.id);
+  assert.equal((await teamView(peer)).attempts[0].team_title, team.title);
+  assert.equal((await download(peer, teamFile.version_id)).sha256, digest);
+  assert.equal((await teamView(peer)).teams[0].locked, true);
+  assert.equal((await teamView(outsider)).attempts.length, 0);
+  await assert.rejects(download(outsider, teamFile.version_id), /42501/);
+  await assert.rejects(
+    teamAction(admin, "remove_team", { team_id: teamId }, 1),
+    /PT409/,
+  );
+  await assert.rejects(
+    teamAction(
+      admin,
+      "save_team",
+      { ...team, member_ids: [learner, outsider] },
+      1,
+    ),
+    /PT409/,
+  );
+
+  const teamReview = {
+    ...review,
+    attempt_id: submitted.id,
+    state: "revision_requested",
+  };
+  await teamAction(admin, "review", teamReview, 0);
+  const revised = await teamAction(
+    peer,
+    "submit",
+    { file_version_id: otherFile.version_id },
+    1,
+  );
+  assert.equal((await teamView(learner)).attempts[0].id, revised.id);
+  assert.equal((await teamView(learner)).attempts[0].attempt_no, 2);
+  const completionEvidence = (id) =>
+    sql(
+      `select private.course_completion_assignment_released(${q(teamAssignment)},${q(id)})`,
+    );
+  assert.equal(await completionEvidence(learner), "f");
+  await teamAction(
+    admin,
+    "review",
+    { ...teamReview, attempt_id: revised.id, state: "released" },
+    0,
+  );
+  assert.equal((await teamView(learner)).attempts[0].review.state, "released");
+  assert.equal((await teamView(peer)).attempts[0].review.private_note, null);
+  for (const member of [learner, peer]) {
+    assert.equal(await completionEvidence(member), "t");
+    const evidence = JSON.parse(
+      await sql(
+        `select private.course_weighted_source(${q(run)},${q(member)},${q(teamAssignment)})`,
+      ),
+    );
+    assert.equal(evidence.attempt, revised.id);
+    assert.equal(evidence.score, 100);
+  }
+  assert.equal(await completionEvidence(outsider), "f");
+  assert.equal(
+    await sql(
+      `select count(*) from public.notifications where resource_id=${q(revised.id)} and kind='course_assignment_feedback'`,
+    ),
+    "2",
+  );
+
   await sql(
     `update public.course_enrolments set status='removed' where course_run_id=${q(run)} and user_id=${q(learner)};`,
   );
   await assert.rejects(view(learner), /42501/);
+  await assert.rejects(teamView(learner), /42501/);
+  assert.equal(await completionEvidence(learner), "f");
+  await assert.rejects(download(learner, otherFile.version_id), /42501/);
+  assert.equal((await download(peer, teamFile.version_id)).sha256, digest);
   await assert.rejects(
     rpc(learner, "course_submission_access", [
       q(run),
@@ -306,6 +437,6 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     "f",
   );
   console.log(
-    "PASS assignment draft/publish, exact reservation and scan, review/privacy, notifications, resubmission races, extensions and revocation",
+    "PASS individual and team assignment publication, exact scans, current membership, shared revisions and feedback, notifications and revocation",
   );
 });
