@@ -144,10 +144,10 @@ await withApiFixture(async ({actor, service, checked, defer, sql, url}) => {
     assert.equal(initial.headers.get("referrer-policy"), "no-referrer");
     assert.equal(initial.headers.get("set-cookie"), null);
     assert.equal(initial.headers.get("location"), null);
-    const empty = await initial.text();
-    assert.ok(!empty.includes("Fictional private calendar appointment"));
-    assert.ok(empty.includes("Fictional subscription assignment"));
-    assert.ok(!empty.includes(token));
+    const teachingOnly = await initial.text();
+    assert.ok(!teachingOnly.includes("Fictional private calendar appointment"));
+    assert.ok(teachingOnly.includes("Fictional subscription assignment"));
+    assert.ok(!teachingOnly.includes(token));
     const changedToken = randomBytes(32).toString("hex"),
         rotation = {
             p_id: created.id,
@@ -242,6 +242,11 @@ await withApiFixture(async ({actor, service, checked, defer, sql, url}) => {
         }),
         "Create active opt-in feed before revoking lecturer role",
     );
+    const beforeRoleRevocation = await fetchFeed(roleToken);
+    assert.equal(beforeRoleRevocation.status, 200);
+    const originalCalendar = await beforeRoleRevocation.text();
+    assert.ok(originalCalendar.includes("Fictional private calendar appointment"));
+    assert.ok(originalCalendar.includes("Fictional subscription assignment"));
     await checked(
         service
             .from("user_roles")
@@ -260,6 +265,6 @@ await withApiFixture(async ({actor, service, checked, defer, sql, url}) => {
     assert.ok(roleRevokedCalendar.includes("Fictional private calendar appointment"));
     assert.ok(!roleRevokedCalendar.includes("Fictional subscription assignment"));
     console.log(
-        "PASS actual Auth/REST calendar owner/hash-only API, native unauthenticated Edge GET, no-store/no-referrer/no-cookie headers, explicit private opt-in/foreign isolation, stable rotation, old-token refusal, invalid/method refusal and revocation",
+        "PASS actual Auth/REST calendar owner/hash-only API, native unauthenticated Edge GET, no-store/no-referrer/no-cookie headers, explicit private opt-in/foreign isolation, stable rotation, old-token refusal, invalid/method refusal and live lecturer-role revocation",
     );
 });
