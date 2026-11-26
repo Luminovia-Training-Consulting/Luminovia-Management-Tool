@@ -105,4 +105,14 @@ Daily encrypted sets are local to the VPS unless separately configured off-site;
 
 ## Operations
 
+To identify the recorded installed release on a CMS development host, run as an authorised host administrator:
+
+```bash
+sudo /usr/bin/python3 /opt/luminovia-portal/control/updater.py --installed
+```
+
+Success prints only `status: installed`, `version: cms-dev-<commit>` and the full 40-character `commit` as JSON. This is distinct from `--check`, which asks GitHub for a candidate. The offline diagnostic compares the private last-success commit with the active static release while holding the updater's existing shared read lock. It returns nonzero without a version during an update, maintenance or required recovery, or if local evidence is missing, inaccessible, invalid or inconsistent. A failed candidate is never reported as the installed release.
+
+This diagnostic is not exposed to browser users and does not certify current HTTPS health, package publication, database migration history or backend configuration. Check those separately before accepting a deployment.
+
 Inspect `systemctl list-timers luminovia-update.timer luminovia-complete-backup.timer apt-daily-upgrade.timer luminovia-required-reboot.timer`, their service journals, `private/updates/state.json` and `private/backups/state.json`. GitHub daily workflow summaries identify held/failed candidates. Never print environment values, role dumps or secret configuration. Normal operation needs no Git clone on the VPS and introduces no new resident update daemon.
