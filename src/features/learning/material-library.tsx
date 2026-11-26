@@ -566,6 +566,86 @@ function MaterialReuse({
   );
 }
 
+type MaterialUsagePage = {
+  items: { id: string; title: string; audiences: string[] }[];
+  next: string | null;
+};
+
+/** Read current exact-version uses when course staff open the disclosure. */
+function MaterialUsage({
+  actor,
+  resource,
+}: {
+  actor: string;
+  resource: string;
+}) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const [open, setOpen] = useState(false);
+  const query = useInfiniteQuery({
+    queryKey: [...courseMaterialLibraryKey(actor), resource, "usage"],
+    enabled: open && online,
+    retry: false,
+    initialPageParam: null as string | null,
+    getNextPageParam: (page: MaterialUsagePage) => page.next ?? undefined,
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, error } = await db()
+        .rpc("course_material_usage", {
+          p_resource_id: resource,
+          p_after: pageParam,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as MaterialUsagePage;
+    },
+  });
+  const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{t("materialUsage")}</summary>
+      {open &&
+        (online ? (
+          query.isError ? (
+            <ErrorState retry={() => void query.refetch()} />
+          ) : query.isPending ? (
+            <Loading />
+          ) : (
+            <>
+              {rows.length ? (
+                <ul>
+                  {rows.map(({ id, title, audiences }) => (
+                    <li key={id}>
+                      <Link to={`/courses/${id}/workspace#course-materials`}>
+                        {title}
+                      </Link>
+                      <p>
+                        {audiences.map((audience) => t(audience)).join(", ")}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{t("materialUsageEmpty")}</p>
+              )}
+              {query.hasNextPage && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={query.isFetchingNextPage}
+                  onClick={() => void query.fetchNextPage()}
+                >
+                  {t("materialUsageMore")}
+                </Button>
+              )}
+            </>
+          )
+        ) : (
+          <p role="status">{t("materialMetadataOffline")}</p>
+        ))}
+    </details>
+  );
+}
+
 /** Presentation and editing share the same row; downloads always use the original resource ID. */
 function MaterialItem({
   actor,
@@ -596,6 +676,9 @@ function MaterialItem({
           resourceId={material.id}
           revision={material.metadata_revision}
         />
+      )}
+      {material.can_read_metadata_history && (
+        <MaterialUsage actor={actor} resource={material.id} />
       )}
       <div className="form-actions">
         <DownloadButton

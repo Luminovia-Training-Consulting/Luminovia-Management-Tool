@@ -149,6 +149,8 @@ import {
   importRowResult,
   materialHistoryParameters,
   materialHistoryResult,
+  materialUsageParameters,
+  materialUsageResult,
   materialMetadataParameters,
   materialMetadataRevision,
   materialReuseParameters,
@@ -1082,6 +1084,14 @@ const coursePaths = {
     record(curriculumCatalogueParameters, ["p_run_id"]),
     curriculumCatalogueResult,
     true,
+  ),
+  "/rest/v1/rpc/course_material_usage": courseOperation(
+    "readAcademyCourseMaterialUsage",
+    "Find active uses of a course material version",
+    "Current staff can read authorised courses using the exact same scanned file version, grouped with their active share audiences.",
+    "active-or-grace",
+    record(materialUsageParameters, ["p_resource_id"]),
+    materialUsageResult,
   ),
   "/rest/v1/rpc/course_material_reuse_targets": courseOperation(
     "listAcademyCourseMaterialReuseTargets",

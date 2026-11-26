@@ -1037,6 +1037,12 @@ const pairs: Record<string, [string, string]> = {
   materialReviewOn: ["Prüfdatum", "Review date"],
   materialHistory: ["Metadatenverlauf", "Metadata history"],
   materialMoreRevisions: ["Ältere Fassungen anzeigen", "Show older revisions"],
+  materialUsage: ["Verwendung der Dateifassung", "Uses of this file version"],
+  materialUsageEmpty: [
+    "Keine aktive Freigabe im Kursbereich gefunden.",
+    "No current shares found in your course scope.",
+  ],
+  materialUsageMore: ["Weitere Kurse anzeigen", "Show more courses"],
   materialReuse: ["In weiterem Kurs verwenden", "Use in another course"],
   materialReuseHelp: [
     "Die geprüfte Fassung von {{name}} wird im Zielkurs für dieselbe Zielgruppe freigegeben.",

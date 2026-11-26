@@ -103,6 +103,32 @@ export const materialSearchResult = {
   ),
   maxItems: 25,
 };
+export const materialUsageParameters = { p_resource_id: uuid, p_after: uuid };
+export const materialUsageResult = {
+  type: "object",
+  additionalProperties: false,
+  required: ["items", "next"],
+  properties: {
+    items: {
+      type: "array",
+      maxItems: 25,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "title", "audiences"],
+        properties: {
+          id: uuid,
+          title: { type: "string" },
+          audiences: {
+            type: "array",
+            items: { enum: ["all", "staff", "client", "participants"] },
+          },
+        },
+      },
+    },
+    next: { anyOf: [uuid, { type: "null" }] },
+  },
+};
 export const materialReuseTargetsParameters = {
   p_resource_id: uuid,
   p_search: nullable({ ...text, maxLength: 150 }),
