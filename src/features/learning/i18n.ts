@@ -126,17 +126,44 @@ const pairs: Record<string, [string, string]> = {
     "Übernimm eine veröffentlichte Lektion aus einem deiner Kurse dieser Organisation. Materialverweise werden übernommen, wenn dieselbe Dateifassung bereits für Teilnehmende in diesem Kurs freigegeben ist.",
     "Copy a published lesson from a course you teach or manage in this organisation. Material links are copied when the same file version is already shared with participants in this course.",
   ],
-  curriculumCatalogueOffline: ["Die Lektionsbibliothek ist online verfügbar.", "The lesson library is available online."],
-  curriculumCatalogueSearch: ["Kurs, Modul oder Lektion", "Course, module or lesson"],
+  curriculumCatalogueOffline: [
+    "Die Lektionsbibliothek ist online verfügbar.",
+    "The lesson library is available online.",
+  ],
+  curriculumCatalogueSearch: [
+    "Kurs, Modul oder Lektion",
+    "Course, module or lesson",
+  ],
   curriculumCatalogueFind: ["Lektionen suchen", "Find lessons"],
-  curriculumCatalogueEmpty: ["Keine passenden veröffentlichten Lektionen gefunden.", "No matching published lessons found."],
-  curriculumCatalogueDraftChanged: ["Der Zielentwurf hat sich geändert. Prüfe den Entwurf vor dem Kopieren.", "The destination draft changed. Review it before copying a lesson."],
-  curriculumCatalogueInvalidDraft: ["Die Lektion kann in diesem Entwurf nicht gespeichert werden. Prüfe die Pflichtfelder und die Gesamtgröße des Entwurfs.", "This lesson cannot be saved in the current draft. Check the required fields and the overall draft size."],
-  curriculumCatalogueSourceChanged: ["Die Lektion ist derzeit nicht verfügbar. Prüfe die aktualisierte Liste.", "The lesson is currently unavailable. Check the updated list."],
-  curriculumCatalogueOrigin: ["{{course}} · {{module}} · Fassung {{version}}", "{{course}} · {{module}} · revision {{version}}"],
+  curriculumCatalogueEmpty: [
+    "Keine passenden veröffentlichten Lektionen gefunden.",
+    "No matching published lessons found.",
+  ],
+  curriculumCatalogueDraftChanged: [
+    "Der Zielentwurf hat sich geändert. Prüfe den Entwurf vor dem Kopieren.",
+    "The destination draft changed. Review it before copying a lesson.",
+  ],
+  curriculumCatalogueInvalidDraft: [
+    "Die Lektion kann in diesem Entwurf nicht gespeichert werden. Prüfe die Pflichtfelder und die Gesamtgröße des Entwurfs.",
+    "This lesson cannot be saved in the current draft. Check the required fields and the overall draft size.",
+  ],
+  curriculumCatalogueSourceChanged: [
+    "Die Lektion ist derzeit nicht verfügbar. Prüfe die aktualisierte Liste.",
+    "The lesson is currently unavailable. Check the updated list.",
+  ],
+  curriculumCatalogueOrigin: [
+    "{{course}} · {{module}} · Fassung {{version}}",
+    "{{course}} · {{module}} · revision {{version}}",
+  ],
   curriculumCatalogueCopy: ["Lektion übernehmen", "Copy lesson"],
-  curriculumCatalogueCopyNamed: ["Lektion übernehmen – {{title}} ({{course}})", "Copy lesson – {{title}} ({{course}})"],
-  curriculumCatalogueCopied: ["{{title}} wurde zum Entwurf hinzugefügt.", "{{title}} was added to the draft."],
+  curriculumCatalogueCopyNamed: [
+    "Lektion übernehmen – {{title}} ({{course}})",
+    "Copy lesson – {{title}} ({{course}})",
+  ],
+  curriculumCatalogueCopied: [
+    "{{title}} wurde zum Entwurf hinzugefügt.",
+    "{{title}} was added to the draft.",
+  ],
   curriculumCatalogueBack: ["Vorherige Lektionen", "Previous lessons"],
   curriculumCatalogueNext: ["Weitere Lektionen", "More lessons"],
   curriculumAddFirstModule: [
@@ -1334,7 +1361,10 @@ const pairs: Record<string, [string, string]> = {
     "Der aktuelle Abschlussstatus ist nur online verfügbar.",
     "Current completion status is available online.",
   ],
-  completionRefreshStatus: ["Abschlussstatus aktualisieren", "Refresh completion status"],
+  completionRefreshStatus: [
+    "Abschlussstatus aktualisieren",
+    "Refresh completion status",
+  ],
   completionIssuedStatus: [
     "Abschlussdokument ausgestellt.",
     "Completion document issued.",

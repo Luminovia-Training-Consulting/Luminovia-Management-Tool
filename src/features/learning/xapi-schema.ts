@@ -33,7 +33,9 @@ const statement = z.union([
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "attempted") }),
     object: activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/),
-    result: scoredResult.extend({ score: score.extend({ raw: percent.int() }) }),
+    result: scoredResult.extend({
+      score: score.extend({ raw: percent.int() }),
+    }),
   }),
   z.strictObject({
     ...base,
@@ -44,7 +46,9 @@ const statement = z.union([
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "scored") }),
-    object: activity(/\/[a-f0-9]{64}\/(?:weighted-grade|text-exam\/[1-9][0-9]*)$/),
+    object: activity(
+      /\/[a-f0-9]{64}\/(?:weighted-grade|text-exam\/[1-9][0-9]*)$/,
+    ),
     result: scoredResult,
   }),
   z.strictObject({

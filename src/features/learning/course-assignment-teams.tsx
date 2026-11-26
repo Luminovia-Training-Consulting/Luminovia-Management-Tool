@@ -168,7 +168,7 @@ function TeamEditor({
   );
 }
 
-export default function AssignmentTeams({
+export function AssignmentTeams({
   teams,
   canManage,
   ...editor

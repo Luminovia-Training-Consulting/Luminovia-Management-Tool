@@ -518,11 +518,18 @@ const completionStatusFields = {
   state: { type: "string", enum: ["pending", "ready", "issued"] },
 };
 export const courseCompletionStatusResult = record(
-  { ...completionStatusFields, policy: z.toJSONSchema(courseCompletionPinnedPolicy) },
-  Object.keys(completionStatusFields) as (keyof typeof completionStatusFields)[],
+  {
+    ...completionStatusFields,
+    policy: z.toJSONSchema(courseCompletionPinnedPolicy),
+  },
+  Object.keys(
+    completionStatusFields,
+  ) as (keyof typeof completionStatusFields)[],
 );
 export const courseCompletionPolicyRead = record({ p_run_id: uuid });
-export const courseCompletionPolicyResult = z.toJSONSchema(courseCompletionPolicyProjection);
+export const courseCompletionPolicyResult = z.toJSONSchema(
+  courseCompletionPolicyProjection,
+);
 export const courseCompletionPolicyAction = {
   ...z.toJSONSchema(courseCompletionPolicyActionSchema),
   required: ["p_run_id", "p_action", "p_payload", "p_expected_version"],

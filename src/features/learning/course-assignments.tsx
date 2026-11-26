@@ -20,7 +20,11 @@ import {
   type CourseAssignmentAttempt,
 } from "./course-assignment-schema";
 
-const AssignmentTeams = lazy(() => import("./course-assignment-teams"));
+const AssignmentTeams = lazy(() =>
+  import("./course-assignment-teams").then((module) => ({
+    default: module.AssignmentTeams,
+  })),
+);
 
 type Action = (typeof assignmentActions)[number];
 type Command = (

@@ -64,7 +64,9 @@ const input = (name: string) =>
 
 describe("internal operation documentation", () => {
   it("covers the 76 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(definitions.length);
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(
+      definitions.length,
+    );
     expect(definitions).toHaveLength(76);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);

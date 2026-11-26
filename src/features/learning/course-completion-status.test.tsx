@@ -68,7 +68,9 @@ it("only requests the chosen learner and explains each active requirement", asyn
   expect(await screen.findByText(/outstanding requirements/)).toBeVisible();
   expect(screen.getByText(/enrolment must be marked completed/)).toBeVisible();
   expect(screen.getByText(/All sessions must have ended.*9:00/)).toBeVisible();
-  expect(screen.getByText(/80% verified attendance \(1 of 2 verified\)/)).toBeVisible();
+  expect(
+    screen.getByText(/80% verified attendance \(1 of 2 verified\)/),
+  ).toBeVisible();
   expect(screen.getByText(/published quiz \(version 2\)/)).toBeVisible();
   expect(screen.getByText(/staff must verify attendance again/)).toBeVisible();
   expect(rpc).toHaveBeenCalledWith("course_completion_status", {

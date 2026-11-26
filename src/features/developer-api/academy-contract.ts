@@ -5,7 +5,10 @@ import {
   competencyReadResult,
 } from "./competency-contract.ts";
 import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
-import { curriculumCatalogueParameters, curriculumCatalogueResult } from "./course-content-operation-documentation.ts";
+import {
+  curriculumCatalogueParameters,
+  curriculumCatalogueResult,
+} from "./course-content-operation-documentation.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";

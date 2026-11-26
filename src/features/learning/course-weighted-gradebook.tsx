@@ -49,8 +49,7 @@ function useSourceLabel() {
     ["exam", t("weightedExam")],
     ["text_exam", t("weightedTextExam")],
   ]);
-  return ({ key, label }: WeightedSource) =>
-    label ?? labels.get(key) ?? key;
+  return ({ key, label }: WeightedSource) => label ?? labels.get(key) ?? key;
 }
 
 function WriteError({ error }: { error: unknown }) {
