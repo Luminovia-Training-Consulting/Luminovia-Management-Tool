@@ -80,7 +80,7 @@ async function responseToken(changes: Record<string, unknown> = {}) {
     );
 }
 
-function fixture(origin = portal, resource?: string) {
+function fixture(origin = portal, resource?: string, agsEnabled = false) {
   const staged: unknown[] = [];
   const deepLink = createLtiDeepLink(returnBase, issuer, [portal], {
     registration: (clientId, deployment) =>
@@ -131,6 +131,7 @@ function fixture(origin = portal, resource?: string) {
               context_id: place,
               subject: browserProof,
               role: "Instructor",
+              ags_enabled: agsEnabled,
               ...(resource
                 ? { resource_link_id: resource, resource_custom: { unit: "2" } }
                 : {
@@ -210,6 +211,7 @@ Deno.test("the signing boundary publishes the picker claim and a signed response
   assert.deepEqual(settings.accept_types, ["ltiResourceLink"]);
   assert.equal(settings.auto_create, false);
   assert.equal(settings.accept_multiple, false);
+  assert.equal(settings.accept_lineitem, false);
   const signed = await responseToken();
   const review = await handler(callback(signed));
   assert.equal(review.status, 303);
@@ -272,4 +274,38 @@ Deno.test("a published placement emits a resource link ID independent of the dep
   assert.equal(claims[lti + "deployment_id"], place);
   assert.deepEqual(claims[lti + "resource_link"], { id: ticket });
   assert.deepEqual(claims[lti + "custom"], { unit: "2" });
+});
+
+Deno.test("a grading-enabled picker advertises declarative AGS metadata and validates it", async () => {
+  const { handler, staged } = fixture(portal, undefined, true);
+  const claims = await launchClaims(await handler(browserRequest(authorize)));
+  assert.equal(claims[dl + "deep_linking_settings"].accept_lineitem, true);
+  const invalid = await handler(callback(
+    await responseToken({
+      [dl + "content_items"]: [{
+        ...example,
+        lineItem: { scoreMaximum: "20" },
+      }],
+    }),
+  ));
+  assert.equal(invalid.status, 400);
+  assert.deepEqual(staged, []);
+  const lineItem = {
+    label: "Fictional assignment",
+    scoreMaximum: 12.5,
+    resourceId: "worksheet",
+    tag: "practice",
+  };
+  const review = await handler(callback(
+    await responseToken({
+      [dl + "content_items"]: [{ ...example, lineItem }],
+    }),
+  ));
+  assert.equal(review.status, 303);
+  assert.deepEqual(JSON.parse(JSON.stringify(staged)), [{
+    title: example.title,
+    url: example.url,
+    custom: example.custom,
+    lineItem,
+  }]);
 });

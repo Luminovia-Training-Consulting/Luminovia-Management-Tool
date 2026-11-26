@@ -1292,8 +1292,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             ]);
         const applyLink = (who, session, id, action) =>
             invoke(who, session, "lti_deep_link_review", [q(id), q(action)]);
-        const returnSelection = (choice, item) =>
-            toolRpc("receive_lti_deep_link", [q(deployment), 3, q(choice.deep_link_data),
+        const returnSelection = (choice, item, revision = 3) =>
+            toolRpc("receive_lti_deep_link", [q(deployment), revision, q(choice.deep_link_data),
                 item ? q(JSON.stringify(item)) : "null",
             ]);
         const portalOrigin = "https://fixture-portal.example.invalid";
@@ -1314,6 +1314,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         };
         await assert.rejects(returnSelection(choice,{...link,url:"https://foreign.example.invalid/activity"}), /22023/);
         await assert.rejects(returnSelection(choice,{...link,custom:{invalid:42}}), /22023/);
+        await assert.rejects(returnSelection(choice,{...link,lineItem:{scoreMaximum:15}}), /42501/);
         const received = await returnSelection(choice,link);
         assert.equal(received.origin, portalOrigin);
         await assert.rejects(returnSelection(choice,link), /42501/);
@@ -1373,17 +1374,44 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         const readLedger = (who, session) => invoke(who, session, "course_lti_ags_grades", [
             q(deployment), "null", 10,
         ]);
-        await assert.rejects(issueGrades(["lineitem"], 4), /42501/);
-        await assert.rejects(enableGrades(learner, learnerSession, 4, true), /42501/);
-        assert.equal(await enableGrades(admin, managerSession, 4, true), 5);
-        await assert.rejects(enableGrades(admin, managerSession, 4, false), /PT409/);
-        const gradeToken = await issueGrades(["lineitem", "result.readonly", "score"], 5);
-        const readToken = await issueGrades(["lineitem.readonly"], 5);
+        await assert.rejects(issueGrades(["lineitem"], 5), /42501/);
+        await assert.rejects(enableGrades(learner, learnerSession, 5, true), /42501/);
+        assert.equal(await enableGrades(admin, managerSession, 5, true), 6);
+        await assert.rejects(enableGrades(admin, managerSession, 5, false), /PT409/);
+        const gradeToken = await issueGrades(["lineitem", "result.readonly", "score"], 6);
+        const readToken = await issueGrades(["lineitem.readonly"], 6);
         await assert.rejects(grades(readToken,"create",null,{label: "Denied", scoreMaximum: 5}),/42501/);
         await assert.rejects(grades(gradeToken,"list",null,{},randomUUID()),/42501/);
         await assert.rejects(grades(gradeToken,"create",null,{
             label: "Foreign link", scoreMaximum: 10, resourceLinkId: randomUUID(),
         }),/PT404/);
+        const gradedHint = await prepare(teacher,teacherSession,null,portalOrigin);
+        const gradedPick = await finish(teacher,teacherSession,gradedHint,{
+            nonce:"graded-selection",state:"graded-selection",
+        });
+        assert.equal(gradedPick.ags_enabled,true);
+        const declaration = {
+            scoreMaximum:12.5, resourceId:"fixture-graded-placement", tag:"first-review", gradesReleased:true,
+        };
+        await assert.rejects(returnSelection(gradedPick,{...link,lineItem:{...declaration,scoreMaximum:-2}},6),/22023/);
+        const gradedLink = await returnSelection(gradedPick,{...link,lineItem:declaration},6);
+        assert.deepEqual((await applyLink(teacher,teacherSession,gradedLink.id,"read")).line_item,{
+            label:link.title,maximum:12.5,
+        });
+        assert.deepEqual(await grades(readToken,"list",null,{resource_id:declaration.resourceId}),[]);
+        assert.equal((await applyLink(teacher,teacherSession,gradedLink.id,"publish")).published,true);
+        assert.equal((await applyLink(teacher,teacherSession,gradedLink.id,"publish")).published,true);
+        const [declaredItem] = await grades(readToken,"list",null,{resource_id:declaration.resourceId});
+        assert.equal(declaredItem.label,link.title);
+        assert.equal(declaredItem.scoreMaximum,12.5);
+        assert.equal(declaredItem.resourceLinkId,gradedLink.id);
+        assert.equal(declaredItem.tag,declaration.tag);
+        assert.ok(!Object.hasOwn(declaredItem,"gradesReleased"));
+        const chosenLink = await prepare(learner,learnerSession,gradedLink.id,null);
+        const gradedResource = await finish(learner,learnerSession,chosenLink,{
+            nonce:"graded-resource",state:"graded-resource",
+        });
+        assert.equal(gradedResource.ags_lineitem,declaredItem.id);
         const item = await grades(gradeToken,"create",null,{
             label: "Fictional skills check", scoreMaximum: 20, resourceLinkId: deployment, resourceId: "worksheet",
             tag: "lab",
@@ -1416,13 +1444,13 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             label: "Fictional skills check",scoreMaximum: 25,resourceId: "worksheet",tag: "lab",
         })).scoreMaximum,25);
         assert.equal((await grades(gradeToken,"results",item.id))[0].resultScore,30);
-        assert.equal((await readLedger(teacher,teacherSession))[0].results[0].score,30);
+        assert.equal((await readLedger(teacher,teacherSession)).find((row) => row.id === item.id).results[0].score,30);
         await assert.rejects(readLedger(learner,learnerSession),/42501/);
         assert.equal(await grades(gradeToken,"score",item.id,submission(3000,{scoreGiven:null,scoreMaximum:null})),true);
         assert.deepEqual(await grades(gradeToken,"results",item.id),[]);
         assert.equal(await grades(gradeToken,"delete",item.id),true);
         await assert.rejects(grades(gradeToken,"read",item.id),/PT404/);
-        assert.equal(await enableGrades(admin,managerSession,5,false),6);
+        assert.equal(await enableGrades(admin,managerSession,6,false),7);
         await assert.rejects(grades(gradeToken,"list",null),/42501/);
 
         const staleSession = await start(learner, learnerSession);

@@ -10,7 +10,19 @@ import {
 
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const dataClaim = "https://purl.imsglobal.org/spec/lti-dl/claim/";
-type Item = { title: string; url: string; custom: Record<string, string> };
+type LineItem = {
+  label?: string;
+  scoreMaximum: number;
+  resourceId?: string;
+  tag?: string;
+  gradesReleased?: boolean;
+};
+type Item = {
+  title: string;
+  url: string;
+  custom: Record<string, string>;
+  lineItem?: LineItem;
+};
 
 type Backend = {
   registration: (
@@ -24,7 +36,26 @@ type Backend = {
   ) => Promise<{ id: string; origin: string } | null>;
 };
 
-/** Accept a single LTI Resource Link with no HTML, file, media or line-item import. */
+function declaredGrading(value: unknown): LineItem | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("line_item");
+  }
+  const { label, scoreMaximum, resourceId, tag, gradesReleased } =
+    value as Record<string, unknown>;
+  if (
+    typeof scoreMaximum !== "number" || !Number.isFinite(scoreMaximum) ||
+    scoreMaximum < 0.000001 || scoreMaximum > 1_000_000_000_000 ||
+    (label !== undefined && (!bounded(label, 300) || !label.trim())) ||
+    (resourceId !== undefined &&
+      (!bounded(resourceId, 500) || !resourceId.trim())) ||
+    (tag !== undefined && (!bounded(tag, 500) || !tag.trim())) ||
+    (gradesReleased !== undefined && typeof gradesReleased !== "boolean")
+  ) throw new Error("line_item");
+  return { label, scoreMaximum, resourceId, tag, gradesReleased };
+}
+
+/** Accept one LTI Resource Link and its optional reviewed AGS declaration. */
 function selectedItem(input: unknown): Item | null {
   if (!Array.isArray(input) || input.length > 1) {
     throw new Error("selection_count");
@@ -50,7 +81,13 @@ function selectedItem(input: unknown): Item | null {
       (value !== "" && !bounded(value, 512))
     )
   ) throw new Error("selection_parameters");
-  return { title: item.title, url: item.url, custom };
+  const lineItem = declaredGrading(item.lineItem);
+  return {
+    title: item.title,
+    url: item.url,
+    custom,
+    ...(lineItem ? { lineItem } : {}),
+  };
 }
 
 export function createLtiDeepLink(
@@ -65,14 +102,14 @@ export function createLtiDeepLink(
     "X-Content-Type-Options": "nosniff",
   };
   return {
-    settings(data: string) {
+    settings(data: string, gradeServiceEnabled: boolean) {
       return {
         [dataClaim + "deep_linking_settings"]: {
           deep_link_return_url: base + "/deep-link-return",
           accept_types: ["ltiResourceLink"],
           accept_presentation_document_targets: ["window"],
           accept_multiple: false,
-          accept_lineitem: false,
+          accept_lineitem: gradeServiceEnabled,
           auto_create: false,
           data,
         },

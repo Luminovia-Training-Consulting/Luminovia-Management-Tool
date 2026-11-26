@@ -855,6 +855,10 @@ const pairs: Record<string, [string, string]> = {
     "Material für den Kurs freigeben",
     "Publish material to the course",
   ],
+  ltiSelectedGradeColumn: [
+    "Notenspalte {{label}} · maximal {{maximum}} Punkte",
+    "Grade column {{label}} · maximum {{maximum}} points",
+  ],
   ltiLinkPublished: [
     "Das Lernmaterial ist im Kurs verfügbar.",
     "The learning material is available in the course.",

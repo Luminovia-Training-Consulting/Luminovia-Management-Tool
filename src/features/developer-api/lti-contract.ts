@@ -138,6 +138,12 @@ export function ltiCoursePaths(academy: boolean) {
                 title: z.string().nullable().optional(),
                 target_uri: url.nullable().optional(),
                 published: z.boolean().optional(),
+                line_item: z
+                  .strictObject({
+                    label: z.string(),
+                    maximum: z.number().positive(),
+                  })
+                  .optional(),
               }),
             ),
           },

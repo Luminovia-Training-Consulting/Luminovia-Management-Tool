@@ -177,6 +177,7 @@ type Selection = {
   title: string | null;
   target_uri: string | null;
   published: boolean;
+  line_item?: { label: string; maximum: number };
 };
 
 async function reviewSelection(
@@ -242,6 +243,14 @@ export function LtiDeepLinkReview() {
             <>
               <h2>{selection.title}</h2>
               <p className="break-all">{selection.target_uri}</p>
+              {selection.line_item && (
+                <p>
+                  {t("ltiSelectedGradeColumn", {
+                    label: selection.line_item.label,
+                    maximum: selection.line_item.maximum,
+                  })}
+                </p>
+              )}
               {selection.published ? (
                 <Notice>{t("ltiLinkPublished")}</Notice>
               ) : (

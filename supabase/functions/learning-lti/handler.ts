@@ -339,7 +339,10 @@ export function createLtiHandler(options: {
         return json(403, { error: "lti_launch" });
       }
       const claims = launch.deep_link_data
-        ? options.deepLink!.settings(launch.deep_link_data)
+        ? options.deepLink!.settings(
+          launch.deep_link_data,
+          launch.ags_enabled === true,
+        )
         : options.advantage?.claims(launch) ?? {};
       return json(200, {
         redirect: launch.redirect_uri,
