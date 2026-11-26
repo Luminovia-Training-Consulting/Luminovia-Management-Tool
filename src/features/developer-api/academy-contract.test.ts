@@ -64,6 +64,7 @@ const writePaths = [
   "/rest/v1/rpc/reuse_course_material",
   "/rest/v1/rpc/course_question_bank_action",
   "/rest/v1/rpc/course_assignment_action",
+  "/rest/v1/rpc/save_course_quiz_draft",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

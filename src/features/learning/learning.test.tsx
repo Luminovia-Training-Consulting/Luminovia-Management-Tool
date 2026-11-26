@@ -151,47 +151,49 @@ beforeEach(async () => {
                       }
                       return resolve({ data, error: fake.meetingError });
                     })
-                  : name === "course_submissions"
-                    ? Promise.resolve({
-                        data: {
-                          enabled: false,
-                          can_manage: false,
-                          can_upload: false,
-                          entries: [],
-                          next: null,
-                        },
-                        error: null,
-                      }).then(resolve)
-                    : name === "course_evaluations"
+                  : name === "save_course_quiz_draft"
+                    ? Promise.resolve({ data: 1, error: null }).then(resolve)
+                    : name === "course_submissions"
                       ? Promise.resolve({
                           data: {
-                            completed: true,
-                            writable: false,
-                            targets: [],
-                            mine: [],
-                            summaries: [],
+                            enabled: false,
+                            can_manage: false,
+                            can_upload: false,
+                            entries: [],
+                            next: null,
                           },
                           error: null,
                         }).then(resolve)
-                      : [
-                            "course_chat_rooms",
-                            "course_enrolments",
-                            "course_enrolment_candidates",
-                          ].includes(name)
-                        ? Promise.resolve({ data: [], error: null }).then(
-                            resolve,
-                          )
-                        : Promise.resolve(
-                            fake.pending ?? { id: null, saved: true },
-                          ).then((data) =>
-                            resolve({
-                              data,
-                              error:
-                                args?.p_action === "resource_share"
-                                  ? fake.shareError
-                                  : fake.error,
-                            }),
-                          ),
+                      : name === "course_evaluations"
+                        ? Promise.resolve({
+                            data: {
+                              completed: true,
+                              writable: false,
+                              targets: [],
+                              mine: [],
+                              summaries: [],
+                            },
+                            error: null,
+                          }).then(resolve)
+                        : [
+                              "course_chat_rooms",
+                              "course_enrolments",
+                              "course_enrolment_candidates",
+                            ].includes(name)
+                          ? Promise.resolve({ data: [], error: null }).then(
+                              resolve,
+                            )
+                          : Promise.resolve(
+                              fake.pending ?? { id: null, saved: true },
+                            ).then((data) =>
+                              resolve({
+                                data,
+                                error:
+                                  args?.p_action === "resource_share"
+                                    ? fake.shareError
+                                    : fake.error,
+                              }),
+                            ),
       };
       return request;
     });
@@ -553,6 +555,17 @@ describe("connected course workspace", () => {
       screen.getByRole("heading", { name: "Mein Abschlussdokument" }),
     ).toBeVisible();
     await user.click(screen.getByRole("radio", { name: "Yes" }));
+    expect(await screen.findByText("Antwortentwurf gespeichert")).toBeVisible();
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "save_course_quiz_draft",
+      expect.objectContaining({
+        p_quiz_version: 4,
+        p_attempt_number: 1,
+        p_expected_revision: 0,
+        p_answers: [0],
+      }),
+    );
+
     await user.click(
       screen.getByRole("button", { name: "Antworten verbindlich abgeben" }),
     );

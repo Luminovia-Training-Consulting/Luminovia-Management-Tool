@@ -192,10 +192,42 @@ await withTestDatabase("course_question_bank", async ({ sql, actor }) => {
       1,
     );
   const attemptId = randomUUID();
+  const draft = (who, requestId, revision, values, number = 1) =>
+    rpc(
+      who,
+      "save_course_quiz_draft",
+      q(run),
+      1,
+      number,
+      q(requestId),
+      revision,
+      q(JSON.stringify(values)),
+    );
+  const partial = [answers[0], null];
+  await assert.rejects(draft(teacher, attemptId, 0, partial), /42501/);
+  await assert.rejects(draft(learner, attemptId, 0, [answers[0], 5]), /22023/);
+  assert.equal(await draft(learner, attemptId, 0, partial), 1);
+  assert.equal(await draft(learner, attemptId, 0, partial), 1);
+  assert.equal((await workspace(learner)).quiz.attempts, 0);
+  assert.deepEqual((await workspace(learner)).quiz.draft, {
+    revision: 1,
+    request_id: attemptId,
+    answers: partial,
+  });
+  assert.equal((await workspace(teacher)).quiz.draft, null);
+  await assert.rejects(draft(learner, randomUUID(), 0, partial), /PT409/);
+  await assert.rejects(draft(learner, attemptId, 0, answers), /PT409/);
+  assert.equal(await draft(learner, attemptId, 1, answers), 2);
   const accepted = await attempt(attemptId);
   assert.equal(accepted.score, 100);
   assert.deepEqual(await attempt(attemptId), accepted);
   await assert.rejects(attempt(randomUUID()), /22023/);
+  assert.equal((await workspace(learner)).quiz.draft, null);
+  await assert.rejects(draft(learner, attemptId, 2, answers), /PT409/);
+  assert.equal(
+    await sql("select count(*) from private.course_quiz_answer_drafts"),
+    "0",
+  );
 
   // A current quiz may retain its own snapshot even after the bank row is archived.
   assert.equal(
@@ -239,6 +271,6 @@ await withTestDatabase("course_question_bank", async ({ sql, actor }) => {
     /42501/,
   );
   console.log(
-    "PASS question bank scope, validation, immutable revisions, competing authors, archive/restore and canonical quiz attempts",
+    "PASS question bank scope, validation, immutable revisions, competing authors, archive/restore, recoverable drafts and canonical quiz attempts",
   );
 });

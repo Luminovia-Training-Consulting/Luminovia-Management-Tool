@@ -124,6 +124,8 @@ import {
   questionBankActionParameters,
   questionBankActionVariants,
   questionBankActionResult,
+  quizDraftParameters,
+  quizDraftRevision,
   courseWelcomePublishedResult,
   courseWelcomeResult,
   courseWelcomeWrite,
@@ -4408,6 +4410,14 @@ const nativePaths = {
     "Returns the actor-scoped course. With Premium disabled, course managers, assigned lecturers and authorised company contacts receive course details and scheduled sessions. Active Premium enables scoped learning materials, participant workflows and meeting links. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     internalWorkspaceResult,
+  ),
+  "/rest/v1/rpc/save_course_quiz_draft": rpc(
+    "saveCourseQuizDraft",
+    "Premium LMS",
+    "Save or recover a learner's in-progress quiz answers",
+    "Send the caller's exact published quiz version, next attempt number, stable request ID, expected draft revision, and one option index or null per question. The reply is the confirmed draft revision. The draft stays learner-private and consumes no attempt. The current course workspace returns this draft to its owner. Changing a stale revision returns 409.",
+    quizDraftParameters,
+    quizDraftRevision,
   ),
   "/rest/v1/rpc/course_question_bank": rpc(
     "readCourseQuestionBank",

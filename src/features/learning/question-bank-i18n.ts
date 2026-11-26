@@ -51,6 +51,25 @@ const pairs = {
     "Die Fassung wurde inzwischen geändert. Lade den aktuellen Stand und wähle die Frage erneut.",
     "The revision has changed. Reload current data and select the question again.",
   ],
+  quizDraftSaved: ["Antwortentwurf gespeichert", "Answer draft saved"],
+  quizDraftSaving: [
+    "Antwortentwurf wird gespeichert …",
+    "Saving answer draft…",
+  ],
+  quizDraftFailure: [
+    "Antwortentwurf konnte nicht gespeichert werden.",
+    "The answer draft could not be saved.",
+  ],
+  quizDraftConflict: [
+    "Der Antwortentwurf wurde geändert. Lade den aktuellen Entwurf.",
+    "The answer draft changed. Reload the current draft.",
+  ],
+  quizDraftReload: ["Antwortentwurf neu laden", "Reload answer draft"],
+  quizDraftRetry: ["Entwurf erneut speichern", "Retry saving draft"],
+  quizDraftOffline: [
+    "Du bist offline. Neue Antworten sind nur in diesem Tab vorhanden.",
+    "You are offline. New answers are only in this tab.",
+  ],
   questionBankReload: ["Aktuellen Stand laden", "Reload current data"],
 } as const;
 

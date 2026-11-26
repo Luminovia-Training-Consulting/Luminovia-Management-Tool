@@ -242,6 +242,21 @@ export const questionBankActionResult = record(
   ["version"],
 );
 
+const quizDraftAnswers = {
+  ...itemList(nullable({ ...integer, maximum: 5 })),
+  minItems: 1,
+  maxItems: 20,
+};
+export const quizDraftParameters = {
+  p_run_id: uuid,
+  p_quiz_version: { ...integer, minimum: 1 },
+  p_attempt_number: { ...integer, minimum: 1, maximum: 10 },
+  p_request_id: uuid,
+  p_expected_revision: integer,
+  p_answers: quizDraftAnswers,
+};
+export const quizDraftRevision = { ...integer, minimum: 1 };
+
 const dateRange = { starts_at: dateTime, ends_at: dateTime };
 const resourceReference = { id: uuid, name: text, version: integer };
 
@@ -340,6 +355,13 @@ const workspaceFields = {
       attempts: integer,
       passed: boolean,
       last_score: nullable(score),
+      draft: nullable(
+        record({
+          request_id: uuid,
+          revision: quizDraftRevision,
+          answers: quizDraftAnswers,
+        }),
+      ),
     }),
   ),
   completion: nullable(record({ id: uuid, created_at: dateTime })),

@@ -44,6 +44,7 @@ import "./i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseWelcomeContent } from "./welcome-content";
+import { QuizAttempt } from "./quiz-attempt";
 import { QuestionBank } from "./question-bank";
 import { questionBankAction, questionBankKey } from "./question-bank-api";
 import { CourseMeetingLinkEditor } from "./meeting-link";
@@ -758,75 +759,6 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
     </>
   );
 }
-/** Submits an eligible attempt with a stable retry ID; correct answers remain server-private. */
-function QuizAttempt({ course, actor, academy }: ActivityProps) {
-  const { t } = useTranslation("learning");
-  const online = useOnline();
-  const save = useAction(course.id, actor, Boolean(academy));
-  const [answers, setAnswers] = useState<number[]>([]);
-  const [request] = useState(() => crypto.randomUUID());
-  const quiz = course.quiz!;
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate({
-          action: "quiz_attempt",
-          payload: { answers, request_id: request },
-          version: quiz.version,
-        });
-      }}
-    >
-      {quiz.questions.map((question, index) => (
-        <fieldset key={index}>
-          <legend>{question.prompt}</legend>
-          {question.options.map((option, n) => (
-            <label className="checkbox-label" key={n}>
-              <input
-                type="radio"
-                required
-                name={`quiz-question-${index}`}
-                checked={answers[index] === n}
-                onChange={() =>
-                  setAnswers((items) => {
-                    const next = [...items];
-                    next[index] = n;
-                    return next;
-                  })
-                }
-              />
-              {option}
-            </label>
-          ))}
-        </fieldset>
-      ))}
-      <p>
-        {t("quizLimits", {
-          attempts: quiz.attempts,
-          max: quiz.max_attempts,
-          pass: quiz.pass_percent,
-        })}
-      </p>
-      {quiz.last_score !== null && (
-        <p>
-          {t("score", { score: quiz.last_score })} ·{" "}
-          {t(quiz.passed ? "passed" : "notPassed")}
-        </p>
-      )}
-      <Button
-        disabled={
-          !online ||
-          save.isPending ||
-          quiz.attempts >= quiz.max_attempts ||
-          quiz.passed
-        }
-      >
-        {t("submitQuiz")}
-      </Button>
-      <Result error={save.isError} />
-    </form>
-  );
-}
 /** Chooses authoring or attempt controls from the authorized course DTO. */
 function Quiz({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
@@ -860,7 +792,7 @@ function Quiz({ course, actor, academy }: ActivityProps) {
           key={`${course.quiz.version}:${course.quiz.attempts}`}
           course={course}
           actor={actor}
-          academy={academy}
+          academy={academy === "active"}
         />
       ) : (
         <p>{t("noQuiz")}</p>

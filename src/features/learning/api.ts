@@ -134,6 +134,11 @@ export interface CourseWorkspace {
     attempts: number;
     passed: boolean;
     last_score: number | null;
+    draft?: {
+      request_id: string;
+      revision: number;
+      answers: (number | null)[];
+    } | null;
   } | null;
   completion: { id: string; created_at: string } | null;
   roster: {

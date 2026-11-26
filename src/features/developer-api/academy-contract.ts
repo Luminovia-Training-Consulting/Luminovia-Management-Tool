@@ -102,6 +102,8 @@ import {
   questionBankActionParameters,
   questionBankActionVariants,
   questionBankActionResult,
+  quizDraftParameters,
+  quizDraftRevision,
   enrolmentState,
   courseWelcomePublishedResult,
   courseWelcomeResult,
@@ -1063,6 +1065,15 @@ const coursePaths = {
       }),
     }),
   ),
+  "/rest/v1/rpc/save_course_quiz_draft": courseOperation(
+    "saveAcademyCourseQuizDraft",
+    "Save or recover a learner's in-progress quiz answers",
+    "Send the caller's exact published quiz version, next attempt number, stable request ID, expected draft revision, and one option index or null per question. The reply is the confirmed draft revision. The draft stays learner-private and consumes no attempt. The current course workspace returns this draft to its owner. Changing a stale revision returns 409.",
+    "active",
+    record(quizDraftParameters),
+    quizDraftRevision,
+    true,
+  ),
   "/rest/v1/rpc/course_question_bank": courseOperation(
     "readAcademyCourseQuestionBank",
     "List reusable course quiz questions",
@@ -1079,7 +1090,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_question_bank_action": courseOperation(
     "saveAcademyCourseQuestionBank",
     "Save question revisions or configure a quiz from the bank",
-    "Save appends a new question revision; archive and restore are versioned. Configure resolves the selected bank revisions and saves the canonical quiz snapshot atomically. Pass the last-read question or quiz version; stale data returns 409. Shuffling changes the order for the whole new quiz revision.",
+    "Save, archive and restore each append a question revision. Configure resolves the selected bank revisions and saves the canonical quiz snapshot atomically. Pass the last-read question or quiz version. Stale data returns 409. Shuffling changes the order for the whole new quiz revision.",
     "active",
     {
       ...record(questionBankActionParameters),

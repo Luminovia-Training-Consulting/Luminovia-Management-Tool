@@ -10,8 +10,17 @@ import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 for (const edition of ["customer-self-hosted", "customer-managed"]) {
   await withTestDatabase("academy_question_bank", async ({ sql, actor }) => {
-    const [installation, admin, absentTeacher, company, template, run, id] =
-      Array.from({ length: 7 }, randomUUID);
+    const [
+      installation,
+      admin,
+      absentTeacher,
+      learner,
+      company,
+      template,
+      run,
+      id,
+      linkRequest,
+    ] = Array.from({ length: 9 }, randomUUID);
     const now = Date.now();
     const date = (offset) => new Date(now + offset * 86_400_000).toISOString();
     const terms = {
@@ -40,12 +49,24 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await configureAcademyCourseAccess({ ...licence, enabled: true }, sql);
     await sql(`
       insert into auth.users(id,email,email_confirmed_at) values
-        (${q(admin)},'manager@example.invalid',now()), (${q(absentTeacher)},'lecturer@example.invalid',now());
+        (${q(admin)},'manager@example.invalid',now()), (${q(absentTeacher)},'lecturer@example.invalid',now()),
+        (${q(learner)},'participant@example.invalid',now());
       insert into public.user_roles(user_id,role) values
-        (${q(admin)},'admin'), (${q(absentTeacher)},'lecturer');
+        (${q(admin)},'admin'), (${q(absentTeacher)},'lecturer'), (${q(learner)},'participant');
       insert into public.organisations(id,name) values (${q(company)},'Fictional Academy');
       insert into public.course_templates(id,title) values (${q(template)},'Fictional Academy course');
-      insert into public.course_runs(id,template_id,organisation_id) values (${q(run)},${q(template)},${q(company)});
+      insert into public.course_runs(id,template_id,organisation_id,published)
+        values (${q(run)},${q(template)},${q(company)},true);
+      insert into public.course_sessions(course_run_id,starts_at,ends_at)
+        values (${q(run)},now()-interval '2 hours',now()-interval '1 hour');
+      insert into private.company_participant_link_requests
+        (id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at)
+        select ${q(linkRequest)},${q(company)},${q(admin)},${q(randomUUID())},luminovia_user_id,id,'accepted',now()+interval '1 day'
+        from public.profiles where id=${q(learner)};
+      insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at)
+        values (${q(company)},${q(learner)},'active',${q(linkRequest)},${q(admin)},now());
+      insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+        values (${q(run)},${q(learner)},'enrolled',${q(admin)});
     `);
     const gate = (path, method) =>
       `set local request.path=${q("/rpc/" + path)};
@@ -96,6 +117,32 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       question.content.prompt,
     );
 
+    const attemptId = randomUUID();
+    const draft = (version, answers) =>
+      `select public.save_course_quiz_draft(${q(run)},1,1,${q(attemptId)},${version},${q(JSON.stringify(answers))})`;
+    const readDraft = async () => {
+      const result = await actor(
+        learner,
+        gate("course_workspace", "GET") +
+          `select public.course_workspace(${q(run)})`,
+      );
+      return JSON.parse(result.trim()).quiz.draft;
+    };
+    assert.equal(
+      (
+        await actor(
+          learner,
+          gate("save_course_quiz_draft", "POST") + draft(0, [1]),
+        )
+      ).trim(),
+      "1",
+    );
+    assert.deepEqual(await readDraft(), {
+      request_id: attemptId,
+      revision: 1,
+      answers: [1],
+    });
+
     await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     assert.equal((await read(admin)).items[0].can_edit, false);
@@ -104,6 +151,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       actor(admin, command("configure", policy, 1)),
       /42501/,
     );
+    assert.equal((await readDraft()).revision, 1);
+    await assert.rejects(
+      actor(learner, gate("save_course_quiz_draft", "POST") + draft(1, [0])),
+      /42501/,
+    );
+    await assert.rejects(actor(learner, draft(1, [0])), /42501/);
     await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     await assert.rejects(read(admin), /42501/);
@@ -112,7 +165,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       /42501/,
     );
     console.log(
-      `PASS ${edition} question-bank active, grace and expired rights`,
+      `PASS ${edition} question-bank and answer draft active, grace and expired rights`,
     );
   });
 }

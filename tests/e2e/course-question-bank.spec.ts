@@ -156,6 +156,15 @@ test("staff reuse an immutable question in a quiz and the learner submits the sn
     ).toHaveCount(0);
     await expect(learnerQuiz.getByText("Eine spätere Fassung")).toHaveCount(0);
     await learnerQuiz.getByRole("radio", { name: "ls", exact: true }).check();
+    await expect(learnerQuiz.getByRole("status")).toHaveText(
+      "Antwortentwurf gespeichert",
+    );
+    await learnerPage.reload();
+    await expect(
+      learnerQuiz.getByRole("radio", { name: "ls", exact: true }),
+    ).toBeChecked();
+    await expect(learnerQuiz.getByText(/0 von 3 Versuchen/)).toBeVisible();
+
     await learnerQuiz
       .getByRole("button", { name: "Antworten verbindlich abgeben" })
       .click();
