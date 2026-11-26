@@ -9,9 +9,12 @@ import { Dialog } from "../../components/ui/dialog";
 import { dateTime, resolveScheduleWindow } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { downloadCsv } from "../../lib/csv";
 import {
   textExamCommand,
   textExamDraft,
+  textExamExportPage,
+  textExamExportRequest,
   textExamState,
   type TextExamCommand,
   type TextExamState,
@@ -89,6 +92,62 @@ function ExamWorkspace({ actor, course, zone }: Props) {
     },
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
   });
+  const grades = useMutation({
+    mutationFn: async (paperRevision: number) => {
+      requireOnline();
+      const rows: unknown[][] = [
+        [
+          "learner_id",
+          "learner",
+          "exam_revision",
+          "grade_revision",
+          "submitted_at",
+          "score",
+          "max_points",
+          "passed",
+          "released_at",
+        ],
+      ];
+      let after: string | null = null;
+      let asOf: string | null = null;
+      do {
+        const { data, error } = await db().rpc(
+          "course_text_exam_grade_export",
+          textExamExportRequest.parse({
+            p_run_id: course,
+            p_revision: paperRevision,
+            p_after: after,
+            p_as_of: asOf,
+          }),
+        );
+        if (error) throw error;
+        const page = textExamExportPage.parse(data);
+        if (
+          (after && page.next && page.next <= after) ||
+          (asOf && asOf !== page.as_of)
+        )
+          throw new Error("Exam export pagination changed");
+        for (const row of page.rows)
+          rows.push([
+            row.learner_id,
+            row.name,
+            paperRevision,
+            row.grade_revision,
+            row.submitted_at,
+            row.score,
+            row.max_points,
+            row.passed,
+            row.released_at,
+          ]);
+        after = page.next;
+        asOf = page.as_of;
+      } while (after);
+      const { data, error } = await db().auth.getSession();
+      if (error || data.session?.user.id !== actor)
+        throw new Error("Exam export actor changed");
+      downloadCsv(`text-exam-grades-v${paperRevision}.csv`, rows);
+    },
+  });
   const reload = () => {
     write.reset();
     void read.refetch();
@@ -157,6 +216,19 @@ function ExamWorkspace({ actor, course, zone }: Props) {
           {state.staff && (
             <p>{t(paper.published_at ? "publishedVersion" : "draftVersion")}</p>
           )}
+        </div>
+      )}
+      {state.staff && paper?.published_at && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!online || grades.isPending}
+            onClick={() => grades.mutate(paper.revision)}
+          >
+            {t(grades.isPending ? "exporting" : "exportGrades")}
+          </Button>
+          {grades.isError && <Notice kind="error">{t("exportFailed")}</Notice>}
         </div>
       )}
       {!paper && !state.can_author && <p>{t("noExam")}</p>}

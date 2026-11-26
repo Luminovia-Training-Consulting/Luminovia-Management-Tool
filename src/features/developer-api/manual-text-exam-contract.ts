@@ -2,6 +2,8 @@
 import { z } from "zod";
 import {
   textExamCommand,
+  textExamExportRequest,
+  textExamExportPage,
   textExamRead,
   textExamState,
 } from "../learning/course-text-exam-schema.ts";
@@ -69,6 +71,26 @@ export function manualTextExamPaths(academy: boolean) {
         ...read,
         operationId: "readCourseTextExam",
         requestBody: { required: true, content: jsonContent(textExamRead) },
+      },
+    },
+    "/rest/v1/rpc/course_text_exam_grade_export": {
+      post: {
+        ...read,
+        operationId: "readCourseTextExamGradeExport",
+        summary: "Export released grades for one published examination",
+        description:
+          "Current course staff can page through released marks of currently eligible candidates. Pass the returned as_of and next values for the next page. Includes scores, outcome and release timestamps.",
+        requestBody: {
+          required: true,
+          content: jsonContent(textExamExportRequest),
+        },
+        responses: {
+          "200": {
+            description: "Released exam grades",
+            content: jsonContent(textExamExportPage),
+          },
+          ...errors,
+        },
       },
     },
     "/rest/v1/rpc/course_text_exam_action": {

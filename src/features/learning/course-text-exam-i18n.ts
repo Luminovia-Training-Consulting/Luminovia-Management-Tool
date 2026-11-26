@@ -7,6 +7,15 @@ const labels = {
     "Freitextprüfungen sind online verfügbar.",
     "Text exams are available online.",
   ],
+  exportGrades: [
+    "Freigegebene Prüfungsnoten als CSV",
+    "Export released exam grades as CSV",
+  ],
+  exporting: ["Prüfungsnoten werden exportiert …", "Exporting exam grades…"],
+  exportFailed: [
+    "Prüfungsnoten konnten nicht exportiert werden.",
+    "Exam grades could not be exported.",
+  ],
   readOnly: ["Diese Prüfung ist im Lesemodus.", "This exam is read-only."],
   noExam: [
     "Hier ist noch keine Freitextprüfung veröffentlicht.",

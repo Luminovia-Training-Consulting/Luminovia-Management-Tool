@@ -61,6 +61,31 @@ export const textExamRead = z.strictObject({
   p_offset: z.number().int().min(0).max(1_000_000).optional(),
 });
 
+export const textExamExportRequest = z.strictObject({
+  p_run_id: z.uuid(),
+  p_revision: revision,
+  p_after: z.uuid().nullish(),
+  p_as_of: timestamp.nullish(),
+});
+export const textExamExportPage = z.strictObject({
+  as_of: timestamp,
+  next: z.uuid().nullable(),
+  rows: z
+    .array(
+      z.strictObject({
+        learner_id: z.uuid(),
+        name: z.string().nullable(),
+        submitted_at: timestamp,
+        grade_revision: revision,
+        score: z.number().int().nonnegative(),
+        max_points: z.number().int().positive(),
+        passed: z.boolean(),
+        released_at: timestamp,
+      }),
+    )
+    .max(100),
+});
+
 const command = { p_run_id: z.uuid(), p_expected: expected };
 const target = z.strictObject({ learner_id: z.uuid() });
 const empty = z.strictObject({});
