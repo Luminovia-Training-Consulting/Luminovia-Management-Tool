@@ -66,7 +66,7 @@ const statement = z.union([
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "completed") }),
-    object: activity(/\/[a-f0-9]{64}$/),
+    object: activity(/\/[a-f0-9]{64}(?:\/(?:h5p|scorm)\/[a-f0-9]{64})?$/),
     result: z.strictObject({ completion: z.literal(true) }),
   }),
   z.strictObject({
