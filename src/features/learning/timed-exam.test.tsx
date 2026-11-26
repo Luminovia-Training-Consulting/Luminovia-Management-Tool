@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import {
+  ExamGrades,
   ExamTimeAllowance,
   LearnerExam,
   PublishedExamResults,
@@ -26,6 +27,88 @@ afterEach(() => {
   cleanup();
   client.clear();
   vi.resetAllMocks();
+});
+
+it("reviews a spreadsheet replacement against its captured examination version", async () => {
+  await i18n.changeLanguage("en");
+  const stamp = "2026-11-23T10:00:00+10:00";
+  const exam: TimedExam = {
+    title: "Fictional exam grade import",
+    required: true,
+    published: false,
+    visible_from: stamp,
+    starts_at: stamp,
+    ends_at: stamp,
+    pass_percent: 60,
+    version: 2,
+    grading_open: true,
+    open: false,
+    can_submit: false,
+    can_grade: true,
+    submitted_at: null,
+    draft: null,
+    rows: [
+      {
+        participant_id: version,
+        name: "Fictional participant",
+        score: 65,
+        submitted_at: null,
+        version_id: null,
+        file_name: null,
+        grade_import_eligible: true,
+      },
+    ],
+  };
+  const view = (snapshot: TimedExam) => (
+    <QueryClientProvider client={client}>
+      <ExamGrades actor={actor} run={run} exam={snapshot} />
+    </QueryClientProvider>
+  );
+  const rendered = render(view(exam));
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Import exam grades" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const spreadsheet = (examVersion: number) =>
+    Object.assign(new File([], "scores.csv"), {
+      arrayBuffer: async () =>
+        new TextEncoder().encode(
+          `course_id,exam_version,participant_id,name,score\n${run},${examVersion},${version},Alternate name,81`,
+        ).buffer,
+    });
+  await user.upload(
+    dialog.getByLabelText("Choose grade spreadsheet"),
+    spreadsheet(2),
+  );
+  expect(await dialog.findByText("65% → 81%")).toBeVisible();
+  const apply = dialog.getByRole("button", { name: "Save 1 grade as draft" });
+  expect(apply).toBeDisabled();
+  await user.click(
+    dialog.getByRole("checkbox", { name: "Replace 1 saved draft" }),
+  );
+  expect(apply).toBeEnabled();
+  expect(rpc).not.toHaveBeenCalled();
+  rendered.rerender(view({ ...exam, version: 3 }));
+  expect(apply).toBeDisabled();
+  expect(
+    dialog.getByText(/^The exam, grades or learners changed/),
+  ).toBeVisible();
+  await user.upload(
+    dialog.getByLabelText("Choose grade spreadsheet"),
+    spreadsheet(3),
+  );
+  await user.click(
+    await dialog.findByRole("checkbox", { name: "Replace 1 saved draft" }),
+  );
+  rpc.mockResolvedValue({ data: 1, error: null });
+  await user.click(apply);
+  expect(await dialog.findByText("1 grade was saved as draft.")).toBeVisible();
+  expect(rpc).toHaveBeenCalledExactlyOnceWith("import_course_exam_grades", {
+    p_run_id: run,
+    p_version: 3,
+    p_rows: [{ participant_id: version, expected_score: 65, score: 81 }],
+  });
 });
 
 it("keeps a scanned upload as a draft until the learner confirms within the individual window", async () => {

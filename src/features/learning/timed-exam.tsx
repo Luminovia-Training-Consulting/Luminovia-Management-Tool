@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from "react";
+import { lazy, Suspense, useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
@@ -13,6 +13,12 @@ import { courseWorkspaceKey, downloadPortalDocument } from "./api";
 import { publishedExamResultsQuery, timedExamKey } from "./timed-exam-api";
 import { examExtraMinutes, type TimedExam } from "./timed-exam-schema";
 import "./timed-exam-i18n";
+
+const ExamGradeImportPanel = lazy(() =>
+  import("./exam-grade-import-panel").then((module) => ({
+    default: module.ExamGradeImportPanel,
+  })),
+);
 
 type ExamBody = Pick<
   TimedExam,
@@ -478,6 +484,9 @@ export function ExamGrades({
   });
   const writable =
     exam.can_grade && exam.grading_open && !exam.published && online;
+  const importRoster = exam.rows.filter(
+    (row) => row.grade_import_eligible === true,
+  );
   return (
     <section className="panel learning-panel">
       <h2>{t("grading")}</h2>
@@ -558,6 +567,17 @@ export function ExamGrades({
             >
               {t("publish")}
             </Button>
+            {importRoster.length > 0 && (
+              <Suspense fallback={null}>
+                <ExamGradeImportPanel
+                  actor={actor}
+                  run={run}
+                  version={exam.version}
+                  roster={importRoster}
+                  disabled={save.isPending || Object.keys(changes).length > 0}
+                />
+              </Suspense>
+            )}
           </div>
         )}
       </form>

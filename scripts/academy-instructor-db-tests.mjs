@@ -32,6 +32,7 @@ const featureFixtureOperations = new Map([
       "course_gradebook_export",
       "course_weighted_gradebook",
       "course_weighted_gradebook_command",
+      "import_course_exam_grades",
       "set_course_material_metadata",
       "course_completion_status",
     ],
