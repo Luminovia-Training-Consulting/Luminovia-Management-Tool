@@ -321,6 +321,14 @@ const pairs: Record<string, [string, string]> = {
     "Der Entwurf kann nicht gespeichert werden. Prüfe, ob alle Titel ausgefüllt sind und die Inhaltsgrenzen eingehalten werden.",
     "This draft cannot be saved. Check that every title is filled in and the content stays within the limits.",
   ],
+  curriculumMerge: [
+    "Unabhängige Änderungen zusammenführen",
+    "Merge independent changes",
+  ],
+  curriculumMergeBlocked: [
+    "Der aktuelle Entwurf und deine Änderungen lassen sich nicht automatisch zusammenführen. Deine Eingaben sind weiterhin im Editor.",
+    "The current draft and your edits could not be merged automatically. Your edits are still in the editor.",
+  ],
   curriculumConflict: [
     "Die Fassung wurde inzwischen geändert. Sichere bei Bedarf deine lokalen Änderungen, bevor du die aktuelle Fassung lädst.",
     "This revision has changed. Copy any local edits you want to keep before loading the latest revision.",
