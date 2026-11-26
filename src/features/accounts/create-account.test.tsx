@@ -92,7 +92,7 @@ it("creates a company with an explicit organisation and accepts the eight-charac
     screen.getByRole("option", { name: "Kursteilnehmer:in" }),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("option", { name: "Inhaberin / Plattformleitung" }),
+    screen.queryByRole("option", { name: "Plattformleitung" }),
   ).not.toBeInTheDocument();
   expect(screen.getByLabelText("Kontorolle")).toHaveValue("");
   await userEvent.type(

@@ -43,7 +43,7 @@ test("platform owner can review administrator roles while owner accounts stay pr
       await search.fill(protectedOwner.email);
       const row = accountRow(protectedOwner.email);
       await expect(
-        row.getByText("Inhaberin / Plattformleitung", { exact: true }),
+        row.getByText("Plattformleitung", { exact: true }),
       ).toBeVisible();
       await expect(row.getByRole("button", rolesButton)).toHaveCount(0);
     }
@@ -55,11 +55,11 @@ test("platform owner can review administrator roles while owner accounts stay pr
       roles.getByRole("checkbox", { name: "Administration", exact: true }),
     ).toBeChecked();
     await expect(
-      roles.getByRole("checkbox", { name: "Management", exact: true }),
+      roles.getByRole("checkbox", { name: "Plattformmanagement", exact: true }),
     ).toBeEnabled();
     await expect(
       roles.getByRole("checkbox", {
-        name: "Inhaberin / Plattformleitung",
+        name: "Plattformleitung",
         exact: true,
       }),
     ).toHaveCount(0);

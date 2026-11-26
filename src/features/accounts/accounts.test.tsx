@@ -287,13 +287,13 @@ describe("Account administration", () => {
       screen.getByRole("checkbox", { name: "Kursteilnehmer:in" }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("checkbox", { name: "Management" }),
+      screen.queryByRole("checkbox", { name: "Plattformmanagement" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("checkbox", { name: "Administration" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("option", { name: "Management" }),
+      screen.queryByRole("option", { name: "Plattformmanagement" }),
     ).not.toBeInTheDocument();
   });
   it("offers management and administrative roles when the server catalog authorizes an admin", async () => {
@@ -308,10 +308,12 @@ describe("Account administration", () => {
     expect(
       await screen.findByRole("checkbox", { name: "Administration" }),
     ).toBeVisible();
-    expect(screen.getByRole("checkbox", { name: "Management" })).toBeVisible();
+    expect(
+      screen.getByRole("checkbox", { name: "Plattformmanagement" }),
+    ).toBeVisible();
     expect(
       screen.queryByRole("checkbox", {
-        name: "Inhaberin / Plattformleitung",
+        name: "Plattformleitung",
       }),
     ).not.toBeInTheDocument();
   });
@@ -325,7 +327,9 @@ describe("Account administration", () => {
     await waitFor(() => expect(edit).toBeEnabled());
     await userEvent.click(edit);
     expect(screen.getByRole("checkbox", { name: "Dozent:in" })).toBeChecked();
-    await userEvent.click(screen.getByRole("checkbox", { name: "Management" }));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Plattformmanagement" }),
+    );
     await userEvent.click(
       screen.getByRole("checkbox", { name: "Kursteilnehmer:in" }),
     );
@@ -514,7 +518,7 @@ describe("Account administration", () => {
       dialog.queryByRole("checkbox", { name: "Senior-Dozent:in" }),
     ).not.toBeInTheDocument();
     for (const name of [
-      "Management",
+      "Plattformmanagement",
       "Dozent:in",
       "Kursteilnehmer:in",
       "Unternehmen",
@@ -581,13 +585,15 @@ describe("Account administration", () => {
       await screen.findByRole("dialog", { name: "Rollen für Anna ändern?" }),
     );
     expect(
-      confirm.getByText(/Ein anderes Admin- oder Inhaberkonto/),
+      confirm.getByText(
+        /Ein anderes Konto mit Administrationsrechten oder Plattformleitung/,
+      ),
     ).toBeVisible();
     await userEvent.click(
       confirm.getByRole("button", { name: "Rollen speichern" }),
     );
     expect(await confirm.findByRole("alert")).toHaveTextContent(
-      "Mindestens ein anderes aktives Admin- oder Inhaberkonto",
+      "Mindestens ein anderes aktives Konto mit Administrationsrechten oder Plattformleitung",
     );
     expect(fake.rpc).toHaveBeenCalledWith("set_account_roles", {
       p_user_id: "own-actor",

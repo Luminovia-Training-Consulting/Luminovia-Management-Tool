@@ -59,9 +59,9 @@ const de = {
   ownRoleHint:
     "Du kannst mehrere Rollen für dein Konto kombinieren. Wähle für die Unternehmensrolle ein Unternehmen aus.",
   relinquishAdmin:
-    "Wenn du deine Administrationsrolle entfernst, enden ihre Berechtigungen sofort. Ein anderes Admin- oder Inhaberkonto kann sie dir wieder zuweisen.",
+    "Wenn du deine Administrationsrolle entfernst, enden ihre Berechtigungen sofort. Ein anderes Konto mit Administrationsrechten oder Plattformleitung kann sie dir wieder zuweisen.",
   lastAdminProtected:
-    "Mindestens ein anderes aktives Admin- oder Inhaberkonto muss bestehen, bevor du deine Administrationsrolle entfernen kannst.",
+    "Mindestens ein anderes aktives Konto mit Administrationsrechten oder Plattformleitung muss bestehen, bevor du deine Administrationsrolle entfernen kannst.",
   activeTeachingProtected:
     "Schließe deine aktiven Lehraufträge ab oder übergib sie, bevor du deine letzte Dozierendenrolle entfernst.",
   ownProfileExpertise: "Mein Profil und meine Expertise",
@@ -76,9 +76,9 @@ const de = {
   error:
     "Die Änderung konnte nicht bestätigt werden. Bitte Berechtigungen und Verbindung prüfen.",
   self: "Eigener Zugang",
-  owner: "Inhaberin / Plattformleitung",
+  owner: "Plattformleitung",
   admin: "Administration",
-  management: "Management",
+  management: "Plattformmanagement",
   senior_lecturer: "Senior-Dozent:in",
   lecturer: "Dozent:in",
   client: "Unternehmen",
@@ -200,9 +200,9 @@ const en: typeof de = {
   error:
     "The change could not be confirmed. Check your permissions and connection.",
   self: "Your account",
-  owner: "Owner / platform lead",
+  owner: "Platform leadership",
   admin: "Administration",
-  management: "Management",
+  management: "Platform management",
   senior_lecturer: "Senior lecturer",
   lecturer: "Lecturer",
   client: "Company",

@@ -67,11 +67,11 @@ test("management assigns only subordinate roles while only administration sees a
             roles.getByRole("checkbox", {name: "Administration", exact: true}),
         ).toHaveCount(0);
         await expect(
-            roles.getByRole("checkbox", {name: "Management", exact: true}),
+            roles.getByRole("checkbox", {name: "Plattformmanagement", exact: true}),
         ).toHaveCount(0);
         await expect(
             roles.getByRole("checkbox", {
-                name: "Inhaberin / Plattformleitung",
+                name: "Plattformleitung",
                 exact: true,
             }),
         ).toHaveCount(0);

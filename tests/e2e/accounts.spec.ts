@@ -86,7 +86,7 @@ test("individual account roles, scoped invitations and linked status management 
         roleDialog.getByLabel("Administration", {exact: true}),
     ).toBeVisible();
     await expect(
-        roleDialog.getByLabel("Management", {exact: true}),
+        roleDialog.getByLabel("Plattformmanagement", {exact: true}),
     ).toBeVisible();
     const learnerRole = roleDialog.getByLabel("Kursteilnehmer:in", {exact: true});
     await expect(learnerRole).toBeVisible();
@@ -225,7 +225,7 @@ test("administrator combines own roles and delegates company, lecturer and parti
     await own.click();
     const ownEditor = page.getByRole("dialog", {name: "Meine Rollen", exact: true});
     await expect(ownEditor.getByLabel("Administration", {exact: true})).toBeChecked();
-    for (const label of ["Management", "Dozent:in", "Kursteilnehmer:in", "Unternehmen"])
+    for (const label of ["Plattformmanagement", "Dozent:in", "Kursteilnehmer:in", "Unternehmen"])
         await ownEditor.getByLabel(label, {exact: true}).check();
     await ownEditor.getByLabel("Zugeordnetes Unternehmen", {exact: true}).selectOption(company.id);
     await saveRoles("Meine Rollen", admin.name);
@@ -255,7 +255,7 @@ test("administrator combines own roles and delegates company, lecturer and parti
     await participantCard.getByRole("button", {name: "Rollen bearbeiten", exact: true}).click();
     const otherEditor = page.getByRole("dialog", {name: "Rollen bearbeiten", exact: true});
     await expect(otherEditor.getByLabel("Administration", {exact: true})).toHaveCount(0);
-    await expect(otherEditor.getByLabel("Management", {exact: true})).toHaveCount(0);
+    await expect(otherEditor.getByLabel("Plattformmanagement", {exact: true})).toHaveCount(0);
     await expect(otherEditor.getByLabel("Kursteilnehmer:in", {exact: true})).toBeChecked();
     await otherEditor.getByLabel("Unternehmen", {exact: true}).check();
     await otherEditor.getByLabel("Dozent:in", {exact: true}).check();
