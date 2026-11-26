@@ -1499,6 +1499,18 @@ test("completion status explains blockers for course staff and lets the learner 
         await page.reload();
         await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
         await expect(staffStatus.getByText("Abschlussdokument ausgestellt.")).toBeVisible();
+        const exportPanel = page.getByRole("region", {name: "Lernaktivitäten exportieren"});
+        const receipt = page.waitForEvent("download");
+        await exportPanel.getByRole("button", {name: "xAPI-Daten herunterladen"}).click();
+        const archive = JSON.parse(await readFile(await (await receipt).path(), "utf8"));
+        expect(archive.xapi_version).toBe("1.0.3");
+        expect(archive.statements.map((entry: {verb: {id: string}}) => entry.verb.id)).toEqual([
+            "http://adlnet.gov/expapi/verbs/attempted",
+            "http://adlnet.gov/expapi/verbs/completed",
+        ]);
+        expect(JSON.stringify(archive)).not.toContain(f.learner.id);
+        await expect(learnerPage.getByRole("region", {name: "Lernaktivitäten exportieren"})).toHaveCount(0);
+
     } finally {
         await context.close();
     }

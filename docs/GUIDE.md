@@ -333,6 +333,12 @@ In **Lernaktivitäten / Learning activities**, open **Mein Abschlussdokument / M
 
 Course staff can open **Abschlussstatus / Completion status** in the same workspace section and select a currently enrolled or completed participant. The displayed date and time use the course's time zone. Previously issued, unrevoked completion documents remain available to authorised learners.
 
+### xAPI learning activity exports
+
+Course managers can open **Lernaktivitäten / Learning activities** and download an xAPI 1.0.3 archive for a bounded date range in the course time zone. The archive maps accepted quiz attempts and issued or revoked completion records to statements with stable IDs. Each learner uses an organisation-specific pseudonym. Names, email addresses, answer contents and correction notes are excluded. The 2,000-statement limit requires a narrower date range when exceeded.
+
+An operator with an authorised xAPI 1.0.3 Learning Record Store can submit an exported file with `node scripts/xapi-lrs-delivery.mjs <archive.json>`. Configure `LMS_XAPI_LRS_ENDPOINT`, `LMS_XAPI_LRS_USERNAME` and `LMS_XAPI_LRS_PASSWORD` in the operator environment. The command uses HTTPS for remote services and reports confirmed writes, retries and pending statements. Repeating the same archive preserves statement IDs. This workflow uses the [ADL statement data model](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Data.md) and [statement transport](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Communication.md).
+
 ### Course assignments and feedback
 
 Open **Dateiabgaben / File submissions** in a course workspace, then **Kursaufgaben / Course assignments**. The course staff can save a draft with instructions, an attempt limit, a deadline in the course's time zone and an assessment rubric. Add at least two levels to each criterion, beginning at zero points, then publish the saved definition. Staff can grant a later deadline to an individual enrolled participant.

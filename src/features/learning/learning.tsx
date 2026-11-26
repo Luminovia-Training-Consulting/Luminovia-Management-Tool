@@ -45,6 +45,7 @@ import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseCompetencies } from "./competencies";
 import { CoursePeerFeedback } from "./peer-feedback";
+import { CourseXapiExport } from "./course-xapi-export";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizAttempt } from "./quiz-attempt";
 import { QuestionBank } from "./question-bank";
@@ -1641,9 +1642,23 @@ function CourseWorkspaceLayout({
                   editable={canEdit}
                 />
               )}
-              {(course.access.staff || learner) && currentSection === "course-learning" && (
-                <CoursePeerFeedback course={course.id} actor={actor} staff={course.access.staff} />
-              )}
+              {(course.access.staff || learner) &&
+                currentSection === "course-learning" && (
+                  <CoursePeerFeedback
+                    course={course.id}
+                    actor={actor}
+                    staff={course.access.staff}
+                  />
+                )}
+              {course.access.manager &&
+                course.lms_enabled &&
+                currentSection === "course-learning" && (
+                  <CourseXapiExport
+                    key={course.id}
+                    runId={course.id}
+                    zone={course.time_zone}
+                  />
+                )}
               {learner && (
                 <Completion
                   course={course}

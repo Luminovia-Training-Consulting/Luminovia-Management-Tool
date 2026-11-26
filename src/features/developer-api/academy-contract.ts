@@ -72,6 +72,7 @@ import {
 } from "../learning/course-participation-report-schema.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
+import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import { courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
@@ -1152,6 +1153,20 @@ const coursePaths = {
     { ...peerActionRequest, required: ["p_run_id", "p_action", "p_payload"] },
     { const: true },
     true,
+  ),
+  "/rest/v1/rpc/course_xapi_statements": courseOperation(
+    "readAcademyCourseXapiStatements",
+    "Export pseudonymous xAPI learning records",
+    "Current course managers may export up to 2000 existing quiz attempts and completion or revocation statements for a date interval up to 366 days. No LRS connection is made.",
+    "active-or-grace",
+    z.toJSONSchema(
+      z.strictObject({
+        p_run_id: z.uuid(),
+        p_from: z.iso.datetime({ offset: true }),
+        p_until: z.iso.datetime({ offset: true }),
+      }),
+    ),
+    z.toJSONSchema(courseXapiArchiveSchema),
   ),
   "/rest/v1/rpc/course_gradebook": courseOperation(
     "readAcademyCourseGradebook",

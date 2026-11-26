@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
+import {courseXapiArchiveSchema} from "../src/features/learning/xapi-schema.ts";
 import {portalOpenApi} from "../src/features/developer-api/contract.ts";
 import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
@@ -716,6 +717,23 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(futureMissing.ended_count, 1);
             assert.ok(Date.parse(futureMissing.ends_at) > Date.now());
             await sql(`delete from public.course_sessions where id=${q(future)}`);
+            const xapi = (who, from, until) => rpc(who, "course_xapi_statements", [
+                q(run), q(from ?? new Date(Date.now() - 86_400_000).toISOString()),
+                q(until ?? new Date(Date.now() + 86_400_000).toISOString()),
+            ]);
+            for (const who of [learner, teacher, client, foreign]) {
+                await assert.rejects(xapi(who), /42501/);
+            }
+            await assert.rejects(xapi(admin, "2020-01-01T00:00:00Z", "2026-01-01T00:00:00Z"), /22023/);
+            const archive = courseXapiArchiveSchema.parse(await xapi(admin));
+            assert.deepEqual(await xapi(admin), archive);
+            const completedStatement = archive.statements.find((entry) => entry.verb.id.endsWith("/completed"));
+            const attemptedStatement = archive.statements.find((entry) => entry.verb.id.endsWith("/attempted"));
+            assert.ok(completedStatement && attemptedStatement);
+            assert.deepEqual(completedStatement.actor, attemptedStatement.actor);
+            assert.notEqual(completedStatement.actor.account.name, learner);
+            assert.ok(!JSON.stringify(archive).includes(learner));
+            assert.ok(!JSON.stringify(archive).includes("Fictional practical Linux"));
             const document = await rpc(learner, "course_document_access", [
                 q("completion"),
                 q(completion),
@@ -746,6 +764,9 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 id: completion,
                 reason: "Attendance evidence requires correction",
             });
+            const revoked = courseXapiArchiveSchema.parse(await xapi(admin)).statements.find((entry) => entry.verb.id.endsWith("/voided"));
+            assert.equal(revoked.object.id, completedStatement.id);
+            assert.notDeepEqual(revoked.actor, completedStatement.actor);
             assert.equal((await completionStatus(learner)).reverify_required, true);
             assert.equal((await completionStatus(learner)).state, "pending");
             await assert.rejects(action(learner, "completion_issue"), /22023/);

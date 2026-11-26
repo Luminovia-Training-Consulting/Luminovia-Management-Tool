@@ -39,6 +39,7 @@ const readPaths = [
   "/rest/v1/rpc/course_competencies",
   "/rest/v1/rpc/learning_portfolio",
   "/rest/v1/rpc/course_peer_feedback",
+  "/rest/v1/rpc/course_xapi_statements",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",

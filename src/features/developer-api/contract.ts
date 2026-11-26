@@ -60,6 +60,7 @@ import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
+import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import {
   calendarExpectedRevision,
@@ -4531,6 +4532,18 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/course_xapi_statements": rpc(
+    "readCourseXapiStatements",
+    "Premium LMS",
+    "Export pseudonymous xAPI learning records",
+    "Current course managers may export up to 2000 existing quiz attempts and completion or revocation statements in an interval up to 366 days. The end time is exclusive. No LRS connection is made.",
+    {
+      p_run_id: { type: "string", format: "uuid" },
+      p_from: { type: "string", format: "date-time" },
+      p_until: { type: "string", format: "date-time" },
+    },
+    z.toJSONSchema(courseXapiArchiveSchema),
+  ),
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",
