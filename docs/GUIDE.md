@@ -339,13 +339,19 @@ Under **Nachweis verknüpfen / Link supporting file**, select a file and use **D
 
 ### Programme access prerequisites
 
-When editing a learning programme, open **Kursaktionen / Course actions** beside a selected course to move or remove it. If a programme already has custom prerequisites, clear those rules before changing the course order.
+When editing a learning programme, open **Kursaktionen / Course actions** beside a selected course to move or remove it. Clear any custom prerequisites and reset the published curriculum before changing the course order.
 
 Before the first participant joins, open an existing **Lernprogramme / Learning programmes** entry and choose **Voraussetzungen für Kurszugang / Course access prerequisites**. Select a course, choose which earlier courses count and set the rule to require them all or at least one. Saving without selected prerequisites restores the programme's normal order for that course. Clear explicit rules before changing the course order.
 
-Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
+Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme.
 
 Course managers can open **Ausnahmen für Kursvoraussetzungen / Course prerequisite exceptions** and record a reason for one active participant and locked programme step. The exception permits starting only that step. Managers can withdraw the exception, and certificate eligibility still depends on the required completion receipts.
+
+### Programme curriculum and electives
+
+After saving the course order and before enrolling participants, choose **Lehrplan bearbeiten / Edit curriculum**. Add programme learning objectives and objectives for each course. Mark courses as required or elective and choose how many electives count toward completion. The entry course is required. Add remediation guidance to a course so learners know what to do when a prerequisite locks the step. Publish the reviewed draft to create a new numbered curriculum revision.
+
+The programme completion document requires valid receipts for all required courses and the selected number of electives. A programme without a published curriculum requires a receipt for every course. The roster locks the curriculum after the first enrolment. When a credited receipt is revoked, the programme recalculates eligibility from the remaining receipts.
 
 ### Released programme grades
 

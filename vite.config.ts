@@ -325,6 +325,7 @@ export default defineConfig(({ mode }) => {
             "**/grade-import-dialog-*.js",
             "**/assignment-grade-import-panel-*.js",
             "**/programme-path-exceptions-*.js",
+            "**/programme-curriculum-editor-*.js",
             "**/course-xapi-export-*.js",
             "**/course-completion-policy-*.js",
             // Packet review and conversion are loaded when explicitly used.

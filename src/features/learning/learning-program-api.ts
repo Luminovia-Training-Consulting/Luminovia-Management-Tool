@@ -2,6 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { requireOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import {
+  configureProgrammeCurriculumRequest,
+  type ConfigureProgrammeCurriculumRequest,
   enrolLearningProgramRequest,
   learningProgramId,
   learningProgramClassProgressResult,
@@ -139,6 +141,18 @@ export async function saveLearningProgram(input: SaveLearningProgramRequest) {
   );
   if (error) throw error;
   return learningProgramId.parse(data);
+}
+
+/** Save immutable programme content against the reviewed programme version. */
+export async function configureLearningProgramCurriculum(
+  input: ConfigureProgrammeCurriculumRequest,
+) {
+  requireOnline();
+  const { error } = await db().rpc(
+    "configure_learning_program_curriculum",
+    configureProgrammeCurriculumRequest.parse(input),
+  );
+  if (error) throw error;
 }
 
 /** Save one programme step's explicit gates against the version shown in the editor. */

@@ -22,6 +22,11 @@ import { ProgrammePrerequisites } from "./programme-prerequisites";
 import "./learning-program-i18n";
 import "./learning-programs.css";
 
+const ProgrammeCurriculumEditor = lazy(() =>
+  import("./programme-curriculum-editor").then((module) => ({
+    default: module.ProgrammeCurriculumEditor,
+  })),
+);
 const ProgrammePathExceptions = lazy(() =>
   import("./programme-path-exceptions").then((module) => ({
     default: module.ProgrammePathExceptions,
@@ -63,6 +68,7 @@ function ProgramEditor({
   const [search, setSearch] = useState("");
   const [choice, setChoice] = useState("");
   const hasPathRules = Boolean(Object.keys(program?.path_rules ?? {}).length);
+  const orderLocked = hasPathRules || Boolean(program?.curriculum);
   const courses = useQuery({
     ...learningProgramsQuery(actor, {
       p_organisation_id: organisation,
@@ -193,7 +199,7 @@ function ProgramEditor({
             <Button
               type="button"
               variant="secondary"
-              disabled={hasPathRules || !selected || modules.length >= 30}
+              disabled={orderLocked || !selected || modules.length >= 30}
               onClick={() => {
                 if (!selected) return;
                 setModules([
@@ -208,13 +214,14 @@ function ProgramEditor({
           </div>
         )}
         {hasPathRules && <p>{t("pathLockedRule")}</p>}
+        {program?.curriculum && <p>{t("curriculumLockedOrder")}</p>}
         <h4>{t("selectedCourses")}</h4>
         <ol className="programme-steps">
           {modules.map((module, index) => (
             <li key={module.course_id ?? `unavailable-${index}`}>
               <div className="programme-step">
                 <strong>{module.title}</strong>
-                {!hasPathRules && (
+                {!orderLocked && (
                   <details
                     className="programme-step-actions"
                     name={`programme-course-actions-${id}`}
@@ -486,6 +493,8 @@ function ProgramManager({
 }) {
   const { t } = useTranslation("learningPrograms");
   const [editing, setEditing] = useState(false);
+  const [editingCurriculum, setEditingCurriculum] = useState(false);
+  const [publishedCurriculum, setPublishedCurriculum] = useState(false);
   const [participant, setParticipant] = useState("");
   const [search, setSearch] = useState("");
   const filtered = useQuery({
@@ -596,6 +605,56 @@ function ProgramManager({
             refresh={refresh}
           />
         </Suspense>
+      )}
+      {(program.curriculum || (program.can_edit && !program.archived)) && (
+        <section className="panel programme-panel">
+          <h3>{t("curriculum")}</h3>
+          {program.curriculum && (
+            <>
+              <p>
+                {t("curriculumRevision", {
+                  revision: program.curriculum.revision,
+                })}
+              </p>
+              {program.curriculum.overview && (
+                <p>{program.curriculum.overview}</p>
+              )}
+              <p>
+                {t("curriculumRequirements", {
+                  count: program.curriculum.elective_count,
+                })}
+              </p>
+            </>
+          )}
+          {publishedCurriculum && <Notice>{t("curriculumSaved")}</Notice>}
+          {program.can_edit &&
+            !program.archived &&
+            (editingCurriculum ? (
+              <Suspense fallback={<Loading />}>
+                <ProgrammeCurriculumEditor
+                  key={program.id}
+                  program={program}
+                  onCancel={() => setEditingCurriculum(false)}
+                  onSaved={() => {
+                    setEditingCurriculum(false);
+                    setPublishedCurriculum(true);
+                    refresh();
+                  }}
+                />
+              </Suspense>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setPublishedCurriculum(false);
+                  setEditingCurriculum(true);
+                }}
+              >
+                {t("curriculumEdit")}
+              </Button>
+            ))}
+        </section>
       )}
       <ProgrammeClassProgress actor={actor} program={program.id} />
       <section className="panel programme-panel">
@@ -716,6 +775,18 @@ function LearnerProgram({
     <>
       <section className="panel programme-panel">
         <h3>{t("progress", progress)}</h3>
+        {program.curriculum && (
+          <>
+            {program.curriculum.overview && (
+              <p>{program.curriculum.overview}</p>
+            )}
+            <p>
+              {t("curriculumRequirements", {
+                count: program.curriculum.elective_count,
+              })}
+            </p>
+          </>
+        )}
         <progress
           aria-label={t("progress", progress)}
           max={progress.total}
@@ -727,57 +798,91 @@ function LearnerProgram({
           </p>
         )}
         <ol className="programme-steps">
-          {progress.steps.map((step, index) => (
-            <li key={step.course_id ?? `unavailable-${index}`}>
-              <div className="programme-step">
-                <span>
-                  <strong>{step.title}</strong> · {t(`state.${step.state}`)}
-                </span>
-                {step.can_open && step.course_id && (
-                  <Button asChild variant="secondary">
-                    <Link to={`/courses/${step.course_id}/workspace`}>
-                      {t("courseAction.open")}
-                    </Link>
-                  </Button>
-                )}
-                {step.state === "ready" && writable && step.course_id && (
-                  <Button
-                    type="button"
-                    disabled={start.isPending}
-                    onClick={() =>
-                      start.mutate({
-                        p_program_id: program.id,
-                        p_course_id: step.course_id!,
-                      })
-                    }
-                  >
-                    {t("courseAction.start")}
-                  </Button>
-                )}
-              </div>
-              {step.prerequisite_exception?.active && (
-                <p>{t("pathExceptionActive")}</p>
-              )}
-              {step.prerequisites && (
-                <div>
-                  <p>
-                    {t(
-                      step.prerequisites.mode === "any"
-                        ? "pathAlternatives"
-                        : "pathRequired",
-                    )}
-                  </p>
-                  <ul className="list-disc ps-5">
-                    {step.prerequisites.items
-                      .filter((item) => !item.completed)
-                      .map((item) => (
-                        <li key={item.position}>{item.title}</li>
-                      ))}
-                  </ul>
+          {progress.steps.map((step, index) => {
+            const curriculumStep = step.course_id
+              ? program.curriculum?.steps[step.course_id]
+              : undefined;
+            return (
+              <li
+                id={`programme-step-${index + 1}`}
+                key={step.course_id ?? `unavailable-${index}`}
+              >
+                <div className="programme-step">
+                  <span>
+                    <strong>{step.title}</strong> · {t(`state.${step.state}`)}
+                  </span>
+                  {step.can_open && step.course_id && (
+                    <Button asChild variant="secondary">
+                      <Link to={`/courses/${step.course_id}/workspace`}>
+                        {t("courseAction.open")}
+                      </Link>
+                    </Button>
+                  )}
+                  {step.state === "ready" && writable && step.course_id && (
+                    <Button
+                      type="button"
+                      disabled={start.isPending}
+                      onClick={() =>
+                        start.mutate({
+                          p_program_id: program.id,
+                          p_course_id: step.course_id!,
+                        })
+                      }
+                    >
+                      {t("courseAction.start")}
+                    </Button>
+                  )}
                 </div>
-              )}
-            </li>
-          ))}
+                {curriculumStep && (
+                  <>
+                    <p>
+                      {t(
+                        curriculumStep.required
+                          ? "curriculumRequired"
+                          : "curriculumElective",
+                      )}
+                    </p>
+                    {curriculumStep.objectives && (
+                      <p>{curriculumStep.objectives}</p>
+                    )}
+                  </>
+                )}
+                {step.prerequisite_exception?.active && (
+                  <p>{t("pathExceptionActive")}</p>
+                )}
+                {step.prerequisites && (
+                  <div>
+                    <p>
+                      {t(
+                        step.prerequisites.mode === "any"
+                          ? "pathAlternatives"
+                          : "pathRequired",
+                      )}
+                    </p>
+                    {curriculumStep?.remediation && (
+                      <div>
+                        <p>
+                          <strong>{t("curriculumRemediationTitle")}</strong>
+                        </p>
+                        <p>{curriculumStep.remediation}</p>
+                      </div>
+                    )}
+                    <ul className="list-disc ps-5">
+                      {step.prerequisites.items
+                        .filter((item) => !item.completed)
+                        .map((item) => (
+                          <li key={item.position}>
+                            <a href={`#programme-step-${item.position}`}>
+                              {item.title}
+                            </a>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ol>
         {start.isError && <Notice kind="error">{t("startFailed")}</Notice>}
       </section>
@@ -796,12 +901,16 @@ function LearnerProgram({
             })}
           </p>
           <ul>
-            {progress.steps.map((step) => (
-              <li key={step.receipt_id}>
-                {step.title} ·{" "}
-                {t("certificateReference", { id: step.receipt_id })}
-              </li>
-            ))}
+            {progress.steps
+              .filter(
+                (step) => step.receipt_id && step.completion_credited !== false,
+              )
+              .map((step) => (
+                <li key={step.receipt_id}>
+                  {step.title} ·{" "}
+                  {t("certificateReference", { id: step.receipt_id })}
+                </li>
+              ))}
           </ul>
           <Button type="button" onClick={() => window.print()}>
             {t("print")}

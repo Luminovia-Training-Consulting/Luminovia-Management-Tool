@@ -101,6 +101,21 @@ test("a complete learning programme unlocks its next course and produces whole-p
       .selectOption(course.id);
     await page.getByRole("button", { name: "Kurs hinzufügen" }).click();
   }
+  const courseActions = page.getByLabel(
+    `Kursaktionen für ${name} First course`,
+  );
+  await courseActions.focus();
+  await courseActions.press("Enter");
+  const firstCourseActions = page
+    .locator("details[open]")
+    .filter({ has: courseActions });
+  await expect(
+    firstCourseActions.getByRole("button", { name: "Nach oben" }),
+  ).toBeDisabled();
+  await expect(
+    firstCourseActions.getByRole("button", { name: "Nach unten" }),
+  ).toBeVisible();
+  await courseActions.press("Enter");
   await page.getByRole("button", { name: "Programm speichern" }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   await page.getByLabel("Kurs mit Zugangsvoraussetzungen").selectOption("3");
@@ -113,6 +128,11 @@ test("a complete learning programme unlocks its next course and produces whole-p
     .check();
   await page.getByRole("button", { name: "Voraussetzungen speichern" }).click();
   await expect(page.getByText("Voraussetzungen gespeichert.")).toBeVisible();
+  await page.getByRole("button", { name: "Lehrplan bearbeiten" }).click();
+  const overview = "Fictional learning objectives for this programme";
+  await page.getByLabel("Lernziele des Programms").fill(overview);
+  await page.getByRole("button", { name: "Lehrplan veröffentlichen" }).click();
+  await expect(page.getByText(overview, { exact: true })).toBeVisible();
   await page.reload();
   await page.getByLabel("Teilnehmende Person").selectOption(learner.id);
   await page.getByRole("button", { name: "Für Programm einschreiben" }).click();
@@ -146,6 +166,7 @@ test("a complete learning programme unlocks its next course and produces whole-p
     const student = await context.newPage();
     await login(student, learner.email, /\/learning$/);
     await student.goto(href);
+    await expect(student.getByText(overview, { exact: true })).toBeVisible();
     await expect(
       student.getByText(/Schließe mindestens einen dieser Kurse ab/),
     ).toBeVisible();

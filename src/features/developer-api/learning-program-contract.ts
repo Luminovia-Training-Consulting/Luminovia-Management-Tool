@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  configureProgrammeCurriculumRequest,
   enrolLearningProgramRequest,
   learningProgramId,
   learningProgramClassProgressResult,
@@ -267,6 +268,14 @@ export function learningProgramPaths(academy = false) {
       false,
       learningProgramId,
     ),
+    "/rest/v1/rpc/configure_learning_program_curriculum": write(
+      "configureLearningProgrammeCurriculum",
+      "Publish a learning programme curriculum revision",
+      "Supply individual course objectives, remediation guidance, and the required courses plus elective quota. Use the reviewed programme version. Existing enrolments lock the curriculum. A null curriculum restores the all-courses completion rule before the first enrolment.",
+      configureProgrammeCurriculumRequest,
+      false,
+      z.number().int().positive(),
+    ),
     "/rest/v1/rpc/set_learning_program_prerequisite": write(
       "setLearningProgrammePrerequisite",
       "Set explicit prerequisites for a programme step",
@@ -276,7 +285,7 @@ export function learningProgramPaths(academy = false) {
     "/rest/v1/rpc/set_learning_program_path_exception": write(
       "setLearningProgrammePathException",
       "Grant or withdraw a prerequisite exception",
-      "Course management can grant or withdraw an exception for one current programme learner and one step. The request includes a private reason and the reviewed exception revision. The exception permits starting the step. Programme completion still requires each course completion receipt.",
+      "Course management can grant or withdraw an exception for one current programme learner and one step. The request includes a private reason and the reviewed exception revision. The exception permits starting the step. Programme completion follows its configured required and elective receipt policy.",
       programmePathExceptionRequest,
       false,
       programmePathExceptionRevision,
@@ -290,7 +299,7 @@ export function learningProgramPaths(academy = false) {
     "/rest/v1/rpc/start_learning_program_course": write(
       "startLearningProgrammeCourse",
       "Activate an unlocked course for the current learner",
-      "Requires the current learner's programme enrolment. Explicit all/any prerequisites are evaluated against unrevoked course completion receipts. Ordered steps without an explicit rule require receipts for all earlier courses. Existing active course access is retained; a removed enrolment is not restored.",
+      "Requires the current learner's programme enrolment. Explicit all/any prerequisites are evaluated against unrevoked course completion receipts. Ordered steps without an explicit rule require receipts for all earlier required courses. Existing active course access is retained; a removed enrolment is not restored.",
       startLearningProgramCourseRequest,
       true,
     ),

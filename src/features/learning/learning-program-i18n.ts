@@ -43,6 +43,33 @@ i18n.addResourceBundle("de", "learningPrograms", {
     "Die Voraussetzungen konnten nicht gespeichert werden. Lade den aktuellen Programmstand.",
   pathLockedRule:
     "Für dieses Programm sind Voraussetzungen festgelegt. Entferne sie, bevor du die Kursreihenfolge änderst.",
+  curriculum: "Programmlehrplan",
+  curriculumEdit: "Lehrplan bearbeiten",
+  curriculumOverview: "Lernziele des Programms",
+  curriculumObjectives: "Lernziele dieses Kurses",
+  curriculumRemediation: "Hinweise zum Nachholen der Voraussetzungen",
+  curriculumRequired: "Pflichtkurs",
+  curriculumElective: "Wahlkurs",
+  curriculumFirstRequired: "Der Einstiegskurs ist ein Pflichtkurs.",
+  curriculumElectiveCount: "Benötigte Wahlkurse für den Programmabschluss",
+  curriculumRequirements:
+    "Für den Programmabschluss zählen alle Pflichtkurse und {{count}} Wahlkurse.",
+  curriculumRequirements_one:
+    "Für den Programmabschluss zählen alle Pflichtkurse und ein Wahlkurs.",
+  curriculumPublish: "Lehrplan veröffentlichen",
+  curriculumReset: "Lehrplan zurücksetzen",
+  curriculumResetHint:
+    "Die bisherige Fassung bleibt erhalten. Für den Abschluss werden wieder alle Kursnachweise benötigt.",
+  curriculumResetConfirm: "Zurücksetzen bestätigen",
+  curriculumCancel: "Abbrechen",
+  curriculumError:
+    "Prüfe die Anforderungen und lade bei Änderungen den aktuellen Programmstand.",
+  curriculumOffline: "Die Lehrplanbearbeitung benötigt eine Verbindung.",
+  curriculumSaved: "Die Lehrplanfassung wurde veröffentlicht.",
+  curriculumLockedOrder:
+    "Setze den Lehrplan zurück, bevor du die Kursauswahl oder Reihenfolge änderst.",
+  curriculumRevision: "Fassung {{revision}}",
+  curriculumRemediationTitle: "Voraussetzungen nachholen",
   pathRequired: "Noch benötigte Kursabschlüsse",
   pathAlternatives: "Schließe mindestens einen dieser Kurse ab",
   courseSearch: "Veröffentlichte Kurse suchen",
@@ -108,7 +135,7 @@ i18n.addResourceBundle("de", "learningPrograms", {
     "Der Kurs konnte nicht freigeschaltet werden. Prüfe die Voraussetzungen und deinen aktuellen Zugang.",
   certificate: "Programmabschluss",
   certificateIntro:
-    "Gültiger Abschlussnachweis für alle Kurse dieses Programms.",
+    "Gültige Kursnachweise belegen die erfüllten Abschlussanforderungen dieses Programms.",
   certificateDate: "Abgeschlossen am {{date}}",
   certificateReference: "Nachweisreferenz: {{id}}",
   print: "Nachweis drucken / als PDF speichern",
@@ -182,6 +209,32 @@ i18n.addResourceBundle("en", "learningPrograms", {
   pathError: "The prerequisites could not be saved. Reload the programme.",
   pathLockedRule:
     "This programme has explicit prerequisites. Clear them before changing the course order.",
+  curriculum: "Programme curriculum",
+  curriculumEdit: "Edit curriculum",
+  curriculumOverview: "Programme learning objectives",
+  curriculumObjectives: "Learning objectives of this course",
+  curriculumRemediation: "Guidance for completing prerequisites",
+  curriculumRequired: "Required course",
+  curriculumElective: "Elective course",
+  curriculumFirstRequired: "The first course is required.",
+  curriculumElectiveCount: "Electives required for programme completion",
+  curriculumRequirements:
+    "Complete all required courses and {{count}} electives.",
+  curriculumRequirements_one: "Complete all required courses and one elective.",
+  curriculumPublish: "Publish curriculum",
+  curriculumReset: "Reset curriculum",
+  curriculumResetHint:
+    "The earlier version is retained. Programme completion will require receipts for every course.",
+  curriculumResetConfirm: "Confirm reset",
+  curriculumCancel: "Cancel",
+  curriculumError:
+    "Check the requirements and reload the programme if it changed.",
+  curriculumOffline: "Connect to edit the curriculum.",
+  curriculumSaved: "The curriculum revision was published.",
+  curriculumLockedOrder:
+    "Reset the curriculum before changing the course list or order.",
+  curriculumRevision: "Revision {{revision}}",
+  curriculumRemediationTitle: "Complete these prerequisites",
   pathRequired: "Required course completions",
   pathAlternatives: "Complete at least one of these courses",
   courseSearch: "Find a published course",
@@ -248,7 +301,7 @@ i18n.addResourceBundle("en", "learningPrograms", {
     "The course could not be unlocked. Check the prerequisites and your current access.",
   certificate: "Programme completion",
   certificateIntro:
-    "Valid completion records exist for every course in this programme.",
+    "Valid course records confirm that the completion requirements of this programme are met.",
   certificateDate: "Completed on {{date}}",
   certificateReference: "Record reference: {{id}}",
   print: "Print record / save as PDF",
