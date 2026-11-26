@@ -851,7 +851,7 @@ export function CourseAssignments({
               )}
               {canManage && assignment.published_version && (
                 <AssignmentExtension
-                  key={assignment.assignment_id}
+                  key={`extension:${assignment.assignment_id}`}
                   assignment={assignment}
                   command={command}
                   participants={participants}
@@ -861,7 +861,7 @@ export function CourseAssignments({
               )}
               {staff && (
                 <details
-                  key={assignment.assignment_id}
+                  key={`teams:${assignment.assignment_id}`}
                   onToggle={(event) =>
                     setOpenTeams(
                       event.currentTarget.open

@@ -1612,6 +1612,12 @@ test("completed Premium course records a named closeout follow-up without resend
 /** Follow one fictional enrolment from curriculum publication to its released evidence and reports. */
 test("LMS lifecycle links curriculum, assignments, competency, completion and reports", async ({ page, browser, baseURL }, info) => {
     test.setTimeout(120_000);
+    const duplicateKeys: string[] = [];
+    page.on("console", (message) => {
+        if (message.type() === "error" && message.text().includes("Encountered two children with the same key")) {
+            duplicateKeys.push(message.text());
+        }
+    });
     const f = await fixture();
     await linkWorkspaceLearner(f);
     const course = `/courses/${f.run}/workspace`;
@@ -1627,6 +1633,11 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
     await page.getByRole("textbox", {name: "Lektionsinhalt"}).fill("Der Befehl pwd zeigt das Arbeitsverzeichnis.");
     await page.getByRole("button", {name: "Veröffentlichen", exact: true}).click();
     await expect(page.getByText(/Veröffentlicht · Fassung 1/)).toBeVisible();
+    const curriculumAudit = await new AxeBuilder({page})
+        .include("#course-curriculum")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+    expect(curriculumAudit.violations).toEqual([]);
 
     const assignment = (target: Page) => target.getByRole("region", {name: "Kursaufgaben", exact: true});
     await page.goto(assignments);
@@ -1734,9 +1745,27 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         await expect(issue).toBeDisabled();
 
         const quiz = learnerPage.getByRole("region", {name: "Mini-Quiz"});
-        await quiz.getByRole("radio", {name: "pwd", exact: true}).check();
-        await quiz.getByRole("button", {name: "Antworten verbindlich abgeben"}).click();
+        const answer = quiz.getByRole("radio", {name: "pwd", exact: true});
+        await answer.press("Space");
+        await expect(answer).toBeChecked();
+        const learnerAudit = await new AxeBuilder({page: learnerPage})
+            .include("#course-learning")
+            .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+            .analyze();
+        expect(learnerAudit.violations).toEqual([]);
+        const viewport = learnerPage.viewportSize();
+        if (!viewport) throw new Error("The browser project requires an explicit viewport");
+        await learnerPage.setViewportSize({width: 320, height: viewport.height});
+        const width = await learnerPage.locator("main").evaluate((main) => ({
+            visible: main.clientWidth,
+            scroll: main.scrollWidth,
+        }));
+        expect(width.scroll).toBeLessThanOrEqual(width.visible + 1);
+        const submitQuiz = quiz.getByRole("button", {name: "Antworten verbindlich abgeben"});
+        await expect(submitQuiz).toBeEnabled();
+        await submitQuiz.press("Enter");
         await expect(quiz.getByText(/Ergebnis: 100 %.*Bestanden/)).toBeVisible();
+        await learnerPage.setViewportSize(viewport);
         const evidence = "Fiktiver Nachweis zum Arbeitsverzeichnis.";
         await page.goto(workspace);
         const staffCompetencies = page.locator("details").filter({
@@ -1806,6 +1835,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         const row = report.getByRole("row").filter({hasText: f.title});
         await expect(row).toBeVisible();
         await expect(row.getByRole("cell", {name: "—", exact: true})).toHaveCount(11);
+        expect(duplicateKeys).toEqual([]);
     } finally {
         await context.close();
     }
