@@ -28,13 +28,39 @@ const score = z.strictObject({
   max: z.literal(100),
 });
 const scoredResult = z.strictObject({ score, success: z.boolean() });
+const quizActivity = activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/);
+const choice = z.string().regex(/^choice-[1-6]$/);
 const statement = z.union([
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "attempted") }),
-    object: activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/),
+    object: quizActivity,
     result: scoredResult.extend({
       score: score.extend({ raw: percent.int() }),
+    }),
+  }),
+  z.strictObject({
+    ...base,
+    verb: z.strictObject({ id: z.literal(verbBase + "answered") }),
+    object: activity(
+      /\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*\/h5p\/(?:[1-9]|1[0-9]|20)$/,
+    ).extend({
+      definition: z.strictObject({
+        type: z.literal("http://adlnet.gov/expapi/activities/cmi.interaction"),
+        interactionType: z.literal("choice"),
+        choices: z
+          .array(z.strictObject({ id: choice }))
+          .min(2)
+          .max(6),
+      }),
+    }),
+    result: z.strictObject({
+      completion: z.literal(true),
+      response: choice,
+      success: z.boolean(),
+    }),
+    context: z.strictObject({
+      contextActivities: z.strictObject({ parent: z.tuple([quizActivity]) }),
     }),
   }),
   z.strictObject({

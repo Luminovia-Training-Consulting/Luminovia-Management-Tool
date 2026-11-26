@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
+import { courseXapiArchiveSchema } from "../src/features/learning/xapi-schema.ts";
 
 await withTestDatabase("course_hfivep_import", async ({ sql, actor }) => {
   const [
@@ -362,5 +363,80 @@ await withTestDatabase("course_hfivep_import", async ({ sql, actor }) => {
   );
   console.log(
     "PASS both H5P collection types, package atomicity, scoped retry and native grading",
+  );
+
+  const exportXapi = (who) =>
+    rpc(
+      who,
+      "course_xapi_statements",
+      q(run),
+      "now() - interval '1 day'",
+      "now() + interval '1 minute'",
+    );
+  await assert.rejects(exportXapi(learner), /42501/);
+  const archive = courseXapiArchiveSchema.parse(await exportXapi(admin));
+  const byVerb = (row) => row.verb.id.endsWith("/answered");
+  const answered = archive.statements.filter(byVerb);
+  assert.equal(answered.length, 3);
+  assert.deepEqual(
+    answered
+      .filter((row) => row.object.id.includes("/quiz/2/"))
+      .map((row) => row.result),
+    [
+      { completion: true, response: "choice-1", success: true },
+      { completion: true, response: "choice-2", success: false },
+    ],
+  );
+  for (const row of answered) {
+    assert.match(
+      row.context.contextActivities.parent[0].id,
+      /\/quiz\/[1-9][0-9]*$/,
+    );
+    assert.deepEqual(row.object.definition.choices, [
+      { id: "choice-1" },
+      { id: "choice-2" },
+    ]);
+    assert.ok(!JSON.stringify(row).includes(learner));
+    assert.ok(!JSON.stringify(row).includes(attribution.authors[0].name));
+  }
+  assert.deepEqual((await exportXapi(admin)).statements, archive.statements);
+
+  await action(
+    teacher,
+    "configure",
+    {
+      entries: ids.map((question_id) => ({ question_id, revision: 1 })),
+      draw_count: 1,
+      pass_percent: 50,
+      max_attempts: 1,
+      published: true,
+      shuffle: false,
+    },
+    2,
+  );
+  const draw = await rpc(learner, "start_course_quiz_pool", q(run), 3);
+  const drawn = (await rpc(learner, "course_workspace", q(run))).quiz.questions;
+  assert.equal(drawn.length, 1);
+  const ordinal =
+    [question.prompt, second.question.prompt].indexOf(drawn[0].prompt) + 1;
+  assert.ok(ordinal > 0);
+  await rpc(
+    learner,
+    "course_workspace_action",
+    q(run),
+    q("quiz_attempt"),
+    q(JSON.stringify({ answers: [0], request_id: draw.request_id })),
+    3,
+  );
+  const newArchive = courseXapiArchiveSchema.parse(await exportXapi(admin));
+  const drawnAnswers = newArchive.statements.filter(
+    (row) => byVerb(row) && row.object.id.includes("/quiz/3/"),
+  );
+  assert.equal(drawnAnswers.length, 1);
+  assert.ok(drawnAnswers[0].object.id.endsWith("/h5p/" + ordinal));
+  assert.equal(drawnAnswers[0].result.response, "choice-1");
+  assert.equal(drawnAnswers[0].result.success, true);
+  console.log(
+    "PASS pseudonymous answered xAPI for fixed and persisted pooled H5P questions",
   );
 });

@@ -1263,7 +1263,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_xapi_statements": courseOperation(
     "readAcademyCourseXapiStatements",
     "Export pseudonymous xAPI learning records",
-    "Current course managers may export up to 2000 quiz attempts, released text exam and weighted course scores, or completion and revocation statements for a date interval up to 366 days. This returns an archive for local download.",
+    "Current course managers may export up to 2000 quiz attempts, H5P-origin quiz answers, released text exam and weighted course scores, or completion and revocation statements for a date interval up to 366 days. This returns an archive for local download.",
     "active-or-grace",
     z.toJSONSchema(
       z.strictObject({

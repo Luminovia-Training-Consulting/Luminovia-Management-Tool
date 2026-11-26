@@ -323,6 +323,31 @@ for (const library of ["H5P.SingleChoiceSet", "H5P.QuestionSet"]) {
           () => "sampleH5pCodeWasLoaded" in globalThis,
         ),
       ).toBe(false);
+
+      const archive = await checked(
+        manager.client.rpc("course_xapi_statements", {
+          p_run_id: run,
+          p_from: new Date(Date.now() - 600_000).toISOString(),
+          p_until: new Date(Date.now() + 60_000).toISOString(),
+        }),
+        { requireData: true },
+      );
+      const interactions = archive.statements.filter(
+        (event: { verb: { id: string } }) =>
+          event.verb.id.endsWith("/answered"),
+      );
+      expect(interactions).toHaveLength(2);
+      for (const [index, event] of interactions.entries()) {
+        expect(event.object.id).toMatch(
+          new RegExp(`/quiz/1/h5p/${index + 1}$`),
+        );
+        expect(event.result).toEqual({
+          completion: true,
+          response: "choice-1",
+          success: true,
+        });
+        expect(JSON.stringify(event)).not.toContain(learner.email);
+      }
     } finally {
       await learnerContext.close();
     }

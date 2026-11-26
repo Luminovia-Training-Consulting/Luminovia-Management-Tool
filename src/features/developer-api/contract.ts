@@ -4619,7 +4619,7 @@ const nativePaths = {
     "readCourseXapiStatements",
     "Premium LMS",
     "Export pseudonymous xAPI learning records",
-    "Current course managers may export up to 2000 quiz attempts, released text exam and weighted course scores, or completion and revocation statements in an interval up to 366 days. The end time is exclusive. This returns an archive for local download.",
+    "Current course managers may export up to 2000 quiz attempts, H5P-origin quiz answers, released text exam and weighted course scores, or completion and revocation statements in an interval up to 366 days. The end time is exclusive. This returns an archive for local download.",
     {
       p_run_id: { type: "string", format: "uuid" },
       p_from: { type: "string", format: "date-time" },
