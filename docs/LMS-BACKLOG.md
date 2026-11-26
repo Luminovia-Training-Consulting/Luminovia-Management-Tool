@@ -35,11 +35,11 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-03 — gradebook and configurable grading policies
 
-- **Priority / status:** P0 · planned; current quiz result and course completion facts exist, but are not a comprehensive gradebook.
-- **Dependencies / affected modules:** Existing quiz, exam, assignment, enrolment and reporting records; course assessment and analytics owners.
-- **Data and security:** Versioned deterministic grading policy, grade history and moderation record; participant reads limited to own published results; server-authorised staff writes, audited changes and correction rather than silent final-grade overwrite.
-- **Tasks / acceptance:** Implement categories, weight/threshold rules, optional/mandatory/bonus/excused/missing cases, supported configurable scales, tabular and individual views, publication/moderation, import preview/error recovery and exports. Test reproducibility, rounding, concurrent edits, imports, finalisation, privacy and RLS.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Do not infer grades from attendance or presence.
+- **Priority / status:** P0 · quiz-gradebook vertical implemented in the DE/EN course workspace. The gradebook uses existing course enrolments, attempts and quiz revisions. Quiz pass facts and certificate eligibility retain their established rules.
+- **Data and security:** Private RLS-enabled tables retain immutable policy and grade revisions. The preview uses the highest score on the current published quiz. Ties prefer the latest attempt, then the lowest attempt ID. A policy displays percentage or the label for the highest threshold reached. Release checks the reviewed attempt and policy. Corrections and recalculated releases require the current grade revision and a reason. Current learners can read only their own released history. Internal reasons and the current-grade CSV export are scoped to course staff. Academy grace allows reads and exports.
+- **Affected modules:** `course-gradebook.tsx`, `course_gradebook`, `course_gradebook_history`, `course_gradebook_export`, and the `gradebook_*` commands in `course_workspace_action` and `academy_learning_action`.
+- **Acceptance and tests:** Focused component cases cover versioned release, offline state, conflict recovery, grace, reasoned recalculation and paginated history. The PostgreSQL cases exercise API grants, competing writes, privacy, current membership and both Academy licences. Desktop/mobile functional tests exercise release, correction, recalculation, history and CSV. See [readiness evidence](PRODUCTION-READINESS.md#verification-record-for-lms-p0-03) for the commands that passed.
+- **Remaining work:** Category weights, missing/optional/mandatory/bonus/excused rules, independent passing policies, exam and assignment grades, separate moderation/finalisation, programme reporting, grade notifications and reviewed spreadsheet imports remain open.
 
 ### LMS-P0-04 — reusable question bank and examination builder
 

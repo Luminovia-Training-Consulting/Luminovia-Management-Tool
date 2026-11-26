@@ -303,6 +303,14 @@ In **Kursinhalte / Course content**, edit modules and lessons and compare the op
 
 In a lesson, choose a scanned, learner-visible course material and attach it. The lesson references the exact shared version. A withdrawn share disappears from the learner's lesson and the download gateway checks current access again. In **Materialbibliothek / Materials library**, authorised staff can edit learning objectives and a review date. Use **Metadatenverlauf / Metadata history** to inspect earlier snapshots while you have course staff access to that share.
 
+### Quiz grades and release history
+
+In the course workspace, open **Quiz-Notenbuch / Quiz gradebook**. Save a percentage scale or name two to ten grading bands with distinct thresholds, starting at zero. Staff review the best attempt on the current published quiz revision. Choose **Note freigeben / Publish grade** for the selected learner. A saved change to the grading scale or quiz leaves previously released grades in place.
+
+Choose **Note korrigieren / Correct grade** to enter an adjusted mark and an internal reason. When the current preview has a new attempt or policy, **Mit aktueller Vorschau neu bewerten / Recalculate using current preview** lets staff explicitly release the recalculated grade with a reason. Open **Notenverlauf / Grade history** to see older published revisions with their date, quiz revision and grading scale version. Each learner can read their own history. Internal reasons stay with scoped course staff.
+
+**Freigegebene Noten als CSV exportieren / Export published grades as CSV** produces one current snapshot for enrolled and completed learners, up to 5,000 published grades. The export covers the full course rather than the displayed roster page. Quiz pass and certificate eligibility continue to use their established assessment and completion rules. Academy grace supports read and export access for currently authorised users. Publication and correction require an active licence.
+
 ### Timed exams and results
 
 In the course workspace, open **Klausur / Exam**. Choose **Klausur planen / Schedule exam**, enter the title, announcement time, start, submission deadline and pass threshold, then save. The times use the course's time zone. Start and deadline must be on course dates. Upload and publish the scanned student PDF after saving the schedule. Already published papers from before timed exams keep their previous access until the course has a schedule. Use the existing exam setting to mark a course exam-free.

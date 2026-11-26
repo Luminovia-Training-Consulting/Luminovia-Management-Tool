@@ -1,4 +1,4 @@
-/** Test caller-scoped exact course resources and licence changes in both dedicated editions. */
+/** Test scoped course resources, gradebook access and licence changes in both dedicated editions. */
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -599,11 +599,94 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const nextSubmissionLease = await submissionWorker(nextSubmission, "begin", null, digest);
     const graceReservation = await reserve(teacher, randomUUID());
     const graceLease = await worker(graceReservation, "begin", null, digest);
+
+    // Establish a published grade through the dedicated RPC while the licence is active.
+    const gradebook = (who, course = run) =>
+      actor(who, gate("/rpc/course_gradebook") +
+        `select public.course_gradebook(${q(course)},0,20)`).then(JSON.parse);
+    const gradebookHistory = (who, target = null, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_gradebook_history") : "") +
+        `select public.course_gradebook_history(${q(run)},${target === null ? "null" : q(target)})`).then(JSON.parse);
+    const gradebookExport = (who, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_gradebook_export") : "") +
+        `select public.course_gradebook_export(${q(run)})`).then(JSON.parse);
+    const learningPath = "/rpc/academy_learning_action";
+    const learningCall = (name, payload, version = 0) =>
+      `select public.academy_learning_action(${q(run)},${q(name)},${q(JSON.stringify(payload))},${version})`;
+    const learningAction = (who, name, payload, version = 0) =>
+      actor(who, gate(learningPath) + learningCall(name, payload, version)).then(JSON.parse);
+    // The dedicated assignment fixture needs a future session; quiz submissions need a started one.
+    await sql(`update public.course_sessions set starts_at=now()-interval '2 hours',ends_at=now()-interval '1 hour'
+      where course_run_id=${q(run)}`);
+    await learningAction(teacher, "quiz_config", {
+      questions: [{ prompt: "Which choice matches the lesson?", options: ["Choice A", "Choice B"], correct: 0 }],
+      pass_percent: 80, max_attempts: 2, published: true,
+    });
+    const attempt = await learningAction(learner, "quiz_attempt", { answers: [0], request_id: randomUUID() }, 1);
+    assert.equal(attempt.score, 100);
+    const policy = { scheme: "percentage", bands: [] };
+    assert.equal((await learningAction(teacher, "gradebook_policy", policy)).version, 1);
+    const activeGradebook = await gradebook(teacher);
+    assert.equal(activeGradebook.can_manage, true);
+    assert.equal(activeGradebook.policy.version, 1);
+    assert.deepEqual(activeGradebook.learners.map(({ user_id }) => user_id), [learner]);
+    const row = activeGradebook.learners[0];
+    assert.equal(row.best_attempt.id, attempt.id);
+    assert.deepEqual(row.preview, { grade_percent: 100, grade_label: null });
+    assert.equal(row.grade, null);
+    assert.equal((await gradebook(learner)).own_grade, null);
+    for (const who of [client, outside]) await assert.rejects(gradebook(who), /42501/);
+    assert.deepEqual((await gradebook(teacher, otherRun)).learners, []);
+    await assert.rejects(gradebook(learner, otherRun), /42501/);
+    const publish = { user_id: learner, attempt_id: row.best_attempt.id, expected_revision: 0, reason: "" };
+    await assert.rejects(learningAction(learner, "gradebook_publish", publish, 1), /42501/);
+    await assert.rejects(learningAction(teacher, "gradebook_publish", publish), /PT409/);
+    assert.equal((await learningAction(teacher, "gradebook_publish", publish, 1)).revision, 1);
+    const correct = { user_id: learner, grade_value: "90", expected_revision: 1, reason: "Fictional reviewed mark" };
+    assert.equal((await learningAction(teacher, "gradebook_correct", correct, 1)).revision, 2);
+    const publishedGradebook = await gradebook(teacher);
+    const learnerGradebook = await gradebook(learner);
+    const { reason: correctionReason, ...mark } = publishedGradebook.learners[0].grade;
+    assert.equal(correctionReason, correct.reason);
+    assert.equal(mark.revision, 2);
+    assert.equal(mark.attempt_id, publish.attempt_id);
+    assert.equal(mark.grade_percent, 90);
+    assert.deepEqual(learnerGradebook, {
+      can_manage: false, policy: null, learners: [], own_grade: mark, total: 0, offset: 0, limit: 20,
+    });
+
+    const staffHistory = await gradebookHistory(teacher, learner);
+    const learnerHistory = await gradebookHistory(learner);
+    assert.equal(staffHistory.revisions[0].reason, correct.reason);
+    assert.deepEqual(learnerHistory.revisions.map(({ revision }) => revision), [2, 1]);
+    assert.ok(learnerHistory.revisions.every((revision) => !Object.hasOwn(revision, "reason")));
+    await assert.rejects(gradebookHistory(learner, outside), /42501/);
+    await assert.rejects(gradebookHistory(client, learner), /42501/);
+    const staffExport = await gradebookExport(teacher);
+    assert.deepEqual(staffExport.map(({ user_id, grade }) => ({ user_id, grade })), [{ user_id: learner, grade: mark }]);
+    await assert.rejects(gradebookExport(learner), /42501/);
+
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
       expires_at: date(-2),
     });
+    const graceGradebook = { ...publishedGradebook, can_manage: false };
+    assert.deepEqual(await gradebook(teacher), graceGradebook);
+    assert.deepEqual(await gradebook(learner), learnerGradebook);
+    assert.deepEqual(await gradebookHistory(teacher, learner), staffHistory);
+    assert.deepEqual(await gradebookHistory(learner), learnerHistory);
+    assert.deepEqual(await gradebookExport(teacher), staffExport);
+    // Both the request gate and the dedicated command enforce read-only grace.
+    for (const [name, payload] of [
+      ["gradebook_policy", policy],
+      ["gradebook_publish", { ...publish, expected_revision: 2, reason: "Reviewed again" }],
+      ["gradebook_correct", { ...correct, expected_revision: 2 }],
+    ]) {
+      await assert.rejects(learningAction(teacher, name, payload, 1), /42501/);
+      await assert.rejects(actor(teacher, learningCall(name, payload, 1)), /42501/);
+    }
+    assert.deepEqual(await gradebook(teacher), graceGradebook);
     assert.deepEqual(await access(learner), exact);
     await assert.rejects(command(teacher), /42501/);
     await assert.rejects(reserve(teacher), /42501/);
@@ -641,6 +724,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(access(learner), /42501/);
     await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);
+    await assert.rejects(gradebook(learner), /42501/);
+    for (const withGate of [true, false]) {
+      await assert.rejects(gradebookHistory(teacher, learner, withGate), /42501/);
+      await assert.rejects(gradebookExport(teacher, withGate), /42501/);
+    }
+    await assert.rejects(gradebook(teacher), /42501/);
     assert.equal(await storagePath(learnerDraft), "");
     assert.equal(
       await sql(`select count(*) from private.course_submission_offboard where version_id=${q(learnerDraft.version_id)}`),
@@ -653,7 +742,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "1",
     );
     console.log(
-      `PASS ${edition} reserve, scan, manage exact course materials and private learner submissions, signed quotas, grace and expiry`,
+      `PASS ${edition} exact course materials, private learner submissions, signed quotas, gradebook, grace and expiry`,
     );
   });
 }

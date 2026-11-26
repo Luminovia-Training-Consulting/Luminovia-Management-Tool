@@ -634,6 +634,105 @@ const pairs: Record<string, [string, string]> = {
   resources: ["Kursdateien", "Course files"],
   materialLibrary: ["Kursmaterialien", "Course materials"],
   materialCourseFilter: ["Nach Kurs filtern", "Filter by course"],
+  gradebookTitle: ["Quiz-Notenbuch", "Quiz gradebook"],
+  gradebookOffline: [
+    "Das Notenbuch ist nur online verfügbar.",
+    "The gradebook is only available online.",
+  ],
+  gradebookHelp: [
+    "Die Vorschau verwendet den besten Versuch der aktuell veröffentlichten Quizfassung. Freigegebene Noten bleiben bei Änderungen an Quiz oder Skala unverändert.",
+    "The preview uses the best attempt on the current published quiz version. Changing the quiz or scale does not change released grades.",
+  ],
+  gradebookPolicy: ["Notenskala", "Grading scale"],
+  gradebookScheme: ["Bewertungsformat", "Grading format"],
+  gradebookPolicyVersion: [
+    "Notenskala: Version {{version}}",
+    "Grading scale: version {{version}}",
+  ],
+  gradebookPercentage: ["Prozentwert", "Percentage"],
+  gradebookBands: ["Benannte Stufen", "Named bands"],
+  gradebookBand: ["Stufe {{number}}", "Band {{number}}"],
+  gradebookBandHelp: [
+    "Es gilt die höchste erreichte Untergrenze. Eine Stufe muss bei 0 % beginnen.",
+    "The highest threshold reached applies. One band must start at 0%.",
+  ],
+  gradebookMinimum: ["Untergrenze (%)", "Minimum (%)"],
+  gradebookLabel: ["Bezeichnung", "Label"],
+  gradebookAddBand: ["Stufe hinzufügen", "Add band"],
+  gradebookRemoveBand: ["Stufe entfernen", "Remove band"],
+  gradebookSavePolicy: ["Notenskala speichern", "Save grading scale"],
+  gradebookPolicyInvalid: [
+    "Untergrenzen und Bezeichnungen müssen eindeutig sein. Eine Untergrenze muss 0 % sein.",
+    "Thresholds and labels must be unique. One threshold must be 0%.",
+  ],
+  gradebookNoLearners: [
+    "Keine Teilnehmenden auf dieser Seite.",
+    "No participants on this page.",
+  ],
+  gradebookNoAttempt: [
+    "Kein Versuch für die aktuelle Quizfassung.",
+    "No attempt for the current quiz version.",
+  ],
+  gradebookScore: [
+    "Bester Versuch: {{score}} % (Quizfassung {{version}})",
+    "Best attempt: {{score}}% (quiz version {{version}})",
+  ],
+  gradebookPreview: ["Vorschau: {{grade}}", "Preview: {{grade}}"],
+  gradebookPublished: [
+    "Freigegebene Note: {{grade}} (Fassung {{revision}})",
+    "Published grade: {{grade}} (revision {{revision}})",
+  ],
+  gradebookUnpublished: [
+    "Noch keine Note freigegeben.",
+    "No grade has been published yet.",
+  ],
+  gradebookPublish: ["Note freigeben", "Publish grade"],
+  gradebookCorrect: ["Note korrigieren", "Correct grade"],
+  gradebookValue: ["Neue Note", "New grade"],
+  gradebookSelectBand: ["Stufe wählen", "Select a band"],
+  gradebookReason: ["Interne Begründung", "Internal reason"],
+  gradebookSaveCorrection: ["Korrektur freigeben", "Publish correction"],
+  gradebookCancelCorrection: ["Korrektur abbrechen", "Cancel correction"],
+  gradebookRecalculate: [
+    "Mit aktueller Vorschau neu bewerten",
+    "Recalculate using current preview",
+  ],
+  gradebookPublishRecalculation: [
+    "Neue Berechnung freigeben",
+    "Publish recalculated grade",
+  ],
+  gradebookHistory: ["Notenverlauf", "Grade history"],
+  gradebookHistorySource: [
+    "Freigabe am {{date}} · Quizfassung {{quiz}} · Notenskala {{policy}}",
+    "Published on {{date}} · Quiz version {{quiz}} · Grading scale {{policy}}",
+  ],
+  gradebookOlderGrades: ["Ältere Fassungen laden", "Load older revisions"],
+  gradebookHistoryLoadFailed: [
+    "Ältere Fassungen konnten nicht geladen werden.",
+    "Older revisions could not be loaded.",
+  ],
+  gradebookExport: [
+    "Freigegebene Noten als CSV exportieren",
+    "Export published grades as CSV",
+  ],
+  gradebookExportEmpty: [
+    "Für diesen Kurs sind noch keine Noten freigegeben.",
+    "This course has no published grades yet.",
+  ],
+  gradebookExportFailed: [
+    "Der Notenexport ist fehlgeschlagen.",
+    "The grade export failed.",
+  ],
+  gradebookPrevious: ["Vorherige Seite", "Previous page"],
+  gradebookNext: ["Nächste Seite", "Next page"],
+  gradebookConflict: [
+    "Die Vorschau ist nicht mehr aktuell. Lade das Notenbuch neu und prüfe die Werte vor der Freigabe.",
+    "The preview has changed. Refresh the gradebook and review the values before publishing.",
+  ],
+  gradebookSaveFailed: [
+    "Die Änderung konnte nicht gespeichert werden.",
+    "The change could not be saved.",
+  ],
   materialAllCourses: ["Alle freigegebenen Kurse", "All available courses"],
   materialSearch: ["Nach Dateiname suchen", "Search by file name"],
   materialSearchHint: [

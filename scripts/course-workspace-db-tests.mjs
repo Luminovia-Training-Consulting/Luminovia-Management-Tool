@@ -1,3 +1,4 @@
+/** Exercise course workspace RPCs with fictional actors in an isolated database. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
@@ -93,6 +94,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             q(JSON.stringify(payload)),
             String(version),
         ]);
+    const gradebook = (who, course = run, offset = 0, limit = 20) =>
+        rpc(who, "course_gradebook", [q(course), String(offset), String(limit)]);
     let count = 0;
     const check = async (name, fn) => {
         await fn();
@@ -731,6 +734,150 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.notEqual(replacement, completion);
         },
     );
+    await check("Gradebook scopes previews and publishes and corrects a learner's grade by policy and revision", async () => {
+        // Reuse the mini-quiz's two attempts and give the peer a separate attempt to check learner scope.
+        const peerAttempt = await action(second, "quiz_attempt", {answers: [1], request_id: randomUUID()}, 1);
+        const initial = await gradebook(teacher);
+        const learnerRow = (page) => page.learners.find(({user_id}) => user_id === learner);
+        const readLearnerRow = async () => learnerRow(await gradebook(teacher));
+        const own = () => gradebook(learner);
+        const best = learnerRow(initial).best_attempt;
+        const peerRow = initial.learners.find(({user_id}) => user_id === second);
+        assert.equal(initial.can_manage, true);
+        assert.equal(initial.policy, null);
+        assert.equal(initial.own_grade, null);
+        assert.equal(best.quiz_version, 1);
+        assert.equal(best.score, 100);
+        assert.equal(best.passed, true);
+        assert.equal(peerRow.best_attempt.id, peerAttempt.id);
+        assert.equal(peerRow.best_attempt.score, 0);
+        assert.equal(learnerRow(initial).preview, null);
+        assert.equal(learnerRow(initial).grade, null);
+        const page = await gradebook(teacher, run, 1, 1);
+        assert.equal(page.total, 3);
+        assert.equal(page.offset, 1);
+        assert.equal(page.limit, 1);
+        assert.deepEqual(page.learners, initial.learners.slice(1, 2));
+
+        const bandPolicy = {scheme: "bands", bands: [{minimum: 80, label: "Pass"}, {minimum: 0, label: "Review"}]};
+        const percentPolicy = {scheme: "percentage", bands: []};
+        const publish = {user_id: learner, attempt_id: best.id, expected_revision: 0, reason: ""};
+        for (const who of [foreign, client]) await assert.rejects(gradebook(who), /42501/);
+        await assert.rejects(gradebook(teacher, current), /42501/);
+        await assert.rejects(action(teacher, "gradebook_policy", bandPolicy, 0, current), /42501/);
+        for (const who of [foreign, client, learner]) {
+            await assert.rejects(action(who, "gradebook_policy", bandPolicy), /42501/);
+        }
+        assert.equal((await action(teacher, "gradebook_policy", bandPolicy)).version, 1);
+        const bandPage = await gradebook(teacher);
+        const {version, scheme, bands} = bandPage.policy;
+        assert.deepEqual({version, scheme, bands}, {version: 1, ...bandPolicy});
+        assert.deepEqual(learnerRow(bandPage).preview, {grade_percent: null, grade_label: "Pass"});
+        assert.deepEqual(await own(), {
+            can_manage: false, policy: null, learners: [], own_grade: null, total: 0, offset: 0, limit: 20,
+        });
+
+        await assert.rejects(action(learner, "gradebook_publish", publish, 1), /42501/);
+        await assert.rejects(action(teacher, "gradebook_publish", {...publish, user_id: foreign}, 1), /42501/);
+        await assert.rejects(action(teacher, "gradebook_publish", {...publish, attempt_id: peerAttempt.id}, 1), /PT409/);
+        await assert.rejects(action(teacher, "gradebook_publish", publish, 0), /PT409/);
+        assert.equal((await action(teacher, "gradebook_publish", publish, 1)).revision, 1);
+        const {reason: initialReason, ...publishedGrade} = (await readLearnerRow()).grade;
+        const source = {attempt_id: best.id, quiz_version: 1, score: 100, passed: true};
+        assert.equal(initialReason, null);
+        assert.ok(Number.isFinite(Date.parse(publishedGrade.published_at)));
+        assert.deepEqual(publishedGrade, {
+            ...source, revision: 1, policy_version: 1, grade_percent: null, grade_label: "Pass",
+            corrected: false, published_at: publishedGrade.published_at,
+        });
+        assert.deepEqual((await own()).own_grade, publishedGrade);
+        assert.deepEqual(await gradebook(second), {
+            can_manage: false, policy: null, learners: [], own_grade: null, total: 0, offset: 0, limit: 20,
+        });
+
+        // Publishing a policy changes the preview, not the stored grade. Corrections use both CAS versions.
+        await assert.rejects(action(admin, "gradebook_policy", percentPolicy, 0), /PT409/);
+        assert.equal((await action(admin, "gradebook_policy", percentPolicy, 1)).version, 2);
+        assert.deepEqual((await readLearnerRow()).preview, {grade_percent: 100, grade_label: null});
+        assert.deepEqual((await own()).own_grade, publishedGrade);
+        const correct = {user_id: learner, grade_value: "85", expected_revision: 1, reason: "Reviewed fictional assessment"};
+        await assert.rejects(action(learner, "gradebook_correct", correct, 2), /42501/);
+        await assert.rejects(action(teacher, "gradebook_correct", correct, 1), /PT409/);
+        await assert.rejects(action(teacher, "gradebook_correct", {...correct, expected_revision: 0}, 2), /PT409/);
+        await assert.rejects(action(teacher, "gradebook_correct", {...correct, reason: ""}, 2), /22023/);
+        assert.equal((await action(teacher, "gradebook_correct", correct, 2)).revision, 2);
+        await assert.rejects(action(teacher, "gradebook_correct", correct, 2), /PT409/);
+        const {reason, ...correctedGrade} = (await readLearnerRow()).grade;
+        assert.equal(reason, correct.reason);
+        assert.ok(Number.isFinite(Date.parse(correctedGrade.published_at)));
+        assert.deepEqual(correctedGrade, {
+            ...source, revision: 2, policy_version: 2, grade_percent: 85, grade_label: null,
+            corrected: true, published_at: correctedGrade.published_at,
+        });
+        const learnerPage = await own();
+        assert.deepEqual(learnerPage, {
+            can_manage: false, policy: null, learners: [], own_grade: correctedGrade, total: 0, offset: 0, limit: 20,
+        });
+
+        // A replacement quiz supplies a new preview, but cannot rewrite either retained grade revision.
+        await action(teacher, "quiz_config", {
+            questions: [{prompt: "Read a parent directory?", options: ["ls ..", "pwd"], correct: 0}],
+            pass_percent: 80, max_attempts: 2, published: true,
+        }, 1);
+        assert.equal((await readLearnerRow()).best_attempt, null);
+        const newAttempt = await action(learner, "quiz_attempt", {answers: [1], request_id: randomUUID()}, 2);
+        const replacementRow = await readLearnerRow();
+        assert.equal(replacementRow.best_attempt.id, newAttempt.id);
+        assert.equal(replacementRow.best_attempt.quiz_version, 2);
+        assert.deepEqual(replacementRow.preview, {grade_percent: 0, grade_label: null});
+        await assert.rejects(action(teacher, "gradebook_publish", {...publish, expected_revision: 2, reason}, 2), /PT409/);
+        assert.deepEqual(replacementRow.grade, {...correctedGrade, reason});
+        assert.deepEqual(await own(), learnerPage);
+        const readHistory = (who, user = learner, before = null, limit = 20, course = run) =>
+            actor(who, `select public.course_gradebook_history(${q(course)},
+              ${user === null ? "null" : q(user)}, ${before ?? "null"}, ${limit})`).then(JSON.parse);
+        const exportGrades = (who, course = run) =>
+            actor(who, `select public.course_gradebook_export(${q(course)})`).then(JSON.parse);
+        const original = { ...publishedGrade, reason: null };
+        const corrected = { ...correctedGrade, reason };
+        assert.deepEqual(await readHistory(teacher, learner, null, 1), {
+            revisions: [corrected], next_before: 2,
+        });
+        assert.deepEqual(await readHistory(teacher, learner, 2, 1), {
+            revisions: [original], next_before: null,
+        });
+        assert.deepEqual(await readHistory(learner, null), {
+            revisions: [correctedGrade, publishedGrade], next_before: null,
+        });
+        await assert.rejects(readHistory(second), /42501/);
+        await assert.rejects(readHistory(client), /42501/);
+        await assert.rejects(readHistory(teacher, learner, null, 0), /22023/);
+        await assert.rejects(readHistory(teacher, learner, null, 20, current), /42501/);
+        await assert.rejects(exportGrades(learner), /42501/);
+        await assert.rejects(exportGrades(client), /42501/);
+        assert.deepEqual((await exportGrades(teacher)).map(({user_id, grade}) => ({user_id, grade})), [
+            {user_id: learner, grade: correctedGrade},
+        ]);
+
+        // Competing releases of the replacement quiz append exactly one revision.
+        const replace = {...publish, attempt_id: newAttempt.id, expected_revision: 2, reason: "New quiz attempt reviewed"};
+        const concurrentReleases = await Promise.allSettled([
+            action(teacher, "gradebook_publish", replace, 2),
+            action(admin, "gradebook_publish", replace, 2),
+        ]);
+        assert.deepEqual(concurrentReleases.filter(({status}) => status === "fulfilled").map(({value}) => value), [{revision: 3}]);
+        assert.match(concurrentReleases.find(({status}) => status === "rejected").reason.message, /PT409/);
+        const replacementGrade = (await own()).own_grade;
+        assert.equal(replacementGrade.attempt_id, newAttempt.id);
+        assert.equal(replacementGrade.quiz_version, 2);
+        assert.equal(replacementGrade.grade_percent, 0);
+        assert.equal(replacementGrade.passed, false);
+        assert.deepEqual(await readHistory(teacher), {
+            revisions: [{...replacementGrade, reason: replace.reason}, corrected, original],
+            next_before: null,
+        });
+        assert.deepEqual((await exportGrades(teacher)).map(({grade}) => grade), [replacementGrade]);
+    });
     await check(
         "Client repeat booking creates only a fresh idempotent request with future dates and retained quote",
         async () => {
@@ -807,10 +954,12 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             );
             await assert.rejects(workspace(client), /42501/);
             await assert.rejects(workspace(learner), /42501/);
+            await assert.rejects(gradebook(learner), /42501/);
             await sql(
                 `update public.profiles set active=false where id=${q(teacher)}`,
             );
             await assert.rejects(workspace(teacher), /42501/);
+            await assert.rejects(gradebook(teacher), /42501/);
         },
     );
     console.log(`Passed ${count} real course workspace PostgreSQL groups.`);

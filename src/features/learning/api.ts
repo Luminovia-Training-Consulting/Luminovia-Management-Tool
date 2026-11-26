@@ -5,6 +5,12 @@ import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import type { WorkspaceAttendanceHistory } from "./attendance-schema";
 import type { CourseCurriculum } from "./course-authoring-schema";
+import {
+  gradebookPageSize,
+  type CourseGradebook,
+  type CourseGradebookExportRow,
+  type CourseGradebookHistory,
+} from "./course-gradebook-schema";
 
 export interface CourseOverview {
   id: string;
@@ -166,6 +172,11 @@ export const courseWorkspaceKey = (actor: string, run: string) =>
   ["course-workspace", actor, run] as const;
 export const courseContentStudioKey = (actor: string, run: string) =>
   ["course-content-studio", actor, run] as const;
+export const courseGradebookKey = (
+  actor: string,
+  run: string,
+  offset: number,
+) => ["course-gradebook", actor, run, offset] as const;
 /** Own current memberships determine this hub; its actor key prevents cache reuse across accounts. */
 export const courseHubQuery = (actor: string) =>
   queryOptions({
@@ -193,6 +204,63 @@ export const courseWorkspaceQuery = (actor: string, run: string) =>
     staleTime: 15000,
     retry: false,
   });
+/** Current course grades are permission-projected and paginated by the server. */
+export const courseGradebookQuery = (
+  actor: string,
+  run: string,
+  offset: number,
+) =>
+  queryOptions({
+    queryKey: courseGradebookKey(actor, run, offset),
+    queryFn: async ({ signal }) => {
+      requireOnline();
+      const { data, error } = await db()
+        .rpc("course_gradebook", {
+          p_run_id: run,
+          p_offset: offset,
+          p_limit: gradebookPageSize,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as CourseGradebook;
+    },
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+export const courseGradebookHistoryKey = (actor: string, run: string) =>
+  ["course-gradebook-history", actor, run] as const;
+
+/** Load one revision page using the server cursor and the current role projection. */
+export async function fetchCourseGradebookHistory(
+  run: string,
+  learner: string | null,
+  before: number | null,
+  signal: AbortSignal,
+) {
+  requireOnline();
+  const { data, error } = await db()
+    .rpc("course_gradebook_history", {
+      p_run_id: run,
+      p_user_id: learner,
+      p_before_revision: before,
+      p_limit: gradebookPageSize,
+    })
+    .abortSignal(signal);
+  if (error) throw error;
+  return data as CourseGradebookHistory;
+}
+
+/** Request a single database snapshot of published quiz grades for staff CSV. */
+export async function fetchCourseGradebookExport(run: string) {
+  requireOnline();
+  const { data, error } = await db().rpc("course_gradebook_export", {
+    p_run_id: run,
+  });
+  if (error) throw error;
+  return data as CourseGradebookExportRow[];
+}
+
 /** Recheck only the caller-scoped Premium link state for a selected base course row. */
 export const courseWorkspaceEntitlementQuery = (
   actor: string,
