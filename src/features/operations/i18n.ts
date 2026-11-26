@@ -5,6 +5,105 @@
 import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  crmPipelineTitle: ["Vertriebspipeline", "Sales pipeline"],
+  crmPipelineDescription: [
+    "Vertriebschancen dieses Unternehmens. Phasenwechsel werden mit Versionsverlauf gespeichert.",
+    "Sales opportunities for this company. Stage changes are stored with a version history.",
+  ],
+  crmArchivedReadOnly: [
+    "Dieses Unternehmen ist archiviert. Chancen und Verlauf können angesehen, aber nicht geändert werden.",
+    "This company is archived. Opportunities and history remain viewable but cannot be changed.",
+  ],
+  crmOpportunityTitle: ["Vertriebschance", "Opportunity"],
+  crmEstimatedValue: ["Geschätzter Wert", "Estimated value"],
+  crmCurrency: ["Währung", "Currency"],
+  crmCreateOpportunity: ["Chance anlegen", "Create opportunity"],
+  crmValueUnspecified: ["Wert nicht angegeben", "Value not specified"],
+  crmSaveError: [
+    "Die Vertriebschance wurde nicht bestätigt. Prüfe die Eingaben und versuche es erneut.",
+    "The opportunity was not confirmed. Check the values and retry.",
+  ],
+  crmStaleOpportunity: [
+    "Die Chance wurde zwischenzeitlich geändert. Der aktuelle Stand wurde neu geladen; prüfe ihn vor dem nächsten Phasenwechsel.",
+    "This opportunity changed in the meantime. The latest state was reloaded; review it before the next stage change.",
+  ],
+  crmMoveError: [
+    "Die Phase konnte nicht geändert werden. Der gespeicherte Stand bleibt maßgeblich.",
+    "The stage could not be changed. The persisted state remains authoritative.",
+  ],
+  crmNoOpportunities: [
+    "Für dieses Unternehmen sind noch keine Vertriebschancen angelegt.",
+    "This company has no sales opportunities yet.",
+  ],
+  crmHistoryToggle: ["Verlauf", "History"],
+  crmHistoryToggleFor: ["Verlauf für {{title}}", "History for {{title}}"],
+  crmHistoryEmpty: [
+    "Noch kein Verlauf vorhanden.",
+    "No history is available yet.",
+  ],
+  crmOpportunityCreated: ["Vertriebschance angelegt", "Opportunity created"],
+  crmOpportunityStageChanged: [
+    "Phase von {{from}} zu {{to}} geändert",
+    "Stage changed from {{from}} to {{to}}",
+  ],
+  crmOpportunityCount: [
+    "{{count}} Vertriebschancen",
+    "{{count}} opportunities",
+  ],
+  crmSearchLabel: ["Vertriebschancen durchsuchen", "Search opportunities"],
+  crmStageFilterLabel: ["Nach Phase filtern", "Filter by stage"],
+  crmAllStages: ["Alle Phasen", "All stages"],
+  crmNoMatchingOpportunities: [
+    "Keine Vertriebschancen entsprechen diesen Filtern.",
+    "No opportunities match these filters.",
+  ],
+  crmNoOpportunitiesOnPage: [
+    "Auf dieser Seite sind keine Vertriebschancen mehr vorhanden. Auf der vorherigen Seite können noch Ergebnisse stehen.",
+    "There are no opportunities on this page. Earlier pages may still contain results.",
+  ],
+  crmUpdatingResults: [
+    "Vertriebsergebnisse werden aktualisiert …",
+    "Updating sales results …",
+  ],
+  crmOpportunityCountOnPage: [
+    "{{count}} Vertriebschancen auf dieser Seite",
+    "{{count}} opportunities on this page",
+  ],
+  crmPaginationLabel: ["Seiten der Vertriebspipeline", "Sales pipeline pages"],
+  crmPreviousPage: ["Vorherige Seite", "Previous page"],
+  crmNextPage: ["Nächste Seite", "Next page"],
+  crmPageNumber: ["Seite {{page}}", "Page {{page}}"],
+  crmPageLimitReached: [
+    "Das maximale Seitenlimit wurde erreicht. Verfeinere die Suche oder den Phasenfilter.",
+    "The maximum page limit was reached. Narrow the search or stage filter.",
+  ],
+  crmMoveOpportunity: [
+    "Phase für {{title}} ändern",
+    "Change stage for {{title}}",
+  ],
+  crmFormValidation: [
+    "Gib einen Titel und optional einen nicht negativen Wert mit höchstens zwei Nachkommastellen ein.",
+    "Enter a title and, optionally, a non-negative value with at most two decimal places.",
+  ],
+  "crmStage.identified": ["Erfasst", "Identified"],
+  "crmStage.outreach_qualified": [
+    "Für Ansprache qualifiziert",
+    "Qualified for outreach",
+  ],
+  "crmStage.contacted": ["Kontaktiert", "Contacted"],
+  "crmStage.response_received": ["Antwort erhalten", "Response received"],
+  "crmStage.qualified_opportunity": [
+    "Qualifizierte Chance",
+    "Qualified opportunity",
+  ],
+  "crmStage.meeting_scheduled": ["Termin vereinbart", "Meeting scheduled"],
+  "crmStage.negotiation": ["Verhandlung", "Negotiation"],
+  "crmStage.proposal_submitted": ["Angebot eingereicht", "Proposal submitted"],
+  "crmStage.contract_pending": ["Vertrag ausstehend", "Contract pending"],
+  "crmStage.contract_signed": ["Vertrag unterzeichnet", "Contract signed"],
+  "crmStage.active_customer": ["Aktiver Kunde", "Active customer"],
+  "crmStage.lost": ["Verloren", "Lost"],
+  "crmStage.dormant": ["Ruhend", "Dormant"],
   courseListCount: [
     "{{count}} von {{total}} Einträgen angezeigt",
     "{{count}} of {{total}} entries shown",
