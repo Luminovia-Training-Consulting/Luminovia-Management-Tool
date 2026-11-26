@@ -4,7 +4,7 @@
  */
 import { useRequestKey } from "../../lib/request-key";
 import { useSearchParams } from "react-router-dom";
-import { lazy, Suspense, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,36 +37,6 @@ import type { ContractRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import "./i18n";
 import "./commercial.css";
-
-const SubjectDocuments = lazy(() =>
-  import("../files/files").then(({ SubjectDocuments }) => ({
-    default: SubjectDocuments,
-  })),
-);
-
-/** Keep unregistered PDFs separate from registered agreements and bind both upload and listing to self. */
-function OwnContractFiles({ actor }: { actor: string }) {
-  const { t } = useTranslation("commercial");
-  const [showFiles, setShowFiles] = useState(false);
-  return (
-    <section className="panel section-stack">
-      <p>{t("ownContractUploadHint")}</p>
-      <CommercialPdfUpload
-        kind="contract"
-        ownerId={actor}
-        label={t("contractPdf")}
-      />
-      <details onToggle={(event) => setShowFiles(event.currentTarget.open)}>
-        <summary>{t("ownContractFiles")}</summary>
-        {showFiles && (
-          <Suspense fallback={<Loading />}>
-            <SubjectDocuments ownerId={actor} kind="contract" />
-          </Suspense>
-        )}
-      </details>
-    </section>
-  );
-}
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
@@ -730,9 +700,6 @@ export function ContractsPage() {
             )
           )}
         </div>
-        {access.isSuccess && !effectiveAll && (
-          <OwnContractFiles key={actor} actor={actor} />
-        )}
         {access.isPending || records.isPending ? (
           <Loading />
         ) : access.isError || records.isError ? (
