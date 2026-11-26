@@ -138,13 +138,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const searchPath = "/rpc/search_course_materials";
     const metadataPath = "/rpc/set_course_material_metadata";
     const metadata = { title: "Fictional catalogue title", description: "", subject: "", licence: "", language: "", tags: ["catalogue-fixture"] };
-    const revise = (who, id = share, throughGate = true) =>
+    const revise = (who, id = share, throughGate = true, content = metadata, revision = 0) =>
       actor(who, (throughGate ? gate(metadataPath) : "") +
-        `select public.set_course_material_metadata(${q(id)},0,${q(JSON.stringify(metadata))}::jsonb)`).then(JSON.parse);
+        `select public.set_course_material_metadata(${q(id)},${revision},${q(JSON.stringify(content))}::jsonb)`).then(JSON.parse);
     const importPath = "/rpc/import_table_row";
-    const search = (who) =>
+    const search = (who, filter = "material") =>
       actor(who, gate(searchPath) +
-        `select public.search_course_materials(${q(run)},null,'material',0)`).then(JSON.parse);
+        `select public.search_course_materials(${q(run)},null,${q(filter)},0)`).then(JSON.parse);
     const enrolmentGate = (who) => actor(who, gate(importPath));
     const shareCall = (id = sharedVersion, course = run, audience = "all") =>
       `select public.academy_course_material_action(${q(course)},'resource_share',${q(id)},${q(audience)},'material')`;
@@ -211,6 +211,22 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal(await revise(teacher), 1);
     assert.deepEqual((await search(learner))[0].metadata, metadata);
     assert.equal((await search(teacher)).find(({id}) => id === staffShare).metadata, null);
+    const master = { ...metadata, library_master: true };
+    assert.equal(await revise(teacher, share, true, master, 1), 2);
+    assert.equal((await search(teacher, "master"))[0].id, share);
+    assert.deepEqual(await search(learner, "master"), []);
+    const archive = { ...metadata, library_archived: true };
+    await assert.rejects(revise(manager, share, true, archive, 2), /42501/);
+    assert.equal(await revise(teacher, share, true, archive, 2), 3);
+    assert.deepEqual(await search(learner), []);
+    assert.deepEqual(await search(learner, "archived"), []);
+    assert.equal((await search(teacher, "archived"))[0].id, share);
+    const archivedAccess = await access(learner);
+    assert.equal(archivedAccess.id, sharedVersion);
+    assert.equal(await revise(teacher, share, true, { ...metadata, library_archived: false }, 3), 4);
+    assert.deepEqual(await search(teacher, "archived"), []);
+    assert.equal((await search(learner))[0].id, share);
+
     const incoming = "Fictional newly scanned teaching material";
     const digest = hash(incoming);
     const uploadId = randomUUID();
@@ -815,6 +831,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.ok(graceMaterials.some((row) => row.id === share));
     assert.ok(graceMaterials.every((row) => !row.can_upload));
     assert.ok(graceMaterials.every((row) => !row.can_edit_metadata));
+    assert.equal((await search(teacher, "master"))[0].can_edit_metadata, false);
+    await assert.rejects(revise(teacher, share, true, archive, 4), /42501/);
     await assert.rejects(revise(teacher), /42501/);
     await assert.rejects(revise(teacher, share, false), /42501/);
     await assert.rejects(enrolmentGate(manager), /42501/);

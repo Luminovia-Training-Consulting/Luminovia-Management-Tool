@@ -41,6 +41,7 @@ const fixture = vi.hoisted(() => ({
   }[],
   revise: vi.fn(),
   nextPageForbidden: false,
+  roles: ["participant"] as string[],
   calls: [] as {
     p_course_id?: string;
     p_search?: string;
@@ -68,7 +69,13 @@ vi.mock("../../lib/supabase", () => ({
                   (file) =>
                     (!args.p_course_id ||
                       args.p_course_id === file.course_id) &&
-                    (!args.p_category || args.p_category === file.category) &&
+                    (args.p_category === "archived"
+                      ? file.metadata?.library_archived === true
+                      : !file.metadata?.library_archived &&
+                        (args.p_category === "master"
+                          ? file.metadata?.library_master === true
+                          : !args.p_category ||
+                            args.p_category === file.category)) &&
                     file.name
                       .toLowerCase()
                       .includes((args.p_search ?? "").toLowerCase()),
@@ -89,7 +96,10 @@ vi.mock("../../lib/supabase", () => ({
           },
     from: () => ({
       select: () => ({
-        eq: async () => ({ data: [{ role: "participant" }], error: null }),
+        eq: async () => ({
+          data: fixture.roles.map((role) => ({ role })),
+          error: null,
+        }),
       }),
     }),
   }),
@@ -108,6 +118,7 @@ beforeEach(async () => {
   fixture.calls = [];
   fixture.revise.mockReset();
   fixture.nextPageForbidden = false;
+  fixture.roles = ["participant"];
   const base = {
     description: "",
     syllabus: "",
@@ -478,4 +489,78 @@ it("hides the material already shown when a continuation reports permission revo
   expect(
     screen.getByRole("button", { name: "Erneut versuchen" }),
   ).toBeVisible();
+});
+
+it("archives and restores a versioned master while returning focus to the catalogue filter", async () => {
+  await i18n.changeLanguage("en");
+  fixture.roles = ["lecturer"];
+  fixture.materials = [
+    {
+      id: "archive-fixture",
+      course_id: "soon",
+      course_title: "Upcoming course",
+      name: "Historic sample.txt",
+      category: "material",
+      version: 2,
+      can_upload: false,
+      can_edit_metadata: true,
+      metadata_revision: 1,
+      metadata: {
+        title: "Sample",
+        description: "Exact fixture",
+        subject: "",
+        licence: "",
+        language: "en",
+        tags: [],
+        library_master: true,
+      },
+    },
+  ];
+  fixture.revise.mockImplementation(
+    async ({ p_metadata, p_expected_revision }) => {
+      fixture.materials = [
+        {
+          ...fixture.materials[0],
+          metadata_revision: p_expected_revision + 1,
+          metadata: p_metadata,
+        },
+      ];
+      return { error: null };
+    },
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/learning?view=materials"]}>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByText("Manage library entry"));
+  fireEvent.click(screen.getByRole("button", { name: "Archive in library" }));
+  await screen.findByText("Library entry archived.");
+  const filter = screen.getByLabelText("Document category");
+  expect(filter).toHaveFocus();
+  expect(fixture.revise).toHaveBeenLastCalledWith({
+    p_resource_id: "archive-fixture",
+    p_expected_revision: 1,
+    p_metadata: expect.objectContaining({
+      library_archived: true,
+      library_master: true,
+    }),
+  });
+  fireEvent.change(filter, { target: { value: "archived" } });
+  fireEvent.click(await screen.findByText("Manage library entry"));
+  fireEvent.click(screen.getByRole("button", { name: "Restore in library" }));
+  await screen.findByText("Library entry restored.");
+  expect(filter).toHaveFocus();
+  fireEvent.change(filter, { target: { value: "master" } });
+  expect(await screen.findByText("Historic sample.txt")).toBeVisible();
+  expect(fixture.revise).toHaveBeenLastCalledWith({
+    p_resource_id: "archive-fixture",
+    p_expected_revision: 2,
+    p_metadata: expect.objectContaining({
+      library_archived: false,
+      library_master: true,
+    }),
+  });
 });

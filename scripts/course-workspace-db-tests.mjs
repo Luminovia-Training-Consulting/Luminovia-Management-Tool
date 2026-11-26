@@ -253,7 +253,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 rpc(who, "search_course_materials", [
                     course ? q(course) : "null", q(search), category ? q(category) : "null", String(offset),
                 ]);
-            const match = {id: resource, course_id: run, name: "Agreed.pdf", version: 1, category: "material"};
+            const match = {id: resource, course_id: run, name: "Agreed.pdf", version: 1, category: "material", audience: "participants"};
             assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
             assert.deepEqual(await materialSearch(learner), [{
                 ...match, audience: "participants", course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
@@ -333,6 +333,33 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(await revise(admin, 6, metadata), 6);
             await assert.rejects(revise(admin, 6, { ...metadata, competencies: [{...competencyLink, title: "Forged"}] }), /22023/);
 
+            const displayMode = (who, mode) => materialSearch(who, run, "AGREED", mode);
+            const masterMetadata = { ...metadata, library_master: true };
+            assert.equal(await revise(admin, 6, masterMetadata), 7);
+            assert.equal((await displayMode(admin, "master"))[0].id, resource);
+            assert.equal((await displayMode(teacher, "master"))[0].id, resource);
+            assert.deepEqual(await displayMode(learner, "master"), []);
+            await assert.rejects(revise(teacher, 7, { ...metadata, library_archived: true }), /42501/);
+            await assert.rejects(revise(admin, 7, { ...metadata, library_archived: "true" }), /22023/);
+
+            const archived = { ...metadata, library_archived: true };
+            assert.equal(await revise(admin, 7, archived), 8);
+            assert.equal(await revise(admin, 7, archived), 8);
+            assert.deepEqual(await displayMode(admin, "master"), []);
+            assert.deepEqual(await displayMode(admin, "material"), []);
+            assert.deepEqual(await displayMode(learner, "material"), []);
+            assert.deepEqual(await displayMode(learner, "archived"), []);
+            assert.deepEqual(await displayMode(foreign, "archived"), []);
+            assert.equal((await displayMode(teacher, "archived"))[0].metadata_revision, 8);
+            assert.equal((await displayMode(admin, "archived"))[0].metadata.library_master, true);
+            const pinned = await rpc(learner, "course_document_access", [q("resource"), q(resource)]);
+            assert.equal(pinned.id, versionId);
+            await assert.rejects(revise(admin, 7, { ...metadata, library_archived: false }), /PT409/);
+            assert.equal(await revise(admin, 8, { ...metadata, library_archived: false }), 9);
+            assert.deepEqual(await displayMode(admin, "archived"), []);
+            assert.equal((await displayMode(learner, "material"))[0].id, resource);
+            assert.equal((await displayMode(admin, "master"))[0].id, resource);
+            assert.equal((await history(admin))[1].content.library_archived, true);
             const targets = (who) => rpc(who, "course_material_reuse_targets", [q(resource), q("")]);
             const reuse = (who, destination) => rpc(who, "reuse_course_material", [q(resource), q(destination), "true"]);
             const foreignRun = randomUUID();
@@ -356,6 +383,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
 
             assert.equal((await materialSearch(admin, current))[0].metadata.description, metadata.description);
             assert.equal((await materialSearch(admin, current))[0].metadata.competencies, undefined);
+            assert.equal((await materialSearch(admin, current))[0].metadata.library_master, undefined);
             assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, true]]);
             await revise(admin, 1, { ...metadata, title: "Destination-only title" }, reused);
             assert.equal((await materialSearch(admin, run))[0].metadata.title, "Fictional workbook");
