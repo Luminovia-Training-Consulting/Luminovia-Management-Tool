@@ -1483,6 +1483,10 @@ test("scoped LMS assessment exports protect small cohorts and company views", as
     await login(page, f.manager.email);
     await page.goto("/admin/finance/analytics/learning");
     await chooseLanguage(page);
+    // The staff report spans all companies. Select this fixture explicitly
+    // before exporting, even when earlier journeys have filled its first page.
+    await page.getByRole("searchbox").fill(f.title);
+    await page.getByRole("button", { name: english ? "Search" : "Suchen", exact: true }).click();
     const assessmentName = english ? "Assessments and submissions by course" : "Bewertungen und Abgaben je Kurs";
     const assessment = page.getByRole("region", { name: assessmentName });
     const row = assessment.getByRole("row").filter({ hasText: f.title });
