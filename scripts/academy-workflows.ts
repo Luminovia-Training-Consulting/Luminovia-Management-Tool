@@ -99,6 +99,10 @@ const groups = {
     ["Private Lernportfolios", "Private learning portfolios"],
     "readLearningPortfolio changeLearningPortfolio",
   ],
+  lti: [
+    ["Externe LTI-Lernwerkzeuge", "External LTI learning tools"],
+    "readCourseLtiTools saveCourseLtiTool",
+  ],
   chat: [
     ["Kurschat und Anhänge", "Course chat and attachments"],
     "readAcademyCourseChatProtection setAcademyCourseChatProtection ensureAcademyCourseChat listAcademyCourseChatRooms readAcademyCourseChatMessages sendAcademyCourseChatAttachment sendAcademyCourseChatMessage",

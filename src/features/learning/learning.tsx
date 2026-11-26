@@ -75,6 +75,7 @@ import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
 import { CourseGradebook } from "./course-gradebook";
+import { CourseLtiTools } from "./lti-course";
 import {
   CompletionRequirements,
   StaffCompletionRequirements,
@@ -1173,6 +1174,7 @@ function CourseWorkspaceLayout({
     course.lms_enabled && (learner || (canEdit && course.access.staff));
   const hasGradebook = course.lms_enabled && (learner || course.access.staff);
   const hasPortfolioShares = course.lms_enabled && course.access.teacher;
+  const hasLti = course.lms_enabled && (course.access.staff || learner);
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
     ...(hasCurriculum
@@ -1202,6 +1204,7 @@ function CourseWorkspaceLayout({
     ...(hasPortfolioShares
       ? [{ id: "course-portfolio", label: t("portfolioShared") }]
       : []),
+    ...(hasLti ? [{ id: "course-lti", label: t("ltiTools") }] : []),
     ...(hasGradebook
       ? [{ id: "course-gradebook", label: t("gradebookTitle") }]
       : []),
@@ -1487,6 +1490,15 @@ function CourseWorkspaceLayout({
                   course={course.id}
                 />
               </Suspense>
+            </div>
+          )}
+          {hasLti && currentSection === "course-lti" && (
+            <div id="course-lti" className={sectionClass("course-lti")}>
+              <CourseLtiTools
+                key={course.id}
+                actor={actor}
+                course={course.id}
+              />
             </div>
           )}
           {hasGradebook && (

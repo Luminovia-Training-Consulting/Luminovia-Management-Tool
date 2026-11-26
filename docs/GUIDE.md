@@ -327,6 +327,14 @@ Before the first participant joins, open an existing **Lernprogramme / Learning 
 
 Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
 
+### External LTI learning tools
+
+A course manager can enter the client ID, login URL, registered return URL and resource URL from a manually exchanged LTI 1.3 registration. The three addresses require HTTPS. The course manager can enable or disable the deployment under **Externe Lernwerkzeuge / External learning tools**. A current learner or assigned instructor can start an enabled resource from there.
+
+The launch returns to the same tab and passes the tool a course role, pseudonymous identifiers and resource placement. The tool validates the short-lived signed launch and its OIDC state. The activation and end-point exchange for a real external tool require an authorised installation operator.
+
+For local development, provision the worker's issuer and signing key through the isolated worker environment as `LTI_PLATFORM_ISSUER` and `LTI_PLATFORM_RSA_PRIVATE_JWK` with an explicit key ID. The worker publishes only the public key at `/functions/v1/learning-lti/jwks`. Exchange that key-set URL, the HTTPS issuer and the portal's `/lti/authorize` URL as one manual registration. The local slice accepts the tool's GET authorization request in the originating tab and sends the ID token and state as a form POST to the exact registered redirect. The hosted gateway and other provider combinations still need an integration acceptance run. [LTI 1.3 Core](https://www.imsglobal.org/spec/lti/v1p3/) and [1EdTech Security Framework](https://www.imsglobal.org/spec/security/v1p0/).
+
 ### Course completion status
 
 In **Lernaktivitäten / Learning activities**, open **Mein Abschlussdokument / My completion document**. The status lists current requirements still open, including enrolment completion, course end, verified attendance, a published quiz or an attendance review after revocation. Use **Aktualisieren / Refresh** after the evidence changes. Once all requirements are met, choose **Voraussetzungen prüfen und Dokument ausstellen / Check eligibility and issue document**. The server checks the same requirements again before issuance.

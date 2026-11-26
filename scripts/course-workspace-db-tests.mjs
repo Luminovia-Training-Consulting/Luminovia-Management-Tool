@@ -1062,6 +1062,79 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         assert.deepEqual((await read(teacher, run)).shares, []);
         assert.ok((await read(learner, null, id)).entries[0].shares[0].revoked_at);
     });
+    await check("LTI tool registration and launch bind current course roles, Auth sessions and one-time proof", async () => {
+        const deployment = randomUUID();
+        const managerSession = randomUUID();
+        const learnerSession = randomUUID();
+        const otherSession = randomUUID();
+        const teacherSession = randomUUID();
+        const proof = randomUUID();
+        const login = "https://lti-fixture.example.invalid/login";
+        const target = "https://lti-fixture.example.invalid/resource";
+        const redirect = "https://lti-fixture.example.invalid/receive";
+        const clientId = "fictional-lti-tool";
+        // The replay harness emulates native Auth only for permission checks.
+        await sql(`create table if not exists auth.sessions(id uuid primary key, user_id uuid, not_after timestamptz);
+          insert into auth.sessions(id,user_id) values
+            (${q(managerSession)},${q(admin)}),(${q(learnerSession)},${q(learner)}),
+            (${q(otherSession)},${q(learner)}),(${q(teacherSession)},${q(teacher)});`);
+        const invoke = async (who, session, name, args) => JSON.parse(await sql(`
+          begin; set local role authenticated;
+          set local request.jwt.claims=${q(JSON.stringify({sub: who, role: "authenticated", aal: "aal1", session_id: session}))};
+          set local request.path=${q("/rpc/" + name)}; set local request.method='POST';
+          set local request.headers='{}'; select public.require_portal_access();
+          select to_jsonb(public.${name}(${args.join(",")})); commit;
+        `));
+        const register = (who, session, version = 0, actuallyLogin = login, active = true) =>
+            invoke(who, session, "save_course_lti_tool", [
+                q(deployment), q(run), q("Fictional LTI resource"), q(clientId), q(actuallyLogin),
+                q(redirect), q(target), active, version,
+            ]);
+        const start = (who, session) =>
+            invoke(who, session, "prepare_lti_launch", [q(deployment), q(proof)]);
+        const finish = (who, session, ready, {browser = proof, destination = redirect, nonce = "fixture-nonce", state = "fixture-state"} = {}) =>
+            invoke(who, session, "consume_lti_launch", [
+                q(ready.login_hint), q(ready.message_hint), q(browser), q(clientId), q(destination), q(nonce), q(state),
+            ]);
+        await assert.rejects(register(learner, learnerSession), /42501/);
+        await assert.rejects(register(admin, managerSession, 0, "https://other-invalid.example@fixture.example.invalid/login"), /22023/);
+        assert.equal(await register(admin, managerSession), 1);
+        await assert.rejects(register(admin, managerSession), /PT409/);
+        const learnerTools = await invoke(learner, learnerSession, "course_lti_tools", [q(run)]);
+        assert.equal(learnerTools.can_manage, false);
+        assert.equal(learnerTools.can_launch, true);
+        assert.ok(!Object.hasOwn(learnerTools.tools[0], "redirect_uri"));
+        await assert.rejects(start(admin, managerSession), /42501/);
+        const ready = await start(learner, learnerSession);
+        assert.equal(ready.target_uri, target);
+        await assert.rejects(finish(learner, otherSession, ready), /42501/);
+        await assert.rejects(finish(teacher, teacherSession, ready), /42501/);
+        await assert.rejects(finish(learner, learnerSession, ready, {browser: randomUUID()}), /42501/);
+        await assert.rejects(finish(learner, learnerSession, ready, {destination: target}), /42501/);
+        const submitted = await Promise.allSettled([
+            finish(learner, learnerSession, ready),
+            finish(learner, learnerSession, ready),
+        ]);
+        assert.equal(submitted.filter(({status}) => status === "fulfilled").length, 1);
+        const launched = submitted.find(({status}) => status === "fulfilled").value;
+        assert.equal(launched.role, "Learner");
+        assert.notEqual(launched.subject, learner);
+        assert.notEqual(launched.context_id, run);
+        const next = await start(learner, learnerSession);
+        await assert.rejects(finish(learner, learnerSession, next), /PT409/);
+        await assert.rejects(finish(learner, learnerSession, next, { nonce: "fresh-nonce" }), /PT409/);
+        const fresh = await finish(learner, learnerSession, next, {nonce: "fresh-nonce", state: "fresh-state"});
+        assert.equal(fresh.subject, launched.subject);
+        const withheld = await start(learner, learnerSession);
+        assert.equal(await register(admin, managerSession, 1, login, false), 2);
+        await assert.rejects(finish(learner, learnerSession, withheld), /42501/);
+        await assert.rejects(start(learner, learnerSession), /42501/);
+        // Signup/session entitlement is rechecked, even while the profile stays active.
+        assert.equal(await register(admin, managerSession, 2), 3);
+        const staleSession = await start(learner, learnerSession);
+        await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
+        await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);
+    });
     await check(
         "Membership and account revocation remove course documents with existing identities",
         async () => {

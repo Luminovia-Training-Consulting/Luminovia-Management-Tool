@@ -40,6 +40,7 @@ const readPaths = [
   "/rest/v1/rpc/learning_portfolio",
   "/rest/v1/rpc/course_peer_feedback",
   "/rest/v1/rpc/course_xapi_statements",
+  "/rest/v1/rpc/course_lti_tools",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -74,6 +75,7 @@ const writePaths = [
   "/rest/v1/rpc/learning_portfolio_command",
   "/rest/v1/rpc/set_learning_program_prerequisite",
   "/rest/v1/rpc/course_peer_feedback_action",
+  "/rest/v1/rpc/save_course_lti_tool",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

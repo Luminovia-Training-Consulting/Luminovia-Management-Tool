@@ -462,3 +462,7 @@ verify_jwt = false
 [functions.portal-api]
 # The handler verifies the current caller through Auth before invoking PostgREST.
 verify_jwt = false
+
+[functions.learning-lti]
+# JWKS is public. The worker separately validates Auth and exact browser origin before any launch.
+verify_jwt = false

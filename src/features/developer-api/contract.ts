@@ -53,6 +53,7 @@ import {
 import { courseSeriesPaths } from "./course-series-contract.ts";
 import { learningProgramPaths } from "./learning-program-contract.ts";
 import { portfolioPaths } from "./portfolio-contract.ts";
+import { ltiCoursePaths } from "./lti-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
@@ -1622,6 +1623,7 @@ const nativePaths = {
   ...courseSeriesPaths(),
   ...learningProgramPaths(),
   ...portfolioPaths(false),
+  ...ltiCoursePaths(false),
   ...courseEvaluationPaths(false),
   ...companyClassFeedbackPaths,
   ...learningAnalyticsPaths(false),

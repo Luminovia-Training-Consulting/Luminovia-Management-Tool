@@ -54,6 +54,11 @@ const AcademyTimetable = lazy(() =>
     default: module.AcademyTimetable,
   })),
 );
+const LtiAuthorize = lazy(() =>
+  import("../features/learning/lti-course").then((module) => ({
+    default: module.LtiAuthorize,
+  })),
+);
 const CourseWorkspacePage = lazy(() =>
   import("../features/learning/learning").then((module) => ({
     default: module.CourseWorkspacePage,
@@ -273,6 +278,7 @@ export default function AcademyRoutes() {
       <Routes>
         <Route path="/login" element={<AcademyLogin />} />
         <Route path="/help" element={<HelpCenter />} />
+        <Route path="/lti/authorize" element={<LtiAuthorize />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route element={<AcademySession />}>
           <Route
