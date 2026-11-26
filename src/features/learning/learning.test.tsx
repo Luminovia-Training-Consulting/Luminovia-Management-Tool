@@ -554,6 +554,11 @@ describe("connected course workspace", () => {
     expect(
       screen.queryByRole("button", { name: "Neue Quizfassung speichern" }),
     ).not.toBeInTheDocument();
+    const feedback = screen.getByText("Kursfeedback & Qualität", {
+      exact: true,
+    });
+    expect(feedback.closest("details")).not.toHaveAttribute("open");
+    await user.click(feedback);
     expect(
       screen.getByRole("button", { name: "Kursfeedback speichern" }),
     ).toBeVisible();

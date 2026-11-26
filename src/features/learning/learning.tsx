@@ -489,8 +489,7 @@ function Feedback({ course, actor, academy }: ActivityProps) {
   const [rating, setRating] = useState(String(course.feedback?.rating ?? 5));
   const [comment, setComment] = useState(course.feedback?.comment ?? "");
   return (
-    <section className="panel learning-panel" aria-label={t("feedback")}>
-      <h2>{t("feedback")}</h2>
+    <section aria-label={t("feedback")}>
       <p>{t("feedbackPolicy")}</p>
       {academy === "grace" && course.feedback && (
         <>
@@ -1823,12 +1822,15 @@ function CourseWorkspaceLayout({
                   academy={academy}
                 />
               )}
-              <Feedback
-                key={`feedback:${actor}:${course.id}:${course.feedback?.version ?? 0}`}
-                course={course}
-                actor={actor}
-                academy={academy}
-              />
+              <details className="panel learning-panel">
+                <summary>{t("feedback")}</summary>
+                <Feedback
+                  key={`feedback:${actor}:${course.id}:${course.feedback?.version ?? 0}`}
+                  course={course}
+                  actor={actor}
+                  academy={academy}
+                />
+              </details>
               {(course.access.staff || (learner && course.quiz?.published)) && (
                 <Quiz course={course} actor={actor} academy={academy} />
               )}

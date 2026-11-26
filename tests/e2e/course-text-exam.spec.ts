@@ -123,6 +123,12 @@ test("a learner recovers private text, submits once and sees only the released g
     await login(candidate, learner.email, /\/learning$/);
     await candidate.goto(workspace);
     const learnerExam = candidate.locator("#course-learning");
+    await expect(
+      learnerExam.getByText("Kursfeedback & Qualität", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      learnerExam.getByRole("button", { name: "Kursfeedback speichern" }),
+    ).toBeHidden();
     const examDisclosure = candidate.getByText("Freitextprüfung", {
       exact: true,
     });

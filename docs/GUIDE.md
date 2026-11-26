@@ -486,7 +486,7 @@ Use **Attach file** in a course chat to scan a file before sending it, with or w
 
 Use the attendance register to mark present, absent or excused by session, optionally recording arrival, departure and a note. Authorised staff and company contacts can see the class register, upload evidence as a protected PDF and import the session’s CSV template. Review the proposed rows before confirming the entire import. Changes after the first marking require a reason and the current version. An issued completion document must be revoked before corrections that would change its eligibility. Learners see their allowed course and completion information.
 
-Ended-course feedback is available to eligible learners and customers. Ordinary summaries omit authors and remain withheld until three responses. The server retains the author privately for eligibility and duplicates.
+Open **Kursfeedback & Qualität / Course feedback & quality** in the learning activities to leave feedback after the course ends. Eligible learners and customers can submit feedback. Ordinary summaries omit authors and appear after three responses. The server retains the author privately to check eligibility and prevent duplicate submissions.
 
 In **Mini-Quiz**, open **Fragenbank / Question bank** to search prompts and topics from the course organisation. Create a question with two to six answer options and mark the correct choice. Add a bank question to the quiz to pin the displayed revision. You can combine it with manual questions, adjust the pass threshold and attempt limit, and optionally shuffle the entire new quiz revision on save. Changes or archiving in the bank leave already published questions and accepted attempts intact.
 
