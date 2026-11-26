@@ -2,6 +2,7 @@
 import catalogue from "../../../data/native-rpc.generated.json" with { type: "json" };
 import { chatOperationDocumentation } from "./chat-operation-documentation.ts";
 import { commercialOperationDocumentation } from "./commercial-operation-documentation.ts";
+import { courseContentOperationDocumentation } from "./course-content-operation-documentation.ts";
 import { knowledgeOperationDocumentation } from "./knowledge-operation-documentation.ts";
 import { operationsRpcDocumentation } from "./operations-rpc-documentation.ts";
 
@@ -22,6 +23,7 @@ type RpcDocumentation = {
 const operationDocumentation: Record<string, RpcDocumentation | undefined> = {
   ...chatOperationDocumentation,
   ...commercialOperationDocumentation,
+  ...courseContentOperationDocumentation,
   ...knowledgeOperationDocumentation,
   ...operationsRpcDocumentation,
 };
@@ -84,10 +86,13 @@ function documentRequest(
   return {
     ...request,
     properties: Object.fromEntries(
-      Object.entries(request.properties).map(([name, property]) => [
-        name,
-        { ...property, ...documentation.parameters?.[name] },
-      ]),
+      Object.entries(request.properties).map(([name, property]) => {
+        const documented = documentation.parameters?.[name];
+        const transport = { ...(property ?? {}) };
+        if (documented && transport["x-postgresql-type"] === "jsonb")
+          delete transport["x-postgresql-type"];
+        return [name, { ...transport, ...documented }];
+      }),
     ),
     required: [
       ...new Set([

@@ -547,3 +547,138 @@
   align-items: center;
   gap: 8px;
 }
+
+.course-authoring {
+  display: grid;
+  gap: 1rem;
+}
+
+.course-authoring-header,
+.course-authoring-list-header,
+.course-authoring-modules > li > div,
+.course-authoring-history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.course-authoring-header h2,
+.course-authoring-list-header h3 {
+  margin: 0;
+}
+
+.course-authoring-header p {
+  margin-block: 0.5rem;
+}
+
+.course-authoring-status {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.course-authoring-layout {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  grid-template-columns: minmax(14rem, 0.38fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.course-authoring-layout > aside,
+.course-authoring-editor,
+.course-authoring-preview > section,
+.course-authoring-history,
+.course-authoring-migration {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.course-authoring-modules,
+.course-authoring-modules ul,
+.course-authoring-history ol {
+  display: grid;
+  gap: 0.5rem;
+  padding-inline-start: 1rem;
+}
+
+.course-authoring-modules > li > div {
+  justify-content: flex-start;
+}
+
+.course-authoring-modules li > button,
+.course-authoring-modules > li > div > button {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.course-authoring-order,
+.course-authoring-migration {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.course-authoring-editor {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.course-authoring-editor .knowledge-editor {
+  min-width: 0;
+}
+
+.course-authoring-destination {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  justify-items: start;
+}
+
+.course-authoring-destination .field {
+  inline-size: min(24rem, 100%);
+  min-width: 0;
+}
+
+.course-authoring-compact {
+  max-inline-size: 24rem;
+  margin-inline: auto;
+}
+
+.course-authoring-preview {
+  display: grid;
+  gap: 1rem;
+}
+
+.course-authoring-preview article {
+  padding-block: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.course-authoring-preview :is(h3, h4) {
+  overflow-wrap: anywhere;
+}
+
+.course-authoring-history li {
+  justify-content: flex-start;
+}
+
+.course-authoring-migration .field {
+  flex: 1;
+}
+
+@media (max-width: 760px) {
+  .course-authoring-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .course-authoring-header {
+    align-items: flex-start;
+  }
+}

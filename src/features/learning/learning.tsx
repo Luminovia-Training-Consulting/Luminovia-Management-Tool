@@ -64,6 +64,7 @@ import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
+import { CourseAuthoring } from "./course-authoring";
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -1037,8 +1038,13 @@ function CourseWorkspaceLayout({
     course.access.manager;
   const canManageEnrolments =
     canEdit && (course.access.manager || course.access.client);
+  const hasCurriculum =
+    course.lms_enabled && (learner || (canEdit && course.access.staff));
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
+    ...(hasCurriculum
+      ? [{ id: "course-curriculum", label: t("curriculum") }]
+      : []),
     { id: "course-materials", label: t("workspaceMaterials") },
     ...(hasSubmissions
       ? [{ id: "course-submissions", label: t("submissions") }]
@@ -1313,6 +1319,21 @@ function CourseWorkspaceLayout({
               />
             )}
           </div>
+          {hasCurriculum && (
+            <div
+              className={sectionClass("course-curriculum")}
+              id="course-curriculum"
+            >
+              <CourseAuthoring
+                key={`curriculum:${actor}:${course.id}`}
+                actor={actor}
+                courseId={course.id}
+                editable={canEdit && course.access.staff}
+                manager={course.access.manager}
+                roster={course.roster}
+              />
+            </div>
+          )}
           <div
             className={sectionClass("course-materials")}
             id="course-materials"

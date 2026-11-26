@@ -5,6 +5,7 @@ import catalogue from "../../../data/native-rpc.generated.json";
 import { internalInstallationBrand } from "../../lib/installation-brand";
 import { chatOperationDocumentation } from "./chat-operation-documentation";
 import { commercialOperationDocumentation } from "./commercial-operation-documentation";
+import { courseContentOperationDocumentation } from "./course-content-operation-documentation";
 import { portalOpenApi } from "./contract";
 import { knowledgeOperationDocumentation } from "./knowledge-operation-documentation";
 import { operationsRpcDocumentation } from "./operations-rpc-documentation";
@@ -38,6 +39,7 @@ const path = (name: string) => `/rest/v1/rpc/${name}`;
 const definitions: [string, Documentation][] = [
   ...Object.entries(chatOperationDocumentation),
   ...Object.entries(commercialOperationDocumentation),
+  ...Object.entries(courseContentOperationDocumentation),
   ...Object.entries(knowledgeOperationDocumentation),
   ...Object.entries(operationsRpcDocumentation),
 ];
@@ -61,9 +63,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 73 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(73);
-    expect(definitions).toHaveLength(73);
+  it("covers the 75 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(75);
+    expect(definitions).toHaveLength(75);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -234,6 +236,43 @@ describe("internal operation documentation", () => {
       publish.safeParse({ p_request_id: id, p_platform_percent: 25.125 })
         .success,
     ).toBe(false);
+  });
+
+  it("documents the versioned course-content payloads and participant boundary", () => {
+    const studio = input("course_content_studio");
+    expect(studio.safeParse({ p_run_id: id }).success).toBe(true);
+    expect(operation("course_content_studio").description).toContain(
+      "draft content and revision history are omitted",
+    );
+
+    const action = input("course_content_action");
+    const saveDraft = action.safeParse({
+      p_run_id: id,
+      p_action: "save_draft",
+      p_payload: {
+        content: { modules: [] },
+        published_version: 0,
+        draft_version: 0,
+      },
+    });
+    expect(saveDraft.success, JSON.stringify(saveDraft)).toBe(true);
+    expect(
+      action.safeParse({
+        p_run_id: id,
+        p_action: "migrate",
+        p_payload: { user_id: id, target_version: 1 },
+      }).success,
+    ).toBe(true);
+    expect(
+      action.safeParse({
+        p_run_id: id,
+        p_action: "publish",
+        p_payload: { published_version: 1 },
+      }).success,
+    ).toBe(false);
+    expect(
+      operation("course_content_action").responses["409"].description,
+    ).toContain("PT409");
   });
 
   it("requires the contract registration request ID even with a legacy SQL default", () => {

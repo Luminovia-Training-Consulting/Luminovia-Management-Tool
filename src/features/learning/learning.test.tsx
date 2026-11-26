@@ -109,73 +109,89 @@ beforeEach(async () => {
       const request = {
         abortSignal: () => request,
         then: (resolve: (v: unknown) => unknown) =>
-          name === "course_welcome_content"
+          name === "course_content_studio"
             ? Promise.resolve({
                 data: {
-                  version: 0,
-                  description: "",
-                  objectives: "",
-                  joining_instructions: "",
+                  can_edit: true,
+                  published_version: 0,
+                  published_content: { modules: [] },
                   published_at: null,
+                  draft_version: 0,
+                  draft_base_version: 0,
+                  draft_content: null,
+                  versions: [],
                 },
                 error: null,
               }).then(resolve)
-            : name === "course_workspace"
-              ? Promise.resolve(fake.workspaceRead).then(() =>
-                  resolve({
-                    data: fake.workspace,
-                    error: fake.error,
-                  }),
-                )
-              : name === "set_course_meeting_link"
-                ? Promise.resolve(fake.pending).then((data) => {
-                    if (!fake.meetingError && data) {
-                      fake.workspace = {
-                        ...fake.workspace,
-                        meeting_link: data as CourseWorkspace["meeting_link"],
-                      };
-                    }
-                    return resolve({ data, error: fake.meetingError });
-                  })
-                : name === "course_submissions"
-                  ? Promise.resolve({
-                      data: {
-                        enabled: false,
-                        can_manage: false,
-                        can_upload: false,
-                        entries: [],
-                        next: null,
-                      },
-                      error: null,
-                    }).then(resolve)
-                  : name === "course_evaluations"
+            : name === "course_welcome_content"
+              ? Promise.resolve({
+                  data: {
+                    version: 0,
+                    description: "",
+                    objectives: "",
+                    joining_instructions: "",
+                    published_at: null,
+                  },
+                  error: null,
+                }).then(resolve)
+              : name === "course_workspace"
+                ? Promise.resolve(fake.workspaceRead).then(() =>
+                    resolve({
+                      data: fake.workspace,
+                      error: fake.error,
+                    }),
+                  )
+                : name === "set_course_meeting_link"
+                  ? Promise.resolve(fake.pending).then((data) => {
+                      if (!fake.meetingError && data) {
+                        fake.workspace = {
+                          ...fake.workspace,
+                          meeting_link: data as CourseWorkspace["meeting_link"],
+                        };
+                      }
+                      return resolve({ data, error: fake.meetingError });
+                    })
+                  : name === "course_submissions"
                     ? Promise.resolve({
                         data: {
-                          completed: true,
-                          writable: false,
-                          targets: [],
-                          mine: [],
-                          summaries: [],
+                          enabled: false,
+                          can_manage: false,
+                          can_upload: false,
+                          entries: [],
+                          next: null,
                         },
                         error: null,
                       }).then(resolve)
-                    : [
-                          "course_chat_rooms",
-                          "course_enrolments",
-                          "course_enrolment_candidates",
-                        ].includes(name)
-                      ? Promise.resolve({ data: [], error: null }).then(resolve)
-                      : Promise.resolve(
-                          fake.pending ?? { id: null, saved: true },
-                        ).then((data) =>
-                          resolve({
-                            data,
-                            error:
-                              args?.p_action === "resource_share"
-                                ? fake.shareError
-                                : fake.error,
-                          }),
-                        ),
+                    : name === "course_evaluations"
+                      ? Promise.resolve({
+                          data: {
+                            completed: true,
+                            writable: false,
+                            targets: [],
+                            mine: [],
+                            summaries: [],
+                          },
+                          error: null,
+                        }).then(resolve)
+                      : [
+                            "course_chat_rooms",
+                            "course_enrolments",
+                            "course_enrolment_candidates",
+                          ].includes(name)
+                        ? Promise.resolve({ data: [], error: null }).then(
+                            resolve,
+                          )
+                        : Promise.resolve(
+                            fake.pending ?? { id: null, saved: true },
+                          ).then((data) =>
+                            resolve({
+                              data,
+                              error:
+                                args?.p_action === "resource_share"
+                                  ? fake.shareError
+                                  : fake.error,
+                            }),
+                          ),
       };
       return request;
     });
