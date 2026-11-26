@@ -69,6 +69,7 @@ import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
+import { ScormPackageReview } from "./scorm-package-review";
 import { CourseAssignments } from "./course-assignments";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
@@ -1506,6 +1507,10 @@ function CourseWorkspaceLayout({
                   course.access.client)
               }
             />
+            {currentSection === "course-materials" &&
+              course.lms_enabled &&
+              course.access.staff &&
+              canEdit && <ScormPackageReview key={actor + ":" + course.id} />}
           </div>
           {hasSubmissions && (
             <div

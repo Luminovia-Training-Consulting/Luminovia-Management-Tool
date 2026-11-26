@@ -1,11 +1,12 @@
 import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {DateTime} from "luxon";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
+import {scormFixtureZip} from "../../scripts/testing/scorm-fixture.ts";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -1404,6 +1405,54 @@ test("scoped LMS assessment exports protect small cohorts and company views", as
         expect(companyRows).toContain(f.title);
         expect(companyRows).not.toContain(english ? "Quiz attempts" : "Quizversuche");
         expect(companyRows).not.toContain(f.learner.name);
+    } finally {
+        await company.close();
+    }
+});
+
+test("course staff can review a SCORM 1.2 ZIP locally without launching or uploading it", async ({ page, browser, baseURL }, info) => {
+    const f = await fixture();
+    const language = info.project.name.startsWith("mobile") ? "en" : "de";
+    const english = language === "en";
+    const regionName = english ? "SCORM 1.2 package review" : "SCORM-1.2-Paketprüfung";
+    const workspace = "/courses/" + f.run + "/workspace#course-materials";
+    await login(page, f.manager.email);
+    await page.goto(workspace);
+    await page.getByLabel(/^Sprache$|^Language$/).selectOption(language);
+    const review = page.getByRole("region", { name: regionName });
+    const bytes = Buffer.from(await scormFixtureZip());
+    const uploads: string[] = [];
+    page.on("request", (request) => {
+        if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/functions/v1/files"))
+            uploads.push(request.method());
+    });
+    await review.getByLabel(english ? "Choose SCORM ZIP" : "SCORM-ZIP auswählen").setInputFiles({
+        name: "fictional-course.zip", mimeType: "application/zip", buffer: bytes,
+    });
+    await review.getByRole("button", { name: english ? "Review package" : "Paket prüfen" }).click();
+    await expect(review.getByText(createHash("sha256").update(bytes).digest("hex"), { exact: true })).toBeVisible();
+    await expect(review.getByText("Exercise <summary>", { exact: true })).toBeVisible();
+    await expect(review.locator("summary,iframe,script")).toHaveCount(0);
+    await expect(review.getByRole("link")).toHaveCount(0);
+    expect(uploads).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await review.getByLabel(english ? "Choose SCORM ZIP" : "SCORM-ZIP auswählen").setInputFiles({
+        name: "not-an-archive.zip", mimeType: "application/zip", buffer: Buffer.from("fictional invalid archive"),
+    });
+    await review.getByRole("button", { name: english ? "Review package" : "Paket prüfen" }).click();
+    await expect(review.getByRole("alert")).toContainText(english ? "readable ZIP" : "lesbares ZIP");
+    await expect(review.getByText("Exercise <summary>", { exact: true })).toHaveCount(0);
+
+    const company = await browser.newContext({
+        baseURL, viewport: info.project.use.viewport, isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+    });
+    try {
+        const companyPage = await company.newPage();
+        await login(companyPage, f.client.email);
+        await companyPage.goto(workspace);
+        await companyPage.getByLabel(/^Sprache$|^Language$/).selectOption(language);
+        await expect(companyPage.getByRole("heading", { name: f.title, exact: true })).toBeVisible();
+        await expect(companyPage.getByRole("region", { name: regionName })).toHaveCount(0);
     } finally {
         await company.close();
     }

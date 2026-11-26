@@ -339,6 +339,12 @@ Course managers can open **Lernaktivitäten / Learning activities** and download
 
 An operator with an authorised xAPI 1.0.3 Learning Record Store can submit an exported file with `node scripts/xapi-lrs-delivery.mjs <archive.json>`. Configure `LMS_XAPI_LRS_ENDPOINT`, `LMS_XAPI_LRS_USERNAME` and `LMS_XAPI_LRS_PASSWORD` in the operator environment. The command uses HTTPS for remote services and reports confirmed writes, retries and pending statements. Repeating the same archive preserves statement IDs. This workflow uses the [ADL statement data model](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Data.md) and [statement transport](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Communication.md).
 
+### Review a SCORM 1.2 package
+
+Course staff can open **Materialien → SCORM-1.2-Paketprüfung / Materials → SCORM 1.2 package review**. Choose the ZIP produced by the authoring tool and review its file checksums, default organisation and local HTML entry points. Copy the displayed SHA-256 to record the exact ZIP you reviewed.
+
+The preflight limits ZIPs to 10 MiB, 512 entries and 64 MiB declared unpacked size. It checks the root UTF-8 IMS/ADL manifest, local file references and resource dependencies. All checks run in the browser. The current workflow ends at preflight. Publishing a package for learners requires a separate isolated content origin and player. [ADL SCORM 1.2 package requirements](https://lms.technology/for/scorm/1.2/standards/SCORM_1.2_ConformanceReq.pdf) · [ADL cross-domain runtime guidance](https://adlnet.gov/assets/uploads/ADL_CrossDomainScripting_1_0.pdf)
+
 ### Course assignments and feedback
 
 Open **Dateiabgaben / File submissions** in a course workspace, then **Kursaufgaben / Course assignments**. The course staff can save a draft with instructions, an attempt limit, a deadline in the course's time zone and an assessment rubric. Add at least two levels to each criterion, beginning at zero points, then publish the saved definition. Staff can grant a later deadline to an individual enrolled participant.

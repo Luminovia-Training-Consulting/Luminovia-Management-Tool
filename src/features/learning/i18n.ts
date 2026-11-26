@@ -1,7 +1,9 @@
 import i18n from "../../lib/i18n";
+import { scormReviewTexts } from "./scorm-package-i18n";
 import assignmentTexts from "./course-assignments-i18n";
 
 const pairs: Record<string, [string, string]> = {
+  ...scormReviewTexts,
   ...assignmentTexts,
   submissions: ["Dateiabgaben", "File submissions"],
   submissionOnline: [
