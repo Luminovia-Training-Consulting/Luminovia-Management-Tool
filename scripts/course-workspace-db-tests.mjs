@@ -685,9 +685,37 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
     await check(
         "Completion requires verified attendance, completed enrolment and quiz pass, then preserves immutable facts",
         async () => {
+            const completionStatus = (who, target = null, scope = run) =>
+                rpc(who, "course_completion_status", [q(scope), target === null ? "null" : q(target)]);
+            const ready = await completionStatus(learner);
+            assert.deepEqual(ready, {
+                enrolment_completed: true, session_count: 1, ended_count: 1, verified_count: 1,
+                ends_at: ready.ends_at, quiz_version: 1, quiz_passed: true, reverify_required: false,
+                rule_version: 1, state: "ready",
+            });
+            assert.ok(Date.parse(ready.ends_at) < Date.now());
+            assert.deepEqual(await completionStatus(teacher, learner), ready);
+            const missing = await completionStatus(second);
+            assert.equal(missing.state, "pending");
+            assert.equal(missing.verified_count, 0);
+            assert.equal(missing.quiz_passed, false);
+            await assert.rejects(completionStatus(second, learner), /42501/);
+            await assert.rejects(completionStatus(client, learner), /42501/);
+            await assert.rejects(completionStatus(foreign, learner), /42501/);
+            await assert.rejects(completionStatus(learner, null, randomUUID()), /42501/);
             await assert.rejects(action(second, "completion_issue"), /22023/);
             completion = (await action(learner, "completion_issue")).id;
             assert.equal((await action(learner, "completion_issue")).id, completion);
+            assert.equal((await completionStatus(learner)).state, "issued");
+            const future = randomUUID();
+            await sql(`insert into public.course_sessions(id, course_run_id, starts_at, ends_at)
+              values (${q(future)}, ${q(run)}, now() + interval '1 day', now() + interval '25 hours')`);
+            assert.equal((await completionStatus(learner)).state, "issued");
+            const futureMissing = await completionStatus(second);
+            assert.equal(futureMissing.session_count, 2);
+            assert.equal(futureMissing.ended_count, 1);
+            assert.ok(Date.parse(futureMissing.ends_at) > Date.now());
+            await sql(`delete from public.course_sessions where id=${q(future)}`);
             const document = await rpc(learner, "course_document_access", [
                 q("completion"),
                 q(completion),
@@ -718,6 +746,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 id: completion,
                 reason: "Attendance evidence requires correction",
             });
+            assert.equal((await completionStatus(learner)).reverify_required, true);
+            assert.equal((await completionStatus(learner)).state, "pending");
             await assert.rejects(action(learner, "completion_issue"), /22023/);
             await assert.rejects(
                 rpc(learner, "course_document_access", [
@@ -738,6 +768,10 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 },
                 2,
             );
+            const reverifiedAbsent = await completionStatus(learner);
+            assert.equal(reverifiedAbsent.reverify_required, false);
+            assert.equal(reverifiedAbsent.verified_count, 0);
+            assert.equal(reverifiedAbsent.state, "pending");
             await assert.rejects(action(learner, "completion_issue"), /22023/);
             await action(
                 teacher,
@@ -751,6 +785,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 },
                 3,
             );
+            assert.deepEqual(await completionStatus(learner), ready);
             const replacement = (await action(learner, "completion_issue")).id;
             assert.notEqual(replacement, completion);
         },

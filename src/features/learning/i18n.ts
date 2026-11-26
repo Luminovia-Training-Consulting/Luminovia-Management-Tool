@@ -1199,6 +1199,52 @@ const pairs: Record<string, [string, string]> = {
     "No quiz is currently published for this course.",
   ],
   completion: ["Mein Abschlussdokument", "My completion document"],
+  completionRequirements: ["Abschlussstatus", "Completion status"],
+  completionSelectLearner: [
+    "Teilnehmende Person auswählen",
+    "Select a participant",
+  ],
+  completionSelectPlaceholder: ["Bitte auswählen", "Choose a participant"],
+  completionRequirementsOffline: [
+    "Der aktuelle Abschlussstatus ist nur online verfügbar.",
+    "Current completion status is available online.",
+  ],
+  completionIssuedStatus: [
+    "Abschlussdokument ausgestellt.",
+    "Completion document issued.",
+  ],
+  completionReadyStatus: [
+    "Alle Voraussetzungen für das Abschlussdokument sind erfüllt.",
+    "All requirements for the completion document are met.",
+  ],
+  completionPendingStatus: [
+    "Für das Abschlussdokument fehlen noch Voraussetzungen.",
+    "The completion document has outstanding requirements.",
+  ],
+  completionRequirementEnrolment: [
+    "Die Teilnahme muss als abgeschlossen eingetragen sein.",
+    "The enrolment must be marked completed.",
+  ],
+  completionRequirementNoSessions: [
+    "Für den Kurs müssen Termine vorliegen.",
+    "The course must have scheduled sessions.",
+  ],
+  completionRequirementEnd: [
+    "Alle Termine müssen beendet sein. Letztes Kursende: {{end}}.",
+    "All sessions must have ended. Last course end: {{end}}.",
+  ],
+  completionRequirementAttendance: [
+    "Für jeden Termin sind mindestens 80 % bestätigte Anwesenheit erforderlich ({{verified}} von {{total}} bestätigt).",
+    "Each session requires at least 80% verified attendance ({{verified}} of {{total}} verified).",
+  ],
+  completionRequirementQuiz: [
+    "Das veröffentlichte Quiz (Fassung {{version}}) muss bestanden sein.",
+    "The published quiz (version {{version}}) must be passed.",
+  ],
+  completionRequirementReverification: [
+    "Nach einem Widerruf muss die Lehrkraft die Anwesenheit erneut bestätigen.",
+    "After a revocation, staff must verify attendance again.",
+  ],
   completionHelp: [
     "Ein Abschlussdokument wird erst nach Kursende, abgeschlossenem Einschreibestatus, bestätigten mindestens 80 % Anwesenheit je Termin und bestandenem veröffentlichtem Quiz ausgestellt. Es dokumentiert diese Fakten und ist keine behauptete qualifizierte Signatur oder externe Zertifizierung.",
     "A completion document is issued only after the course ends, enrolment is completed, at least 80% attendance is verified in each session and the published quiz is passed. It records those facts and does not claim a qualified signature or external certification.",

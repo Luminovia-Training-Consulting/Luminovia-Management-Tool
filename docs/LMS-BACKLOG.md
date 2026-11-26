@@ -57,11 +57,11 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-06 — authoritative completion and next-step engine
 
-- **Priority / status:** P0 · planned; current programme progress and certificate rules remain the completion authority until an explicit compatible extension is designed.
-- **Dependencies / affected modules:** Course enrolments/programmes, quiz pass facts, verified attendance, assignments, certificates and existing analytics.
-- **Data and security:** Versioned, explainable requirement rules; do not use page views or enrolment as completion evidence; preserve existing certificates and historical outcomes.
-- **Tasks / acceptance:** Add required activity/assessment/attendance/competency/lecturer-verification conditions, status projection, missing requirements and deadlines, deterministic prerequisites and exception audit. Test invalid/circular paths, timezones, revoked access, old certificates and multiple requirement combinations.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Do not silently change current certificate eligibility.
+- **Priority / status:** P0 · the current course certificate requirements are implemented as a shared server evaluator with a DE/EN status and guidance view for learners and course staff.
+- **Delivered scope:** Learners see which requirements remain open. Course staff can inspect one current learner from the roster. The view explains completion of enrolment, course end in the course time zone, verified attendance for every session, the current published quiz and attendance review after revocation. Previously issued unrevoked documents retain issued status.
+- **Data and security:** The version-1 evaluator feeds the existing issue command and `course_completion_status` in the internal Portal and both Academy editions. The learner scope is actor-owned. Staff need current course authority. Academy grace permits reads. Existing certificate snapshots and issue rules are preserved.
+- **Local verification:** 88 focused Vitest tests, both Academy edition SQL suites, the 16 course-workspace SQL groups and 11 API-surface checks passed. Desktop and mobile Chromium exercised the staff and learner views, actual issuance and the PDF download on a separate native QA stack. The additive migration also applied to that stack's retained fixture data.
+- **Remaining work:** Opt-in configurable activity, assessment, competency and lecturer-verification rules, pinned per-enrolment policies, deadline policies beyond the course schedule, prerequisite graphs, completion exceptions and programme-level next steps remain open.
 
 ### LMS-P0-07 — education permissions, accommodations and accessibility
 

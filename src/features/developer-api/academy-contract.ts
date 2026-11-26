@@ -88,6 +88,8 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseCompletionStatusParameters,
+  courseCompletionStatusResult,
   courseGradebookExportResult,
   courseGradebookHistoryParameters,
   courseGradebookHistoryResult,
@@ -1079,6 +1081,14 @@ const coursePaths = {
     },
     questionBankActionResult,
     true,
+  ),
+  "/rest/v1/rpc/course_completion_status": courseOperation(
+    "readAcademyCourseCompletionStatus",
+    "Read current course completion requirements",
+    "Current learners read only their own status. Current course staff can select an enrolled or completed learner. The projection explains the existing issue requirements and preserves issued status when course evidence has subsequently changed.",
+    "active-or-grace",
+    courseCompletionStatusParameters,
+    courseCompletionStatusResult,
   ),
   "/rest/v1/rpc/course_gradebook": courseOperation(
     "readAcademyCourseGradebook",

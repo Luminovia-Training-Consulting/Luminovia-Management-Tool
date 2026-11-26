@@ -610,6 +610,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const gradebookExport = (who, withGate = true) =>
       actor(who, (withGate ? gate("/rpc/course_gradebook_export") : "") +
         `select public.course_gradebook_export(${q(run)})`).then(JSON.parse);
+    const completionStatus = (who, target = null, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_completion_status") : "") +
+        `select public.course_completion_status(${q(run)},${target === null ? "null" : q(target)})`).then(JSON.parse);
     const learningPath = "/rpc/academy_learning_action";
     const learningCall = (name, payload, version = 0) =>
       `select public.academy_learning_action(${q(run)},${q(name)},${q(JSON.stringify(payload))},${version})`;
@@ -624,6 +627,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     const attempt = await learningAction(learner, "quiz_attempt", { answers: [0], request_id: randomUUID() }, 1);
     assert.equal(attempt.score, 100);
+    const completion = await completionStatus(learner);
+    assert.equal(completion.quiz_version, 1);
+    assert.equal(completion.quiz_passed, true);
+    assert.equal(completion.state, "pending");
+    assert.equal(completion.verified_count, 0);
+    assert.deepEqual(await completionStatus(teacher, learner), completion);
+    await assert.rejects(completionStatus(learner, outside), /42501/);
+    await assert.rejects(completionStatus(client, learner), /42501/);
     const policy = { scheme: "percentage", bands: [] };
     assert.equal((await learningAction(teacher, "gradebook_policy", policy)).version, 1);
     const activeGradebook = await gradebook(teacher);
@@ -677,6 +688,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(await gradebookHistory(teacher, learner), staffHistory);
     assert.deepEqual(await gradebookHistory(learner), learnerHistory);
     assert.deepEqual(await gradebookExport(teacher), staffExport);
+    assert.deepEqual(await completionStatus(learner), completion);
+    assert.deepEqual(await completionStatus(teacher, learner), completion);
     // Both the request gate and the dedicated command enforce read-only grace.
     for (const [name, payload] of [
       ["gradebook_policy", policy],
@@ -727,6 +740,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(gradebook(learner), /42501/);
     for (const withGate of [true, false]) {
       await assert.rejects(gradebookHistory(teacher, learner, withGate), /42501/);
+      await assert.rejects(completionStatus(learner, null, withGate), /42501/);
       await assert.rejects(gradebookExport(teacher, withGate), /42501/);
     }
     await assert.rejects(gradebook(teacher), /42501/);

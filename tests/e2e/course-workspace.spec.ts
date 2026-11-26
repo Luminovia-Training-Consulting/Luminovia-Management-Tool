@@ -1280,3 +1280,66 @@ test("completed Premium course records a named closeout follow-up without resend
     await expect(page.getByRole("link", {name: /Fictional course workspace manager.*Erledigt/})).toBeVisible();
 
 });
+
+/** Current evidence drives the visible issue button in the actual learner workspace. */
+test("completion status explains blockers for course staff and lets the learner issue the document when ready", async ({ page, browser, baseURL }, info) => {
+    test.setTimeout(90_000);
+    const f = await fixture();
+    const learner = await linkWorkspaceLearner(f);
+    const enrol = (status: "enrolled" | "completed") => checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: status,
+    }));
+    const action = (client: typeof learner, name: string, payload: Record<string, unknown>, version = 0) =>
+        checked(client.rpc("course_workspace_action", {
+            p_run_id: f.run, p_action: name, p_payload: payload, p_expected_version: version,
+        }));
+    await enrol("enrolled");
+    await action(f.adminClient, "quiz_config", {
+        questions: [{ prompt: "Print the current working directory?", options: ["pwd", "ls"], correct: 0 }],
+        pass_percent: 80, max_attempts: 2, published: true,
+    });
+    const workspace = `/courses/${f.run}/workspace#course-learning`;
+    await adminLogin(page, f.manager);
+    await page.goto(workspace);
+    const staffStatus = page.getByRole("region", { name: "Abschlussstatus", exact: true });
+    await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
+    await expect(staffStatus.getByText(/Die Teilnahme muss als abgeschlossen/)).toBeVisible();
+    await expect(staffStatus.getByText(/0 von 1 bestätigt/)).toBeVisible();
+    await expect(staffStatus.getByText(/Das veröffentlichte Quiz/)).toBeVisible();
+
+    const context = await browser.newContext({
+        baseURL, viewport: info.project.use.viewport,
+        isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+    });
+    try {
+        const learnerPage = await context.newPage();
+        await login(learnerPage, f.learner.email, /\/learning$/);
+        await learnerPage.goto(workspace);
+        const learnerStatus = learnerPage.getByRole("region", { name: "Mein Abschlussdokument", exact: true });
+        await expect(learnerStatus.getByText(/0 von 1 bestätigt/)).toBeVisible();
+        const issue = learnerStatus.getByRole("button", {name: "Voraussetzungen prüfen und Dokument ausstellen", exact: true});
+        await expect(issue).toBeDisabled();
+
+        await enrol("completed");
+        // Use the same authorized commands as the normal teaching and quiz controls.
+        await action(f.adminClient, "attendance_verify", {
+            session_id: f.session, user_id: f.learner.id, state: "attended", minutes: 48,
+            reason: "Fictional attendance reviewed",
+        });
+        await action(learner, "quiz_attempt", {answers: [0], request_id: randomUUID()}, 1);
+        await learnerPage.reload();
+        await expect(learnerStatus.getByText(/Alle Voraussetzungen/)).toBeVisible();
+        await issue.click();
+        await expect(issue).toHaveCount(0);
+        const pdf = learnerPage.waitForEvent("download");
+        await learnerStatus.getByRole("button", {name: "Herunterladen", exact: true}).click();
+        const downloaded = await pdf;
+        expect(downloaded.suggestedFilename()).toBe("course-completion.pdf");
+        expect((await readFile(await downloaded.path())).subarray(0, 5).toString()).toBe("%PDF-");
+        await page.reload();
+        await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
+        await expect(staffStatus.getByText("Abschlussdokument ausgestellt.")).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});

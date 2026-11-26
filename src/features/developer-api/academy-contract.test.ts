@@ -34,6 +34,7 @@ const readPaths = [
   "/rest/v1/rpc/course_gradebook_history",
   "/rest/v1/rpc/course_gradebook_export",
   "/rest/v1/rpc/course_question_bank",
+  "/rest/v1/rpc/course_completion_status",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",

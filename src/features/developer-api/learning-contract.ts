@@ -434,6 +434,23 @@ export const courseEnrolmentsResult = itemList(
   }),
 );
 
+export const courseCompletionStatusParameters = record(
+  { p_run_id: uuid, p_user_id: nullable(uuid) },
+  ["p_run_id"],
+);
+export const courseCompletionStatusResult = record({
+  enrolment_completed: boolean,
+  session_count: integer,
+  ended_count: integer,
+  verified_count: integer,
+  ends_at: nullable(dateTime),
+  quiz_version: nullable(integer),
+  quiz_passed: boolean,
+  reverify_required: boolean,
+  rule_version: { ...integer, minimum: 1 },
+  state: { type: "string", enum: ["pending", "ready", "issued"] },
+});
+
 const gradebookBand = record({
   minimum: { ...integer, maximum: 100 },
   label: { ...text, minLength: 1, maxLength: 80 },

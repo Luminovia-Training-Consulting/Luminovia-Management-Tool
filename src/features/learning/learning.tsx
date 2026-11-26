@@ -34,6 +34,8 @@ import {
   courseAction,
   type CourseWorkspace,
   type QuizQuestion,
+  courseCompletionStatusKey,
+  useCourseCompletionStatus,
   courseWorkspaceKey,
   courseWorkspaceQuery,
   repeatCourse,
@@ -68,6 +70,10 @@ import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
 import { CourseGradebook } from "./course-gradebook";
+import {
+  CompletionRequirements,
+  StaffCompletionRequirements,
+} from "./course-completion-status";
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -102,6 +108,16 @@ function useAction(course: string, actor: string, academy = false) {
       await client.invalidateQueries({
         queryKey: courseWorkspaceKey(actor, course),
       });
+      if (
+        action === "quiz_attempt" ||
+        action === "quiz_config" ||
+        action === "completion_issue" ||
+        action === "completion_revoke"
+      ) {
+        await client.invalidateQueries({
+          queryKey: courseCompletionStatusKey(actor, course),
+        });
+      }
       if (action === "contact_select") {
         await Promise.all(
           ["job-briefing", "job-lifecycle", "teaching-day"].map((key) =>
@@ -851,10 +867,21 @@ function Quiz({ course, actor, academy }: ActivityProps) {
   );
 }
 /** Requests completion only after server attendance and current-quiz eligibility checks. */
-function Completion({ course, actor, academy }: ActivityProps) {
+function Completion({
+  course,
+  actor,
+  academy,
+  active,
+}: ActivityProps & { active: boolean }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
   const save = useAction(course.id, actor, Boolean(academy));
+  const status = useCourseCompletionStatus(
+    course,
+    actor,
+    null,
+    active && !course.completion,
+  );
   return (
     <section className="panel learning-panel" aria-label={t("completion")}>
       <h2>{t("completion")}</h2>
@@ -868,13 +895,23 @@ function Completion({ course, actor, academy }: ActivityProps) {
             name="course-completion.pdf"
           />
         </>
-      ) : academy !== "grace" ? (
-        <Button
-          disabled={!online || save.isPending || !course.ended}
-          onClick={() => save.mutate({ action: "completion_issue" })}
-        >
-          {t("issueCompletion")}
-        </Button>
+      ) : active ? (
+        <>
+          <CompletionRequirements query={status} zone={course.time_zone} />
+          {academy !== "grace" && (
+            <Button
+              disabled={
+                !online ||
+                save.isPending ||
+                status.isError ||
+                status.data?.state !== "ready"
+              }
+              onClick={() => save.mutate({ action: "completion_issue" })}
+            >
+              {t("issueCompletion")}
+            </Button>
+          )}
+        </>
       ) : null}
       <Result error={save.isError} />
     </section>
@@ -1629,8 +1666,22 @@ function CourseWorkspaceLayout({
                 <Quiz course={course} actor={actor} academy={academy} />
               )}
               {learner && (
-                <Completion course={course} actor={actor} academy={academy} />
+                <Completion
+                  course={course}
+                  actor={actor}
+                  academy={academy}
+                  active={currentSection === "course-learning"}
+                />
               )}
+              {course.access.staff &&
+                course.lms_enabled &&
+                currentSection === "course-learning" && (
+                  <StaffCompletionRequirements
+                    key={course.id}
+                    course={course}
+                    actor={actor}
+                  />
+                )}
               {academy && editor && (
                 <AcademyCompletionRegister
                   key={course.id}

@@ -1,8 +1,8 @@
 /** Permission-scoped course DTOs and online mutation/download boundaries for the learning workspace. */
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { saveBlob } from "../../lib/blob-download";
 import { db } from "../../lib/supabase";
-import { requireOnline } from "../../lib/online";
+import { requireOnline, useOnline } from "../../lib/online";
 import type { WorkspaceAttendanceHistory } from "./attendance-schema";
 import type { CourseCurriculum } from "./course-authoring-schema";
 import {
@@ -260,6 +260,59 @@ export async function fetchCourseGradebookExport(run: string) {
   });
   if (error) throw error;
   return data as CourseGradebookExportRow[];
+}
+
+/** Currently explainable inputs to the shared certificate issuance rules. */
+export interface CourseCompletionStatus {
+  enrolment_completed: boolean;
+  session_count: number;
+  ended_count: number;
+  verified_count: number;
+  ends_at: string | null;
+  quiz_version: number | null;
+  quiz_passed: boolean;
+  reverify_required: boolean;
+  rule_version: number;
+  state: "pending" | "ready" | "issued";
+}
+export const courseCompletionStatusKey = (actor: string, run: string) =>
+  ["course-completion-status", actor, run] as const;
+
+/** Staff pass one current enrolment. The learner scope defaults to the actor. */
+export const courseCompletionStatusQuery = (
+  actor: string,
+  run: string,
+  learner: string | null,
+) =>
+  queryOptions({
+    queryKey: [...courseCompletionStatusKey(actor, run), learner],
+    queryFn: async ({ signal }) => {
+      requireOnline();
+      const { data, error } = await db()
+        .rpc("course_completion_status", {
+          p_run_id: run,
+          p_user_id: learner,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as CourseCompletionStatus;
+    },
+    gcTime: 0,
+    retry: false,
+  });
+
+/** Fetch authoritative evidence only while the caller's learning section is open. */
+export function useCourseCompletionStatus(
+  course: CourseWorkspace,
+  actor: string,
+  learner: string | null,
+  active: boolean,
+) {
+  const online = useOnline();
+  return useQuery({
+    ...courseCompletionStatusQuery(actor, course.id, learner),
+    enabled: active && online,
+  });
 }
 
 /** Recheck only the caller-scoped Premium link state for a selected base course row. */

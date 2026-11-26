@@ -313,6 +313,12 @@ Choose **Note korrigieren / Correct grade** to enter an adjusted mark and an int
 
 **Freigegebene Noten als CSV exportieren / Export published grades as CSV** produces one current snapshot for enrolled and completed learners, up to 5,000 published grades. The export covers the full course rather than the displayed roster page. Quiz pass and certificate eligibility continue to use their established assessment and completion rules. Academy grace supports read and export access for currently authorised users. Publication and correction require an active licence.
 
+### Course completion status
+
+In **Lernaktivitäten / Learning activities**, open **Mein Abschlussdokument / My completion document**. The status lists current requirements still open, including enrolment completion, course end, verified attendance, a published quiz or an attendance review after revocation. Use **Aktualisieren / Refresh** after the evidence changes. Once all requirements are met, choose **Voraussetzungen prüfen und Dokument ausstellen / Check eligibility and issue document**. The server checks the same requirements again before issuance.
+
+Course staff can open **Abschlussstatus / Completion status** in the same workspace section and select a currently enrolled or completed participant. The displayed date and time use the course's time zone. Previously issued, unrevoked completion documents remain available to authorised learners.
+
 ### Timed exams and results
 
 In the course workspace, open **Klausur / Exam**. Choose **Klausur planen / Schedule exam**, enter the title, announcement time, start, submission deadline and pass threshold, then save. The times use the course's time zone. Start and deadline must be on course dates. Upload and publish the scanned student PDF after saving the schedule. Already published papers from before timed exams keep their previous access until the course has a schedule. Use the existing exam setting to mark a course exam-free.

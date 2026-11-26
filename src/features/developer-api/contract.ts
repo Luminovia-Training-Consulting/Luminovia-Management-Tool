@@ -111,6 +111,8 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseCompletionStatusParameters,
+  courseCompletionStatusResult,
   courseGradebookExportResult,
   courseGradebookHistoryParameters,
   courseGradebookHistoryResult,
@@ -4434,6 +4436,15 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/course_completion_status": rpc(
+    "readCourseCompletionStatus",
+    "Premium LMS",
+    "Read current course completion requirements",
+    "A current learner reads their own status by leaving p_user_id empty. Course staff may select a current enrolment. Reports the versioned attendance, quiz, enrolment, timing and post-revocation requirements used by certificate issuance and separately identifies an already issued document.",
+    courseCompletionStatusParameters.properties,
+    courseCompletionStatusResult,
+    ["p_user_id"],
+  ),
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",
