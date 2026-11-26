@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareCourseCurricula,
   copyCourseLesson,
   copyCourseModule,
   createCourseModule,
@@ -73,6 +74,44 @@ describe("course authoring content contract", () => {
     expect(
       normalizeCourseCurriculum({ modules: [original, copy] }).modules,
     ).toHaveLength(2);
+  });
+
+  it("round-trips archive state and independently copies exact material pins", () => {
+    const original = normalizeCourseCurriculum(curriculum).modules[0];
+    original.archived = true;
+    original.lessons[0].archived = true;
+    original.lessons[0].material_ids = [lessonId];
+    expect(
+      normalizeCourseCurriculum({ modules: [original] }).modules[0],
+    ).toMatchObject({
+      archived: true,
+      lessons: [{ archived: true, material_ids: [lessonId] }],
+    });
+    const copy = copyCourseLesson(original.lessons[0]);
+    expect(copy.material_ids).not.toBe(original.lessons[0].material_ids);
+    copy.material_ids!.push(lessonId);
+    expect(() =>
+      normalizeCourseCurriculum({
+        modules: [{ ...original, lessons: [copy] }],
+      }),
+    ).toThrow("Invalid lesson material references");
+    expect(original.lessons[0].material_ids).toEqual([lessonId]);
+  });
+
+  it("reports a renamed and archived lesson as edits of the same stable object", () => {
+    const published = normalizeCourseCurriculum(curriculum);
+    const draft = structuredClone(published);
+    draft.modules[0].lessons[0].archived = true;
+    draft.modules[0].lessons[0].title = "Updated lesson";
+    expect(compareCourseCurricula(published, draft)).toEqual([
+      {
+        id: lessonId,
+        kind: "curriculumLessonItem",
+        title: "Updated lesson",
+        previousTitle: "Fictional lesson",
+        fieldChanges: ["curriculumChangeTitle", "curriculumChangeArchived"],
+      },
+    ]);
   });
 
   it("moves the exact lesson without changing the source snapshot or exceeding the destination limit", () => {

@@ -9,6 +9,10 @@ export const materialMetadataSchema = z.strictObject({
   subject: z.string().trim().max(120),
   licence: z.string().trim().max(160),
   language: materialLanguage,
+  learning_objectives: z.string().trim().max(1000).optional(),
+  review_on: z
+    .union([z.literal(""), z.iso.date().refine((date) => /^[1-9]/.test(date))])
+    .optional(),
   tags: z
     .array(
       z

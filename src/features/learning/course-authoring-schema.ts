@@ -1,3 +1,4 @@
+/** Shared curriculum codec for immutable saved revisions and the authoring editor. */
 import type { JSONContent } from "@tiptap/react";
 import {
   contentIsValid,
@@ -11,6 +12,8 @@ export type CourseLesson = {
   objectives: string;
   duration_minutes: number;
   body: JSONContent;
+  archived?: boolean;
+  material_ids?: string[];
 };
 
 export type CourseModule = {
@@ -18,6 +21,7 @@ export type CourseModule = {
   title: string;
   description: string;
   lessons: CourseLesson[];
+  archived?: boolean;
 };
 
 export type CourseCurriculum = { modules: CourseModule[] };
@@ -25,6 +29,7 @@ export type CourseCurriculum = { modules: CourseModule[] };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const maxCourseModules = 40;
 export const maxModuleLessons = 100;
+export const maxLessonMaterials = 12;
 
 export const emptyCurriculum: CourseCurriculum = { modules: [] };
 
@@ -47,7 +52,8 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
     if (
       typeof module.id !== "string" ||
       !uuid.test(module.id) ||
-      ids.has(module.id) ||
+      ids.has(module.id.toLowerCase()) ||
+      (module.archived !== undefined && typeof module.archived !== "boolean") ||
       typeof module.title !== "string" ||
       module.title.trim().length < 1 ||
       module.title.trim().length > 150 ||
@@ -57,7 +63,7 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
       module.lessons.length > maxModuleLessons
     )
       throw new Error("Invalid course module");
-    ids.add(module.id);
+    ids.add(module.id.toLowerCase());
 
     const lessons = module.lessons.map((lessonCandidate): CourseLesson => {
       if (
@@ -70,7 +76,9 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
       if (
         typeof lesson.id !== "string" ||
         !uuid.test(lesson.id) ||
-        ids.has(lesson.id) ||
+        ids.has(lesson.id.toLowerCase()) ||
+        (lesson.archived !== undefined &&
+          typeof lesson.archived !== "boolean") ||
         typeof lesson.title !== "string" ||
         lesson.title.trim().length < 1 ||
         lesson.title.trim().length > 150 ||
@@ -82,7 +90,21 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
         lesson.duration_minutes > 1440
       )
         throw new Error("Invalid course lesson");
-      ids.add(lesson.id);
+      ids.add(lesson.id.toLowerCase());
+      const materials = lesson.material_ids;
+      if (
+        materials !== undefined &&
+        (!Array.isArray(materials) ||
+          materials.length > maxLessonMaterials ||
+          materials.some(
+            (id: unknown) =>
+              typeof id !== "string" ||
+              !uuid.test(id) ||
+              id !== id.toLowerCase(),
+          ) ||
+          new Set(materials).size !== materials.length)
+      )
+        throw new Error("Invalid lesson material references");
       const body = normalizedDocument(lesson.body as JSONContent);
       if (!contentIsValid(body, true))
         throw new Error("Invalid lesson content");
@@ -92,6 +114,8 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
         objectives: lesson.objectives,
         duration_minutes: lesson.duration_minutes,
         body,
+        ...(lesson.archived && { archived: true }),
+        ...(materials?.length && { material_ids: [...materials] }),
       };
     });
 
@@ -100,6 +124,7 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
       title: module.title.trim(),
       description: module.description,
       lessons,
+      ...(module.archived && { archived: true }),
     };
   });
 
@@ -133,6 +158,7 @@ export function copyCourseLesson(lesson: CourseLesson): CourseLesson {
     ...lesson,
     id: newCourseContentId(),
     body: structuredClone(lesson.body),
+    ...(lesson.material_ids && { material_ids: [...lesson.material_ids] }),
   };
 }
 
@@ -169,4 +195,86 @@ export function moveCourseLesson(
       return module;
     }),
   };
+}
+
+type CurriculumItem = {
+  kind: "curriculumModuleItem" | "curriculumLessonItem";
+  title: string;
+  archived: boolean;
+  position: string;
+  content: string;
+};
+
+/** Index by stable ID so moving a lesson across modules retains its identity. */
+function indexCurriculum(curriculum: CourseCurriculum) {
+  const index = new Map<string, CurriculumItem>();
+  curriculum.modules.forEach((module, position) => {
+    index.set(module.id, {
+      kind: "curriculumModuleItem",
+      title: module.title,
+      archived: Boolean(module.archived),
+      position: String(position),
+      content: module.description,
+    });
+    module.lessons.forEach((lesson, lessonPosition) => {
+      index.set(lesson.id, {
+        kind: "curriculumLessonItem",
+        title: lesson.title,
+        archived: Boolean(lesson.archived),
+        position: `${module.id}:${lessonPosition}`,
+        content: JSON.stringify([
+          lesson.objectives,
+          lesson.duration_minutes,
+          lesson.body,
+          lesson.material_ids ?? [],
+        ]),
+      });
+    });
+  });
+  return index;
+}
+
+/** Describe additions, removals and edited fields without copying private draft text. */
+export function compareCourseCurricula(
+  published: CourseCurriculum,
+  draft: CourseCurriculum,
+) {
+  const before = indexCurriculum(published);
+  const after = indexCurriculum(draft);
+  return [...new Set([...after.keys(), ...before.keys()])].flatMap((id) => {
+    const oldItem = before.get(id);
+    const newItem = after.get(id);
+    const item = newItem ?? oldItem!;
+    const previousTitle =
+      oldItem && newItem && oldItem.title !== newItem.title
+        ? oldItem.title
+        : null;
+    const fieldChanges: string[] = [];
+    if (!oldItem) fieldChanges.push("curriculumChangeAdded");
+    else if (!newItem) fieldChanges.push("curriculumChangeRemoved");
+    else {
+      if (previousTitle !== null) fieldChanges.push("curriculumChangeTitle");
+      if (oldItem.position !== newItem.position)
+        fieldChanges.push("curriculumChangeMoved");
+      if (oldItem.content !== newItem.content)
+        fieldChanges.push("curriculumChangeContent");
+      if (oldItem.archived !== newItem.archived)
+        fieldChanges.push(
+          newItem.archived
+            ? "curriculumChangeArchived"
+            : "curriculumChangeRestored",
+        );
+    }
+    return fieldChanges.length
+      ? [
+          {
+            id,
+            kind: item.kind,
+            title: item.title,
+            previousTitle,
+            fieldChanges,
+          },
+        ]
+      : [];
+  });
 }

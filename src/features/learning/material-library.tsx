@@ -39,6 +39,7 @@ type Material = Pick<CourseResource, "id" | "name" | "version" | "category"> & {
   organisation_name: string | null;
   can_upload: boolean;
   can_edit_metadata: boolean;
+  can_read_metadata_history?: boolean;
   metadata: MaterialMetadata | null;
   metadata_revision: number;
 };
@@ -149,6 +150,29 @@ function MaterialMetadataEditor({
             }
           />
         </Field>
+        <Field id={`${id}-objectives`} label={t("lessonObjectives")}>
+          <textarea
+            maxLength={1000}
+            value={metadata.learning_objectives ?? ""}
+            onChange={(event) =>
+              setMetadata({
+                ...metadata,
+                learning_objectives: event.target.value,
+              })
+            }
+          />
+        </Field>
+        <Field id={`${id}-review-on`} label={t("materialReviewOn")}>
+          <input
+            type="date"
+            min="1000-01-01"
+            max="9999-12-31"
+            value={metadata.review_on ?? ""}
+            onChange={(event) =>
+              setMetadata({ ...metadata, review_on: event.target.value })
+            }
+          />
+        </Field>
         <Field
           id={`${id}-tags`}
           label={t("materialMetadataTags")}
@@ -225,6 +249,143 @@ function MaterialMetadataEditor({
   );
 }
 
+type MetadataRevision = {
+  revision: number;
+  content: MaterialMetadata;
+  changed_at: string;
+};
+const metadataHistoryPageSize = 20;
+
+/** Fetch history only on demand. Cursor pages stay scoped to the signed-in actor and share. */
+function MaterialMetadataHistory({
+  actor,
+  resourceId,
+  revision,
+}: {
+  actor: string;
+  resourceId: string;
+  revision: number;
+}) {
+  const { t, i18n } = useTranslation("learning");
+  const online = useOnline();
+  const [open, setOpen] = useState(false);
+  const query = useInfiniteQuery({
+    queryKey: [
+      ...courseMaterialLibraryKey(actor),
+      "history",
+      resourceId,
+      revision,
+    ],
+    enabled: open && online,
+    initialPageParam: null as number | null,
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, error, status } = await db()
+        .rpc("course_material_metadata_history", {
+          p_resource_id: resourceId,
+          p_before: pageParam,
+        })
+        .abortSignal(signal);
+      if (error) throwPagedReadError(error, status);
+      return data as MetadataRevision[];
+    },
+    getNextPageParam: (rows) =>
+      rows.length > metadataHistoryPageSize
+        ? rows[metadataHistoryPageSize - 1].revision
+        : undefined,
+    retry: false,
+    staleTime: 0,
+  });
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{t("materialHistory")}</summary>
+      {open &&
+        (!online ? (
+          <p>{t("materialMetadataOffline")}</p>
+        ) : query.isPending ? (
+          <Loading />
+        ) : query.isError && !canRetryNextPage(query) ? (
+          <ErrorState retry={() => void query.refetch()} />
+        ) : (
+          <>
+            <ol className="space-y-4">
+              {query.data?.pages
+                .flatMap((page) => page.slice(0, metadataHistoryPageSize))
+                .map((item) => (
+                  <li key={item.revision}>
+                    <strong>{t("version", { version: item.revision })}</strong>
+                    {" · "}
+                    <time dateTime={item.changed_at}>
+                      {new Date(item.changed_at).toLocaleString(i18n.language)}
+                    </time>
+                    {item.content.title && <p>{item.content.title}</p>}
+                    <MaterialMetadataDetails metadata={item.content} />
+                  </li>
+                ))}
+            </ol>
+            {canRetryNextPage(query) ? (
+              <NextPageError
+                retry={() => void query.fetchNextPage({ cancelRefetch: false })}
+                disabled={query.isFetching}
+              />
+            ) : (
+              query.hasNextPage && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={query.isFetching}
+                  onClick={() =>
+                    void query.fetchNextPage({ cancelRefetch: false })
+                  }
+                >
+                  {t("materialMoreRevisions")}
+                </Button>
+              )
+            )}
+          </>
+        ))}
+    </details>
+  );
+}
+
+/** Latest catalogue card and historical snapshots render the same documented fields. */
+function MaterialMetadataDetails({ metadata }: { metadata: MaterialMetadata }) {
+  const { t, i18n } = useTranslation("learning");
+  const detail = [
+    metadata.subject,
+    metadata.language && t(languageLabels[metadata.language]),
+    metadata.licence,
+  ].filter(Boolean);
+  return (
+    <>
+      {metadata.description && (
+        <p className="material-metadata-description">{metadata.description}</p>
+      )}
+      {detail.length > 0 && <p>{detail.join(" · ")}</p>}
+      {metadata.learning_objectives && (
+        <p>
+          {t("lessonObjectives")}: {metadata.learning_objectives}
+        </p>
+      )}
+      {metadata.review_on && (
+        <p>
+          {t("materialReviewOn")}:{" "}
+          <time dateTime={metadata.review_on}>
+            {new Intl.DateTimeFormat(i18n.language, {
+              dateStyle: "medium",
+              timeZone: "UTC",
+            }).format(new Date(metadata.review_on))}
+          </time>
+        </p>
+      )}
+      {metadata.tags.length > 0 && (
+        <small>
+          {t("materialMetadataTags")}: {metadata.tags.join(", ")}
+        </small>
+      )}
+    </>
+  );
+}
+
 /** Presentation and editing share the same row; downloads always use the original resource ID. */
 function MaterialItem({
   actor,
@@ -240,11 +401,6 @@ function MaterialItem({
   const [saved, setSaved] = useState(false);
   const edit = useRef<HTMLButtonElement>(null);
   const metadata = material.metadata;
-  const detail = [
-    metadata?.subject,
-    metadata?.language && t(languageLabels[metadata.language]),
-    metadata?.licence,
-  ].filter(Boolean);
   return (
     <li>
       {metadata?.title && <h3>{metadata.title}</h3>}
@@ -252,14 +408,13 @@ function MaterialItem({
       <small>
         {t(material.category)} · {t("version", { version: material.version })}
       </small>
-      {metadata?.description && (
-        <p className="material-metadata-description">{metadata.description}</p>
-      )}
-      {detail.length > 0 && <p>{detail.join(" · ")}</p>}
-      {!!metadata?.tags.length && (
-        <small>
-          {t("materialMetadataTags")}: {metadata.tags.join(", ")}
-        </small>
+      {metadata && <MaterialMetadataDetails metadata={metadata} />}
+      {material.can_read_metadata_history && (
+        <MaterialMetadataHistory
+          actor={actor}
+          resourceId={material.id}
+          revision={material.metadata_revision}
+        />
       )}
       <div className="form-actions">
         <DownloadButton

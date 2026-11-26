@@ -253,7 +253,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
             assert.deepEqual(await materialSearch(learner), [{
                 ...match, course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
-                can_edit_metadata: false, metadata: null, metadata_revision: 0,
+                can_edit_metadata: false, can_read_metadata_history: false, metadata: null, metadata_revision: 0,
             }]);
             assert.equal((await materialSearch(admin, run))[0].can_upload, true);
             assert.equal((await materialSearch(teacher, run))[0].can_upload, true);
@@ -288,6 +288,24 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.deepEqual(await materialSearch(foreign, run, "filesystems"), []);
             assert.equal(await sql(`select content->>'description' from private.course_material_metadata_revisions where resource_id=${q(resource)} and revision=1`), "Course handout");
             assert.equal(await sql(`select count(*) from public.audit_events where resource_id=${q(resource)} and action='course.material_metadata_revised'`), "2");
+            const history = (who, before = "null") => rpc(who, "course_material_metadata_history", [q(resource), before]);
+            for (const who of [learner, client, foreign]) {
+                await assert.rejects(history(who), /42501/);
+            }
+            assert.equal((await history(teacher)).length, 2);
+            assert.equal((await history(admin, 2))[0].revision, 1);
+            assert.equal((await materialSearch(admin, run))[0].can_read_metadata_history, true);
+            assert.equal(rows[0].can_read_metadata_history, false);
+            await assert.rejects(revise(admin, 2, { ...metadata, review_on: "2027-02-29" }), /22023/);
+            const reviewed = { ...metadata, review_on: "2028-02-29", learning_objectives: "Explain persistent volumes" };
+            assert.equal(await revise(admin, 2, reviewed), 3);
+            assert.equal((await materialSearch(learner, run, "persistent volumes"))[0].id, resource);
+            assert.equal(await revise(admin, 3, { ...metadata, description: "Older editor update" }), 4);
+            assert.equal((await history(admin))[0].content.review_on, reviewed.review_on);
+            assert.equal((await history(admin))[0].content.learning_objectives, reviewed.learning_objectives);
+            assert.equal(await revise(admin, 4, { ...metadata, review_on: "", learning_objectives: "" }), 5);
+            assert.equal((await history(admin))[0].content.review_on, undefined);
+            assert.equal((await history(admin))[0].content.learning_objectives, undefined);
             await actor(learner, `set local request.path='/rpc/search_course_materials';
               set local request.method='POST';select public.require_portal_access()`);
             assert.equal((await workspace(client)).resources.length, 0);

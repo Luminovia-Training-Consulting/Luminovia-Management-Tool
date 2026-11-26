@@ -97,6 +97,8 @@ import {
   myWorkspacesResult,
   importRowParameters,
   importRowResult,
+  materialHistoryParameters,
+  materialHistoryResult,
   materialMetadataParameters,
   materialMetadataRevision,
   materialSearchParameters,
@@ -958,7 +960,7 @@ const coursePaths = {
   "/rest/v1/rpc/search_course_materials": courseOperation(
     "searchAcademyCourseMaterials",
     "Search clean materials in authorised Academy courses",
-    "Filters by course ID, category and a case-insensitive substring in file name, title, description, subject or tags. Use null to omit a filter. Returns up to 25 rows ordered by file name and resource ID. Metadata has the file's audience. Grace permits reads and clears can_upload and can_edit_metadata.",
+    "Filters by course ID, category and a case-insensitive substring in file name, title, description, subject, learning objectives or tags. Use null to omit a filter. Returns up to 25 rows ordered by file name and resource ID. Metadata has the file's audience. Grace permits reads and clears can_upload and can_edit_metadata.",
     "active-or-grace",
     record(materialSearchParameters),
     materialSearchResult,
@@ -971,6 +973,14 @@ const coursePaths = {
     record(materialMetadataParameters),
     materialMetadataRevision,
     true,
+  ),
+  "/rest/v1/rpc/course_material_metadata_history": courseOperation(
+    "readAcademyCourseMaterialMetadataHistory",
+    "Read exact-share metadata revisions",
+    "Current course staff can read up to 21 metadata snapshots for an accessible share. Start with a null cursor and pass the last displayed revision to continue.",
+    "active-or-grace",
+    record(materialHistoryParameters),
+    materialHistoryResult,
   ),
   "/rest/v1/rpc/my_course_workspaces": courseOperation(
     "listAcademyCourseWorkspaces",

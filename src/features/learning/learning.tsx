@@ -1331,6 +1331,7 @@ function CourseWorkspaceLayout({
                 editable={canEdit && course.access.staff}
                 manager={course.access.manager}
                 roster={course.roster}
+                resources={course.resources}
               />
             </div>
           )}

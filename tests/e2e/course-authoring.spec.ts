@@ -108,6 +108,13 @@ test("course author publishes a versioned module and learner sees only the assig
     .getByLabel("Zielmodul")
     .selectOption({ label: `2. ${destination}` });
   await page.getByRole("button", { name: "In Zielmodul verschieben" }).click();
+  await page.getByRole("button", { name: "Lektion hinzufügen" }).click();
+  const archivedTitle = `Fictional archived lesson ${suffix}`;
+  await page.getByLabel("Lektionstitel").fill(archivedTitle);
+  await page.getByRole("button", { name: "Lektion archivieren" }).click();
+  await expect(
+    page.getByRole("button", { name: "Lektion wiederherstellen" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Teilnehmendenvorschau" }).click();
   const narrow = page.getByRole("button", { name: "Schmale Ansicht" });
   await narrow.click();
@@ -134,6 +141,7 @@ test("course author publishes a versioned module and learner sees only the assig
   );
   expect(learnerState.draft_content).toBeNull();
   expect(learnerState.versions).toEqual([]);
+  expect(JSON.stringify(learnerState)).not.toContain(archivedTitle);
   expect(learnerState.published_content.modules[1].title).toBe(destination);
   const [originalModule, destinationModule] =
     learnerState.published_content.modules;
@@ -168,6 +176,9 @@ test("course author publishes a versioned module and learner sees only the assig
     await expect(
       learnerPage.getByRole("heading", { name: copyTitle }),
     ).toBeVisible();
+    await expect(
+      learnerPage.getByRole("heading", { name: archivedTitle }),
+    ).toHaveCount(0);
     await expect(
       learnerPage.getByRole("button", { name: "Entwurf speichern" }),
     ).toHaveCount(0);

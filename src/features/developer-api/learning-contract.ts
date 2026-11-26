@@ -52,6 +52,20 @@ export const materialMetadataParameters = {
   p_metadata: materialMetadata,
 };
 export const materialMetadataRevision = { ...integer, minimum: 1 };
+export const materialHistoryParameters = {
+  p_resource_id: uuid,
+  p_before: nullable(materialMetadataRevision),
+};
+export const materialHistoryResult = {
+  ...itemList(
+    record({
+      revision: materialMetadataRevision,
+      content: materialMetadata,
+      changed_at: dateTime,
+    }),
+  ),
+  maxItems: 21,
+};
 export const materialSearchParameters = {
   p_course_id: nullable(uuid),
   p_search: nullable({ ...text, maxLength: 200 }),
@@ -70,6 +84,7 @@ export const materialSearchResult = {
       category: materialCategory,
       can_upload: boolean,
       can_edit_metadata: boolean,
+      can_read_metadata_history: boolean,
       metadata_revision: integer,
       metadata: nullable(materialMetadata),
     }),

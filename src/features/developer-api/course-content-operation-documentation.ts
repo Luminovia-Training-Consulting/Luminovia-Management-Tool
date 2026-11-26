@@ -21,6 +21,7 @@ const courseContent = {
           id: uuid,
           title: { type: "string", minLength: 1, maxLength: 150 },
           description: { type: "string", maxLength: 1000 },
+          archived: { type: "boolean" },
           lessons: {
             type: "array",
             maxItems: 100,
@@ -44,6 +45,19 @@ const courseContent = {
                   maximum: 1440,
                 },
                 body: { type: "object" },
+                archived: { type: "boolean" },
+                material_ids: {
+                  type: "array",
+                  items: {
+                    ...uuid,
+                    pattern:
+                      "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                  },
+                  maxItems: 12,
+                  uniqueItems: true,
+                  description:
+                    "Ordered references to exact course material shares.",
+                },
               },
             },
           },
@@ -163,7 +177,7 @@ export const courseContentOperationDocumentation = {
   course_content_studio: {
     summary: "Read authorised course curriculum and publication state",
     description:
-      "Requires an enabled LMS and current course access. Assigned staff receive the latest published curriculum, private draft and revision metadata. Participants receive only the exact published revision pinned to their active/completed enrolment; draft content and revision history are omitted. Completed legacy enrolments without a pinned content revision do not inherit future publications. Academy reads are available while the installation is active or in its permitted grace period.",
+      "Requires an enabled LMS and current course access. Assigned staff receive the latest published curriculum, private draft and revision metadata. Participants receive only the exact published revision pinned to their active/completed enrolment; draft content and revision history are omitted. Archived modules and lessons are omitted from participant projections. Material references are resolved against current learner-visible scanned course shares. Completed legacy enrolments without a pinned content revision do not inherit future publications. Academy reads are available while the installation is active or in its permitted grace period.",
     parameters: { p_run_id: uuid },
     required: ["p_run_id"],
     result: courseContentStudio,

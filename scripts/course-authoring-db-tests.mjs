@@ -111,8 +111,76 @@ await withTestDatabase("course_authoring_studio", async ({ sql, actor }) => {
     /42501/i,
   );
 
+  // Populate the real scanned-resource registry and reference the exact share.
+  const [
+    document,
+    version,
+    privateShare,
+    publicShare,
+    unrelatedShare,
+    archivedLesson,
+    archivedModule,
+  ] = Array.from({ length: 7 }, randomUUID);
+  await sql(`
+    insert into public.documents(id, owner_id, uploaded_by, scope, kind, original_name, mime_type, size_bytes, status, client_id)
+      values (${q(document)}, ${q(admin)}, ${q(admin)}, 'personal', 'material', 'Fictional.pdf', 'application/pdf', 10, 'clean', ${q(randomUUID())});
+    insert into public.document_versions(id, document_id, uploaded_by, client_id, version, object_path, original_name, mime_type, size_bytes, status, sha256)
+      values (${q(version)}, ${q(document)}, ${q(admin)}, ${q(randomUUID())}, 1, 'fictional/lesson.pdf', 'Fictional.pdf', 'application/pdf', 10, 'clean', ${q("a".repeat(64))});
+    update public.documents set current_version_id=${q(version)} where id=${q(document)};
+    insert into private.course_resources(id,run_id,version_id,audience,category,created_by)
+      values (${q(publicShare)},${q(run)},${q(version)},'participants','material',${q(admin)}),
+             (${q(privateShare)},${q(run)},${q(version)},'staff','material',${q(admin)});
+  `);
+  const firstContent = content("revision one");
+  const firstModule = firstContent.modules[0];
+  firstModule.lessons[0].material_ids = [
+    publicShare,
+    privateShare,
+    unrelatedShare,
+  ];
+  firstModule.lessons.push({
+    ...firstModule.lessons[0],
+    id: archivedLesson,
+    archived: true,
+  });
+  firstContent.modules.push({
+    ...firstModule,
+    id: archivedModule,
+    archived: true,
+    lessons: [],
+  });
+
+  await assert.rejects(
+    action(admin, "save_draft", {
+      content: { modules: [{ ...firstModule, archived: "true" }] },
+      published_version: 0,
+      draft_version: 0,
+    }),
+    /22023/,
+  );
+  await assert.rejects(
+    action(admin, "save_draft", {
+      content: {
+        modules: [
+          {
+            ...firstModule,
+            lessons: [
+              {
+                ...firstModule.lessons[0],
+                material_ids: [publicShare, publicShare],
+              },
+            ],
+          },
+        ],
+      },
+      published_version: 0,
+      draft_version: 0,
+    }),
+    /22023/,
+  );
+
   const firstDraft = await action(admin, "save_draft", {
-    content: content("revision one"),
+    content: firstContent,
     published_version: 0,
     draft_version: 0,
   });
@@ -143,6 +211,20 @@ await withTestDatabase("course_authoring_studio", async ({ sql, actor }) => {
     draft_version: 1,
   });
   assert.equal(first.published_version, 1);
+  assert.equal(first.published_content.modules.length, 2);
+  assert.equal(first.published_content.modules[0].lessons.length, 2);
+  const projected = (await read(learner)).published_content;
+  assert.equal(projected.modules.length, 1);
+  assert.equal(projected.modules[0].lessons.length, 1);
+  assert.deepEqual(projected.modules[0].lessons[0].material_ids, [publicShare]);
+  await sql(
+    `update private.course_resources set removed_at=now() where id=${q(publicShare)}`,
+  );
+  assert.deepEqual(
+    (await read(learner)).published_content.modules[0].lessons[0].material_ids,
+    [],
+  );
+
   assert.equal(
     (await read(learner)).published_content.modules[0].title,
     "Fictional revision one",

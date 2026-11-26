@@ -164,9 +164,16 @@ test("the assigned lecturer can scan, share, describe and withdraw their own cou
         await page.getByLabel("Titel", {exact: true}).fill(materialTitle);
         await page.getByLabel("Beschreibung", {exact: true}).fill(description);
         await page.getByLabel("Fachgebiet", {exact: true}).fill(subject);
+        const objectives = `Fictional objectives ${f.suffix}`;
+        await page.getByLabel("Lernziele", {exact: true}).fill(objectives);
+        await page.getByLabel("Prüfdatum", {exact: true}).fill("2028-02-29");
         await page.getByLabel("Schlagwörter", {exact: true}).fill(`map-review, ${participantTag}`);
         await page.getByRole("button", {name: "Metadaten speichern", exact: true}).click();
         await expect(editableMaterial.getByText(materialTitle, {exact: true})).toBeVisible();
+        await editableMaterial.getByText("Metadatenverlauf", {exact: true}).click();
+        const history = editableMaterial.locator("details");
+        await expect(history.getByText(objectives, {exact: false})).toBeVisible();
+        await expect(history.locator('time[datetime="2028-02-29"]')).toBeVisible();
         await page.goto(path);
 
         const learnerPage = await openAs(f.learner.email, /\/learning$/);
@@ -197,6 +204,12 @@ test("the assigned lecturer can scan, share, describe and withdraw their own cou
         await expect(noMatches).toBeVisible();
         await search.fill(subject);
         await expect(sharedMaterial.getByText(description, {exact: true})).toBeVisible();
+        await expect(sharedMaterial.getByText("Metadatenverlauf", {exact: true})).toHaveCount(0);
+        const deniedHistory = await learner.client.rpc("course_material_metadata_history", {
+            p_resource_id: participantResource.id,
+            p_before: null,
+        });
+        expect(deniedHistory.error?.code).toBe("42501");
         await search.fill(staffTag);
         await expect(noMatches).toBeVisible();
         await expect(learnerLibrary.getByRole("listitem")).toHaveCount(0);

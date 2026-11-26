@@ -27,6 +27,7 @@ const readPaths = [
   "/rest/v1/rpc/course_class_options",
   "/rest/v1/rpc/course_submissions",
   "/rest/v1/rpc/search_course_materials",
+  "/rest/v1/rpc/course_material_metadata_history",
   "/rest/v1/rpc/course_attendance_summary",
 ] as const;
 const writePaths = [

@@ -1,3 +1,4 @@
+/** Course-run authoring and participant projection for versioned curricula. */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -6,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Dialog } from "../../components/ui/dialog";
 import { requireOnline, useOnline } from "../../lib/online";
+import { DownloadButton } from "./resources";
 import { KnowledgeEditor } from "../knowledge/editor";
 import {
   courseContentAction,
@@ -15,12 +17,14 @@ import {
   type CourseWorkspace,
 } from "./api";
 import {
+  compareCourseCurricula,
   copyCourseLesson,
   copyCourseModule,
   createCourseLesson,
   createCourseModule,
   emptyCurriculum,
   maxCourseModules,
+  maxLessonMaterials,
   maxModuleLessons,
   moveCourseLesson,
   normalizeCourseCurriculum,
@@ -31,34 +35,69 @@ import {
 import "../knowledge/knowledge.css";
 import "./i18n";
 
-function CourseContents({ curriculum }: { curriculum: CourseCurriculum }) {
+/** Resolve only currently projected, exact-version shares. Hidden and withdrawn shares are omitted. */
+function CourseContents({
+  curriculum,
+  materials,
+  preview = false,
+}: {
+  curriculum: CourseCurriculum;
+  materials: CourseWorkspace["resources"];
+  preview?: boolean;
+}) {
   const { t } = useTranslation("learning");
-  if (!curriculum.modules.length) return <p>{t("curriculumEmpty")}</p>;
+  const modules = curriculum.modules.filter((module) => !module.archived);
+  const byId = new Map(materials.map((material) => [material.id, material]));
+  if (!modules.length) return <p>{t("curriculumEmpty")}</p>;
   return (
     <div className="course-authoring-preview">
-      {curriculum.modules.map((module) => (
+      {modules.map((module) => (
         <section key={module.id}>
           <h3>{module.title}</h3>
           {module.description && <p>{module.description}</p>}
-          {module.lessons.map((lesson) => (
-            <article key={lesson.id}>
-              <h4>{lesson.title}</h4>
-              {lesson.objectives && (
-                <p>
-                  <strong>{t("lessonObjectives")}: </strong>
-                  {lesson.objectives}
-                </p>
-              )}
-              {lesson.duration_minutes > 0 && (
-                <p>{t("lessonDuration", { count: lesson.duration_minutes })}</p>
-              )}
-              <KnowledgeEditor
-                value={lesson.body}
-                label={lesson.title}
-                readOnly
-              />
-            </article>
-          ))}
+          {module.lessons
+            .filter((lesson) => !lesson.archived)
+            .map((lesson) => (
+              <article key={lesson.id}>
+                <h4>{lesson.title}</h4>
+                {lesson.objectives && (
+                  <p>
+                    <strong>{t("lessonObjectives")}: </strong>
+                    {lesson.objectives}
+                  </p>
+                )}
+                {lesson.duration_minutes > 0 && (
+                  <p>
+                    {t("lessonDuration", { count: lesson.duration_minutes })}
+                  </p>
+                )}
+                <KnowledgeEditor
+                  value={lesson.body}
+                  label={lesson.title}
+                  readOnly
+                />
+                {lesson.material_ids?.map((id) => {
+                  const material = byId.get(id);
+                  return (
+                    material && (
+                      <p key={id}>
+                        {material.name}
+                        {!preview && (
+                          <DownloadButton
+                            kind="resource"
+                            id={id}
+                            name={material.name}
+                            label={t("materialDownload", {
+                              name: material.name,
+                            })}
+                          />
+                        )}
+                      </p>
+                    )
+                  );
+                })}
+              </article>
+            ))}
         </section>
       ))}
     </div>
@@ -141,18 +180,132 @@ function LessonDestination({
   );
 }
 
+/** Summarise which stable objects a draft changes relative to the last publication. */
+function CurriculumComparison({
+  published,
+  draft,
+  version,
+}: {
+  published: CourseCurriculum;
+  draft: CourseCurriculum;
+  version: number;
+}) {
+  const { t } = useTranslation("learning");
+  const [open, setOpen] = useState(false);
+  const changes = open ? compareCourseCurricula(published, draft) : [];
+  return (
+    <details
+      className="course-authoring-history"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>{t("curriculumCompare", { version })}</summary>
+      {open &&
+        (changes.length ? (
+          <ul className="space-y-2">
+            {changes.map(({ id, kind, title, previousTitle, fieldChanges }) => (
+              <li key={id}>
+                <strong>
+                  {t(kind)} · {title}
+                </strong>
+                {previousTitle && (
+                  <> {t("curriculumPreviousTitle", { title: previousTitle })}</>
+                )}
+                {" · "}
+                {fieldChanges.map((change) => t(change)).join(", ")}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>{t("curriculumNoChanges")}</p>
+        ))}
+    </details>
+  );
+}
+
+/** Attach learner-visible materials without leaving the existing scanned share scope. */
+function LessonMaterials({
+  selected,
+  materials,
+  onChange,
+}: {
+  selected: string[];
+  materials: CourseWorkspace["resources"];
+  onChange: (ids: string[]) => void;
+}) {
+  const { t } = useTranslation("learning");
+  const [choice, setChoice] = useState("");
+  const available = materials.filter(({ id }) => !selected.includes(id));
+  return (
+    <div className="space-y-2">
+      <Field id="course-lesson-material" label={t("curriculumLessonMaterials")}>
+        <select
+          value={choice}
+          onChange={(event) => setChoice(event.target.value)}
+        >
+          <option value="">{t("curriculumChooseMaterial")}</option>
+          {available.map(({ id, name, version }) => (
+            <option key={id} value={id}>
+              {name} · {t("version", { version })}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={
+          selected.length >= maxLessonMaterials ||
+          !available.some(({ id }) => id === choice)
+        }
+        onClick={() => {
+          onChange([...selected, choice]);
+          setChoice("");
+        }}
+      >
+        {t("curriculumAttachMaterial")}
+      </Button>
+      {selected.length > 0 && (
+        <ul className="space-y-2">
+          {selected.map((id) => {
+            const name =
+              materials.find((material) => material.id === id)?.name ??
+              t("curriculumUnavailableMaterial");
+            return (
+              <li key={id} className="flex flex-wrap items-center gap-2">
+                <span>{name}</span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-label={t("curriculumDetachMaterialNamed", { name })}
+                  onClick={() =>
+                    onChange(selected.filter((item) => item !== id))
+                  }
+                >
+                  {t("curriculumDetachMaterial")}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function CourseAuthoring({
   actor,
   courseId,
   editable,
   manager,
   roster,
+  resources = [],
 }: {
   actor: string;
   courseId: string;
   editable: boolean;
   manager: boolean;
   roster: CourseWorkspace["roster"];
+  resources?: CourseWorkspace["resources"];
 }) {
   const { t } = useTranslation("learning");
   const location = useLocation();
@@ -291,6 +444,12 @@ export function CourseAuthoring({
   if (!query.data) return null;
 
   const state = query.data;
+  const materials = resources.filter(
+    ({ category, audience, sha256 }) =>
+      category === "material" &&
+      (audience === "all" || audience === "participants") &&
+      /^[0-9a-f]{64}$/.test(sha256),
+  );
   const updateCurriculum = (
     update: (value: CourseCurriculum) => CourseCurriculum,
   ) => {
@@ -396,7 +555,7 @@ export function CourseAuthoring({
             </span>
           )}
         </header>
-        <CourseContents curriculum={curriculum} />
+        <CourseContents curriculum={curriculum} materials={materials} />
       </section>
     );
 
@@ -512,7 +671,11 @@ export function CourseAuthoring({
           <div
             className={compactPreview ? "course-authoring-compact" : undefined}
           >
-            <CourseContents curriculum={curriculum} />
+            <CourseContents
+              curriculum={curriculum}
+              materials={materials}
+              preview
+            />
           </div>
         </div>
       ) : (
@@ -735,6 +898,19 @@ export function CourseAuthoring({
                   <Button
                     type="button"
                     variant="secondary"
+                    onClick={() =>
+                      reviseLesson({ archived: !activeLesson.archived })
+                    }
+                  >
+                    {t(
+                      activeLesson.archived
+                        ? "curriculumRestoreLesson"
+                        : "curriculumArchiveLesson",
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
                     onClick={() => {
                       updateCurriculum((value) => ({
                         modules: value.modules.map((item) =>
@@ -754,6 +930,12 @@ export function CourseAuthoring({
                     {t("curriculumRemoveLesson")}
                   </Button>
                 </div>
+                <LessonMaterials
+                  key={activeLesson.id}
+                  selected={activeLesson.material_ids ?? []}
+                  materials={materials}
+                  onChange={(material_ids) => reviseLesson({ material_ids })}
+                />
                 <LessonDestination
                   key={activeLesson.id}
                   modules={curriculum.modules}
@@ -825,6 +1007,19 @@ export function CourseAuthoring({
                   <Button
                     type="button"
                     variant="secondary"
+                    onClick={() =>
+                      reviseModule({ archived: !activeModule.archived })
+                    }
+                  >
+                    {t(
+                      activeModule.archived
+                        ? "curriculumRestoreModule"
+                        : "curriculumArchiveModule",
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
                     onClick={() => {
                       updateCurriculum((value) => ({
                         modules: value.modules.filter(
@@ -841,6 +1036,14 @@ export function CourseAuthoring({
             )}
           </div>
         </fieldset>
+      )}
+
+      {state.published_version > 0 && (dirty || state.draft_version > 0) && (
+        <CurriculumComparison
+          published={normalizeCourseCurriculum(state.published_content)}
+          draft={curriculum}
+          version={state.published_version}
+        />
       )}
 
       {state.versions.length > 0 && (
