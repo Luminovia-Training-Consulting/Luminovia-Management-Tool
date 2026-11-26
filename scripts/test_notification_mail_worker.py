@@ -1,5 +1,7 @@
 """Real loopback HTTP/SMTP and deterministic failure tests; no external mail."""
 
+import asyncio
+import base64
 import contextlib
 import importlib.util
 import io
@@ -24,6 +26,13 @@ spec = importlib.util.spec_from_file_location(
 worker = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = worker
 spec.loader.exec_module(worker)
+
+relay_spec = importlib.util.spec_from_file_location(
+    "mail_relay", Path(__file__).with_name("mail-relay.py")
+)
+relay_module = importlib.util.module_from_spec(relay_spec)
+sys.modules[relay_spec.name] = relay_module
+relay_spec.loader.exec_module(relay_module)
 
 IDENTITY = "12345678-1234-4234-8234-123456789abc"
 TOKEN = "87654321-4321-4321-8321-cba987654321"
@@ -107,6 +116,58 @@ class SmtpHandler(socketserver.StreamRequestHandler):
                 return
             else:
                 self.wfile.write(b"250 OK\r\n")
+
+
+class ProviderSmtp:
+    def __init__(self, mode):
+        self.mode = mode
+        self.submissions = []
+        self.closed = False
+
+    def ehlo(self):
+        return 250, b"OK"
+
+    def login(self, _username, _password):
+        if self.mode == "login_4xx":
+            raise smtplib.SMTPAuthenticationError(454, b"private authentication detail")
+        if self.mode == "login_5xx":
+            raise smtplib.SMTPAuthenticationError(535, b"private authentication detail")
+        return 235, b"OK"
+
+    def mail(self, _sender):
+        if self.mode == "sender_4xx":
+            return 450, b"private mailbox address and provider detail"
+        if self.mode == "sender_5xx":
+            return 550, b"private mailbox address and provider detail"
+        return 250, b"OK"
+
+    def rcpt(self, _recipient):
+        if self.mode == "recipient_4xx":
+            return 450, b"private recipient address and provider detail"
+        if self.mode == "recipient_5xx":
+            return 550, b"private recipient address and provider detail"
+        return 250, b"OK"
+
+    def data(self, message):
+        self.submissions.append(message)
+        if self.mode == "data_4xx":
+            return 451, b"private data detail"
+        if self.mode in ("data_5xx", "data_5xx_close_failure"):
+            return 550, b"private data detail"
+        if self.mode == "data_lost":
+            raise smtplib.SMTPServerDisconnected("private provider disconnect")
+        if self.mode == "data_io_error":
+            raise OSError("private provider transport detail")
+        if self.mode == "data_command_rejection":
+            raise smtplib.SMTPDataError(554, b"private DATA command detail")
+        if self.mode == "data_unexpected":
+            return 354, b"unexpected continuation after DATA"
+        return 250, b"OK"
+
+    def close(self):
+        self.closed = True
+        if self.mode == "data_5xx_close_failure":
+            raise OSError("private socket cleanup detail")
 
 
 class CaptureRpcHandler(BaseHTTPRequestHandler):
@@ -304,6 +365,195 @@ class DeliveryTests(unittest.TestCase):
             outcome = worker.smtp_delivery(self.config, DELIVERY)
         self.assertEqual(outcome, ("uncertain", "smtp_ambiguous"))
         self.assertEqual(len(server.messages), 1)
+
+    def test_worker_and_private_relay_preserve_provider_outcome_class(self):
+        settings = {
+            "enabled": True,
+            "host": "smtp.example.com",
+            "port": 465,
+            "security": "implicit_tls",
+            "username": "provider@example.invalid",
+            "password": "fictional-provider-password",
+            "sender_email": "sender@example.invalid",
+            "sender_name": "Fictional Sender",
+        }
+        expected = {
+            "accepted": ("accepted", 1, 0),
+            "login_4xx": ("retry", 0, 0),
+            "login_5xx": ("failed", 0, 0),
+            "sender_4xx": ("retry", 0, 0),
+            "sender_5xx": ("failed", 0, 0),
+            "recipient_4xx": ("retry", 0, 0),
+            "recipient_5xx": ("failed", 0, 0),
+            "data_4xx": ("retry", 1, 0),
+            "data_5xx": ("failed", 1, 0),
+            "data_5xx_close_failure": ("failed", 1, 0),
+            "data_lost": ("uncertain", 1, 0),
+            "data_io_error": ("uncertain", 1, 0),
+            "data_command_rejection": ("failed", 1, 0),
+            "data_unexpected": ("uncertain", 1, 0),
+        }
+        for mode, (outcome, submissions, rpc_errors) in expected.items():
+            with self.subTest(provider_result=mode):
+                provider = ProviderSmtp(mode)
+                relay = relay_module.MailRelay(
+                    relay_module.RelayConfig(
+                        api_url="http://api-gw:8000/rest/v1",
+                        service_key="fictional-relay-service-key",
+                        username="relay@example.invalid",
+                        password=ENV["PORTAL_NOTIFICATION_SMTP_PASSWORD"],
+                        control_token="fictional-relay-control-token",
+                    )
+                )
+                relay.current_transport = Mock(return_value=settings)
+                rpc = Mock()
+                rpc.call.side_effect = [0, [LEASE], DELIVERY, True]
+                original_smtp = smtplib.SMTP
+                data_responses = []
+
+                async def run_delivery():
+                    server = await asyncio.start_server(
+                        lambda reader, writer: relay.handle_smtp(reader, writer),
+                        host="127.0.0.1",
+                        port=0,
+                        limit=relay_module.MAX_COMMAND_BYTES + 2,
+                    )
+                    port = server.sockets[0].getsockname()[1]
+
+                    def connect(host, requested_port, *, timeout):
+                        self.assertEqual((host, requested_port), ("127.0.0.1", 2526))
+                        connection = original_smtp("127.0.0.1", port, timeout=timeout)
+                        original_data = connection.data
+
+                        def capture_data(message):
+                            response = original_data(message)
+                            data_responses.append(response)
+                            return response
+
+                        connection.data = capture_data
+                        return connection
+
+                    try:
+                        with (
+                            patch.object(relay_module, "PinnedSMTPSSL", return_value=provider),
+                            patch.object(smtplib, "SMTP", connect),
+                        ):
+                            # Use the real batch logic without installing a main-thread-only alarm.
+                            result = {
+                                key: 0
+                                for key in (
+                                    "accepted",
+                                    "retry",
+                                    "failed",
+                                    "uncertain",
+                                    "suppressed",
+                                    "rpc_errors",
+                                )
+                            }
+                            await asyncio.to_thread(
+                                worker._run,
+                                self.config,
+                                rpc,
+                                worker.smtp_delivery,
+                                result,
+                                time.monotonic() + 30,
+                            )
+                    finally:
+                        server.close()
+                        await server.wait_closed()
+                    return result
+
+                result = asyncio.run(run_delivery())
+                self.assertEqual(
+                    result[outcome],
+                    1,
+                    f"worker result={result!r}; RPC calls={rpc.call.call_args_list!r}",
+                )
+                self.assertEqual(result["rpc_errors"], rpc_errors)
+                self.assertEqual(len(provider.submissions), submissions)
+                if outcome == "uncertain":
+                    self.assertEqual(data_responses, [])
+                else:
+                    self.assertEqual(len(data_responses), 1)
+                    response_code, response_text = data_responses[0]
+                    self.assertEqual(
+                        response_code,
+                        250 if outcome == "accepted" else 451 if outcome == "retry" else 550,
+                    )
+                    self.assertNotIn(b"private", response_text.lower())
+                    self.assertNotIn(b"provider", response_text.lower())
+                finish = rpc.call.call_args
+                self.assertEqual(finish.args[0], "finish_notification_email")
+                self.assertEqual(finish.args[1]["p_outcome"], outcome)
+                self.assertNotIn("private", str(finish.args[1]).lower())
+                self.assertTrue(provider.closed)
+
+    def test_worker_and_private_relay_do_not_submit_incomplete_data_on_eof(self):
+        relay = relay_module.MailRelay(
+            relay_module.RelayConfig(
+                api_url="http://api-gw:8000/rest/v1",
+                service_key="fictional-relay-service-key",
+                username="relay@example.invalid",
+                password=ENV["PORTAL_NOTIFICATION_SMTP_PASSWORD"],
+                control_token="fictional-relay-control-token",
+            )
+        )
+        encoded_auth = base64.b64encode(
+            b"\0" + relay.config.username.encode() + b"\0" + relay.config.password.encode()
+        )
+
+        class IncompleteReader:
+            def __init__(self):
+                self.lines = iter(
+                    [
+                        b"EHLO worker.example.invalid\r\n",
+                        b"AUTH PLAIN " + encoded_auth + b"\r\n",
+                        b"MAIL FROM:<worker@example.invalid>\r\n",
+                        b"RCPT TO:<fictional.recipient@example.invalid>\r\n",
+                        b"DATA\r\n",
+                        b"Subject: incomplete\r\n",
+                        b"\r\n",
+                        b"partial body without terminator\r\n",
+                        b"",
+                    ]
+                )
+                self.eof_seen = False
+
+            async def readline(self):
+                try:
+                    line = next(self.lines)
+                except StopIteration:
+                    raise AssertionError("SMTP handler continued reading after DATA EOF")
+                if line == b"":
+                    self.eof_seen = True
+                return line
+
+        class Writer:
+            def __init__(self):
+                self.closed = False
+
+            def write(self, _value):
+                pass
+
+            async def drain(self):
+                pass
+
+            def close(self):
+                self.closed = True
+
+            async def wait_closed(self):
+                pass
+
+        reader, writer = IncompleteReader(), Writer()
+        relay.deliver = Mock()
+
+        async def run_incomplete_message():
+            await relay.handle_smtp(reader, writer)
+
+        asyncio.run(run_incomplete_message())
+        self.assertTrue(reader.eof_seen)
+        self.assertTrue(writer.closed)
+        relay.deliver.assert_not_called()
 
     def test_worker_rejects_non_loopback_relays_before_network_access(self):
         with patch.object(smtplib, "SMTP") as connect:
