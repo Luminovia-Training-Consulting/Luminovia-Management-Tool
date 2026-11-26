@@ -127,6 +127,8 @@ import {
   questionBankParameters,
   questionBankOptionalParameters,
   questionBankResult,
+  h5pQuestionImportParameters,
+  h5pQuestionImportResult,
   questionBankActionParameters,
   questionBankActionVariants,
   questionBankActionResult,
@@ -4425,6 +4427,14 @@ const nativePaths = {
     "Send the caller's exact published quiz version, next attempt number, stable request ID, expected draft revision, and one option index or null per question. The reply is the confirmed draft revision. The draft stays learner-private and consumes no attempt. The current course workspace returns this draft to its owner. Changing a stale revision returns 409.",
     quizDraftParameters,
     quizDraftRevision,
+  ),
+  "/rest/v1/rpc/course_h5p_question_import": rpc(
+    "importH5pQuestion",
+    "Premium LMS",
+    "Import a licensed text question to the organisation bank",
+    "Current course staff can store a normalized H5P.MultiChoice 1.16 single-answer or H5P.TrueFalse 1.8 question with declared CC0 1.0 or CC BY 4.0 attribution. The browser reads the archive. The API accepts bounded question JSON and no code or media, and saves an identical declared package only once per organisation.",
+    h5pQuestionImportParameters,
+    h5pQuestionImportResult,
   ),
   "/rest/v1/rpc/course_question_bank": rpc(
     "readCourseQuestionBank",

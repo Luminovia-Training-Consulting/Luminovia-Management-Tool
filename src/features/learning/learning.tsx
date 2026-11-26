@@ -46,6 +46,7 @@ import { CourseDestinations } from "./destinations";
 import { CourseCompetencies } from "./competencies";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizAttempt } from "./quiz-attempt";
+import { H5pAttribution } from "./h5p-attribution";
 import { QuestionBank } from "./question-bank";
 import { questionBankAction, questionBankKey } from "./question-bank-api";
 import { CourseMeetingLinkEditor } from "./meeting-link";
@@ -573,6 +574,7 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
             const selectedQuestion = {
               ...question.content,
               source: { question_id: question.id, revision: question.revision },
+              h5p_attribution: question.h5p_attribution ?? undefined,
             };
             setQuestions((items) =>
               hasOnlyPlaceholder
@@ -615,6 +617,9 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
             {question.source ? (
               <>
                 <p>{question.prompt}</p>
+                {question.h5p_attribution && (
+                  <H5pAttribution credits={question.h5p_attribution} />
+                )}
                 <ol className="list-decimal ps-6">
                   {question.options.map((option, position) => (
                     <li key={position}>
@@ -785,7 +790,12 @@ function Quiz({ course, actor, academy }: ActivityProps) {
           <div>
             <ol>
               {course.quiz.questions.map((question, index) => (
-                <li key={index}>{question.prompt}</li>
+                <li key={index}>
+                  {question.prompt}
+                  {question.h5p_attribution && (
+                    <H5pAttribution credits={question.h5p_attribution} />
+                  )}
+                </li>
               ))}
             </ol>
             {course.quiz.last_score !== null && (

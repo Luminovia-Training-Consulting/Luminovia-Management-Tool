@@ -1,3 +1,4 @@
+import type { H5pAttribution } from "./h5p-import-schema";
 /** Permission-scoped course DTOs and online mutation/download boundaries for the learning workspace. */
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { saveBlob } from "../../lib/blob-download";
@@ -65,6 +66,7 @@ export interface QuizQuestion {
   options: string[];
   correct?: number;
   source?: { question_id: string; revision: number };
+  h5p_attribution?: H5pAttribution;
 }
 
 export interface CourseWorkspace {

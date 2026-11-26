@@ -1,5 +1,6 @@
 /** Exact bank revisions are references in the builder; manual rows contain their own answer key. */
 import { z } from "zod";
+import type { H5pAttribution } from "./h5p-import-schema";
 
 export const questionDifficulties = [
   "introductory",
@@ -37,4 +38,5 @@ export interface BankQuestion extends BankQuestionContent {
   revision: number;
   archived: boolean;
   can_edit: boolean;
+  h5p_attribution?: H5pAttribution | null;
 }

@@ -9,6 +9,8 @@ node scripts/crm-pipeline-db-tests.mjs
 node scripts/course-authoring-db-tests.mjs
 node scripts/academy-course-authoring-db-tests.mjs
 node scripts/course-question-bank-db-tests.mjs
+node scripts/course-h5p-import-db-tests.mjs
+node scripts/academy-course-h5p-import-db-tests.mjs
 node scripts/academy-question-bank-db-tests.mjs
 node scripts/course-competency-db-tests.mjs
 node scripts/academy-course-competency-db-tests.mjs

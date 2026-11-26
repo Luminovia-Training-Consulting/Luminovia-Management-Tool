@@ -3,6 +3,10 @@
  * The generated native catalogue owns PostgreSQL signatures and REST gates.
  */
 import { z } from "zod";
+import {
+  h5pAttributionSchema,
+  h5pQuestionImportSchema,
+} from "../learning/h5p-import-schema.ts";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
 import { questionDifficulties } from "../learning/question-bank-schema.ts";
 import { materialMetadataSchema } from "../learning/material-metadata-schema.ts";
@@ -192,20 +196,33 @@ export const questionBankOptionalParameters = [
   "p_include_archived",
   "p_offset",
 ];
+const h5pAttribution = z.toJSONSchema(h5pAttributionSchema);
+const questionBankEntryFields = {
+  ...questionBankContentFields,
+  id: uuid,
+  revision: { ...integer, minimum: 1 },
+  archived: boolean,
+  can_edit: boolean,
+};
 export const questionBankResult = record({
   items: {
     ...itemList(
       record({
-        ...questionBankContentFields,
-        id: uuid,
-        revision: { ...integer, minimum: 1 },
-        archived: boolean,
-        can_edit: boolean,
+        ...questionBankEntryFields,
+        h5p_attribution: nullable(h5pAttribution),
       }),
     ),
     maxItems: 20,
   },
   has_more: boolean,
+});
+export const h5pQuestionImportParameters = {
+  p_run_id: uuid,
+  p_package: z.toJSONSchema(h5pQuestionImportSchema),
+};
+export const h5pQuestionImportResult = record({
+  ...questionBankEntryFields,
+  h5p_attribution: h5pAttribution,
 });
 export const questionBankActionParameters = {
   p_run_id: uuid,
@@ -347,10 +364,14 @@ const workspaceFields = {
       pass_percent: { ...score, minimum: 50 },
       max_attempts: { ...integer, minimum: 1, maximum: 10 },
       questions: itemList(
-        record({ ...quizQuestion, source: questionBankSource }, [
-          "prompt",
-          "options",
-        ]),
+        record(
+          {
+            ...quizQuestion,
+            source: questionBankSource,
+            h5p_attribution: h5pAttribution,
+          },
+          ["prompt", "options"],
+        ),
       ),
       attempts: integer,
       passed: boolean,

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { H5pAttribution } from "./h5p-attribution";
+import { H5pQuestionImportPanel } from "./h5p-question-import-panel";
 import { useOnline } from "../../lib/online";
 import {
   questionBankAction,
@@ -183,6 +185,13 @@ function OpenQuestionBank({
       >
         {t("questionBankAdd")}
       </Button>
+      <H5pQuestionImportPanel
+        actor={actor}
+        courseId={courseId}
+        selected={selected}
+        canSelect={canSelect}
+        onSelect={onSelect}
+      />
       {draft && (
         <form className="learning-quiz-editor" onSubmit={submit}>
           <fieldset disabled={save.isPending || conflict}>
@@ -323,6 +332,9 @@ function OpenQuestionBank({
             {bank.data.items.map((question) => (
               <li key={question.id} className="space-y-2">
                 <strong>{question.content.prompt}</strong>
+                {question.h5p_attribution && (
+                  <H5pAttribution credits={question.h5p_attribution} />
+                )}
                 <p>
                   {question.topic} · {t(difficultyLabels[question.difficulty])}{" "}
                   · {t("questionBankRevision", { revision: question.revision })}

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import { requireOnline, useOnline } from "../../lib/online";
+import { H5pAttribution } from "./h5p-attribution";
 import { db } from "../../lib/supabase";
 import {
   courseAction,
@@ -166,6 +167,9 @@ export function QuizAttempt({
           disabled={!canAttempt || attempt.isPending || reload.isPending}
         >
           <legend>{question.prompt}</legend>
+          {question.h5p_attribution && (
+            <H5pAttribution credits={question.h5p_attribution} />
+          )}
           {question.options.map((option, number) => (
             <label className="checkbox-label" key={number}>
               <input
