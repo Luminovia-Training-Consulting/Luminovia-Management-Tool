@@ -64,6 +64,10 @@ const pairs: Record<string, [string, string]> = {
   ],
   jobPricingRecords: ["Auftragskonditionen", "Job pricing records"],
   jobDispatchRecords: ["Auftragsplanung", "Job dispatch records"],
+  jobPublicationEmailRecords: [
+    "E-Mail-Vorgänge zur Auftragsveröffentlichung",
+    "Job publication email records",
+  ],
   assignmentPricingRecords: [
     "Zuweisungskonditionen",
     "Assignment pricing records",
@@ -71,6 +75,18 @@ const pairs: Record<string, [string, string]> = {
   companyLecturerDecisions: [
     "Entscheidungen zur Lehrkraft",
     "Company lecturer decisions",
+  ],
+  emergencyAssignmentDays: ["Notfalleinsätze", "Emergency assignments"],
+  assignmentWithdrawals: ["Rücktrittsanfragen", "Withdrawal requests"],
+  assignmentWithdrawalCommands: [
+    "Gespeicherte Änderungen an Rücktrittsanfragen",
+    "Recorded withdrawal changes",
+  ],
+  jobSubstitutions: ["Vertretungen", "Substitutions"],
+  replacementOffers: ["Ersatzangebote", "Replacement offers"],
+  replacementOfferRequests: [
+    "Gespeicherte Änderungen an Ersatzangeboten",
+    "Recorded replacement offer changes",
   ],
   courseJobRecords: ["Kurs-Auftragszuordnungen", "Course job records"],
   organisationDetails: [
@@ -149,6 +165,7 @@ const pairs: Record<string, [string, string]> = {
   assignmentSessions: ["Zugewiesene Termine", "Assigned sessions"],
   building_block: ["Kursbausteine", "Course building blocks"],
   title: ["Endgültig löschen", "Delete permanently"],
+  jobTitle: ["Auftrag endgültig löschen", "Permanently delete job"],
   intro: [
     "Verwalte löschbare Einträge anhand ihrer aktuellen Berechtigungen.",
     "Manage deletable records under your current permissions.",
@@ -201,6 +218,10 @@ const pairs: Record<string, [string, string]> = {
   acknowledge: [
     "Ich habe den angezeigten Umfang geprüft und möchte diese Daten endgültig löschen.",
     "I reviewed the displayed impact and want to permanently delete these records.",
+  ],
+  acknowledgeJob: [
+    "Ich habe den Umfang geprüft und möchte diesen Auftrag samt den aufgeführten Daten endgültig löschen.",
+    "I reviewed the impact and want to permanently delete this job and the listed records.",
   ],
   confirm: ["Jetzt unwiderruflich löschen", "Delete irreversibly now"],
   pending: [
@@ -276,6 +297,7 @@ const pairs: Record<string, [string, string]> = {
   global_event: ["Globale Termine", "Global events"],
   contract: ["Verträge", "Contracts"],
   invoice: ["Rechnungen", "Invoices"],
+  invoiceItems: ["Rechnungspositionen", "Invoice line items"],
   payment: ["Zahlungen", "Payments"],
   personal_event: ["Eigene Termine", "Personal events"],
   availability: ["Verfügbarkeit", "Availability"],
