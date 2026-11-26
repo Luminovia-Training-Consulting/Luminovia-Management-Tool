@@ -112,6 +112,20 @@ try {
     assert.ok(server.MAIL_RELAY_PASSWORD.length >= 40);
     assert.ok(server.PORTAL_MAIL_RELAY_CONTROL_TOKEN.length >= 40);
     assert.equal(server.PORTAL_MAIL_RELAY_URL, "http://mail-relay:8080");
+    assert.equal(server.PORTAL_TOTP_ENABLED, "false");
+    assert.equal(server.PORTAL_TOTP_SECURITY_MAIL_ENABLED, "false");
+    assert.throws(
+        () =>
+            createConfiguration({
+                ...options,
+                enableAuthenticatorSecurityNotices: true,
+            }),
+        /require authenticator transport/,
+    );
+    assert.throws(
+        () => createConfiguration({...options, enableAuthenticator: "true"}),
+        /must be boolean/,
+    );
     assert.throws(() =>
         createConfiguration({
             ...options,
@@ -147,6 +161,150 @@ try {
     assert(!publicFile.includes(server.PORTAL_MAIL_RELAY_CONTROL_TOKEN));
     assert.throws(() => writeConfiguration(output, configuration));
     assert.deepEqual(readFileSync(output), original);
+
+    const generator = resolve(here, "generate-env.mjs");
+    const generatorArgs = (destination, flags = []) => [
+        generator,
+        "--output",
+        destination,
+        "--portal-origin",
+        "https://portal.example.invalid",
+        "--api-origin",
+        "https://portal.example.invalid/backend",
+        "--data-dir",
+        resolve(directory, "data"),
+        ...flags,
+    ];
+    const runGenerator = (destination, flags = []) =>
+        spawnSync(
+            process.execPath,
+            generatorArgs(destination, flags),
+            {encoding: "utf8", timeout: 10_000},
+        );
+    const readSetting = (path, name) => {
+        const match = readFileSync(path, "utf8").match(
+            new RegExp(`^${name}='(true|false)'$`, "m"),
+        );
+        assert(match, `Generated configuration omitted ${name}.`);
+        return match[1];
+    };
+    const cliDefault = resolve(directory, "cli-default.env");
+    const defaultResult = runGenerator(cliDefault);
+    assert.equal(defaultResult.status, 0, "Default CLI generation failed.");
+    assert.equal(readSetting(cliDefault, "PORTAL_TOTP_ENABLED"), "false");
+    assert.equal(
+        readSetting(cliDefault, "PORTAL_TOTP_SECURITY_MAIL_ENABLED"),
+        "false",
+    );
+
+    const cliTransport = resolve(directory, "cli-transport.env");
+    const transportResult = runGenerator(cliTransport, ["--enable-authenticator"]);
+    assert.equal(transportResult.status, 0, "Authenticator CLI opt-in failed.");
+    assert.equal(readSetting(cliTransport, "PORTAL_TOTP_ENABLED"), "true");
+    assert.equal(
+        readSetting(cliTransport, "PORTAL_TOTP_SECURITY_MAIL_ENABLED"),
+        "false",
+    );
+
+    const cliNoticesOnly = resolve(directory, "cli-notices-only.env");
+    const noticesOnlyResult = runGenerator(cliNoticesOnly, [
+        "--enable-authenticator-security-notices",
+    ]);
+    assert.equal(noticesOnlyResult.status, 1);
+    for (const path of [
+        cliNoticesOnly,
+        cliNoticesOnly + ".public.env",
+        cliNoticesOnly + ".notification.env",
+    ])
+        assert(!existsSync(path), "Invalid CLI options wrote a configuration file.");
+
+    const cliEnabled = resolve(directory, "cli-enabled.env");
+    const enabledResult = runGenerator(cliEnabled, [
+        "--enable-authenticator",
+        "--enable-authenticator-security-notices",
+    ]);
+    assert.equal(enabledResult.status, 0, "Authenticator notices opt-in failed.");
+    assert.equal(readSetting(cliEnabled, "PORTAL_TOTP_ENABLED"), "true");
+    assert.equal(
+        readSetting(cliEnabled, "PORTAL_TOTP_SECURITY_MAIL_ENABLED"),
+        "true",
+    );
+
+    const duplicateFlag = runGenerator(resolve(directory, "duplicate.env"), [
+        "--enable-authenticator",
+        "--enable-authenticator",
+    ]);
+    assert.equal(duplicateFlag.status, 1);
+    const invalidFlag = runGenerator(resolve(directory, "invalid.env"), [
+        "--enable-authenticator",
+        "true",
+    ]);
+    assert.equal(invalidFlag.status, 1);
+
+    const existingFiles = paths.map((path) => readFileSync(path));
+    const overwriteResult = runGenerator(output);
+    assert.equal(overwriteResult.status, 1);
+    paths.forEach((path, index) =>
+        assert.deepEqual(readFileSync(path), existingFiles[index]),
+    );
+
+    const composeEnvironment = Object.fromEntries(
+        Object.entries(process.env).filter(
+            ([name]) =>
+                ![
+                    "PORTAL_TOTP_ENABLED",
+                    "PORTAL_TOTP_SECURITY_MAIL_ENABLED",
+                ].includes(name),
+        ),
+    );
+    const renderAuth = (envFile) => {
+        const rendered = spawnSync(
+            "docker",
+            [
+                "compose",
+                "--project-directory",
+                here,
+                "--env-file",
+                envFile,
+                "-f",
+                resolve(here, "compose.yml"),
+                "config",
+                "--format",
+                "json",
+            ],
+            {
+                encoding: "utf8",
+                maxBuffer: 8 * 1024 * 1024,
+                env: composeEnvironment,
+            },
+        );
+        assert.equal(
+            rendered.status,
+            0,
+            "Docker Compose rejected a synthetic authenticator configuration.",
+        );
+        return JSON.parse(rendered.stdout).services.auth.environment;
+    };
+    const assertAuthSettings = (auth, enabled, notices) => {
+        assert.equal(auth.GOTRUE_MFA_TOTP_ENROLL_ENABLED, String(enabled));
+        assert.equal(auth.GOTRUE_MFA_TOTP_VERIFY_ENABLED, String(enabled));
+        assert.equal(
+            auth.GOTRUE_MAILER_NOTIFICATIONS_MFA_FACTOR_ENROLLED_ENABLED,
+            String(notices),
+        );
+        assert.equal(
+            auth.GOTRUE_MAILER_NOTIFICATIONS_MFA_FACTOR_UNENROLLED_ENABLED,
+            String(notices),
+        );
+        assert.equal(
+            auth.GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_ENROLLED_NOTIFICATION,
+            "https://portal.example.invalid/mail-templates/authenticator-enrolled.html",
+        );
+        assert.equal(
+            auth.GOTRUE_MAILER_TEMPLATES_MFA_FACTOR_UNENROLLED_NOTIFICATION,
+            "https://portal.example.invalid/mail-templates/authenticator-unenrolled.html",
+        );
+    };
     const result = spawnSync(
         "docker",
         [
@@ -161,7 +319,11 @@ try {
             "--format",
             "json",
         ],
-        {encoding: "utf8", maxBuffer: 8 * 1024 * 1024},
+        {
+            encoding: "utf8",
+            maxBuffer: 8 * 1024 * 1024,
+            env: composeEnvironment,
+        },
     );
     if (result.status !== 0) {
         const secrets = [
@@ -181,6 +343,10 @@ try {
         );
     }
     const compose = JSON.parse(result.stdout);
+    assertAuthSettings(compose.services.auth.environment, false, false);
+    assertAuthSettings(renderAuth(cliDefault), false, false);
+    assertAuthSettings(renderAuth(cliTransport), true, false);
+    assertAuthSettings(renderAuth(cliEnabled), true, true);
     assert.deepEqual(Object.keys(compose.services).sort(), [
         "api-gw",
         "auth",
