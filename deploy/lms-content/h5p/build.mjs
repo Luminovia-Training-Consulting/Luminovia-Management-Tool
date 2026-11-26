@@ -60,10 +60,15 @@ const libraryFolder = /^(?:H5P(?:Editor)?\.[A-Za-z0-9]+|FontAwesome|jQuery\.ui)-
 const safePart = /^[a-zA-Z0-9._-]+$/;
 const catalogue = new Set();
 const written = new Map();
+const testSample =
+  process.env.PORTAL_TEST_MODE === "1"
+    ? process.env.LUMINOVIA_H5P_BUILD_TEST_SAMPLE
+    : undefined;
+let verifiedSample;
 for (const [library, digest] of Object.entries(sources)) {
-  const zip = new ZipReader(
-    new Uint8ArrayReader(await officialPackage(library, digest)),
-  );
+  const bytes = await officialPackage(library, digest);
+  if (testSample && library === "H5P.TrueFalse") verifiedSample = bytes;
+  const zip = new ZipReader(new Uint8ArrayReader(bytes));
   try {
     for (const item of await zip.getEntries()) {
       const parts = item.filename.split("/");
@@ -123,6 +128,9 @@ if (
 )
   throw new Error("Pinned library catalogue needs review");
 await writeFile(join(dist, "catalogue.json"), JSON.stringify(declared));
+// Exercise the native upload using the exact bytes already verified by this
+// build. Keep the archive out of the deployable content runtime.
+if (testSample) await writeFile(testSample, verifiedSample, { mode: 0o600 });
 console.log(
   `Built trusted H5P runtime and ${catalogue.size} pinned libraries in ${dist}`,
 );
