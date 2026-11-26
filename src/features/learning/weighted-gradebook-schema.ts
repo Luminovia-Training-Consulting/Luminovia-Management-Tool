@@ -11,7 +11,21 @@ const mode = z.enum(["required", "optional", "bonus"]);
 const missing = z.enum(["block", "zero"]);
 const date = z.iso.datetime({ offset: true });
 
-const policyItem = z.strictObject({ key: itemKey, weight, treatment: mode });
+const categoryId = z.uuidv4().regex(/^[a-f0-9-]+$/);
+const category = z.strictObject({
+  id: categoryId,
+  label: z.string().trim().min(1).max(80),
+  parent_id: categoryId.nullable().optional(),
+});
+const categories = z.array(category).max(15);
+export type WeightedCategory = z.infer<typeof category>;
+
+const policyItem = z.strictObject({
+  key: itemKey,
+  weight,
+  treatment: mode,
+  category_id: categoryId.nullable().optional(),
+});
 export type WeightedPolicyItem = z.infer<typeof policyItem>;
 export const weightedPolicyDraft = z
   .strictObject({
@@ -19,10 +33,23 @@ export const weightedPolicyDraft = z
     missing_required: missing,
     separate_reviewer: z.boolean(),
     items: z.array(policyItem).min(1).max(30),
+    categories: categories.optional(),
   })
   .refine(
     ({ items }) => new Set(items.map(({ key }) => key)).size === items.length,
   )
+  .refine(({ categories: groups = [], items }) => {
+    const depths = new Map<string, number>();
+    for (const group of groups) {
+      const parentDepth = group.parent_id ? depths.get(group.parent_id) : 0;
+      if (depths.has(group.id) || parentDepth === undefined || parentDepth >= 3)
+        return false;
+      depths.set(group.id, parentDepth + 1);
+    }
+    return items.every(
+      ({ category_id }) => !category_id || depths.has(category_id),
+    );
+  })
   .refine(
     ({ items }) =>
       items
@@ -39,6 +66,7 @@ const policy = z.strictObject({
   missing_required: missing,
   separate_reviewer: z.boolean(),
   items: z.array(savedItem),
+  categories: categories.optional(),
   version: positiveVersion,
   created_at: date,
 });
@@ -49,6 +77,7 @@ const calculated = z.strictObject({
   missing_required: missing,
   percent: percent.nullable(),
   passed: z.boolean().nullable(),
+  categories: categories.optional(),
   components: z.array(
     savedItem.extend({
       status: z.enum(["graded", "excused", "unscored", "missing", "zero"]),

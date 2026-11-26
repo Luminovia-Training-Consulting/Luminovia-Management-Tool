@@ -13,6 +13,7 @@ import {
 } from "./weighted-gradebook-api";
 import {
   weightedPolicyDraft,
+  type WeightedCategory,
   type WeightedGradebook,
   type WeightedPolicy,
   type WeightedPolicyItem,
@@ -25,6 +26,7 @@ import "./weighted-gradebook-i18n";
 type Context = { actor: string; course: CourseWorkspace };
 type ItemDraft = {
   key: string;
+  category_id?: string | null;
   weight: string;
   treatment: WeightedPolicyItem["treatment"];
 };
@@ -89,9 +91,11 @@ function PolicyEditor({
   const [separate, setSeparate] = useState(
     original?.separate_reviewer ?? false,
   );
+  const [categories, setCategories] = useState(original?.categories ?? []);
   const [items, setItems] = useState<ItemDraft[]>(
-    original?.items.map(({ key, treatment, weight }) => ({
+    original?.items.map(({ key, treatment, weight, category_id }) => ({
       key,
+      category_id,
       treatment,
       weight: String(weight),
     })) ?? [{ key: "quiz", weight: "100", treatment: "required" }],
@@ -104,6 +108,7 @@ function PolicyEditor({
     threshold: threshold === "" ? Number.NaN : Number(threshold),
     missing_required: missing,
     separate_reviewer: separate,
+    ...(categories.length ? { categories } : {}),
     items: items.map((item) => ({ ...item, weight: Number(item.weight) })),
   });
 
@@ -113,6 +118,32 @@ function PolicyEditor({
       rows.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     );
   }
+  function updateCategory(id: string, patch: Partial<WeightedCategory>) {
+    setCategories((rows) =>
+      rows.map((group) => (group.id === id ? { ...group, ...patch } : group)),
+    );
+  }
+
+  function removeCategory(id: string) {
+    setCategories((rows) => rows.filter((group) => group.id !== id));
+    setItems((rows) =>
+      rows.map((item) =>
+        item.category_id === id ? { ...item, category_id: undefined } : item,
+      ),
+    );
+  }
+
+  function categoryAncestors(group: WeightedCategory): WeightedCategory[] {
+    const parent = categories.find(({ id }) => group.parent_id === id);
+    return parent ? [...categoryAncestors(parent), group] : [group];
+  }
+
+  function categoryPath(group: WeightedCategory) {
+    return categoryAncestors(group)
+      .map(({ label }) => label)
+      .join(" / ");
+  }
+
   return (
     <form
       onSubmit={(event) => {
@@ -165,6 +196,74 @@ function PolicyEditor({
           {t("weightedSecondReviewer")}
         </label>
         <p>{t("weightedPolicyHelp")}</p>
+        <details open={categories.length > 0 || undefined}>
+          <summary>{t("weightedCategories")}</summary>
+          <p>{t("weightedCategoryHelp")}</p>
+          {categories.map((group, index) => (
+            <fieldset key={group.id} className="course-gradebook-band-fields">
+              <legend>
+                {t("weightedCategoryNumber", { number: index + 1 })}
+              </legend>
+              <label>
+                {t("weightedCategoryLabel")}
+                <input
+                  value={group.label}
+                  maxLength={80}
+                  required
+                  onChange={(event) =>
+                    updateCategory(group.id, {
+                      label: event.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                {t("weightedCategoryParent")}
+                <select
+                  value={group.parent_id ?? ""}
+                  onChange={(event) =>
+                    updateCategory(group.id, {
+                      parent_id: event.currentTarget.value || null,
+                    })
+                  }
+                >
+                  <option value="">{t("weightedCategoryNone")}</option>
+                  {categories.slice(0, index).map((parent) => (
+                    <option key={parent.id} value={parent.id}>
+                      {categoryPath(parent)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={categories.some(
+                  ({ parent_id }) => parent_id === group.id,
+                )}
+                onClick={() => removeCategory(group.id)}
+              >
+                {t("weightedCategoryRemove")}
+              </Button>
+            </fieldset>
+          ))}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={categories.length >= 15}
+            onClick={() =>
+              setCategories((rows) => [
+                ...rows,
+                { id: crypto.randomUUID(), label: "" },
+              ])
+            }
+          >
+            {t("weightedCategoryAdd")}
+          </Button>
+          {categories.some((group) => categoryAncestors(group).length > 3) && (
+            <Notice kind="error">{t("weightedCategoryDepth")}</Notice>
+          )}
+        </details>
         {items.map((item, index) => (
           <fieldset key={index} className="course-gradebook-band-fields">
             <legend>{t("weightedItem", { number: index + 1 })}</legend>
@@ -230,6 +329,26 @@ function PolicyEditor({
                 <option value="bonus">{t("weightedBonus")}</option>
               </select>
             </label>
+            {categories.length > 0 && (
+              <label>
+                {t("weightedCategoryLabel")}
+                <select
+                  value={item.category_id ?? ""}
+                  onChange={(event) =>
+                    update(index, {
+                      category_id: event.currentTarget.value || undefined,
+                    })
+                  }
+                >
+                  <option value="">{t("weightedCategoryNone")}</option>
+                  {categories.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {categoryPath(group)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {items.length > 1 && (
               <Button
                 type="button"
@@ -275,23 +394,24 @@ function PolicyEditor({
 function ResultCard({ result }: { result: WeightedResult }) {
   const { t } = useTranslation("learning");
   const sourceLabel = useSourceLabel();
-  return (
-    <div className="space-y-2">
-      <p role="status">
-        {result.percent === null
-          ? t("weightedIncomplete")
-          : t(result.passed ? "weightedPassed" : "weightedFailed", {
-              score: result.percent,
-            })}
-      </p>
-      <p>
-        {t("weightedPolicySummary", {
-          version: result.policy_version,
-          threshold: result.threshold,
-        })}
-      </p>
+  const groups = result.categories ?? [];
+  function renderGroup(parentId: string | null) {
+    const assessments = result.components.filter(
+      (component) => (component.category_id ?? null) === parentId,
+    );
+    const children = groups.filter(
+      (group) => (group.parent_id ?? null) === parentId,
+    );
+    if (!assessments.length && !children.length) return null;
+    return (
       <ul className="learning-resources">
-        {result.components.map((component) => (
+        {children.map((group) => (
+          <li key={group.id}>
+            <strong>{group.label}</strong>
+            {renderGroup(group.id)}
+          </li>
+        ))}
+        {assessments.map((component) => (
           <li key={component.key}>
             <strong>{sourceLabel(component)}</strong>
             <p>
@@ -322,6 +442,25 @@ function ResultCard({ result }: { result: WeightedResult }) {
           </li>
         ))}
       </ul>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p role="status">
+        {result.percent === null
+          ? t("weightedIncomplete")
+          : t(result.passed ? "weightedPassed" : "weightedFailed", {
+              score: result.percent,
+            })}
+      </p>
+      <p>
+        {t("weightedPolicySummary", {
+          version: result.policy_version,
+          threshold: result.threshold,
+        })}
+      </p>
+      {renderGroup(null)}
     </div>
   );
 }
