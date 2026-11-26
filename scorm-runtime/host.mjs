@@ -1,7 +1,8 @@
 /** Cookie-free SCORM 1.2 launcher. Serve only these immutable files on a dedicated wildcard host. */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
+import { URL, pathToFileURL } from "node:url";
+import process from "node:process";
 
 const originPattern = /^https:\/\/[a-z0-9.-]+(?::[0-9]+)?$/;
 const domainPattern =

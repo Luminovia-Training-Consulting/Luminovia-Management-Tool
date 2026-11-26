@@ -7,10 +7,7 @@ import { Button } from "../../components/ui/button";
 import { uploadCourseScormPackage } from "../files/api";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
-import {
-  changeCourseScormPackage,
-  courseScormKey,
-} from "./course-scorm-player";
+import { changeCourseScormPackage, courseScormKey } from "./scorm-course-api";
 import { scormRuntimeAddress } from "./scorm-runtime-address";
 import type { ScormPackageReview as Review } from "./scorm-package";
 

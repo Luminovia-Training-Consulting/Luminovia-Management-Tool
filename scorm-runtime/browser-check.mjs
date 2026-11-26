@@ -1,5 +1,7 @@
 /** Real Chromium verifies the distinct-origin launch, adapter and bookmark resume. */
 import assert from "node:assert/strict";
+import console from "node:console";
+import { setTimeout } from "node:timers";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { chromium } from "playwright";
@@ -84,7 +86,10 @@ try {
   const output = lesson.locator("output");
   await output.getByText("Initial lesson", { exact: true }).waitFor();
   assert.equal(
-    await output.evaluate((element) => getComputedStyle(element).color),
+    await output.evaluate(
+      (element) =>
+        element.ownerDocument.defaultView.getComputedStyle(element).color,
+    ),
     "rgb(0, 80, 0)",
   );
   await lesson.getByRole("button", { name: "Complete lesson" }).click();

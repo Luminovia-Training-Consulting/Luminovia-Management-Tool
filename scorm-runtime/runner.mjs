@@ -1,3 +1,4 @@
+/* global window, document, location, DOMParser, TextDecoder, URL, Blob */
 /** Origin-isolated launcher. Only this origin sees the SCO DOM and runs package scripts. */
 import { createScormApi } from "./api.mjs";
 
