@@ -36,6 +36,13 @@ const candidate = z.strictObject({
     })
     .nullish(),
 });
+const extraMinutes = z.number().int().min(0).max(480);
+const allowance = z.strictObject({
+  learner_id: z.uuid(),
+  name: z.string().nullable(),
+  revision: expected,
+  extra_minutes: extraMinutes,
+});
 const review = z.strictObject({
   revision,
   points: reviewPoints,
@@ -57,6 +64,9 @@ export const textExamState = z.strictObject({
   ),
   exam: exam.nullable(),
   submissions: z.array(candidate).max(25),
+  time_allowances: z
+    .strictObject({ rows: z.array(allowance).max(25), has_more: z.boolean() })
+    .nullish(),
   has_more: z.boolean(),
   attempt: z
     .strictObject({ revision, answers, submitted_at: timestamp.nullable() })
@@ -115,6 +125,12 @@ export const textExamCommand = z.discriminatedUnion("p_action", [
     p_revision: z.null(),
     p_action: z.literal("publish"),
     p_payload: empty,
+  }),
+  z.strictObject({
+    ...command,
+    p_revision: revision,
+    p_action: z.literal("set_extra_time"),
+    p_payload: target.extend({ extra_minutes: extraMinutes }),
   }),
   z.strictObject({
     ...command,

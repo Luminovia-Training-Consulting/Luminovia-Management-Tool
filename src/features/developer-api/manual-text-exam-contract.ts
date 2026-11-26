@@ -26,7 +26,7 @@ export function manualTextExamPaths(academy: boolean) {
   const read = {
     summary: "Read a course's native text exam",
     description:
-      "Learners receive their own answers and latest released review. Questions are withheld until opening. Staff can browse submitted attempts by 25 per page, then select an exam revision and learner to review.",
+      "Learners receive their own answers and latest released review. Questions are withheld until opening. Staff can browse submitted attempts by 25 per page, then select an exam revision and learner to review. Before a published sitting opens, course managers can view its paginated extra-time settings. Candidates see only their own effective submission deadline.",
     tags: ["Text exams"],
     security,
     ...(academy ? { "x-portal-licence": "active-or-grace" } : {}),
@@ -98,7 +98,7 @@ export function manualTextExamPaths(academy: boolean) {
         operationId: "updateCourseTextExam",
         summary: "Save, submit, publish or assess a text exam",
         description:
-          "Managers save and publish versioned papers. Candidates save or submit their own answers during their effective window. Current staff draft or release a grade for submitted work after the assessment closes. The import_reviews command saves up to 25 submitted attempts as draft question marks in one batch, using each expected review revision. Supply the current paper, answer or review revision as applicable to each command.",
+          "Managers save and publish versioned papers and may set an individual time allowance of 0 to 480 minutes for a published sitting before it opens. Candidates save or submit their own answers during their effective window. Current staff draft or release a grade for submitted work after the assessment closes. The import_reviews command saves up to 25 submitted attempts as draft question marks in one batch, using each expected review revision. Supply the current paper, answer or review revision as applicable to each command.",
         tags: ["Text exams"],
         security,
         ...(academy ? { "x-portal-licence": "active" } : {}),
@@ -106,7 +106,7 @@ export function manualTextExamPaths(academy: boolean) {
         responses: {
           "200": {
             description:
-              "Accepted paper, answer or review revision, or the number of imported review drafts.",
+              "Accepted paper, answer, allowance or review revision, or the number of imported review drafts.",
             content: jsonContent(z.number().int().positive()),
           },
           ...errors,

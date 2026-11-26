@@ -263,6 +263,17 @@ function ExamWorkspace({ actor, course, zone }: Props) {
           {grades.isError && <Notice kind="error">{t("exportFailed")}</Notice>}
         </div>
       )}
+      {state.time_allowances && paper && (
+        <ExamTimeAllowances
+          key={paper.revision}
+          allowances={state.time_allowances}
+          revision={paper.revision}
+          offset={offset}
+          page={setOffset}
+          disabled={disabled}
+          run={write.mutateAsync}
+        />
+      )}
       {!paper && !state.can_author && <p>{t("noExam")}</p>}
       {state.can_author &&
         state.head_revision !== null &&
@@ -331,6 +342,138 @@ function ExamWorkspace({ actor, course, zone }: Props) {
         </Notice>
       )}
     </div>
+  );
+}
+
+function ExamTimeAllowances({
+  allowances,
+  revision,
+  offset,
+  page,
+  disabled,
+  run,
+}: {
+  allowances: NonNullable<TextExamState["time_allowances"]>;
+  revision: number;
+  offset: number;
+  page: (offset: number) => void;
+  disabled: boolean;
+  run: Run;
+}) {
+  const { t } = useTranslation("textExam");
+  const id = useId();
+  const [learner, setLearner] = useState("");
+  const selected = allowances.rows.find((row) => row.learner_id === learner);
+  if (allowances.rows.length === 0 && offset === 0) return null;
+
+  return (
+    <details className="space-y-2">
+      <summary>{t("extraTime")}</summary>
+      <p>{t("extraTimeHint")}</p>
+      <Field id={id + "-learner"} label={t("extraTimeCandidate")}>
+        <select
+          disabled={disabled}
+          value={selected?.learner_id ?? ""}
+          onChange={(event) => setLearner(event.target.value)}
+        >
+          <option value="">{t("extraTimeSelect")}</option>
+          {allowances.rows.map((row) => (
+            <option value={row.learner_id} key={row.learner_id}>
+              {row.name ?? t("candidate")}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {selected && (
+        <ExtraTimeForm
+          key={selected.learner_id + ":" + selected.revision}
+          selected={selected}
+          revision={revision}
+          disabled={disabled}
+          run={run}
+        />
+      )}
+      {(offset > 0 || allowances.has_more) && (
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            disabled={disabled || offset === 0}
+            onClick={() => {
+              setLearner("");
+              page(Math.max(0, offset - 25));
+            }}
+          >
+            {t("previous")}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={disabled || !allowances.has_more}
+            onClick={() => {
+              setLearner("");
+              page(offset + 25);
+            }}
+          >
+            {t("next")}
+          </Button>
+        </div>
+      )}
+    </details>
+  );
+}
+
+function ExtraTimeForm({
+  selected,
+  revision,
+  disabled,
+  run,
+}: {
+  selected: NonNullable<TextExamState["time_allowances"]>["rows"][number];
+  revision: number;
+  disabled: boolean;
+  run: Run;
+}) {
+  const { t } = useTranslation("textExam");
+  const id = useId();
+  const [minutes, setMinutes] = useState(String(selected.extra_minutes));
+  const extraMinutes = Number(minutes);
+  const valid =
+    minutes !== "" &&
+    Number.isInteger(extraMinutes) &&
+    extraMinutes >= 0 &&
+    extraMinutes <= 480;
+
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || disabled) return;
+        void run({
+          p_action: "set_extra_time",
+          p_revision: revision,
+          p_expected: selected.revision,
+          p_payload: {
+            learner_id: selected.learner_id,
+            extra_minutes: extraMinutes,
+          },
+        }).catch(() => undefined);
+      }}
+    >
+      <Field id={id} label={t("extraMinutes")}>
+        <input
+          type="number"
+          min={0}
+          max={480}
+          step={1}
+          value={minutes}
+          disabled={disabled}
+          onChange={(event) => setMinutes(event.target.value)}
+        />
+      </Field>
+      <Button type="submit" disabled={disabled || !valid}>
+        {t("saveExtraTime")}
+      </Button>
+    </form>
   );
 }
 
@@ -606,31 +749,40 @@ function LearnerPaper({
     });
   return (
     <div className="space-y-3">
-      {submitted ? (
-        <p>{t("submitted", { date: day(submitted) })}</p>
-      ) : (
-        <p>{t(closed ? "closed" : "notSubmitted")}</p>
-      )}
-      {paper.questions.map((question, index) => (
-        <fieldset className="space-y-2 rounded-md border p-3" key={index}>
-          <legend>{t("number", { number: index + 1 })}</legend>
-          <p className="preserve-text">{question.prompt}</p>
-          <p>{t("max", { points: question.max_points })}</p>
-          <Field id={id + "-answer-" + index} label={t("answer")}>
-            <textarea
-              rows={4}
-              maxLength={4000}
-              value={answers[index]}
-              readOnly={Boolean(submitted) || closed || disabled}
-              onChange={(event) => {
-                const updated = [...answers];
-                updated[index] = event.target.value;
-                setChanged(updated);
-              }}
-            />
-          </Field>
-        </fieldset>
-      ))}
+      <p role="status">
+        {submitted
+          ? t("submitted", { date: day(submitted) })
+          : t(closed ? "closed" : "notSubmitted")}
+      </p>
+      {paper.questions.map((question, index) => {
+        const questionId = `${id}-question-${index}`;
+        return (
+          <fieldset className="space-y-2 rounded-md border p-3" key={index}>
+            <legend>{t("number", { number: index + 1 })}</legend>
+            <p className="preserve-text" id={questionId}>
+              {question.prompt}
+            </p>
+            <p>{t("max", { points: question.max_points })}</p>
+            <Field
+              id={questionId + "-answer"}
+              label={t("answer", { number: index + 1 })}
+            >
+              <textarea
+                aria-describedby={questionId}
+                rows={4}
+                maxLength={4000}
+                value={answers[index]}
+                readOnly={Boolean(submitted) || closed || disabled}
+                onChange={(event) => {
+                  const updated = [...answers];
+                  updated[index] = event.target.value;
+                  setChanged(updated);
+                }}
+              />
+            </Field>
+          </fieldset>
+        );
+      })}
       {!submitted && !closed && (
         <div className="flex flex-wrap gap-2">
           <Button

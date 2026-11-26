@@ -11,6 +11,18 @@ const labels = {
     "Freigabe durch eine zweite Lehrkraft verlangen",
     "Require a second course staff member to publish grades",
   ],
+  extraTime: ["Zusatzzeit verwalten", "Manage extra time"],
+  extraTimeHint: [
+    "Lege die Zusatzzeit vor Beginn für diese Prüfung fest. Mit 0 Minuten gilt die reguläre Abgabefrist.",
+    "Set extra time for this exam before it opens. Use 0 minutes for the standard deadline.",
+  ],
+  extraTimeCandidate: [
+    "Teilnehmende Person für Zusatzzeit",
+    "Learner receiving extra time",
+  ],
+  extraTimeSelect: ["Person auswählen", "Select a learner"],
+  extraMinutes: ["Zusatzzeit in Minuten", "Extra time in minutes"],
+  saveExtraTime: ["Zusatzzeit speichern", "Save extra time"],
   awaitingSecondReviewer: [
     "Eine zweite Lehrkraft muss diese Bewertung freigeben.",
     "A second course staff member must release this assessment.",
@@ -70,7 +82,7 @@ const labels = {
     "Die Abgabefrist ist abgelaufen.",
     "The submission deadline has passed.",
   ],
-  answer: ["Antwort", "Answer"],
+  answer: ["Antwort zu Aufgabe {{number}}", "Answer to question {{number}}"],
   notSubmitted: [
     "Gespeicherte Entwürfe gelten als offen, bis du sie verbindlich abgibst.",
     "Saved drafts remain open until you submit them.",
