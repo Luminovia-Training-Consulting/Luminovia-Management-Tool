@@ -3,7 +3,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { LearnerExam, PublishedExamResults } from "./timed-exam";
+import {
+  ExamTimeAllowance,
+  LearnerExam,
+  PublishedExamResults,
+} from "./timed-exam";
 import type { TimedExam } from "./timed-exam-schema";
 
 const { rpc, upload } = vi.hoisted(() => ({ rpc: vi.fn(), upload: vi.fn() }));
@@ -24,7 +28,7 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-it("keeps a scanned upload as a draft until the learner confirms final submission", async () => {
+it("keeps a scanned upload as a draft until the learner confirms within the individual window", async () => {
   await i18n.changeLanguage("en");
   const now = Date.now();
   const receipt = new Date(now).toISOString();
@@ -32,7 +36,8 @@ it("keeps a scanned upload as a draft until the learner confirms final submissio
     title: "Fictional exam",
     visible_from: new Date(now - 60_000).toISOString(),
     starts_at: new Date(now - 30_000).toISOString(),
-    ends_at: new Date(now + 60_000).toISOString(),
+    ends_at: new Date(now - 1_000).toISOString(),
+    learner_ends_at: new Date(now + 60_000).toISOString(),
     pass_percent: 60,
     version: 1,
     required: true,
@@ -78,6 +83,59 @@ it("keeps a scanned upload as a draft until the learner confirms final submissio
   });
   expect(await screen.findByText(/^Submitted on /)).toBeVisible();
   expect(screen.queryByLabelText("Completed exam")).not.toBeInTheDocument();
+});
+
+it("saves the selected participant’s time allowance from its reviewed revision", async () => {
+  await i18n.changeLanguage("en");
+  const stamp = "2026-11-23T10:00:00+10:00";
+  const exam: TimedExam = {
+    title: "Fictional written examination",
+    visible_from: stamp,
+    starts_at: stamp,
+    ends_at: stamp,
+    pass_percent: 60,
+    version: 1,
+    required: true,
+    published: false,
+    open: false,
+    grading_open: false,
+    can_grade: true,
+    can_submit: false,
+    can_set_extra_time: true,
+    submitted_at: null,
+    draft: null,
+    rows: [
+      {
+        participant_id: version,
+        name: "Fictional participant",
+        submitted_at: null,
+        version_id: null,
+        file_name: null,
+        score: null,
+        time_allowance: { extra_minutes: 15, revision: 2 },
+      },
+    ],
+  };
+  rpc.mockResolvedValue({ data: 3, error: null });
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={client}>
+      <ExamTimeAllowance actor="manager" run={run} exam={exam} />
+    </QueryClientProvider>,
+  );
+  await user.selectOptions(screen.getByLabelText("Participant"), version);
+  const minutes = screen.getByLabelText("Additional minutes");
+  expect(minutes).toHaveValue(15);
+  await user.clear(minutes);
+  await user.type(minutes, "30");
+  await user.click(screen.getByRole("button", { name: "Save exam time" }));
+  expect(await screen.findByText("Saved.")).toBeVisible();
+  expect(rpc).toHaveBeenCalledExactlyOnceWith("set_course_exam_extra_time", {
+    p_run_id: run,
+    p_participant_id: version,
+    p_extra_minutes: 30,
+    p_expected_revision: 2,
+  });
 });
 
 it("shows the published percentage, pass status and cross-course average", async () => {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const examScore = z.number().int().min(0).max(100);
+export const examExtraMinutes = z.number().int().min(0).max(480);
 export const examInstant = z.iso.datetime({ offset: true });
 export const timedExamSchema = z.object({
   title: z.string(),
@@ -15,6 +16,8 @@ export const timedExamSchema = z.object({
   grading_open: z.boolean(),
   can_submit: z.boolean(),
   can_grade: z.boolean(),
+  can_set_extra_time: z.boolean().optional(),
+  learner_ends_at: examInstant.nullable().optional(),
   submitted_at: examInstant.nullable(),
   draft: z.object({ version_id: z.uuid(), name: z.string() }).nullable(),
   rows: z.array(
@@ -25,6 +28,13 @@ export const timedExamSchema = z.object({
       version_id: z.uuid().nullable(),
       file_name: z.string().nullable(),
       score: examScore.nullable(),
+      time_allowance: z
+        .object({
+          extra_minutes: examExtraMinutes,
+          revision: z.number().int().nonnegative(),
+        })
+        .nullable()
+        .optional(),
     }),
   ),
 });

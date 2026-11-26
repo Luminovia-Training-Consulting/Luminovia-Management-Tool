@@ -65,11 +65,11 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-07 — education permissions, accommodations and accessibility
 
-- **Priority / status:** P0 · planned; existing role/resource checks are the baseline, not a complete LMS permission matrix.
+- **Priority / status:** P0 · partially implemented. A course manager can assign a versioned time allowance for an enrolled learner before a timed exam starts.
 - **Dependencies / affected modules:** LMS-P0-02–06, existing capability system, Academy edition gates and WCAG 2.2 AA conventions.
 - **Data and security:** Least-privilege course/assessment/grade scope; accommodations are sensitive and narrowly projected; no blanket administrator access to private portfolios or learner notes.
 - **Tasks / acceptance:** Map author/reviewer/teacher/assessor/moderator/learner capabilities; add appropriate scoped accommodation fields and UI; audit keyboard, screen-reader, focus, contrast, time extension and mobile exam controls. Test cross-organisation, revoked membership, direct RPC manipulation and DE/EN.
-- **Test results / commits / limitations:** Not implemented as a complete matrix; no commit. The new authoring slice has keyboard module ordering but no formal WCAG audit yet.
+- **Follow-up verification:** The timed-exam PostgreSQL regression covers manager-only changes, stale revisions, learner-only deadlines, paper access, scanner and submission during additional time, rejection of unaccommodated peers after the base deadline and delayed grading. The complete capability matrix, broader accommodations and formal WCAG acceptance remain open.
 
 ### LMS-P0-08 — P0 end-to-end and regression acceptance
 

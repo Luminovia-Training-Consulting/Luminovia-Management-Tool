@@ -11,7 +11,7 @@ import { db } from "../../lib/supabase";
 import { acceptedFiles, uploadCourseSubmission } from "../files/api";
 import { courseWorkspaceKey, downloadPortalDocument } from "./api";
 import { publishedExamResultsQuery, timedExamKey } from "./timed-exam-api";
-import type { TimedExam } from "./timed-exam-schema";
+import { examExtraMinutes, type TimedExam } from "./timed-exam-schema";
 import "./timed-exam-i18n";
 
 type ExamBody = Pick<
@@ -141,6 +141,158 @@ export function ExamSchedule({
   );
 }
 
+/** Only course managers see the currently enrolled candidates and time revisions. */
+export function ExamTimeAllowance({
+  actor,
+  run,
+  exam,
+}: {
+  actor: string;
+  run: string;
+  exam: TimedExam;
+}) {
+  const { t } = useTranslation("timedExam");
+  const id = useId();
+  const [learner, setLearner] = useState("");
+  const candidates = exam.rows.filter((row) => row.time_allowance);
+  const selected = candidates.find((row) => row.participant_id === learner);
+  if (!exam.can_set_extra_time || !candidates.length) return null;
+  return (
+    <section className="panel learning-panel" aria-labelledby={id + "-title"}>
+      <h2 id={id + "-title"}>{t("extraTime")}</h2>
+      <p>{t("extraTimeHint")}</p>
+      <Field id={id + "-learner"} label={t("extraTimeLearner")}>
+        <select
+          value={selected?.participant_id ?? ""}
+          onChange={(event) => setLearner(event.target.value)}
+        >
+          <option value="">{t("extraTimeSelect")}</option>
+          {candidates.map((row) => (
+            <option key={row.participant_id} value={row.participant_id}>
+              {row.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {selected?.time_allowance && (
+        <ExamTimeAllowanceForm
+          key={selected.participant_id}
+          actor={actor}
+          run={run}
+          learner={selected.participant_id}
+          allowance={selected.time_allowance}
+        />
+      )}
+    </section>
+  );
+}
+
+/** Preserve a draft on background refresh, show conflicts and retry from the reviewed revision. */
+function ExamTimeAllowanceForm({
+  actor,
+  run,
+  learner,
+  allowance,
+}: {
+  actor: string;
+  run: string;
+  learner: string;
+  allowance: { extra_minutes: number; revision: number };
+}) {
+  const { t } = useTranslation("timedExam");
+  const id = useId();
+  const cache = useQueryClient();
+  const online = useOnline();
+  const [draft, setDraft] = useState<{ minutes: string; version: number }>();
+  const refresh = () =>
+    cache.invalidateQueries({ queryKey: timedExamKey(actor, run) });
+  const save = useMutation({
+    mutationFn: async ({
+      minutes,
+      version,
+    }: {
+      minutes: number;
+      version: number;
+    }) => {
+      requireOnline();
+      const { data, error } = await db().rpc("set_course_exam_extra_time", {
+        p_run_id: run,
+        p_participant_id: learner,
+        p_extra_minutes: minutes,
+        p_expected_revision: version,
+      });
+      if (error || typeof data !== "number")
+        throw error ?? new Error("Unconfirmed exam allowance");
+    },
+    onSuccess: async () => {
+      await refresh();
+      setDraft(undefined);
+    },
+  });
+  const conflict =
+    draft &&
+    (draft.version !== allowance.revision ||
+      (typeof save.error === "object" &&
+        save.error !== null &&
+        "code" in save.error &&
+        save.error.code === "PT409"));
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!draft || !draft.minutes || !online || conflict || save.isPending)
+          return;
+        const minutes = examExtraMinutes.safeParse(Number(draft.minutes));
+        if (minutes.success)
+          save.mutate({ minutes: minutes.data, version: draft.version });
+      }}
+    >
+      <Field id={id} label={t("extraTimeMinutes")}>
+        <input
+          type="number"
+          min={0}
+          max={480}
+          step={1}
+          required
+          disabled={save.isPending}
+          value={draft?.minutes ?? allowance.extra_minutes}
+          onChange={(event) =>
+            setDraft({
+              minutes: event.target.value,
+              version: draft?.version ?? allowance.revision,
+            })
+          }
+        />
+      </Field>
+      <div className="form-actions">
+        <Button
+          type="submit"
+          disabled={!online || !draft || Boolean(conflict) || save.isPending}
+        >
+          {t("saveExtraTime")}
+        </Button>
+        {conflict && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!online}
+            onClick={async () => {
+              await refresh();
+              setDraft(undefined);
+              save.reset();
+            }}
+          >
+            {t("reloadExtraTime")}
+          </Button>
+        )}
+      </div>
+      {conflict && <Notice kind="error">{t("extraTimeConflict")}</Notice>}
+      {!conflict && save.isError && <Notice kind="error">{t("failed")}</Notice>}
+      {!draft && save.isSuccess && <Notice>{t("saved")}</Notice>}
+    </form>
+  );
+}
+
 export function LearnerExam({
   actor,
   run,
@@ -197,26 +349,21 @@ export function LearnerExam({
   const ready = prepared ?? exam.draft?.version_id;
   const submitted = receipt ?? exam.submitted_at;
   const busy = upload.isPending || submit.isPending;
-  const available = online && exam.can_submit && now < Date.parse(exam.ends_at);
+  const deadline = exam.learner_ends_at ?? exam.ends_at;
+  const available = online && exam.can_submit && now < Date.parse(deadline);
   return (
     <section className="panel learning-panel">
       <h2>{exam.title}</h2>
       <p>
         {dateTime(exam.starts_at, i18n.language, zone)} –{" "}
-        {dateTime(exam.ends_at, i18n.language, zone)} ({zone})
+        {dateTime(deadline, i18n.language, zone)} ({zone})
       </p>
       {submitted ? (
         <Notice>
           {t("submitted", { date: dateTime(submitted, i18n.language, zone) })}
         </Notice>
       ) : !available ? (
-        <p>
-          {t(
-            exam.grading_open || now >= Date.parse(exam.ends_at)
-              ? "ended"
-              : "upcoming",
-          )}
-        </p>
+        <p>{t(now >= Date.parse(deadline) ? "ended" : "upcoming")}</p>
       ) : (
         <>
           <form

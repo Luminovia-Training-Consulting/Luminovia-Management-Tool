@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  examExtraMinutes,
   examInstant,
   examResultsSchema,
   examScore,
@@ -71,6 +72,19 @@ export function timedExamPaths(academy: boolean) {
         p_version: z.number().int().nonnegative(),
       }),
       z.literal(true),
+      true,
+    ),
+    "/rest/v1/rpc/set_course_exam_extra_time": post(
+      "set_course_exam_extra_time",
+      "Assign extra time for one timed exam",
+      "Before the exam starts, a current course manager may set 0–480 extra minutes for a current enrolment. Send its reviewed time-allowance revision (zero initially). The learner sees the effective deadline; release waits for the latest active deadline.",
+      z.strictObject({
+        ...run,
+        p_participant_id: z.uuid(),
+        p_extra_minutes: examExtraMinutes,
+        p_expected_revision: z.number().int().nonnegative(),
+      }),
+      z.number().int().nonnegative(),
       true,
     ),
     "/rest/v1/rpc/submit_course_exam": post(

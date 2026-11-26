@@ -238,6 +238,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "/rest/v1/rpc/published_course_exam_results",
           "/rest/v1/rpc/save_course_exam_grades",
           "/rest/v1/rpc/save_course_exam_schedule",
+          "/rest/v1/rpc/set_course_exam_extra_time",
           "/rest/v1/rpc/submit_course_exam",
         ].sort(),
       );

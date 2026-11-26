@@ -53,6 +53,7 @@ import { CourseExams } from "./exams";
 import {
   ExamGrades,
   ExamSchedule,
+  ExamTimeAllowance,
   LearnerExam,
   PublishedExamResults,
 } from "./timed-exam";
@@ -1563,6 +1564,9 @@ function CourseWorkspaceLayout({
                   zone={course.time_zone}
                   exam={exam}
                 />
+              )}
+              {canEdit && exam?.can_set_extra_time && (
+                <ExamTimeAllowance actor={actor} run={course.id} exam={exam} />
               )}
               {learner && exam?.required && (
                 <LearnerExam

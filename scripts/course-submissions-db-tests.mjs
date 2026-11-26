@@ -197,9 +197,40 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     assert.equal(await schedule(teacher, "-10 minutes", "20 minutes", "40 minutes", 1), true);
     assert.equal((await state(learner)).open, false);
     await assert.rejects(paperAccess(learner), denied);
+    // The allowance is visible to management and its recipient only.
+    const setTime = (who, user, minutes, revision) =>
+        rpc(who, "set_course_exam_extra_time", run, user, minutes, revision);
+    await assert.rejects(setTime(teacher, learner, 15, 0), denied);
+    await assert.rejects(setTime(client, learner, 15, 0), denied);
+    await assert.rejects(setTime(learner, learner, 15, 0), denied);
+    await assert.rejects(setTime(admin, unrelated, 15, 0), denied);
+    await assert.rejects(setTime(admin, learner, 481, 0), /22023/);
+    assert.equal(await setTime(admin, learner, 15, 0), 1);
+    assert.equal(await setTime(admin, learner, 15, 0), 1);
+    await assert.rejects(setTime(admin, learner, 10, 0), /PT409/);
+    assert.equal(await setTime(admin, learner, 10, 1), 2);
+    assert.equal((await state(admin)).rows.find((row) => row.participant_id === learner).time_allowance.extra_minutes, 10);
+    assert.equal((await state(teacher)).rows.find((row) => row.participant_id === learner).time_allowance, null);
+    const learnerWindow = await state(learner);
+    assert.deepEqual(learnerWindow.rows, []);
+    assert.equal(Date.parse(learnerWindow.learner_ends_at) - Date.parse(learnerWindow.ends_at), 600000);
+    const peerWindow = await state(peer);
+    assert.equal(peerWindow.learner_ends_at, peerWindow.ends_at);
+
     assert.equal(await schedule(teacher, "-10 minutes", "-5 minutes", "30 minutes", 2), true);
     assert.equal((await state(learner)).can_submit, true);
     assert.ok(await paperAccess(learner));
+    await assert.rejects(setTime(admin, learner, 20, 2), /PT409/);
+    // The base window closes, while the paper, scanner and final submit must
+    // still admit the extended learner and deny a participant without extra time.
+    await sql(`update private.course_timed_exams set ends_at=clock_timestamp()-interval '1 second' where run_id=${q(run)}`);
+    assert.equal((await state(teacher)).grading_open, false);
+    assert.equal((await state(learner)).can_submit, true);
+    assert.ok(await paperAccess(learner));
+    assert.equal(await state(peer), null);
+    await assert.rejects(examReserve(peer), denied);
+    await assert.rejects(paperAccess(peer), denied);
+
 
     const timed = await examReserve(learner);
     await assert.rejects(submit(learner, timed), denied);
@@ -223,7 +254,7 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     await assert.rejects(access(client, timed.version_id), denied);
 
     // Advance the deadline in this isolated fixture without waiting on wall time.
-    await sql(`update private.course_timed_exams set ends_at=clock_timestamp()-interval '1 millisecond' where run_id=${q(run)}`);
+    await sql(`update private.course_timed_exams set visible_from=clock_timestamp()-interval '30 minutes', starts_at=clock_timestamp()-interval '25 minutes', ends_at=clock_timestamp()-interval '11 minutes' where run_id=${q(run)}`);
     assert.equal((await state(learner)).submitted_at, submittedAt);
     await assert.rejects(paperAccess(learner), denied);
     await assert.rejects(examReserve(peer), denied);

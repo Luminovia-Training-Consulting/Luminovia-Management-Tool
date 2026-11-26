@@ -12,6 +12,20 @@ const copy = {
     "Das PDF und die Abgabe sind erst zwischen Start und Abgabeschluss verfügbar. Start und Ende müssen in den Kurstagen liegen.",
     "The PDF and submission are available between the start and deadline. Both must be within the course dates.",
   ],
+  extraTime: ["Individuelle Bearbeitungszeit", "Individual exam time"],
+  extraTimeHint: [
+    "Lege vor Prüfungsbeginn zusätzliche Minuten für einzelne Teilnehmende fest. 0 setzt die reguläre Abgabefrist wieder ein.",
+    "Assign extra minutes before the exam opens. Enter 0 to restore the standard deadline.",
+  ],
+  extraTimeLearner: ["Teilnehmende Person", "Participant"],
+  extraTimeSelect: ["Person auswählen", "Choose a participant"],
+  extraTimeMinutes: ["Zusätzliche Minuten", "Additional minutes"],
+  saveExtraTime: ["Bearbeitungszeit speichern", "Save exam time"],
+  reloadExtraTime: ["Zeitregel neu laden", "Reload allowance"],
+  extraTimeConflict: [
+    "Das Zeitfenster läuft bereits oder die Zeitregel wurde geändert. Lade die aktuellen Daten.",
+    "The exam has opened or the allowance changed. Reload the current details.",
+  ],
   requiredSchedule: [
     "Speichere zuerst das Zeitfenster, um das Aufgabenblatt freizugeben.",
     "Save the exam schedule before publishing the paper.",
