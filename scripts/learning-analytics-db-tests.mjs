@@ -289,6 +289,130 @@ for (const edition of [
     );
     assert.equal((await report(admin, "staff", org)).totals.courses, 2);
 
+    // Reuse the previously withdrawn fixture as the third eligible learner.
+    // Assessment facts deliberately include stale revisions and private text.
+    const scores = [
+      [learner, 90],
+      [second, 60],
+      [withdrawn, 75],
+    ];
+    const quizAttempts = scores.map(() => randomUUID());
+    const assignment = randomUUID();
+    const submissions = scores.map(() => randomUUID());
+    const framework = randomUUID();
+    const competency = randomUUID();
+    const level = randomUUID();
+    await sql(`
+      begin;
+      update public.course_enrolments set status = 'enrolled'
+        where course_run_id = ${q(finished)} and user_id = ${q(withdrawn)};
+      insert into private.course_quiz_versions(run_id,version,questions,pass_percent,max_attempts,published)
+        values (${q(finished)},1,'[]',70,4,true);
+      insert into private.course_quiz_attempts(id,run_id,quiz_version,user_id,request_id,answers,score,passed)
+        values ${scores
+          .map(
+            ([id, score], index) =>
+              `(${q(quizAttempts[index])},${q(finished)},1,${q(id)},${q(randomUUID())},'["Private quiz answer"]',${score},${score >= 70})`,
+          )
+          .join(",")},
+          (${q(randomUUID())},${q(finished)},1,${q(learner)},${q(randomUUID())},'[]',40,false);
+      insert into private.course_gradebook_policies(run_id,version,scheme,bands)
+        values(${q(finished)},1,'percentage','[]');
+      insert into private.course_gradebook_revisions
+        (run_id,user_id,revision,attempt_id,quiz_version,source_score,source_passed,policy_version,grade_percent,correction_reason)
+        values ${scores
+          .map(
+            ([id, score], index) =>
+              `(${q(finished)},${q(id)},1,${q(quizAttempts[index])},1,${score},${score >= 70},1,${score},null)`,
+          )
+          .join(",")},
+          (${q(finished)},${q(learner)},2,${q(quizAttempts[0])},1,90,true,1,84,'Private grade correction');
+      insert into private.course_assignments(id,run_id,current_version,published_version)
+        values (${q(assignment)},${q(finished)},1,1);
+      insert into private.course_assignment_definitions(assignment_id,version,title,instructions,due_at,max_attempts,rubric)
+        values (${q(assignment)},1,'Private assignment title','Private instructions',now()+interval '1 day',2,'[]');
+      insert into private.course_assignment_attempts(id,assignment_id,assignment_version,user_id,attempt_no,file_name)
+        values ${scores
+          .map(
+            ([id], index) =>
+              `(${q(submissions[index])},${q(assignment)},1,${q(id)},1,'Private submission filename')`,
+          )
+          .join(",")};
+      insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+        values ${submissions.map((id) => `(${q(id)},1,'released','[]','Private feedback','Private staff assessment')`).join(",")},
+          (${q(submissions[0])},2,'draft','[]','Private draft','Private moderation');
+      insert into private.lms_competency_frameworks(id,organisation_id,revision)
+        values (${q(framework)},${q(org)},1);
+      insert into private.lms_competency_framework_revisions(framework_id,revision,content,created_by)
+        values (${q(framework)},1,'{"title":"Private competency framework"}',${q(admin)});
+      insert into private.lms_course_competency_pins(run_id,revision,framework_id,framework_revision,created_by)
+        values (${q(finished)},1,${q(framework)},1,${q(admin)}),(${q(finished)},2,${q(framework)},1,${q(admin)});
+      insert into private.lms_competency_decisions
+        (run_id,pin_revision,user_id,competency_id,revision,level_id,evidence_note,quiz_attempt_id,created_by)
+        values ${scores
+          .map(
+            ([id], index) =>
+              `(${q(finished)},2,${q(id)},${q(competency)},1,${q(level)},'Private competency evidence',${q(quizAttempts[index])},${q(admin)})`,
+          )
+          .join(",")},
+          (${q(finished)},1,${q(learner)},${q(randomUUID())},1,${q(level)},'Private older pin',null,${q(admin)}),
+          (${q(finished)},2,${q(learner)},${q(competency)},2,${q(level)},'Private revised decision',null,${q(admin)});
+      commit;
+    `);
+    const assessment = (await report(manager, "staff", org, "all", "100%"))
+      .assessment;
+    assert.deepEqual(assessment, {
+      metric_version: 1,
+      minimum_learner_count: 3,
+      courses: [
+        {
+          course_id: finished,
+          quiz_learners: 3,
+          quiz_attempts: 4,
+          quiz_passes: 2,
+          quiz_best_average: 75,
+          published_grades: 3,
+          published_grade_average: 73,
+          submission_learners: 3,
+          submission_attempts: 3,
+          released_reviews: 3,
+          competency_learners: 3,
+          competency_decisions: 3,
+        },
+      ],
+    });
+    for (const secret of [
+      ...scores.map(([id]) => id),
+      ...quizAttempts,
+      framework,
+      competency,
+      level,
+      ...submissions,
+      "Private",
+      "file_name",
+      "evidence",
+    ])
+      assert(!JSON.stringify(assessment).includes(secret));
+
+    const staffUpcoming = (await report(teacher, "personal", null)).assessment;
+    assert.equal(staffUpcoming.courses[0].course_id, upcoming);
+    assert.equal(staffUpcoming.courses[0].quiz_attempts, null);
+    const companyScope = await report(company, "company", org);
+    assert.equal(Object.hasOwn(companyScope, "assessment"), false);
+    await assert.rejects(report(company, "staff", org), denied);
+
+    // The same credible facts become inadmissible as soon as a current
+    // participant leaves. There must be no small-cohort totals or inference via
+    // direct repeated search of a single course.
+    await sql(`update public.course_enrolments set status='removed'
+      where course_run_id=${q(finished)} and user_id=${q(withdrawn)}`);
+    const suppressed = (await report(manager, "staff", org, "all", "100%"))
+      .assessment.courses[0];
+    assert.equal(suppressed.course_id, finished);
+    for (const [key, value] of Object.entries(suppressed)) {
+      if (key !== "course_id") assert.equal(value, null);
+    }
+
     await assert.rejects(report(foreign, "company", org), denied);
     await assert.rejects(report(company, "company", other), denied);
     await assert.rejects(report(learner, "staff", null), denied);

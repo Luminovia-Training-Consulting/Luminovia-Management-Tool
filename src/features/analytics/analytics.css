@@ -305,3 +305,44 @@
 .analytics-section-heading > .analytics-filters {
   flex: 1 1 min(100%, 22rem);
 }
+
+.learning-report-print {
+  display: none;
+}
+
+@page lms-report {
+  size: A4 landscape;
+  margin: 9mm;
+}
+
+@media print {
+  body:has(.learning-report-print)
+    :has(.learning-report-print)
+    > :not(:has(.learning-report-print), .learning-report-print) {
+    display: none !important;
+  }
+
+  .learning-report-print {
+    display: block;
+    page: lms-report;
+    background: white;
+    color: #12233c;
+    font-size: 8pt;
+  }
+
+  .learning-report-print table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .learning-report-print :is(th, td) {
+    padding: 2pt;
+    border: 1px solid #758094;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  .learning-report-print tr {
+    break-inside: avoid;
+  }
+}

@@ -1,5 +1,6 @@
+/** Course participation, attendance and assessment reporting for authorized portal actors. */
 import { financeRoots, type FinanceScope } from "../../app/finance-access";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
@@ -27,6 +28,7 @@ import {
   learningAnalyticsReportQuery,
 } from "./learning-api";
 import {
+  learningAssessmentFields,
   learningReportStatus,
   type LearningAnalyticsAccess,
   type LearningAnalyticsReport,
@@ -40,6 +42,7 @@ import {
   TimeDonut,
   type ChartSeries,
 } from "./charts";
+import { LearningExportControls } from "./learning-export-controls";
 import { PeriodForm, Totals } from "./report-ui";
 import "./learning-i18n";
 
@@ -50,14 +53,72 @@ function learningReportPages(total: number) {
   return Math.max(1, Math.ceil(total / coursesPerPage));
 }
 
+/** Assessment rows are already thresholded by the authorized server projection. */
+function LearningAssessment({ report }: { report: LearningAnalyticsReport }) {
+  const { t, i18n } = useTranslation("learningAnalytics");
+  const assessment = report.assessment;
+  if (!assessment?.courses.length) return null;
+  const number = new Intl.NumberFormat(i18n.language, {
+    maximumFractionDigits: 2,
+  });
+  const courses = new Map(report.courses.map(({ id, title }) => [id, title]));
+  return (
+    <section className="panel">
+      <h2>{t("assessment")}</h2>
+      <p className="analytics-muted">
+        {t("assessmentBasis", {
+          version: assessment.metric_version,
+          minimum: assessment.minimum_learner_count,
+        })}
+      </p>
+      <div
+        className="analytics-scroll analytics-data"
+        role="region"
+        tabIndex={0}
+        aria-label={t("assessment")}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t("course")}</th>
+              {learningAssessmentFields.map((field) => (
+                <th scope="col" key={field}>
+                  {t(field)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {assessment.courses.map((values) => (
+              <tr key={values.course_id}>
+                <th scope="row">{courses.get(values.course_id)}</th>
+                {learningAssessmentFields.map((field) => {
+                  const value = values[field];
+                  return (
+                    <td key={field}>
+                      {value === null ? "—" : number.format(value)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function LearningReport({
   report,
   page,
   setPage,
+  exports,
 }: {
   report: LearningAnalyticsReport;
   page: number;
   setPage: (page: number) => void;
+  exports: ReactNode;
 }) {
   const { t, i18n } = useTranslation("learningAnalytics");
   const number = new Intl.NumberFormat(i18n.language, {
@@ -181,6 +242,7 @@ function LearningReport({
       </section>
       <section className="panel">
         <h2>{t("courseBreakdown")}</h2>
+        {courses.length > 0 && exports}
         <div
           className="analytics-scroll analytics-data"
           role="region"
@@ -265,6 +327,7 @@ function LearningReport({
           </div>
         )}
       </section>
+      <LearningAssessment report={report} />
     </>
   );
 }
@@ -459,7 +522,23 @@ function LearningAnalyticsView({
       ) : query.isError ? (
         <ErrorState retry={() => void query.refetch()} />
       ) : (
-        <LearningReport report={query.data} page={page} setPage={setPage} />
+        <LearningReport
+          report={query.data}
+          page={page}
+          setPage={setPage}
+          exports={
+            <LearningExportControls
+              actor={actor}
+              page={page}
+              period={period}
+              refresh={async () => {
+                const latest = await query.refetch({ throwOnError: true });
+                if (!latest.data) throw new Error("learning_analytics_missing");
+                return latest.data;
+              }}
+            />
+          }
+        />
       )}
     </>
   );

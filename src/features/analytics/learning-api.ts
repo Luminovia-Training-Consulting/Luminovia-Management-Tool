@@ -66,7 +66,10 @@ export const learningAnalyticsReportQuery = (
         })
         .abortSignal(signal);
       if (error) throw error;
-      return learningAnalyticsReportSchema.parse(data);
+      const report = learningAnalyticsReportSchema.parse(data);
+      if (filters.scope === "company" && report.assessment)
+        throw new Error("unexpected_company_assessment_report");
+      return report;
     },
     retry: false,
     gcTime: 0,

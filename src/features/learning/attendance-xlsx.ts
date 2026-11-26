@@ -315,19 +315,32 @@ export function attendanceXlsxTemplate(
   );
 }
 
+/** Convert a one-based spreadsheet column to A..Z, AA..AZ, and subsequent column names. */
+function spreadsheetColumnName(column: number): string {
+  let label = "";
+  for (let value = column; value > 0; value = Math.floor((value - 1) / 26)) {
+    label = String.fromCharCode(65 + ((value - 1) % 26)) + label;
+  }
+  return label;
+}
+
+/** Write a literal workbook. Existing import templates keep their sheet name and text cells. */
 export async function spreadsheetXlsxTemplate(
   headers: readonly string[],
-  rows: readonly (readonly string[])[],
+  rows: readonly (readonly (string | number | null)[])[],
+  name: "Import" | "LMS" = "Import",
 ): Promise<Blob> {
   const values = [headers, ...rows];
   const sheetRows = values
     .map((row, index) => {
       const number = index + 1;
       const cells = row
-        .map(
-          (cell, column) =>
-            `<c r="${String.fromCharCode(65 + column)}${number}" t="inlineStr"><is><t xml:space="preserve">${xmlText(cell)}</t></is></c>`,
-        )
+        .map((cell, column) => {
+          const address = spreadsheetColumnName(column + 1) + number;
+          return typeof cell === "number" && Number.isFinite(cell)
+            ? `<c r="${address}"><v>${cell}</v></c>`
+            : `<c r="${address}" t="inlineStr"><is><t xml:space="preserve">${xmlText(String(cell ?? ""))}</t></is></c>`;
+        })
         .join("");
       return `<row r="${number}">${cells}</row>`;
     })
@@ -336,7 +349,7 @@ export async function spreadsheetXlsxTemplate(
     "[Content_Types].xml":
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
     "_rels/.rels": `<Relationships xmlns="${packageRelationships}"><Relationship Id="rId1" Type="${relationships}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-    "xl/workbook.xml": `<workbook xmlns="${namespace}" xmlns:r="${relationships}"><sheets><sheet name="Import" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    "xl/workbook.xml": `<workbook xmlns="${namespace}" xmlns:r="${relationships}"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
     "xl/_rels/workbook.xml.rels": `<Relationships xmlns="${packageRelationships}"><Relationship Id="rId1" Type="${relationships}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
     "xl/worksheets/sheet1.xml": `<worksheet xmlns="${namespace}"><sheetData>${sheetRows}</sheetData></worksheet>`,
   };

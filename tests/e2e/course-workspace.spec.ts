@@ -1330,6 +1330,70 @@ test("company filters live Premium LMS analytics without exposing learners", asy
     await expect(row).toHaveCount(0);
 });
 
+test("scoped LMS assessment exports protect small cohorts and company views", async ({ page, browser, baseURL }, info) => {
+    test.setTimeout(100_000);
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    const english = info.project.name.startsWith("mobile");
+    const chooseLanguage = async (target: Page) => {
+        await target.getByLabel(/^Sprache$|^Language$/).selectOption(english ? "en" : "de");
+    };
+    await login(page, f.manager.email);
+    await page.goto("/admin/finance/analytics/learning");
+    await chooseLanguage(page);
+    const assessmentName = english ? "Assessments and submissions by course" : "Bewertungen und Abgaben je Kurs";
+    const assessment = page.getByRole("region", { name: assessmentName });
+    const row = assessment.getByRole("row").filter({ hasText: f.title });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole("cell", { name: "—", exact: true })).toHaveCount(11);
+    const [csv] = await Promise.all([
+        page.waitForEvent("download", { timeout: 15_000 }),
+        page.getByRole("button", { name: english ? "CSV for this page" : "CSV dieser Seite" }).click(),
+    ]);
+    const filename = csv.suggestedFilename();
+    expect(filename).toMatch(/\.csv$/);
+    const exportText = await readFile(await csv.path(), "utf8");
+    expect(exportText).toContain(f.title);
+    expect(exportText).toContain(english ? "Quiz attempts" : "Quizversuche");
+    expect(exportText).not.toContain(f.learner.name);
+    expect(exportText).not.toContain(f.learner.id);
+
+    const [xlsx] = await Promise.all([
+        page.waitForEvent("download", { timeout: 15_000 }),
+        page.getByRole("button", { name: english ? "XLSX for this page" : "XLSX dieser Seite" }).click(),
+    ]);
+    expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/);
+    expect((await readFile(await xlsx.path())).subarray(0, 2).toString("ascii")).toBe("PK");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+
+    const company = await browser.newContext({
+        baseURL, viewport: info.project.use.viewport, isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+    });
+    try {
+        const companyPage = await company.newPage();
+        await login(companyPage, f.client.email);
+        await companyPage.goto("/client/finance/analytics/learning");
+        await chooseLanguage(companyPage);
+        await expect(companyPage.getByRole("region", {
+            name: english ? "Metrics by course" : "Kennzahlen je Kurs",
+        }).getByText(f.title)).toBeVisible();
+        await expect(companyPage.getByRole("region", { name: assessmentName })).toHaveCount(0);
+        const [companyExport] = await Promise.all([
+            companyPage.waitForEvent("download", { timeout: 15_000 }),
+            companyPage.getByRole("button", { name: english ? "CSV for this page" : "CSV dieser Seite" }).click(),
+        ]);
+        const companyRows = await readFile(await companyExport.path(), "utf8");
+        expect(companyRows).toContain(f.title);
+        expect(companyRows).not.toContain(english ? "Quiz attempts" : "Quizversuche");
+        expect(companyRows).not.toContain(f.learner.name);
+    } finally {
+        await company.close();
+    }
+});
+
 test("completed Premium course records a named closeout follow-up without resending it", async ({page}) => {
     const f = await fixture();
     await linkWorkspaceLearner(f);

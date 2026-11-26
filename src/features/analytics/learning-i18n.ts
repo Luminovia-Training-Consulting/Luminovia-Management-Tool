@@ -86,6 +86,58 @@ const labels = {
     "Für diese Auswahl wurden keine Kurse gefunden.",
     "No courses match this selection.",
   ],
+  assessment: [
+    "Bewertungen und Abgaben je Kurs",
+    "Assessments and submissions by course",
+  ],
+  assessmentBasis: [
+    "Kennzahlen-Version {{version}}. Jede Kennzahl benötigt mindestens {{minimum}} beitragende Teilnehmende je Kurs. Prozentmittel für Noten zählen nur zuletzt freigegebene Prozentnoten.",
+    "Metric version {{version}}. Each measure requires at least {{minimum}} contributing learners per course. The grade average uses the latest published percentage grades only.",
+  ],
+  quiz_learners: [
+    "Teilnehmende mit Quizversuch",
+    "Learners with a quiz attempt",
+  ],
+  quiz_attempts: ["Quizversuche", "Quiz attempts"],
+  quiz_passes: [
+    "Teilnehmende mit bestandenem Quiz",
+    "Learners with a passing quiz",
+  ],
+  quiz_best_average: [
+    "Quizmittelwert der Bestversuche (%)",
+    "Mean best quiz score (%)",
+  ],
+  published_grades: ["Freigegebene Noten", "Published grades"],
+  published_grade_average: [
+    "Mittelwert der Prozentnoten (%)",
+    "Mean percentage grade (%)",
+  ],
+  submission_learners: ["Teilnehmende mit Abgabe", "Learners with submissions"],
+  submission_attempts: ["Aufgabenabgaben", "Assignment submissions"],
+  released_reviews: [
+    "Abgaben mit freigegebener Bewertung",
+    "Submissions with released assessment",
+  ],
+  competency_learners: [
+    "Teilnehmende mit Kompetenzbewertung",
+    "Learners with competency decisions",
+  ],
+  competency_decisions: [
+    "Kompetenzbewertungen der aktuellen Kursfassung",
+    "Competency decisions on the current course revision",
+  ],
+  reportCsv: ["CSV dieser Seite", "CSV for this page"],
+  reportXlsx: ["XLSX dieser Seite", "XLSX for this page"],
+  reportPrint: ["Diese Seite drucken", "Print this page"],
+  reportPreparing: ["Auswertung wird vorbereitet …", "Preparing report…"],
+  reportExportError: [
+    "Die aktuelle Auswertung konnte nicht exportiert werden.",
+    "Could not export the current report.",
+  ],
+  reportStart: ["Beginn der Auswertung", "Report start"],
+  reportEnd: ["Ende der Auswertung", "Report end"],
+  reportZone: ["Zeitzone", "Time zone"],
+  metricVersion: ["Kennzahlen-Version", "Metric version"],
   previous: ["Vorherige Seite", "Previous page"],
   next: ["Nächste Seite", "Next page"],
   page: ["Seite {{page}} von {{pages}}", "Page {{page}} of {{pages}}"],

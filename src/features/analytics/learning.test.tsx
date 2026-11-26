@@ -1,3 +1,4 @@
+/** Exercise authorization-based report pivots and serialized export bytes. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -6,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { TextWriter, Uint8ArrayReader, ZipReader } from "@zip.js/zip.js";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -16,8 +18,15 @@ import type {
   LearningAnalyticsReport,
 } from "./learning-schema";
 
-const rpc = vi.hoisted(() => vi.fn());
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+const { rpc, getSession, saveBlob } = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  getSession: vi.fn(),
+  saveBlob: vi.fn(),
+}));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({ rpc, auth: { getSession } }),
+}));
+vi.mock("../../lib/blob-download", () => ({ saveBlob }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "fictional-course-admin" } } }),
 }));
@@ -96,6 +105,10 @@ function open(
 
 beforeEach(async () => {
   rpc.mockReset();
+  saveBlob.mockReset();
+  getSession.mockResolvedValue({
+    data: { session: { user: { id: "fictional-course-admin" } } },
+  });
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -205,4 +218,126 @@ it("returns to a valid page if the course count drops while changing pages", asy
     ([name]) => name === "learning_analytics_report",
   );
   expect(requests.map(([, args]) => args.p_page)).toEqual([1, 2, 1]);
+});
+
+/** FileReader supports the JSDOM Blob used by the browser download path. */
+function readReportBlob<T extends string | ArrayBuffer>(
+  blob: Blob,
+  read: (reader: FileReader, blob: Blob) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as T);
+    reader.onerror = () => reject(reader.error);
+    read(reader, blob);
+  });
+}
+
+const assessmentReport: LearningAnalyticsReport = {
+  ...report,
+  courses: report.courses.map((row) => ({
+    ...row,
+    title: "=Fictional course & report",
+  })),
+  assessment: {
+    metric_version: 1,
+    minimum_learner_count: 3,
+    courses: [
+      {
+        course_id: course,
+        quiz_learners: 3,
+        quiz_attempts: 4,
+        quiz_passes: 2,
+        quiz_best_average: 82.5,
+        published_grades: 3,
+        published_grade_average: null,
+        submission_learners: null,
+        submission_attempts: null,
+        released_reviews: null,
+        competency_learners: 3,
+        competency_decisions: 8,
+      },
+    ],
+  },
+};
+
+it("exports a refetched report with safe CSV text, true XLSX numbers and no suppressed values", async () => {
+  const user = userEvent.setup();
+  open(access, () => assessmentReport);
+  const table = await screen.findByRole("region", {
+    name: "Assessments and submissions by course",
+  });
+  expect(within(table).getByText("82.5")).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "CSV for this page" }));
+  await waitFor(() => expect(saveBlob).toHaveBeenCalledTimes(1));
+  const [csv, csvName] = saveBlob.mock.calls[0];
+  expect(csvName).toMatch(/-1\.csv$/);
+  const text = await readReportBlob<string>(csv, (reader, blob) =>
+    reader.readAsText(blob),
+  );
+  expect(text).toContain('"Mean percentage grade (%)"');
+  expect(text).toContain('"\'=Fictional course & report"');
+  expect(text).toContain('"3","","","","","3","8"');
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "learning_analytics_report"),
+  ).toHaveLength(2);
+
+  await user.click(screen.getByRole("button", { name: "XLSX for this page" }));
+  await waitFor(() => expect(saveBlob).toHaveBeenCalledTimes(2));
+  const [workbook, workbookName] = saveBlob.mock.calls[1];
+  expect(workbookName).toMatch(/-1\.xlsx$/);
+  const buffer = await readReportBlob<ArrayBuffer>(workbook, (reader, blob) =>
+    reader.readAsArrayBuffer(blob),
+  );
+  const zip = new ZipReader(new Uint8ArrayReader(new Uint8Array(buffer)), {
+    useWebWorkers: false,
+  });
+  try {
+    const entry = (await zip.getEntries()).find(
+      ({ filename }) => filename === "xl/worksheets/sheet1.xml",
+    );
+    if (!entry || entry.directory) throw new Error("Worksheet missing");
+    const xml = await entry.getData(new TextWriter());
+    expect(xml).toContain("=Fictional course &amp; report");
+    expect(xml).not.toContain("<f>");
+    expect(xml).toContain("<v>82.5</v>");
+    expect(xml).toContain('<c r="AA2"><v>8</v></c>');
+  } finally {
+    await zip.close();
+  }
+});
+
+it("keeps refreshed bytes local when the authenticated identity changes", async () => {
+  open(access, () => assessmentReport);
+  getSession.mockResolvedValue({
+    data: { session: { user: { id: "another-account" } } },
+  });
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "CSV for this page" }),
+  );
+  await screen.findByText("Could not export the current report.");
+  expect(saveBlob).not.toHaveBeenCalled();
+});
+
+it("prints only the fresh report snapshot and removes it after printing", async () => {
+  const print = vi.spyOn(window, "print").mockImplementation(() => {});
+  try {
+    open(access, () => assessmentReport);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Print this page" }),
+    );
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1));
+    const snapshot = document.querySelector(".learning-report-print");
+    expect(snapshot).toHaveTextContent("Mean best quiz score (%)");
+    expect(snapshot).toHaveTextContent("82.5");
+    window.dispatchEvent(new Event("afterprint"));
+    await waitFor(() =>
+      expect(document.querySelector(".learning-report-print")).toBeNull(),
+    );
+  } finally {
+    print.mockRestore();
+  }
 });
