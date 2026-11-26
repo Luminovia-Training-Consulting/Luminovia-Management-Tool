@@ -1,4 +1,5 @@
 /** Current external grades are visible to course staff in a separate reviewed view. */
+import "./lti-course-i18n";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

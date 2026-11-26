@@ -1,4 +1,5 @@
 /** Publish scanned H5P packages and launch them on a separate cookie-free site. */
+import "./h5p-playback-i18n";
 import { useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -8,20 +9,14 @@ import { Dialog } from "../../components/ui/dialog";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { downloadCourseArchive, uploadCourseArchive } from "../files/api";
+import {
+  h5pCatalogue,
+  type CourseH5pPackage,
+  type H5pProgress,
+} from "./h5p-playback-schema";
 import type { H5pPlayback } from "./h5p-runtime-package";
 import "./i18n";
 
-type Package = {
-  id: string;
-  title: string;
-  sha256: string;
-  progress: { completed: boolean; score: number | null } | null;
-};
-type Catalogue = {
-  packages: Package[];
-  can_publish: boolean;
-  can_complete: boolean;
-};
 type Launch = {
   id: string;
   title: string;
@@ -29,7 +24,6 @@ type Launch = {
   url: URL;
   assets: H5pPlayback["assets"];
 };
-type PlaybackProgress = { completed: boolean; score: number | null };
 
 function runtimeHost() {
   const host = String(
@@ -71,7 +65,7 @@ function RuntimeFrame({
   onProgress,
 }: {
   launch: Launch;
-  onProgress?: (result: PlaybackProgress) => void;
+  onProgress?: (result: H5pProgress) => void;
 }) {
   const { t } = useTranslation("learning");
   const frame = useRef<HTMLIFrameElement>(null);
@@ -166,7 +160,7 @@ export function CourseH5pPlayback({
     clientId: string;
   } | null>(null);
   const [launch, setLaunch] = useState<Launch | null>(null);
-  const [withdraw, setWithdraw] = useState<Package | null>(null);
+  const [withdraw, setWithdraw] = useState<CourseH5pPackage | null>(null);
   const [fileKey, setFileKey] = useState(0);
   const packages = useQuery({
     queryKey: key,
@@ -178,7 +172,7 @@ export function CourseH5pPlayback({
         .rpc("course_h5p_packages", { p_run_id: course }, { get: true })
         .abortSignal(signal);
       if (error) throw error;
-      return data as Catalogue;
+      return h5pCatalogue.parse(data);
     },
   });
   const review = useMutation({
@@ -211,7 +205,7 @@ export function CourseH5pPlayback({
     },
   });
   const remove = useMutation({
-    mutationFn: (item: Package) =>
+    mutationFn: (item: CourseH5pPackage) =>
       courseH5pAction(course, item.id, "withdraw", {}),
     onSuccess: async () => {
       setWithdraw(null);
@@ -220,7 +214,7 @@ export function CourseH5pPlayback({
     },
   });
   const open = useMutation({
-    mutationFn: async (item: Package) => {
+    mutationFn: async (item: CourseH5pPackage) => {
       if (!host) throw new Error("h5p_runtime_not_configured");
       const blob = await downloadCourseArchive(
         "h5p",
@@ -247,7 +241,7 @@ export function CourseH5pPlayback({
     onSuccess: setLaunch,
   });
   const progress = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PlaybackProgress }) =>
+    mutationFn: ({ id, data }: { id: string; data: H5pProgress }) =>
       courseH5pAction(course, id, "progress", data),
     onSuccess: () => cache.invalidateQueries({ queryKey: key }),
   });

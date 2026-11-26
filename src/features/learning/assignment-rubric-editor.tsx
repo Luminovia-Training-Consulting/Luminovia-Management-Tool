@@ -2,17 +2,12 @@
 import "./course-assignments-i18n";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
-import type { AssignmentDefinition } from "./course-assignment-schema";
+import {
+  blankCriterion,
+  type AssignmentDefinition,
+} from "./course-assignment-schema";
 
 type Rubric = AssignmentDefinition["rubric"];
-
-export const blankCriterion = () => ({
-  label: "",
-  levels: [
-    { label: "", points: 0 },
-    { label: "", points: 1 },
-  ],
-});
 
 export function AssignmentRubricEditor({
   rubric,

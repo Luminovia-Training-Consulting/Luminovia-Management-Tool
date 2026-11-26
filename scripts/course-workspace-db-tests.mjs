@@ -310,6 +310,29 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(await revise(admin, 4, { ...metadata, review_on: "", learning_objectives: "" }), 5);
             assert.equal((await history(admin))[0].content.review_on, undefined);
             assert.equal((await history(admin))[0].content.learning_objectives, undefined);
+            const competencyFramework = randomUUID();
+            const competency = { id: randomUUID(), code: "VOL-01", title: "Analyse persistent storage" };
+            const competencyLink = { ...competency, framework_id: competencyFramework, framework_revision: 1 };
+            const competencyData = { ...metadata, competencies: [competencyLink] };
+            await assert.rejects(revise(admin, 5, competencyData), /22023/);
+            await sql(`begin;
+              insert into private.lms_competency_frameworks(id,organisation_id,revision)
+                values (${q(competencyFramework)},${q(org)},1);
+              insert into private.lms_competency_framework_revisions(framework_id,revision,created_by,content)
+                values (${q(competencyFramework)},1,${q(admin)},${q(JSON.stringify({
+                  title: "Fictional storage framework",
+                  competencies: [competency],
+                  levels: [{id: randomUUID(), title: "Introduced"}, {id: randomUUID(), title: "Ready"}],
+                }))}::jsonb);
+              insert into private.lms_course_competency_pins(run_id,revision,framework_id,framework_revision,created_by)
+                values (${q(run)},1,${q(competencyFramework)},1,${q(admin)});
+              commit;`);
+            assert.equal(await revise(admin, 5, competencyData), 6);
+            assert.deepEqual((await materialSearch(learner, run, "vol-01"))[0].metadata.competencies, [competencyLink]);
+            assert.deepEqual(await materialSearch(foreign, run, "vol-01"), []);
+            assert.equal(await revise(admin, 6, metadata), 6);
+            await assert.rejects(revise(admin, 6, { ...metadata, competencies: [{...competencyLink, title: "Forged"}] }), /22023/);
+
             const targets = (who) => rpc(who, "course_material_reuse_targets", [q(resource), q("")]);
             const reuse = (who, destination) => rpc(who, "reuse_course_material", [q(resource), q(destination), "true"]);
             const foreignRun = randomUUID();
@@ -732,7 +755,9 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 await assert.rejects(xapi(who), /42501/);
             }
             await assert.rejects(xapi(admin, "2020-01-01T00:00:00Z", "2026-01-01T00:00:00Z"), /22023/);
-            const monitor = (who) => rpc(who, "course_xapi_delivery_monitor", [q(run)]);
+            const monitor = (who) => actor(who,
+                `select coalesce(public.course_xapi_delivery_monitor(${q(run)}), 'null'::jsonb)`
+            ).then(JSON.parse);
             const report = (who, through, failure = "null") =>
                 rpc(who, "report_course_xapi_delivery", [q(run), q(through), "2", "1", failure]);
             assert.equal(await monitor(admin), null);

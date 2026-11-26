@@ -146,3 +146,11 @@ export function rubricIsOrdered(value: AssignmentDefinition["rubric"]) {
     )
   );
 }
+
+export const blankCriterion = () => ({
+  label: "",
+  levels: [
+    { label: "", points: 0 },
+    { label: "", points: 1 },
+  ],
+});

@@ -1,4 +1,5 @@
 /** Course registration, learner launch and the same-tab LTI OIDC callback. */
+import "./lti-course-i18n";
 import { useId, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";

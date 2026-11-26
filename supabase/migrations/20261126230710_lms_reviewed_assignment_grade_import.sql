@@ -11,7 +11,7 @@ declare
   target uuid;
   attempt private.course_assignment_attempts%rowtype;
   draft private.course_assignment_reviews%rowtype;
-  seen uuid[] := '{}';
+  seen uuid[] := array[]::uuid[];
 begin
   if jsonb_typeof(rows) is distinct from 'array'
     or jsonb_array_length(rows) not between 1 and 25 then raise invalid_parameter_value; end if;

@@ -1,4 +1,5 @@
 /** Start provider registration using an exact metadata URL and a reviewed public key. */
+import "./lti-course-i18n";
 import { useId } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

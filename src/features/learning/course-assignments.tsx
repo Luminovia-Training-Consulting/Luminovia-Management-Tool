@@ -13,6 +13,7 @@ import { acceptedFiles, uploadCourseAssignmentSubmission } from "../files/api";
 import { downloadPortalDocument, type CourseWorkspace } from "./api";
 import {
   assignmentDefinition,
+  blankCriterion,
   type assignmentActions,
   courseAssignmentsProjection,
   rubricIsOrdered,
@@ -21,10 +22,7 @@ import {
   type CourseAssignmentAttempt,
 } from "./course-assignment-schema";
 
-import {
-  AssignmentRubricEditor,
-  blankCriterion,
-} from "./assignment-rubric-editor";
+import { AssignmentRubricEditor } from "./assignment-rubric-editor";
 
 const AssignmentTeams = lazy(() =>
   import("./course-assignment-teams").then((module) => ({

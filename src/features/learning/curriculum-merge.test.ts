@@ -8,9 +8,14 @@ import {
 import { mergeCourseCurriculum } from "./curriculum-merge";
 
 function example() {
-  const module = createCourseModule();
-  module.lessons.push(createCourseLesson(), createCourseLesson());
-  return normalizeCourseCurriculum({ modules: [module, createCourseModule()] });
+  const module = { ...createCourseModule(), title: "First module" };
+  module.lessons.push(
+    { ...createCourseLesson(), title: "First lesson" },
+    { ...createCourseLesson(), title: "Second lesson" },
+  );
+  return normalizeCourseCurriculum({
+    modules: [module, { ...createCourseModule(), title: "Second module" }],
+  });
 }
 
 it("merges separate lesson and module edits without changing either source", () => {
@@ -44,7 +49,7 @@ it("keeps separate edits when a lesson is added on one side", () => {
   const base = example();
   const local = structuredClone(base);
   const remote = structuredClone(base);
-  const added = createCourseLesson();
+  const added = { ...createCourseLesson(), title: "Added lesson" };
   remote.modules[0].lessons.unshift(added);
   local.modules[0].lessons[1].title = "Keep this title";
   expect(
