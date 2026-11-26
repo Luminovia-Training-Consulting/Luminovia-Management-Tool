@@ -14,29 +14,26 @@ export async function subscribeToRoom(client, room, table, eventTypes, events) {
       (payload) => events.push(payload.new),
     );
   }
+  let timeout;
   await new Promise((resolve, reject) => {
-    const fail = (reason) => {
-      clearTimeout(timeout);
-      void client.removeChannel(channel);
-      reject(reason);
-    };
-    const timeout = setTimeout(
-      () => fail(new Error(`Realtime subscription timeout: ${table}`)),
+    timeout = setTimeout(
+      () => reject(new Error(`Realtime subscription timeout: ${table}`)),
       25_000,
     );
+    // The fixture owns teardown. Phoenix can emit CLOSED from inside
+    // unsubscribe, so removing a channel in this callback can re-enter cleanup.
     channel.subscribe((status, error) => {
       if (status === "SUBSCRIBED") {
-        clearTimeout(timeout);
         resolve();
       } else if (
         status === "CHANNEL_ERROR" ||
         status === "TIMED_OUT" ||
         status === "CLOSED"
       ) {
-        fail(error ?? new Error(status));
+        reject(error ?? new Error(status));
       }
     });
-  });
+  }).finally(() => clearTimeout(timeout));
 }
 
 /** Fail if a real event has not arrived before the test's bounded deadline. */
