@@ -4,15 +4,8 @@ import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { enablePremiumAndLinkParticipant } from "../../scripts/testing/company-participant.mjs";
-import {
-  TextReader,
-  TextWriter,
-  Uint8ArrayReader,
-  Uint8ArrayWriter,
-  ZipReader,
-  ZipWriter,
-} from "@zip.js/zip.js";
 import { actor, api, checked, login } from "./helpers/accounts-support";
+import { fillWorkbookCell } from "./helpers/spreadsheet";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -151,32 +144,11 @@ test("reviewed CSV and XLSX changes stay private until the examiner publishes", 
     .getByRole("button", { name: "Excel-Vorlage herunterladen" })
     .click();
   const templateBytes = await readFile(await (await excelDownload).path());
-  const sourceZip = new ZipReader(new Uint8ArrayReader(templateBytes));
-  const authoredZip = new ZipWriter(new Uint8ArrayWriter());
-  try {
-    for (const entry of await sourceZip.getEntries()) {
-      if (entry.directory) continue;
-      const xml = await entry.getData(new TextWriter());
-      if (entry.filename === "xl/worksheets/sheet1.xml") {
-        expect(xml).toContain(learner.id);
-        const blankScore = /<c r="E2"[^>]*>[\s\S]*?<\/c>/;
-        expect(xml).toMatch(blankScore);
-        await authoredZip.add(
-          entry.filename,
-          new TextReader(xml.replace(blankScore, '<c r="E2"><v>91</v></c>')),
-        );
-      } else {
-        await authoredZip.add(entry.filename, new TextReader(xml));
-      }
-    }
-  } finally {
-    await sourceZip.close();
-  }
   await input.setInputFiles({
     name: "reviewed-grades.xlsx",
     mimeType:
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    buffer: Buffer.from(await authoredZip.close()),
+    buffer: await fillWorkbookCell(templateBytes, "E2", 91, learner.id),
   });
   await expect(dialog.getByText("82 % → 91 %")).toBeVisible();
   const confirm = dialog.getByRole("button", {
