@@ -10,8 +10,9 @@ import {
 
 test("same-tab LTI launch to a synthetic tool validates live JWT claims", async ({
   page,
+  browser,
   baseURL,
-}) => {
+}, info) => {
   test.setTimeout(75_000);
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const auth = async (name: string, role: string) => {
@@ -47,14 +48,12 @@ test("same-tab LTI launch to a synthetic tool validates live JWT claims", async 
       .insert({ id: template, title: "Fictional LTI course" }),
   );
   await checked(
-    service
-      .from("course_runs")
-      .insert({
-        id: course,
-        template_id: template,
-        organisation_id: organisation,
-        published: true,
-      }),
+    service.from("course_runs").insert({
+      id: course,
+      template_id: template,
+      organisation_id: organisation,
+      published: true,
+    }),
   );
   await enablePremiumAndLinkParticipant({
     admin,
@@ -75,21 +74,45 @@ test("same-tab LTI launch to a synthetic tool validates live JWT claims", async 
   const issuer = "https://lti-fixture-portal.example.invalid";
   const redirect = fake + "/receive";
   const target = fake + "/resource";
-  const deployment = randomUUID(),
-    clientId = "native-local-browser-fixture";
-  await checked(
-    admin.client.rpc("save_course_lti_tool", {
-      p_id: deployment,
-      p_run_id: course,
-      p_title: "Fictional local LTI tool",
-      p_client_id: clientId,
-      p_login_uri: fake + "/login",
-      p_redirect_uri: redirect,
-      p_target_uri: target,
-      p_active: true,
-      p_expected_version: 0,
-    }),
-  );
+  const clientId = "native-local-browser-fixture";
+  const workspace = `/courses/${course}/workspace#course-lti`;
+  const managerContext = await browser.newContext({
+    baseURL,
+    viewport: info.project.use.viewport,
+    isMobile: info.project.use.isMobile,
+    hasTouch: info.project.use.hasTouch,
+  });
+  let deployment: string;
+  try {
+    const manager = await managerContext.newPage();
+    await login(manager, admin.email);
+    await manager.goto(workspace);
+    const tools = manager.getByRole("region", {
+      name: "Externe Lernwerkzeuge",
+    });
+    await tools
+      .getByRole("button", { name: "Lernwerkzeug registrieren" })
+      .click();
+    await tools
+      .getByLabel("Name des Lernwerkzeugs")
+      .fill("Fictional local LTI tool");
+    await tools.getByLabel("LTI-Client-ID").fill(clientId);
+    await tools.getByLabel("Anmelde-URL des Werkzeugs").fill(fake + "/login");
+    await tools.getByLabel("Registrierte Rückgabe-URL").fill(redirect);
+    await tools.getByLabel("Ziel-URL des Kurslinks").fill(target);
+    await tools.getByLabel("Für diesen Kurs freigeben").check();
+    await tools
+      .getByRole("button", { name: "Registrierung speichern" })
+      .click();
+    const registration = tools
+      .getByRole("listitem")
+      .filter({ hasText: "Fictional local LTI tool" });
+    await expect(registration.getByText("LTI-Deployment-ID")).toBeVisible();
+    deployment = await registration.locator("code").innerText();
+    expect(deployment).toMatch(/^[a-f0-9-]{36}$/);
+  } finally {
+    await managerContext.close();
+  }
   const nonce = randomUUID(),
     state = randomUUID();
   await page.route(fake + "/**", async (route) => {
@@ -151,7 +174,8 @@ test("same-tab LTI launch to a synthetic tool validates live JWT claims", async 
     });
   });
   await login(page, learner.email, /\/learning$/);
-  await page.goto(`/courses/${course}/workspace#course-lti`);
+  await page.goto(workspace);
+  await expect(page.getByText("LTI-Deployment-ID")).toHaveCount(0);
   await page
     .getByRole("button", { name: "Externes Lernwerkzeug öffnen" })
     .click();

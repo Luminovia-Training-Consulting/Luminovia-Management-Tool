@@ -305,13 +305,21 @@ export function CourseLtiTools({
                   </Button>
                 )}
                 {tools.data?.can_manage && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setEditing(tool)}
-                  >
-                    {t("ltiEdit")}
-                  </Button>
+                  <>
+                    <dl>
+                      <dt>{t("ltiDeploymentId")}</dt>
+                      <dd>
+                        <code className="break-all">{tool.id}</code>
+                      </dd>
+                    </dl>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setEditing(tool)}
+                    >
+                      {t("ltiEdit")}
+                    </Button>
+                  </>
                 )}
               </li>
             ))}

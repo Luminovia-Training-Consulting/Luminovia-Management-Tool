@@ -719,6 +719,7 @@ const pairs: Record<string, [string, string]> = {
   ltiEdit: ["Registrierung bearbeiten", "Edit registration"],
   ltiField_title: ["Name des Lernwerkzeugs", "Learning tool name"],
   ltiField_client_id: ["LTI-Client-ID", "LTI client ID"],
+  ltiDeploymentId: ["LTI-Deployment-ID", "LTI deployment ID"],
   ltiField_login_uri: ["Anmelde-URL des Werkzeugs", "Tool login URL"],
   ltiField_redirect_uri: [
     "Registrierte Rückgabe-URL",

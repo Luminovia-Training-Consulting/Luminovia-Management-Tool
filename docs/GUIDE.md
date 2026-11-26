@@ -331,7 +331,7 @@ Participants can see which course completions are still required for a locked st
 
 ### External LTI learning tools
 
-A course manager can enter the client ID, login URL, registered return URL and resource URL from a manually exchanged LTI 1.3 registration. The three addresses require HTTPS. The course manager can enable or disable the deployment under **Externe Lernwerkzeuge / External learning tools**. A current learner or assigned instructor can start an enabled resource from there.
+A course manager can enter the client ID, login URL, registered return URL and resource URL from a manually exchanged LTI 1.3 registration. The three addresses require HTTPS. After saving, copy the displayed **LTI-Deployment-ID / LTI deployment ID** into the tool registration. The course manager can enable or disable the deployment under **Externe Lernwerkzeuge / External learning tools**. A current learner or assigned instructor can start an enabled resource from there.
 
 The launch returns to the same tab and passes the tool a course role, pseudonymous identifiers and resource placement. The tool validates the short-lived signed launch and its OIDC state. The activation and end-point exchange for a real external tool require an authorised installation operator.
 
