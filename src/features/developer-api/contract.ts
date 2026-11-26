@@ -111,6 +111,8 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseGradebookParameters,
+  courseGradebookResult,
   courseWelcomePublishedResult,
   courseWelcomeResult,
   courseWelcomeWrite,
@@ -367,7 +369,7 @@ const workspaceAction = {
       "courseWorkspaceAction",
       "Premium LMS",
       "Apply a course workspace command",
-      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Assigned lecturers can withdraw their own material shares. Authorised company contacts can withdraw visible material and report shares in their course. Scoped course managers can withdraw course shares. Withdrawal keeps the original file. Attendance evidence remains protected. Quiz attempts are idempotent by request ID and return only the score and pass result. Completion issuance requires current completed enrolment, verified attendance and a pass on any published quiz.",
+      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Assigned lecturers can withdraw their own material shares. Authorised company contacts can withdraw visible material and report shares in their course. Scoped course managers can withdraw course shares. Withdrawal keeps the original file. Attendance evidence remains protected. Quiz attempts are idempotent by request ID and return only the score and pass result. Staff can publish versioned grading policies, release a grade from the best current quiz attempt, and append reasoned corrections; participants receive only their own published grade.",
       {},
       workspaceActionResult,
     ).post,
@@ -4346,6 +4348,14 @@ const nativePaths = {
     "Returns the actor-scoped course. With Premium disabled, course managers, assigned lecturers and authorised company contacts receive course details and scheduled sessions. Active Premium enables scoped learning materials, participant workflows and meeting links. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     internalWorkspaceResult,
+  ),
+  "/rest/v1/rpc/course_gradebook": rpc(
+    "readCourseGradebook",
+    "Premium LMS",
+    "Read a scoped, paginated course quiz gradebook",
+    "Current course staff receive a paginated roster, the best attempt from the current published quiz version, its server-calculated grading-policy preview, and the latest published grade per learner. Participants receive only their own published grade and no roster, correction reason or attempt answers.",
+    courseGradebookParameters,
+    courseGradebookResult,
   ),
   "/rest/v1/rpc/course_submissions": rpc(
     "courseSubmissions",

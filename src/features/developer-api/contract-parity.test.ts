@@ -1282,6 +1282,9 @@ describe("documented Premium course and spending operations", () => {
       "quiz_attempt",
       "completion_issue",
       "completion_revoke",
+      "gradebook_policy",
+      "gradebook_publish",
+      "gradebook_correct",
     ]);
     expect(actions[0].properties.p_payload.required).toEqual([
       "version_id",

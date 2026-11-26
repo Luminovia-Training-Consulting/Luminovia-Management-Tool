@@ -1377,8 +1377,10 @@ it("withdraws private details after the current workspace's live scope is revoke
   await act(async () =>
     page.client.invalidateQueries({ queryKey: ["course-workspace"] }),
   );
-  expect(await screen.findByRole("alert")).toBeVisible();
-  expect(screen.queryByText("Protected course briefing")).toBeNull();
+  await waitFor(() => {
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect(screen.queryByText("Protected course briefing")).toBeNull();
+  });
 });
 
 it("rejects internal paths in the dedicated app without making protected backend requests", async () => {

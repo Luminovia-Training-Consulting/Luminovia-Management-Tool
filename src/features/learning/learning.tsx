@@ -65,6 +65,7 @@ import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
+import { CourseGradebook } from "./course-gradebook";
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
@@ -1040,6 +1041,7 @@ function CourseWorkspaceLayout({
     canEdit && (course.access.manager || course.access.client);
   const hasCurriculum =
     course.lms_enabled && (learner || (canEdit && course.access.staff));
+  const hasGradebook = course.lms_enabled && (learner || course.access.staff);
   const sections = [
     { id: "course-overview", label: t("courseOverview") },
     ...(hasCurriculum
@@ -1065,6 +1067,9 @@ function CourseWorkspaceLayout({
       : []),
     ...(hasRatingSection
       ? [{ id: "course-evaluations", label: t("evaluations") }]
+      : []),
+    ...(hasGradebook
+      ? [{ id: "course-gradebook", label: t("gradebookTitle") }]
       : []),
   ];
   const currentSection =
@@ -1331,6 +1336,22 @@ function CourseWorkspaceLayout({
                 editable={canEdit && course.access.staff}
                 manager={course.access.manager}
                 roster={course.roster}
+              />
+            </div>
+          )}
+          {hasGradebook && (
+            <div
+              className={sectionClass("course-gradebook")}
+              id="course-gradebook"
+            >
+              <CourseGradebook
+                key={`${actor}:${course.id}:${course.access.staff}`}
+                actor={actor}
+                courseId={course.id}
+                active={currentSection === "course-gradebook"}
+                academy={Boolean(academy)}
+                staff={course.access.staff}
+                readOnly={!canEdit}
               />
             </div>
           )}

@@ -1,6 +1,6 @@
 # LMS delivery backlog
 
-This ledger tracks the educational-only LMS extension from the implementation directive. It extends the existing Luminovia course run, enrolment, assessment, document, attendance, certificate and analytics authorities; it does not create parallel registries. The reviewed upstream base is `main` at `9d1dbdba`; the first deliverable is limited to the authoring and publication workflow below. This document distinguishes source implementation, local verification, browser verification, external interoperability and production acceptance.
+This ledger tracks the educational-only LMS extension from the implementation directive. It extends the existing Luminovia course run, enrolment, assessment, document, attendance, certificate and analytics authorities; it does not create parallel registries. This document distinguishes source implementation, local verification, browser verification, external interoperability and production acceptance.
 
 ## Coordination and ownership
 
@@ -25,19 +25,19 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-02 — shared educational content library
 
-- **Priority / status:** P0 · planned; existing scanned documents and course resources are reusable only within their present resource workflows.
+- **Priority / status:** P0 · partially implemented on the separate `codex/lms-p0-material-catalogue` branch; this gradebook change does not include it.
 - **Dependencies / affected modules:** LMS-P0-01 and existing document/version/virus-scan owners; `src/features/learning/resources.tsx`, document discovery and secure course-document gateways; additive metadata/indexing only after defining canonical resource ownership.
 - **Data and security:** Reuse exact scanned file versions and existing audience permissions; define master/reference versus independent copy without changing historical course evidence; keep lecturer-only solutions out of participant projections.
 - **Tasks / acceptance:** Add categories, subjects, tags, language, owner, review/licensing metadata, search/preview, reuse/copy, consumer usage view, revision comparison, outdated review and archive. Verify organisation/course/private scopes, exact-version downloads, malware quarantine, permissions after revocation and historical snapshots.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Requires a resource identity and usage model approved before schema work.
+- **Test results / commits / limitations:** `94872d32` adds locally verified metadata revisions and search to exact course shares. Cross-course reuse still needs a canonical resource identity and usage model.
 
 ### LMS-P0-03 — gradebook and configurable grading policies
 
-- **Priority / status:** P0 · planned; current quiz result and course completion facts exist, but are not a comprehensive gradebook.
-- **Dependencies / affected modules:** Existing quiz, exam, assignment, enrolment and reporting records; course assessment and analytics owners.
-- **Data and security:** Versioned deterministic grading policy, grade history and moderation record; participant reads limited to own published results; server-authorised staff writes, audited changes and correction rather than silent final-grade overwrite.
-- **Tasks / acceptance:** Implement categories, weight/threshold rules, optional/mandatory/bonus/excused/missing cases, supported configurable scales, tabular and individual views, publication/moderation, import preview/error recovery and exports. Test reproducibility, rounding, concurrent edits, imports, finalisation, privacy and RLS.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Do not infer grades from attendance or presence.
+- **Priority / status:** P0 · partially implemented and locally verified. The course workspace has a bilingual quiz-gradebook view, not a comprehensive gradebook.
+- **Dependencies / affected modules:** The LMS assessment maintainers own `course-gradebook.tsx`, `course_gradebook` and the `gradebook_*` operations in `course_workspace_action` and `academy_learning_action`. The gradebook reads existing course enrolments, attempts and published quiz revisions; it does not grade answers or change certificate eligibility.
+- **Data and security:** Private RLS-enabled tables store immutable course policy versions and append-only grade revisions. The preview uses the highest score for the learner on the current published quiz; ties prefer the latest attempt and then the lowest attempt ID. The policy either displays the percentage or uses the label for the highest threshold reached. An explicit publication checks the reviewed attempt and policy; a correction requires the current grade revision and an internal reason. The participant projection shows only that person's published grade, not the roster, answers or correction reasons. Academy grace is read-only.
+- **Acceptance and tests:** 1,919 local Vitest tests passed, plus lint, application/E2E TypeScript and 7 documentation checks. A fresh isolated PostgreSQL replay passed 16 course-workspace groups, both Academy document/learning edition suites and 11 API checks. These include stale changes, concurrent publication, correction/privacy, retained grades and current membership checks. The Playwright workflow is registered for desktop/mobile Chromium but was not run because the canonical isolated runner was locked. CI and production acceptance are not claimed.
+- **Commits / limitations:** See the `codex/lms-p0-03-gradebook` change. Categories, weights, other assessment types, independent passing policies, moderation and history UI, class/programme reporting, grade notifications, and validated spreadsheet imports/exports remain open. Formal accessibility acceptance is pending.
 
 ### LMS-P0-04 — reusable question bank and examination builder
 

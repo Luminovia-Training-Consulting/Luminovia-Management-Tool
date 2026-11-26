@@ -315,6 +315,76 @@ export const courseEnrolmentsResult = itemList(
   }),
 );
 
+const gradebookBand = record({
+  minimum: { ...integer, maximum: 100 },
+  label: { ...text, minLength: 1, maxLength: 80 },
+});
+const gradebookAttempt = nullable(
+  record({
+    id: uuid,
+    quiz_version: integer,
+    score,
+    passed: boolean,
+    created_at: dateTime,
+  }),
+);
+const gradebookPolicy = nullable(
+  record({
+    version: { ...integer, minimum: 1 },
+    scheme: { enum: ["percentage", "bands"] },
+    bands: { ...itemList(gradebookBand), maxItems: 10 },
+    created_at: dateTime,
+  }),
+);
+const gradebookMark = record({
+  revision: { ...integer, minimum: 1 },
+  attempt_id: uuid,
+  quiz_version: integer,
+  score,
+  passed: boolean,
+  policy_version: { ...integer, minimum: 1 },
+  grade_percent: nullable({ ...integer, maximum: 100 }),
+  grade_label: nullable({ ...text, maxLength: 80 }),
+  corrected: boolean,
+  published_at: dateTime,
+});
+const staffGradebookMark = record({
+  ...gradebookMark.properties,
+  reason: nullable({ ...text, minLength: 3, maxLength: 500 }),
+});
+const gradebookPreview = nullable(
+  record({
+    grade_percent: nullable({ ...integer, maximum: 100 }),
+    grade_label: nullable({ ...text, maxLength: 80 }),
+  }),
+);
+const gradebookLearner = record({
+  user_id: uuid,
+  name: text,
+  status: enrolmentState,
+  best_attempt: gradebookAttempt,
+  preview: gradebookPreview,
+  grade: nullable(staffGradebookMark),
+});
+
+export const courseGradebookParameters = record(
+  {
+    p_run_id: uuid,
+    p_offset: { ...integer, default: 0 },
+    p_limit: { ...integer, minimum: 1, maximum: 100, default: 20 },
+  },
+  ["p_run_id"],
+);
+export const courseGradebookResult = record({
+  can_manage: boolean,
+  policy: gradebookPolicy,
+  learners: itemList(gradebookLearner),
+  own_grade: nullable(gradebookMark),
+  total: integer,
+  offset: integer,
+  limit: { ...integer, minimum: 1, maximum: 100 },
+});
+
 /** Send the reviewed current version for edits. PostgreSQL defaults omitted versions to zero. */
 const workspaceActions: [action: string, payload: Record<string, unknown>][] = [
   [
@@ -380,6 +450,31 @@ const workspaceActions: [action: string, payload: Record<string, unknown>][] = [
     "completion_revoke",
     { id: uuid, reason: { ...text, minLength: 3, maxLength: 500 } },
   ],
+  [
+    "gradebook_policy",
+    {
+      scheme: { enum: ["percentage", "bands"] },
+      bands: itemList(gradebookBand),
+    },
+  ],
+  [
+    "gradebook_publish",
+    {
+      user_id: uuid,
+      attempt_id: uuid,
+      expected_revision: { ...integer, minimum: 0 },
+      reason: { ...text, maxLength: 500 },
+    },
+  ],
+  [
+    "gradebook_correct",
+    {
+      user_id: uuid,
+      grade_value: { ...text, minLength: 1, maxLength: 80 },
+      expected_revision: { ...integer, minimum: 1 },
+      reason: { ...text, minLength: 3, maxLength: 500 },
+    },
+  ],
 ];
 
 export const workspaceActionRequest = {
@@ -402,5 +497,7 @@ export const workspaceActionResult = {
     record({ id: uuid }),
     record({ id: nullable(uuid), saved: { const: true } }),
     record({ id: uuid, score, passed: boolean }),
+    record({ version: { ...integer, minimum: 1 } }),
+    record({ revision: { ...integer, minimum: 1 } }),
   ],
 };

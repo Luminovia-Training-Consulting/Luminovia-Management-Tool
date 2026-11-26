@@ -88,6 +88,8 @@ import {
 import {
   courseEnrolmentCandidatesResult,
   courseEnrolmentsResult,
+  courseGradebookParameters,
+  courseGradebookResult,
   enrolmentState,
   courseWelcomePublishedResult,
   courseWelcomeResult,
@@ -609,6 +611,9 @@ const academyActivityActions = new Set([
   "quiz_attempt",
   "completion_issue",
   "completion_revoke",
+  "gradebook_policy",
+  "gradebook_publish",
+  "gradebook_correct",
 ]);
 const attendanceVersion = { type: "integer", minimum: 0 };
 const attendanceStatus = { enum: ["present", "absent", "excused"] };
@@ -1000,6 +1005,14 @@ const coursePaths = {
       }),
     }),
   ),
+  "/rest/v1/rpc/course_gradebook": courseOperation(
+    "readAcademyCourseGradebook",
+    "Read a scoped, paginated course quiz gradebook",
+    "Current course staff receive a paginated roster, the best attempt from the current published quiz version, server-calculated grade previews and published grades. Participants receive only their own published grade without correction reasons, answers or roster data. Read access allows active or grace licence; grace makes the gradebook read-only.",
+    "active-or-grace",
+    record({ ...courseGradebookParameters.properties }),
+    courseGradebookResult,
+  ),
   "/rest/v1/rpc/course_withdrawal_window": courseOperation(
     "readAcademyCourseWithdrawalWindow",
     "Read the caller’s course withdrawal deadline",
@@ -1188,7 +1201,7 @@ const coursePaths = {
   "/rest/v1/rpc/academy_learning_action": courseOperation(
     "saveAcademyLearningActivity",
     "Acknowledge material or save a learning activity",
-    "Acknowledge an exact visible resource or save an own private notebook. Course managers create preparation items with an idempotent request ID. Course staff update the checklist, author revisioned quizzes and revoke completion records. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers stay staff-only. Stale writes return 409.",
+    "Acknowledge an exact visible resource or save an own private notebook. Course managers create preparation items with an idempotent request ID. Course staff update the checklist, author revisioned quizzes, configure immutable grading scales, publish grades from the best current quiz attempt and append reasoned grade corrections. Current learners submit their own attempts and request completion after verified attendance, completion of enrolment and passing any published quiz. Eligible learners and company contacts can give feedback after the last session. Correct answers and correction reasons stay staff-only. Grade writes require an active licence; stale writes return 409.",
     "active",
     {
       ...record(
