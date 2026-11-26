@@ -44,7 +44,13 @@ let receiveCommit;
 const saved = new Promise((resolve) => {
   receiveCommit = resolve;
 });
-portal.on("request", (_request, response) => {
+const remoteRequests = [];
+portal.on("request", (request, response) => {
+  if (request.url.startsWith("/remote")) {
+    remoteRequests.push(request.url);
+    response.writeHead(404).end();
+    return;
+  }
   const script = `
     window.addEventListener("message", (event) => {
       const runner = document.querySelector("iframe");
@@ -54,8 +60,9 @@ portal.on("request", (_request, response) => {
         runner.contentWindow.postMessage({
           type: "scorm:launch", launch: ${JSON.stringify(launch)}, title: "Fictional active lesson", path: "course/lesson.html",
           files: [
-            ["course/lesson.html", encode('<!doctype html><html><head><link rel="stylesheet" href="lesson.css"></head><body><output></output><a href="pages/notes.html#remark">Notes</a><button type="button">Complete lesson</button><script src="lesson.js"><' + '/script></body></html>')],
-            ["course/pages/notes.html", encode('<!doctype html><html><body><h2 id="remark">Reviewed notes</h2><a href="../lesson.html">Return to lesson</a><a href="https://example.invalid/">Remote link</a></body></html>')],
+            ["course/lesson.html", encode('<!doctype html><html><head><link rel="stylesheet" href="lesson.css"></head><body><output></output><a href="pages/notes.html#remark">Notes</a><iframe title="Nested lesson"></iframe><script>document.querySelector("iframe").src = "pages/intro.html";<' + '/script><button type="button">Complete lesson</button><script src="lesson.js"><' + '/script></body></html>')],
+            ["course/pages/notes.html", encode('<!doctype html><html><body><h2 id="remark">Reviewed notes</h2><a href="../lesson.html">Return to lesson</a><img src="${portalOrigin}/remote.png" alt="Remote image"><iframe title="Remote page" src="${portalOrigin}/remote-frame"></iframe></body></html>')],
+            ["course/pages/intro.html", encode('<!doctype html><html><body><h2>Nested introduction</h2></body></html>')],
             ["course/lesson.js", encode(${JSON.stringify(sci)})],
             ["course/lesson.css", encode("output{color:rgb(0, 80, 0)}")],
           ],
@@ -79,7 +86,7 @@ portal.on("request", (_request, response) => {
 });
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ serviceWorkers: "allow" });
   await page.exposeFunction("recordScormCommit", (data) => {
     committed = data;
     receiveCommit(data);
@@ -89,6 +96,11 @@ try {
   const lesson = runner.frameLocator("iframe");
   const output = lesson.locator("output");
   await output.getByText("Initial lesson", { exact: true }).waitFor();
+  await lesson
+    .frameLocator('iframe[title="Nested lesson"]')
+    .getByRole("heading", { name: "Nested introduction" })
+    .waitFor();
+
   assert.equal(
     await output.evaluate(
       (element) =>
@@ -104,8 +116,12 @@ try {
       .evaluate((element) => element.ownerDocument.location.hash),
     "#remark",
   );
+  await lesson
+    .locator("img")
+    .evaluate((image) => image.decode().catch(() => undefined));
+  assert.deepEqual(remoteRequests, []);
   assert.equal(
-    await lesson.getByRole("link", { name: "Remote link" }).count(),
+    await lesson.locator("img").evaluate((image) => image.naturalWidth),
     0,
   );
   await lesson.getByRole("link", { name: "Return to lesson" }).click();
