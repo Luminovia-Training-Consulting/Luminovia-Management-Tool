@@ -140,6 +140,8 @@ Open **Endgültig löschen / Delete permanently** from the permitted account, jo
 
 For an unpublished internal course draft with unused dates and no linked assignment or teaching records, the preview includes the dates. Review the total scope, then confirm to remove the draft and dates together. Open **Zu den Kursterminen / Go to course sessions** when the dates block deletion. If an assignment owns the schedule, follow its link in the preview. A blocked template also links to the visible runs using it.
 
+The preview for an otherwise deletable course includes its unused weighted grading policies. A recorded exemption, grading review or release protects the course's grading history and blocks permanent deletion.
+
 Under **Unternehmen / Companies**, open a company and choose **Löschen / Delete** beside an individual contact under **Ansprechpersonen / Contacts**. Company managers can confirm removal when the contact is unused. If it serves as a course contact or the company's default teaching offer contact, update that setting before deleting the record.
 
 Review the server-provided target, affected record counts and protected dependencies. If deletion is permitted, acknowledge the irreversible impact, enter `DELETE`, and confirm. There is no trash, restore or undo. A blocked preview removes nothing. Accepted/invoiced/shared dependencies can require separate resolution; administrator status does not reveal private message bodies, calendars or personal contracts.

@@ -113,6 +113,46 @@ async function acknowledge() {
 
 describe("permanent deletion confirmation", () => {
   it.each([
+    ["de", "Endgültig löschen", "Richtlinien für gewichtete Kursnoten"],
+    ["en", "Delete permanently", "Weighted grading policies"],
+  ])(
+    "labels unused weighted policy versions in the course preview in %s",
+    async (language, action, label) => {
+      await i18n.changeLanguage(language);
+      access = { can_admin: true, kinds: ["course_run"] };
+      const initial = state.request.getMockImplementation()!;
+      state.request.mockImplementation((...args) =>
+        args[0] === "deletions/preview"
+          ? Promise.resolve({
+              ...preview,
+              kind: "course_run",
+              id: "run-a",
+              counts: {
+                "public.course_runs": 1,
+                "private.course_weighted_policies": 2,
+              },
+            })
+          : initial(...args),
+      );
+      setup(
+        <PermanentDeleteAction
+          kind="course_run"
+          id="run-a"
+          label="Fictional workshop"
+        />,
+      );
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: `${action}: Fictional workshop`,
+        }),
+      );
+      expect(
+        (await screen.findByText(label)).nextElementSibling,
+      ).toHaveTextContent("2");
+    },
+  );
+
+  it.each([
     {
       language: "de",
       action: "Endgültig löschen: Fictional workshop",

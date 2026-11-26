@@ -151,6 +151,56 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         assert.equal(await sql(`select count(*) from public.course_sessions where id=${q(siblingSession)}`), "1");
         assert.equal(await sql(`select count(*) from public.course_templates where id=${q(template)}`), "1");
     });
+    await check("Approved course deletion includes unused weighted grading policies and preserves used evidence", async () => {
+        const [template, unused, sibling, reviewed, released, excused] = Array.from({length: 6}, randomUUID);
+        const policy = (run, version = 1) => `insert into private.course_weighted_policies
+          (run_id,version,threshold,missing_required,separate_reviewer,items,created_by)
+          values(${q(run)},${version},60,'block',false,'[{"key":"quiz","weight":100,"treatment":"required"}]',${q(admin)})`;
+        const review = (run) => `insert into private.course_weighted_reviews
+          (run_id,user_id,revision,policy_version,prior_release,fingerprint,snapshot,reason,reviewed_by)
+          values(${q(run)},${q(owner)},1,1,0,repeat('a',64),'{"percent":80,"passed":true}','Fictional review',${q(admin)})`;
+        await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional weighted grading template');
+          insert into public.course_runs(id,template_id) values
+            (${q(unused)},${q(template)}),(${q(sibling)},${q(template)}),(${q(reviewed)},${q(template)}),
+            (${q(released)},${q(template)}),(${q(excused)},${q(template)});
+          ${[unused, sibling, reviewed, released, excused].map((run) => policy(run)).join(';')};
+          insert into public.course_enrolments(course_run_id,user_id,enrolled_by) values
+            (${q(reviewed)},${q(owner)},${q(admin)}),(${q(released)},${q(owner)},${q(admin)}),(${q(excused)},${q(owner)},${q(admin)});
+          ${review(reviewed)};
+          ${review(released)};
+          insert into private.course_weighted_releases(run_id,user_id,revision,review_revision,released_by)
+            values(${q(released)},${q(owner)},1,1,${q(admin)});
+          insert into private.course_weighted_exemptions(run_id,user_id,policy_version,item_key,revision,excused,reason,created_by)
+            values(${q(excused)},${q(owner)},1,'quiz',1,true,'Fictional exemption',${q(admin)});`);
+
+        for (const run of [reviewed, released, excused]) {
+            const protectedPlan = await plan("course_run", run, manager);
+            assert.equal(protectedPlan.can_confirm, false);
+            assert.ok(protectedPlan.blockers.some(({kind}) => kind === "private.course_weighted_policies"));
+            await expectCode(confirm(protectedPlan, manager), "23503");
+        }
+        await expectCode(sql(`delete from private.course_weighted_policies where run_id=${q(unused)}`), "42501");
+        await expectCode(sql(`update private.course_weighted_policies set threshold=61 where run_id=${q(unused)}`), "42501");
+        const stale = await plan("course_run", unused, manager);
+        assert.equal(stale.can_confirm, true);
+        assert.equal(stale.counts["private.course_weighted_policies"], 1);
+        await sql(`${policy(unused, 2)};`);
+        await expectCode(confirm(stale, manager), "40001");
+        const reviewedPlan = await plan("course_run", unused, manager);
+        assert.equal(reviewedPlan.counts["private.course_weighted_policies"], 2);
+        const operation = await confirm(reviewedPlan, manager);
+        await expectCode(sql(`${policy(unused, 3)};`), "55000");
+        await expectCode(sql(`${review(unused)};`), "55000");
+        const execution = await permit(operation, manager);
+        await worker("apply", key(operation, execution));
+        assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
+        assert.equal(await sql(`select count(*) from public.course_runs where id=${q(unused)}`), "0");
+        assert.equal(await sql(`select count(*) from private.course_weighted_policies where run_id=${q(unused)}`), "0");
+        assert.equal(await sql(`select count(*) from private.course_weighted_policies where run_id in (${[sibling, reviewed, released, excused].map(q).join(',')})`), "4");
+        assert.equal(await sql(`select count(*) from private.course_weighted_reviews where run_id in (${q(reviewed)},${q(released)})`), "2");
+        assert.equal(await sql(`select count(*) from private.course_weighted_releases where run_id=${q(released)}`), "1");
+        assert.equal(await sql(`select count(*) from private.course_weighted_exemptions where run_id=${q(excused)}`), "1");
+    });
     await check("One confirmation deletes unused course dates and linked offers while retaining attended records", async () => {
         const template = randomUUID(), published = randomUUID(), linked = randomUUID(), attended = randomUUID(), session = randomUUID();
         const linkedSession = randomUUID(), jobs = [randomUUID(), randomUUID()];

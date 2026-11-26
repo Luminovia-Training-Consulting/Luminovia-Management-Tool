@@ -246,6 +246,10 @@ const pairs: Record<string, [string, string]> = {
   organisation: ["Unternehmen", "Organisations"],
   organisation_contact: ["Unternehmenskontakte", "Organisation contacts"],
   courseContactSettings: ["Kurskontakt", "Course contact"],
+  courseWeightedPolicies: [
+    "Richtlinien für gewichtete Kursnoten",
+    "Weighted grading policies",
+  ],
   companyDispatchContactSettings: [
     "Standardkontakt für Aufträge",
     "Default contact for teaching offers",

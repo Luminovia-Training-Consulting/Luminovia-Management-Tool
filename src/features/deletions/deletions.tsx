@@ -289,6 +289,7 @@ function resourceLabel(
     course_templates: "course_template",
     course_runs: "course_run",
     course_sessions: "course_session",
+    course_weighted_policies: "courseWeightedPolicies",
     topics: "topic",
     wiki_pages: "wiki_page",
     wiki_revisions: "revisions",
