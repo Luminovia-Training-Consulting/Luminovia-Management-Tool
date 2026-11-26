@@ -4,6 +4,7 @@ import { saveBlob } from "../../lib/blob-download";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import type { WorkspaceAttendanceHistory } from "./attendance-schema";
+import type { CourseCurriculum } from "./course-authoring-schema";
 
 export interface CourseOverview {
   id: string;
@@ -147,11 +148,24 @@ export interface CourseWorkspace {
   } | null;
 }
 
+export interface CourseContentStudio {
+  can_edit: boolean;
+  published_version: number;
+  published_content: CourseCurriculum;
+  published_at: string | null;
+  draft_version: number;
+  draft_base_version: number;
+  draft_content: CourseCurriculum | null;
+  versions: { version: number; published_at: string; module_count: number }[];
+}
+
 export const courseMaterialLibraryKey = (actor: string) =>
   ["course-material-library", actor] as const;
 
 export const courseWorkspaceKey = (actor: string, run: string) =>
   ["course-workspace", actor, run] as const;
+export const courseContentStudioKey = (actor: string, run: string) =>
+  ["course-content-studio", actor, run] as const;
 /** Own current memberships determine this hub; its actor key prevents cache reuse across accounts. */
 export const courseHubQuery = (actor: string) =>
   queryOptions({
@@ -195,6 +209,37 @@ export const courseWorkspaceEntitlementQuery = (
     },
     staleTime: 0,
   });
+
+/** Course authors see the current draft and revision history; participants receive only their pinned publication. */
+export const courseContentStudioQuery = (actor: string, run: string) =>
+  queryOptions({
+    queryKey: courseContentStudioKey(actor, run),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("course_content_studio", { p_run_id: run })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as CourseContentStudio;
+    },
+    staleTime: 10000,
+    retry: false,
+  });
+
+/** Draft and publication writes are server-validated and return the newly authoritative studio state. */
+export async function courseContentAction(
+  run: string,
+  action: "save_draft" | "publish" | "restore" | "migrate",
+  payload: Record<string, unknown>,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("course_content_action", {
+    p_run_id: run,
+    p_action: action,
+    p_payload: payload,
+  });
+  if (error) throw error;
+  return data as CourseContentStudio;
+}
 
 /** All attendance, quiz and checklist mutations await the database; no optimistic confirmation. */
 export async function courseAction(
