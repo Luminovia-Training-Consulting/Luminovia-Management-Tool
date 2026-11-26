@@ -1,6 +1,10 @@
 /** OIDC resource-link message boundary for a locally registered LTI 1.3 tool. */
 import type { createLtiAdvantage } from "./advantage.ts";
 import type { createLtiDeepLink } from "./deep-link.ts";
+import type {
+  createDynamicRegistration,
+  RegistrationGrant,
+} from "./dynamic-registration.ts";
 import { boundedJson, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 export interface LaunchHint {
   id: string;
@@ -25,6 +29,7 @@ export interface AuthorizedLaunch {
   resource_custom?: Record<string, string>;
   ags_enabled?: boolean;
   ags_lineitem?: string;
+  registration_scopes?: string[];
 }
 
 type ProtocolRequest = {
@@ -37,6 +42,7 @@ type ProtocolRequest = {
 };
 
 type Principal = {
+  register?: (grant: RegistrationGrant) => Promise<string | null>;
   prepare: (
     id: string,
     proof: string,
@@ -205,6 +211,7 @@ export function createLtiHandler(options: {
   signing: SigningKey | null;
   advantage?: ReturnType<typeof createLtiAdvantage>;
   deepLink?: ReturnType<typeof createLtiDeepLink>;
+  dynamicRegistration?: ReturnType<typeof createDynamicRegistration>;
   principal: (bearer: string) => Promise<Principal | null>;
 }) {
   return async (request: Request) => {
@@ -242,6 +249,11 @@ export function createLtiHandler(options: {
     ) {
       return await options.deepLink.receive(request);
     }
+    const registrationResponse = await options.dynamicRegistration?.route(
+      request,
+      path,
+    );
+    if (registrationResponse) return registrationResponse;
     const service = await options.advantage?.route(request, path);
     if (service) return service;
     if (!allowed) return json(403, { error: "lti_origin" });
@@ -272,11 +284,24 @@ export function createLtiHandler(options: {
         return json(400, { error: "lti_body" });
       }
       const body = input as Record<string, unknown>;
+      const principal = await options.principal(bearer);
+      if (!principal) return json(401, { error: "lti_session" });
+      if (body.action === "register") {
+        if (!principal.register || !options.dynamicRegistration) {
+          return json(503, { error: "lti_registration_unconfigured" });
+        }
+        const begun = await options.dynamicRegistration.begin(
+          body,
+          origin,
+          principal.register,
+        );
+        return begun
+          ? json(200, begun)
+          : json(403, { error: "lti_registration_grant" });
+      }
       if (typeof body.proof !== "string" || !uuid.test(body.proof)) {
         return json(400, { error: "lti_body" });
       }
-      const principal = await options.principal(bearer);
-      if (!principal) return json(401, { error: "lti_session" });
       if (
         body.action === "prepare" && typeof body.registration === "string" &&
         uuid.test(body.registration)

@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { createLtiAdvantage } from "./advantage.ts";
 import { createLtiDeepLink } from "./deep-link.ts";
+import { createDynamicRegistration } from "./dynamic-registration.ts";
 import type { ToolRegistration } from "./tool-jwt.ts";
 import { createLtiHandler, importSigningKey } from "./handler.ts";
 
@@ -90,11 +91,27 @@ const deepLink = service && serviceUrl && signing
   })
   : undefined;
 
+const dynamicRegistration = service && serviceUrl && signing
+  ? createDynamicRegistration(
+    serviceUrl,
+    signing.issuer,
+    origins,
+    async (token, tool) => {
+      const result = await service.rpc("lti_complete_dynamic_registration", {
+        p_token: token,
+        p_input: tool,
+      });
+      return result.error ? null : result.data;
+    },
+  )
+  : undefined;
+
 Deno.serve(createLtiHandler({
   origins,
   signing,
   advantage,
   deepLink,
+  dynamicRegistration,
   principal: async (authorization) => {
     const client = createClient(endpoint, anon, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -102,6 +119,17 @@ Deno.serve(createLtiHandler({
     });
     if ((await client.auth.getUser(authorization.slice(7))).error) return null;
     return {
+      register: async (grant) => {
+        const result = await client.rpc("lti_begin_dynamic_registration", {
+          p_run_id: grant.course,
+          p_initiation_uri: grant.initiation,
+          p_jwks_uri: grant.jwks,
+          p_tool_key: grant.key,
+          p_roster: grant.roster,
+          p_grades: grant.grades,
+        });
+        return result.error ? null : result.data;
+      },
       prepare: async (id, proof, placement) => {
         const args = { p_registration_id: id, p_browser_proof: proof };
         const result = placement?.portalOrigin || placement?.resource

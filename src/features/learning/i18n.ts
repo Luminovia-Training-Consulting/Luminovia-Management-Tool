@@ -867,6 +867,28 @@ const pairs: Record<string, [string, string]> = {
   ltiLaunchResource: ["{{title}} öffnen", "Launch {{title}}"],
   ltiWithdrawResource: ["{{title}} ausblenden", "Hide {{title}}"],
   ltiWithdrawLink: ["Link ausblenden", "Hide link"],
+  ltiDynamicTitle: [
+    "Werkzeug dynamisch registrieren",
+    "Register a tool dynamically",
+  ],
+  ltiDynamicProvider: [
+    "Registrierungs-URL des Anbieters",
+    "Provider registration URL",
+  ],
+  ltiDynamicJwks: [
+    "Öffentliche JWKS-URL des Anbieters",
+    "Provider public JWKS URL",
+  ],
+  ltiPrepareRegistration: ["Registrierung vorbereiten", "Prepare registration"],
+  ltiOpenProviderRegistration: [
+    "Registrierung beim Anbieter öffnen",
+    "Open registration with the provider",
+  ],
+  ltiReloadConfigurations: ["Werkzeuge aktualisieren", "Refresh tools"],
+  ltiDynamicReviewHelp: [
+    "Kehre nach der Registrierung hierher zurück und aktualisiere die Liste. Prüfe das neue Werkzeug und gib es dann für diesen Kurs frei.",
+    "Return here after registration and refresh the list. Review the new tool and then enable it for this course.",
+  ],
   ltiDeploymentId: ["LTI-Deployment-ID", "LTI deployment ID"],
   ltiField_login_uri: ["Anmelde-URL des Werkzeugs", "Tool login URL"],
   ltiField_redirect_uri: [

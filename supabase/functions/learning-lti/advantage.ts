@@ -219,9 +219,12 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
         nrps_enabled?: boolean;
         ags_enabled?: boolean;
         ags_lineitem?: string;
+        registration_scopes?: string[];
       },
     ) {
-      const roster = launch.nrps_enabled
+      const roster = launch.nrps_enabled &&
+          (!launch.registration_scopes ||
+            launch.registration_scopes.includes(nrpsScope))
         ? {
           "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice": {
             context_memberships_url:

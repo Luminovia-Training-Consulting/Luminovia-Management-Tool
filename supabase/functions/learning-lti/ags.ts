@@ -108,13 +108,24 @@ const scopedUrl = (base: string, deployment: string) =>
 /** Advertise endpoints and scopes only when this deployment has enabled the service. */
 export function agsClaims(
   base: string,
-  launch: { id: string; ags_enabled?: boolean; ags_lineitem?: string },
+  launch: {
+    id: string;
+    ags_enabled?: boolean;
+    ags_lineitem?: string;
+    registration_scopes?: string[];
+  },
 ) {
   if (!launch.ags_enabled) return {};
+  const scope = launch.registration_scopes
+    ? agsScopes.filter((service) =>
+      launch.registration_scopes?.includes(service)
+    )
+    : agsScopes;
+  if (!scope.length) return {};
   const lineitems = scopedUrl(base, launch.id);
   return {
     "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint": {
-      scope: agsScopes,
+      scope,
       lineitems,
       ...(launch.ags_lineitem
         ? { lineitem: `${lineitems}/${launch.ags_lineitem}` }

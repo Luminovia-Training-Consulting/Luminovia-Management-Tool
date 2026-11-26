@@ -11,6 +11,8 @@ import { LtiGrades } from "./lti-grades";
 import { useAuth } from "../auth/auth-context";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 
+import { DynamicToolRegistration } from "./lti-register-tool";
+
 type Tool = {
   id: string;
   title: string;
@@ -525,6 +527,12 @@ export function CourseLtiTools({
             >
               {t("ltiAdd")}
             </Button>
+          )}
+          {tools.data.can_manage && (
+            <DynamicToolRegistration
+              course={course}
+              refresh={() => void tools.refetch()}
+            />
           )}
           {editing !== undefined && tools.data.can_manage && (
             <ToolForm

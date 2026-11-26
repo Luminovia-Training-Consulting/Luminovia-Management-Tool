@@ -1453,6 +1453,57 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         assert.equal(await enableGrades(admin,managerSession,6,false),7);
         await assert.rejects(grades(gradeToken,"list",null),/42501/);
 
+        const beginRegistration = (who, session, jwks) =>
+            invoke(who, session, "lti_begin_dynamic_registration", [
+                q(run), q("https://dynamic-fixture.example.invalid/register"), q(jwks),
+                q(JSON.stringify(key)), "false", "true",
+            ]);
+        const expectedJwks = "https://dynamic-fixture.example.invalid/keys";
+        const dynamicMetadata = {
+            title: "Fictional dynamically registered tool",
+            login: "https://dynamic-fixture.example.invalid/login",
+            redirect: "https://dynamic-fixture.example.invalid/response",
+            target: "https://dynamic-fixture.example.invalid/target",
+            jwks: expectedJwks,
+            picker: "https://dynamic-fixture.example.invalid/picker",
+            scopes: [rosterScope,gradeScope("score")],
+        };
+        const registerDynamic = (credential, metadata = dynamicMetadata) =>
+            toolRpc("lti_complete_dynamic_registration", [q(credential), q(JSON.stringify(metadata))]);
+        await assert.rejects(beginRegistration(learner,learnerSession,expectedJwks),/42501/);
+        await assert.rejects(beginRegistration(admin,managerSession,"https://unrelated.example.invalid/public"),/22023/);
+        const dynamicGrant = await beginRegistration(admin,managerSession,expectedJwks);
+        assert.match(dynamicGrant,/^[a-f0-9]{64}$/);
+        await assert.rejects(invoke(admin,managerSession,"lti_complete_dynamic_registration",[
+            q(dynamicGrant),q(JSON.stringify(dynamicMetadata)),
+        ]),/42501/);
+        await assert.rejects(registerDynamic(dynamicGrant,{...dynamicMetadata,
+            redirect:"https://unrelated.example.invalid/response",
+        }),/22023/);
+        const dynamic = await registerDynamic(dynamicGrant);
+        assert.deepEqual(dynamic.scopes,[gradeScope("score")]);
+        await assert.rejects(registerDynamic(dynamicGrant),/42501/);
+        const draftTool = (await invoke(admin,managerSession,"course_lti_tools",[q(run)]))
+            .tools.find(({id}) => id === dynamic.id);
+        assert.equal(draftTool.active,false);
+        assert.equal(draftTool.deep_link_uri,dynamicMetadata.picker);
+        assert.ok(!(await invoke(learner,learnerSession,"course_lti_tools",[q(run)]))
+            .tools.some(({id}) => id === dynamic.id));
+        const dynamicToken = (scope, version) => toolRpc("lti_issue_service_token", [
+            q(dynamic.id),version,q(randomUUID()),"now()+interval '4 minutes'",`array[${q(scope)}]`,
+        ]);
+        await assert.rejects(dynamicToken(gradeScope("score"),1),/42501/);
+        assert.equal(await invoke(admin,managerSession,"save_course_lti_tool",[
+            q(dynamic.id),q(run),q(dynamicMetadata.title),q(dynamic.client_id),q(dynamicMetadata.login),
+            q(dynamicMetadata.redirect),q(dynamicMetadata.target),"true",1,
+        ]),2);
+        assert.match(await dynamicToken(gradeScope("score"),2),/^[a-f0-9]{64}$/);
+        await assert.rejects(dynamicToken(gradeScope("lineitem"),2),/42501/);
+        await assert.rejects(dynamicToken(rosterScope,2),/42501/);
+        const strandedGrant = await beginRegistration(admin,managerSession,expectedJwks);
+        await sql(`delete from auth.sessions where id=${q(managerSession)}`);
+        await assert.rejects(registerDynamic(strandedGrant),/42501/);
+
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);

@@ -380,7 +380,8 @@ Deno.serve({onError}, async (req: Request) => {
         : ["GET", "POST"].includes(req.method);
     const ltiToolService =
         (ltiAgs !== null && ltiAgsMethod) ||
-        ((pathname === "/learning-lti/token" || pathname === "/learning-lti/deep-link-return") && req.method === "POST") ||
+        (["/learning-lti/token", "/learning-lti/deep-link-return", "/learning-lti/registration"].includes(pathname) && req.method === "POST") ||
+        (pathname === "/learning-lti/registration/configuration" && req.method === "GET") ||
         (req.method === "GET" &&
             /^\/learning-lti\/memberships\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(pathname));
     const fileMode = url.searchParams.get("mode");

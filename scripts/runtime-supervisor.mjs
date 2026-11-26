@@ -206,6 +206,9 @@ try {
             ...(localLti.LTI_PLATFORM_ISSUER && localLti.LTI_PLATFORM_RSA_PRIVATE_JWK ? {
                 LTI_PLATFORM_ISSUER: localLti.LTI_PLATFORM_ISSUER,
                 LTI_PLATFORM_RSA_PRIVATE_JWK: localLti.LTI_PLATFORM_RSA_PRIVATE_JWK,
+                ...(localLti.LTI_PLATFORM_SERVICE_URL ? {
+                    LTI_PLATFORM_SERVICE_URL: localLti.LTI_PLATFORM_SERVICE_URL,
+                } : {}),
             } : {}),
             PORTAL_INVITES_ENABLED: "true",
             PORTAL_ALLOWED_ORIGINS: localEdgeOrigins(config).join(","),
