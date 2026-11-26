@@ -321,6 +321,9 @@ export default defineConfig(({ mode }) => {
             "**/portfolio-*.js",
             "**/peer-feedback-*.js",
             "**/course-xapi-export-*.js",
+            // Packet review and conversion are loaded when explicitly used.
+            "**/scorm-package-*.js",
+            "**/h5p-import-*.js",
           ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,

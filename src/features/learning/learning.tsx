@@ -70,7 +70,6 @@ import { CourseEnrolmentsPanel, CourseWithdrawal } from "./enrolments";
 import { CourseChat } from "./course-chat";
 import { CourseClasses } from "./course-classes";
 import { DownloadButton, Resources } from "./resources";
-import { ScormPackageReview } from "./scorm-package-review";
 import { CourseAssignments } from "./course-assignments";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
@@ -94,6 +93,11 @@ const CoursePortfolio = lazy(() =>
 const CourseXapiExport = lazy(() =>
   import("./course-xapi-export").then((module) => ({
     default: module.CourseXapiExport,
+  })),
+);
+const ScormPackageReview = lazy(() =>
+  import("./scorm-package-review").then((module) => ({
+    default: module.ScormPackageReview,
   })),
 );
 const CourseOfferForm = __PORTAL_INTERNAL_EDITION__
@@ -1520,7 +1524,11 @@ function CourseWorkspaceLayout({
             {currentSection === "course-materials" &&
               course.lms_enabled &&
               course.access.staff &&
-              canEdit && <ScormPackageReview key={actor + ":" + course.id} />}
+              canEdit && (
+                <Suspense fallback={<Loading />}>
+                  <ScormPackageReview key={actor + ":" + course.id} />
+                </Suspense>
+              )}
           </div>
           {hasSubmissions && (
             <div
