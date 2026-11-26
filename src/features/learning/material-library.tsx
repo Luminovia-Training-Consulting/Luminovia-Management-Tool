@@ -546,11 +546,18 @@ async function copyCourseMaterial({
     throw new Error("file_size");
   const file = new File([bytes], material.name, { type: bytes.type });
   const document = academy
-    ? await uploadAcademyCourseMaterial(file, target, requestId)
+    ? await uploadAcademyCourseMaterial(
+        file,
+        target,
+        requestId,
+        undefined,
+        actor,
+      )
     : await uploadDocument(file, {
         scope: "personal",
         kind: "material",
         clientId: requestId,
+        expectedActor: actor,
       });
   const version = document.current_version_id;
   if (document.status !== "clean" || !version)

@@ -104,6 +104,25 @@ async function transfer(onProgress?: (percent: number) => void) {
 }
 
 describe("online, authenticated document transfers", () => {
+  it("rejects an independent copy after the active account changed", async () => {
+    await expect(
+      uploadDocument(file(), {
+        scope: "personal",
+        expectedActor: "previous-account",
+      }),
+    ).rejects.toThrow("account_changed");
+    await expect(
+      uploadAcademyCourseMaterial(
+        file(),
+        "course",
+        "retry",
+        undefined,
+        "previous-account",
+      ),
+    ).rejects.toThrow("account_changed");
+    expect(Request.requests).toHaveLength(0);
+  });
+
   it("uses the SCORM scan scope and returns the exact clean version", async () => {
     await expect(
       uploadCourseScormPackage(new File([], "short.zip"), "course", "retry"),

@@ -21,6 +21,8 @@ export interface UploadContext {
   ownerId?: string;
   replaceId?: string;
   clientId?: string;
+  /** Keep a downloaded file bound to the account that read its bytes. */
+  expectedActor?: string;
   messageOnly?: boolean;
   /** Read scan status through the course reservation projection. */
   courseChat?: boolean;
@@ -78,7 +80,7 @@ export async function uploadDocument(
   if (context.jobId) form.set("job_id", context.jobId);
   if (context.replaceId) form.set("replace_id", context.replaceId);
   if (context.ownerId) form.set("owner_id", context.ownerId);
-  return transferUpload(form, endpoint(), onProgress);
+  return transferUpload(form, endpoint(), onProgress, context.expectedActor);
 }
 
 /** Send a company PDF to its dedicated reservation, not the personal file library. */
@@ -141,6 +143,7 @@ export function uploadAcademyCourseMaterial(
   courseId: string,
   clientId: string,
   onProgress?: (percent: number) => void,
+  expectedActor?: string,
 ) {
   const form = new FormData();
   form.set("file", file);
@@ -150,6 +153,7 @@ export function uploadAcademyCourseMaterial(
     form,
     endpoint() + "?mode=academy-material",
     onProgress,
+    expectedActor,
   );
 }
 
@@ -270,8 +274,12 @@ async function transferUpload(
   form: FormData,
   path: string,
   onProgress?: (percent: number) => void,
+  expectedActor?: string,
 ): Promise<PortalDocument> {
-  const headers = authHeaders((await requireSession()).access_token);
+  const session = await requireSession();
+  if (expectedActor && session.user.id !== expectedActor)
+    throw new Error("account_changed");
+  const headers = authHeaders(session.access_token);
   return await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", path);
