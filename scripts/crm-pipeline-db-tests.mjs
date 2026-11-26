@@ -75,6 +75,16 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
   assert.equal(initial.length, 1);
   assert.equal(initial[0].id, opportunityId);
   assert.equal(initial[0].stage, "identified");
+  assert.equal(
+    initial[0].close_probability,
+    null,
+    "probability starts unknown",
+  );
+  assert.equal(
+    initial[0].expected_close_date,
+    null,
+    "closing date starts unknown",
+  );
   assert.equal(initial[0].version, 1);
 
   const moveRequest = randomUUID();
@@ -159,6 +169,170 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
         event_type: "stage_changed",
         from_stage: "identified",
         to_stage: "contacted",
+      },
+    ],
+  );
+
+  const forecastRequest = randomUUID();
+  const forecastArgs = [
+    activeOrganisation,
+    opportunityId,
+    "0",
+    "2026-12-15",
+    2,
+    forecastRequest,
+  ];
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", [
+      foreignOrganisation,
+      ...forecastArgs.slice(1),
+    ]),
+    /P0002|CRM opportunity not found/,
+    "a forecast write binds the opportunity to the selected company",
+  );
+  await call(manager, "update_crm_opportunity_forecast", forecastArgs);
+  await call(manager, "update_crm_opportunity_forecast", forecastArgs);
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", [
+      activeOrganisation,
+      opportunityId,
+      "50",
+      "2026-12-15",
+      2,
+      forecastRequest,
+    ]),
+    /crm_idempotency_key_conflict/,
+    "a request ID cannot be replayed with another forecast payload",
+  );
+  let forecastRows = await rows(manager, "list_crm_opportunities", [
+    activeOrganisation,
+    100,
+  ]);
+  assert.equal(
+    forecastRows[0].close_probability,
+    0,
+    "zero is not treated as unknown",
+  );
+  assert.equal(forecastRows[0].expected_close_date, "2026-12-15");
+  assert.equal(forecastRows[0].version, 3);
+  await assert.rejects(
+    call(manager, "move_crm_opportunity", [
+      activeOrganisation,
+      opportunityId,
+      "proposal_submitted",
+      2,
+      randomUUID(),
+    ]),
+    /40001|crm_opportunity_version_conflict/,
+    "a forecast edit invalidates a competing stage write at the old version",
+  );
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", [
+      activeOrganisation,
+      opportunityId,
+      "75",
+      "2026-12-15",
+      2,
+      randomUUID(),
+    ]),
+    /40001|crm_opportunity_version_conflict/,
+    "a competing forecast write cannot overwrite a newer version",
+  );
+  for (const invalidProbability of ["100.001", "12.345", "-0.01"]) {
+    await assert.rejects(
+      call(manager, "update_crm_opportunity_forecast", [
+        activeOrganisation,
+        opportunityId,
+        invalidProbability,
+        "2026-12-15",
+        3,
+        randomUUID(),
+      ]),
+      /22023|Invalid CRM opportunity forecast/,
+    );
+  }
+  for (const invalidDate of ["infinity", "10000-01-01", "0001-01-01 BC"]) {
+    await assert.rejects(
+      call(manager, "update_crm_opportunity_forecast", [
+        activeOrganisation,
+        opportunityId,
+        25,
+        invalidDate,
+        3,
+        randomUUID(),
+      ]),
+      /22023|Invalid CRM opportunity forecast/,
+    );
+  }
+
+  const clearProbabilityRequest = randomUUID();
+  await call(manager, "update_crm_opportunity_forecast", [
+    activeOrganisation,
+    opportunityId,
+    null,
+    "2026-12-15",
+    3,
+    clearProbabilityRequest,
+  ]);
+  forecastRows = await rows(manager, "list_crm_opportunities", [
+    activeOrganisation,
+    100,
+  ]);
+  assert.equal(forecastRows[0].close_probability, null);
+  assert.equal(forecastRows[0].expected_close_date, "2026-12-15");
+  await call(manager, "update_crm_opportunity_forecast", [
+    activeOrganisation,
+    opportunityId,
+    null,
+    null,
+    4,
+    randomUUID(),
+  ]);
+  forecastRows = await rows(manager, "list_crm_opportunities", [
+    activeOrganisation,
+    100,
+  ]);
+  assert.equal(forecastRows[0].close_probability, null);
+  assert.equal(forecastRows[0].expected_close_date, null);
+  assert.equal(forecastRows[0].version, 5);
+  const forecastHistory = await rows(manager, "list_crm_opportunity_events", [
+    activeOrganisation,
+    opportunityId,
+    50,
+  ]);
+  assert.deepEqual(
+    forecastHistory.slice(2).map((event) => ({
+      version: event.version,
+      event_type: event.event_type,
+      from_close_probability: event.from_close_probability,
+      to_close_probability: event.to_close_probability,
+      from_expected_close_date: event.from_expected_close_date,
+      to_expected_close_date: event.to_expected_close_date,
+    })),
+    [
+      {
+        version: 3,
+        event_type: "forecast_updated",
+        from_close_probability: null,
+        to_close_probability: 0,
+        from_expected_close_date: null,
+        to_expected_close_date: "2026-12-15",
+      },
+      {
+        version: 4,
+        event_type: "forecast_updated",
+        from_close_probability: 0,
+        to_close_probability: null,
+        from_expected_close_date: "2026-12-15",
+        to_expected_close_date: "2026-12-15",
+      },
+      {
+        version: 5,
+        event_type: "forecast_updated",
+        from_close_probability: null,
+        to_close_probability: null,
+        from_expected_close_date: "2026-12-15",
+        to_expected_close_date: null,
       },
     ],
   );
@@ -256,6 +430,60 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
       /22023|Invalid CRM page request/,
     );
   }
+
+  const concurrentUpdates = await Promise.allSettled([
+    call(manager, "update_crm_opportunity_forecast", [
+      activeOrganisation,
+      campusId,
+      "25",
+      "2027-02-01",
+      1,
+      randomUUID(),
+    ]),
+    call(manager, "move_crm_opportunity", [
+      activeOrganisation,
+      campusId,
+      "lost",
+      1,
+      randomUUID(),
+    ]),
+  ]);
+  assert.equal(
+    concurrentUpdates.filter(({ status }) => status === "fulfilled").length,
+    1,
+    "one of a simultaneous stage move and forecast update commits",
+  );
+  const rejectedUpdate = concurrentUpdates.find(
+    ({ status }) => status === "rejected",
+  );
+  assert.equal(rejectedUpdate?.status, "rejected");
+  assert.match(
+    String(rejectedUpdate.reason),
+    /40001|crm_opportunity_version_conflict/,
+    "the losing concurrent update observes a stale version",
+  );
+  const racedOpportunity = (
+    await rows(manager, "list_crm_opportunity_page", [
+      activeOrganisation,
+      "campus",
+      null,
+      10,
+      0,
+    ])
+  ).find((row) => row.id === campusId);
+  assert.equal(racedOpportunity?.version, 2);
+  assert.equal(
+    (
+      await rows(manager, "list_crm_opportunity_events", [
+        activeOrganisation,
+        campusId,
+        50,
+      ])
+    ).length,
+    2,
+    "the race leaves one immutable event and no duplicate version",
+  );
+
   assert.deepEqual(
     await rows(manager, "list_crm_opportunity_page", [
       archivedOrganisation,
@@ -296,6 +524,18 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     ]),
     /42501|organisations.manage required/,
     "company membership does not confer access to the CRM page RPC",
+  );
+  await assert.rejects(
+    call(companyMember, "update_crm_opportunity_forecast", [
+      activeOrganisation,
+      opportunityId,
+      0,
+      "2026-12-15",
+      5,
+      randomUUID(),
+    ]),
+    /42501|organisations.manage required/,
+    "company membership does not confer forecast write access",
   );
   assert.equal(
     await actor(
@@ -364,6 +604,18 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     /42501|Archived organisations are read only/,
   );
   await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", [
+      activeOrganisation,
+      opportunityId,
+      20,
+      "2027-01-01",
+      5,
+      randomUUID(),
+    ]),
+    /42501|Archived organisations are read only/,
+    "archived company forecasts remain read-only",
+  );
+  await assert.rejects(
     call(manager, "create_crm_opportunity", [
       archivedOrganisation,
       "No archived-company write",
@@ -389,7 +641,25 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
         50,
       ])
     ).length,
-    2,
+    5,
+  );
+
+  await sql(
+    `delete from public.user_roles where user_id=${q(manager)} and role='management'`,
+  );
+  await assert.rejects(
+    call(manager, "update_crm_opportunity_forecast", forecastArgs),
+    /organisations.manage required/,
+    "a formerly authorised actor cannot replay a forecast after role revocation",
+  );
+  await assert.rejects(
+    rows(manager, "list_crm_opportunity_events", [
+      activeOrganisation,
+      opportunityId,
+      50,
+    ]),
+    /organisations.manage required/,
+    "role revocation also removes forecast history access",
   );
 });
 

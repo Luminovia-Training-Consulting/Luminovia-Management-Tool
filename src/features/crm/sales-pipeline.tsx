@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
@@ -25,6 +25,7 @@ import {
   crmOpportunityEventsQuery,
   crmStageSchema,
   moveCrmOpportunity,
+  updateCrmOpportunityForecast,
   type CrmOpportunity,
   type CrmOpportunityEvent,
   type CrmStage,
@@ -43,7 +44,16 @@ const opportunityFormSchema = z.object({
   currency: z.enum(currencies),
 });
 
+const opportunityForecastFormSchema = z.object({
+  closeProbability: z
+    .string()
+    .max(6)
+    .regex(/^(?:|(?:0|[1-9]\d?)(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/),
+  expectedCloseDate: z.union([z.literal(""), z.iso.date()]),
+});
+
 type OpportunityForm = z.infer<typeof opportunityFormSchema>;
+type OpportunityForecastForm = z.infer<typeof opportunityForecastFormSchema>;
 
 /** Keep identical create retries on the same UUID; edited input receives a fresh key. */
 function requestIdFor(
@@ -81,6 +91,19 @@ function isVersionConflict(error: unknown) {
   );
 }
 
+function formatCloseProbability(value: number | null, language: string) {
+  if (value === null) return "—";
+  return `${new Intl.NumberFormat(language, { maximumFractionDigits: 2 }).format(value)} %`;
+}
+
+function formatCloseDate(value: string | null, language: string) {
+  if (value === null) return "—";
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(language, {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  });
+}
+
 /** Show one immutable activity list, fetching only after its disclosure is opened. */
 function OpportunityHistory({
   actor,
@@ -105,10 +128,29 @@ function OpportunityHistory({
           <strong>
             {event.event_type === "created"
               ? t("crmOpportunityCreated")
-              : t("crmOpportunityStageChanged", {
-                  from: t(`crmStage.${event.from_stage}`),
-                  to: t(`crmStage.${event.to_stage}`),
-                })}
+              : event.event_type === "stage_changed"
+                ? t("crmOpportunityStageChanged", {
+                    from: t(`crmStage.${event.from_stage}`),
+                    to: t(`crmStage.${event.to_stage}`),
+                  })
+                : t("crmOpportunityForecastChanged", {
+                    fromProbability: formatCloseProbability(
+                      event.from_close_probability,
+                      i18n.language,
+                    ),
+                    toProbability: formatCloseProbability(
+                      event.to_close_probability,
+                      i18n.language,
+                    ),
+                    fromDate: formatCloseDate(
+                      event.from_expected_close_date,
+                      i18n.language,
+                    ),
+                    toDate: formatCloseDate(
+                      event.to_expected_close_date,
+                      i18n.language,
+                    ),
+                  })}
           </strong>
           <time dateTime={event.occurred_at}>
             {new Date(event.occurred_at).toLocaleString(
@@ -121,6 +163,165 @@ function OpportunityHistory({
     </ol>
   ) : (
     <p className="muted">{t("crmHistoryEmpty")}</p>
+  );
+}
+
+/** Save forecast fields as one audited compare-and-swap update. */
+function OpportunityForecast({
+  actor,
+  organisationId,
+  opportunity,
+  archived,
+  online,
+}: {
+  actor: string;
+  organisationId: string;
+  opportunity: CrmOpportunity;
+  archived: boolean;
+  online: boolean;
+}) {
+  const { t, i18n } = useTranslation("operations");
+  const queryClient = useQueryClient();
+  const request = useRef<{ fingerprint: string; id: string } | undefined>(
+    undefined,
+  );
+  const form = useForm<OpportunityForecastForm>({
+    resolver: zodResolver(opportunityForecastFormSchema),
+    defaultValues: {
+      closeProbability:
+        opportunity.close_probability === null
+          ? ""
+          : String(opportunity.close_probability),
+      expectedCloseDate: opportunity.expected_close_date ?? "",
+    },
+  });
+  const forecast = useMutation({
+    mutationFn: (values: OpportunityForecastForm) => {
+      const closeProbability =
+        values.closeProbability === "" ? null : Number(values.closeProbability);
+      const expectedCloseDate = values.expectedCloseDate || null;
+      const fingerprint = JSON.stringify([
+        opportunity.version,
+        closeProbability,
+        expectedCloseDate,
+      ]);
+      if (request.current?.fingerprint !== fingerprint) {
+        request.current = { fingerprint, id: crypto.randomUUID() };
+      }
+      return updateCrmOpportunityForecast({
+        organisationId,
+        opportunityId: opportunity.id,
+        closeProbability,
+        expectedCloseDate,
+        expectedVersion: opportunity.version,
+        requestId: request.current.id,
+      });
+    },
+    onSuccess: async () => {
+      request.current = undefined;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "opportunities", actor, organisationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "opportunity-events", actor, organisationId],
+        }),
+      ]);
+    },
+    onError: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["crm", "opportunities", actor, organisationId],
+      });
+    },
+  });
+
+  useEffect(() => {
+    form.reset({
+      closeProbability:
+        opportunity.close_probability === null
+          ? ""
+          : String(opportunity.close_probability),
+      expectedCloseDate: opportunity.expected_close_date ?? "",
+    });
+  }, [
+    form,
+    opportunity.close_probability,
+    opportunity.expected_close_date,
+    opportunity.version,
+  ]);
+
+  const values = useWatch({ control: form.control });
+  const parsedProbability =
+    values.closeProbability === "" ? null : Number(values.closeProbability);
+  const parsedDate = values.expectedCloseDate || null;
+  const unchanged =
+    parsedProbability === opportunity.close_probability &&
+    parsedDate === opportunity.expected_close_date;
+  const probabilityId = `crm-probability-${opportunity.id}`;
+  const dateId = `crm-close-date-${opportunity.id}`;
+  const savedForecast = t("crmCurrentForecast", {
+    probability: formatCloseProbability(
+      opportunity.close_probability,
+      i18n.language,
+    ),
+    date: formatCloseDate(opportunity.expected_close_date, i18n.language),
+  });
+
+  if (archived)
+    return <p className="crm-forecast-current muted">{savedForecast}</p>;
+
+  return (
+    <form
+      className="crm-forecast-form"
+      noValidate
+      onSubmit={form.handleSubmit((values) => forecast.mutate(values))}
+    >
+      <Field
+        id={probabilityId}
+        label={t("crmCloseProbabilityLabel")}
+        error={Boolean(form.formState.errors.closeProbability)}
+      >
+        <input
+          id={probabilityId}
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          inputMode="decimal"
+          disabled={!online || forecast.isPending || archived}
+          {...form.register("closeProbability")}
+        />
+      </Field>
+      <Field
+        id={dateId}
+        label={t("crmExpectedCloseDateLabel")}
+        error={Boolean(form.formState.errors.expectedCloseDate)}
+      >
+        <input
+          id={dateId}
+          type="date"
+          disabled={!online || forecast.isPending || archived}
+          {...form.register("expectedCloseDate")}
+        />
+      </Field>
+      <p className="crm-forecast-help muted">{t("crmForecastHelp")}</p>
+      <Button disabled={!online || forecast.isPending || archived || unchanged}>
+        {t("crmSaveForecast")}
+      </Button>
+      {Object.keys(form.formState.errors).length > 0 && (
+        <Notice kind="error">{t("crmForecastValidation")}</Notice>
+      )}
+      {forecast.isError && (
+        <Notice kind="error">
+          {isVersionConflict(forecast.error)
+            ? t("crmStaleOpportunity")
+            : t("crmForecastSaveError")}
+        </Notice>
+      )}
+      <p className="crm-forecast-current muted" aria-live="polite">
+        {savedForecast}
+      </p>
+    </form>
   );
 }
 
@@ -458,6 +659,13 @@ export function CompanyOpportunityPipeline({
                           </select>
                         </Field>
                       )}
+                      <OpportunityForecast
+                        actor={actor}
+                        organisationId={organisationId}
+                        opportunity={opportunity}
+                        archived={archived}
+                        online={online}
+                      />
                       <Button
                         variant="ghost"
                         aria-label={t("crmHistoryToggleFor", {

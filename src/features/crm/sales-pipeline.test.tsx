@@ -5,18 +5,24 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import "../operations/i18n";
-import { createCrmOpportunity, moveCrmOpportunity } from "./api";
+import {
+  createCrmOpportunity,
+  moveCrmOpportunity,
+  updateCrmOpportunityForecast,
+} from "./api";
 import { CompanyOpportunityPipeline } from "./sales-pipeline";
 
-const { crmState, createOpportunity, moveOpportunity } = vi.hoisted(() => ({
-  crmState: {
-    opportunities: { items: [] as unknown[], hasNextPage: false },
-    events: [] as unknown[],
-    filters: [] as { page: number; search: string; stage: string | null }[],
-  },
-  createOpportunity: vi.fn(),
-  moveOpportunity: vi.fn(),
-}));
+const { crmState, createOpportunity, moveOpportunity, updateForecast } =
+  vi.hoisted(() => ({
+    crmState: {
+      opportunities: { items: [] as unknown[], hasNextPage: false },
+      events: [] as unknown[],
+      filters: [] as { page: number; search: string; stage: string | null }[],
+    },
+    createOpportunity: vi.fn(),
+    moveOpportunity: vi.fn(),
+    updateForecast: vi.fn(),
+  }));
 
 vi.mock("../../lib/queries", () => ({
   permissionsQuery: (id: string) => ({
@@ -57,6 +63,7 @@ vi.mock("./api", async (importOriginal) => {
     }),
     createCrmOpportunity: createOpportunity,
     moveCrmOpportunity: moveOpportunity,
+    updateCrmOpportunityForecast: updateForecast,
   };
 });
 vi.mock("../../lib/online", () => ({
@@ -80,6 +87,8 @@ function opportunity(
     stage,
     estimated_value: 25000,
     currency: "EUR",
+    close_probability: null,
+    expected_close_date: null,
     version,
     created_at: createdAt,
     updated_at: createdAt,
@@ -103,6 +112,10 @@ function event(
     event_type: eventType,
     from_stage: fromStage,
     to_stage: toStage,
+    from_close_probability: null,
+    to_close_probability: null,
+    from_expected_close_date: null,
+    to_expected_close_date: null,
     actor_id: "e8bafc26-c830-46ae-8482-77c7346f6395",
     request_id:
       version === 1
@@ -139,6 +152,7 @@ describe("CompanyOpportunityPipeline", () => {
   beforeEach(() => {
     createOpportunity.mockReset();
     moveOpportunity.mockReset();
+    updateForecast.mockReset();
     crmState.opportunities = { items: [], hasNextPage: false };
     crmState.events = [];
     crmState.filters = [];
@@ -272,11 +286,96 @@ describe("CompanyOpportunityPipeline", () => {
     expect(
       screen.queryByRole("combobox", { name: /change stage|phase für/i }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("spinbutton", {
+        name: /close probability|abschlusswahrscheinlichkeit/i,
+      }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: /history for|verlauf für/i }),
     );
     expect(
       await screen.findByText(/stage changed from|phase von/i),
+    ).toBeVisible();
+  });
+
+  it("persists an explicit zero forecast and reuses its request ID after an uncertain response", async () => {
+    const user = userEvent.setup();
+    crmState.opportunities = {
+      items: [opportunity()],
+      hasNextPage: false,
+    };
+    updateForecast
+      .mockRejectedValueOnce(new Error("connection lost"))
+      .mockImplementation(async (input) => {
+        crmState.opportunities = {
+          items: [
+            {
+              ...opportunity("identified", 2),
+              close_probability: 0,
+              expected_close_date: "2026-12-15",
+            },
+          ],
+          hasNextPage: false,
+        };
+        crmState.events = [
+          {
+            ...event(1, "created", null, "identified"),
+            id: "751f43d3-1da6-456e-96e2-42f562eb9f31",
+          },
+          {
+            ...event(2, "stage_changed", "identified", "contacted"),
+            event_type: "forecast_updated",
+            from_stage: "identified",
+            to_stage: "identified",
+            from_close_probability: null,
+            to_close_probability: 0,
+            from_expected_close_date: null,
+            to_expected_close_date: "2026-12-15",
+          },
+        ];
+        expect(input.closeProbability).toBe(0);
+      });
+    mount();
+
+    const probability = await screen.findByRole("spinbutton", {
+      name: /close probability|abschlusswahrscheinlichkeit/i,
+    });
+    await user.type(probability, "0");
+    await user.type(
+      screen.getByLabelText(
+        /expected closing date|voraussichtliches abschlussdatum/i,
+      ),
+      "2026-12-15",
+    );
+    const save = screen.getByRole("button", {
+      name: /save forecast|prognose speichern/i,
+    });
+    await user.click(save);
+    expect(
+      await screen.findByText(
+        /forecast was not confirmed|prognose wurde nicht bestätigt/i,
+      ),
+    ).toBeVisible();
+
+    await user.click(save);
+    await waitFor(() => expect(updateForecast).toHaveBeenCalledTimes(2));
+    const forecastRequests = vi.mocked(updateCrmOpportunityForecast).mock.calls;
+    expect(forecastRequests[0][0]).toMatchObject({
+      organisationId,
+      opportunityId,
+      closeProbability: 0,
+      expectedCloseDate: "2026-12-15",
+      expectedVersion: 1,
+    });
+    expect(forecastRequests[0][0].requestId).toBe(
+      forecastRequests[1][0].requestId,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /history for|verlauf für/i }),
+    );
+    expect(
+      await screen.findByText(/forecast changed|prognose geändert/i),
     ).toBeVisible();
   });
 
