@@ -1,11 +1,10 @@
 /** Organization-scoped reusable objective questions, embedded beside the quiz form. */
-import { useId, useState, type FormEvent } from "react";
+import { lazy, Suspense, useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { H5pAttribution } from "./h5p-attribution";
-import { H5pQuestionImportPanel } from "./h5p-question-import-panel";
 import { useOnline } from "../../lib/online";
 import {
   questionBankAction,
@@ -20,6 +19,12 @@ import {
   type BankQuestionContent,
 } from "./question-bank-schema";
 import "./question-bank-i18n";
+
+const H5pQuestionImportPanel = lazy(() =>
+  import("./h5p-question-import-panel").then((module) => ({
+    default: module.H5pQuestionImportPanel,
+  })),
+);
 
 const difficultyLabels = {
   introductory: "questionBankIntroductory",
@@ -185,13 +190,15 @@ function OpenQuestionBank({
       >
         {t("questionBankAdd")}
       </Button>
-      <H5pQuestionImportPanel
-        actor={actor}
-        courseId={courseId}
-        selected={selected}
-        canSelect={canSelect}
-        onSelect={onSelect}
-      />
+      <Suspense fallback={null}>
+        <H5pQuestionImportPanel
+          actor={actor}
+          courseId={courseId}
+          selected={selected}
+          canSelect={canSelect}
+          onSelect={onSelect}
+        />
+      </Suspense>
       {draft && (
         <form className="learning-quiz-editor" onSubmit={submit}>
           <fieldset disabled={save.isPending || conflict}>

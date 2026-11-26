@@ -145,6 +145,10 @@
 	}
 }
 
+(portal_browser_csp) {
+	header {args[0]} Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action {args[1]}; upgrade-insecure-requests"
+}
+
 {$PORTAL_DOMAIN} {
 	encode zstd gzip
 	import {$PORTAL_CADDY_ERROR_PROFILE:portal_standard_errors}
@@ -154,8 +158,11 @@
 		Referrer-Policy no-referrer
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		X-Robots-Tag "noindex, nofollow"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 	}
+	@ltiAuthorization path /lti/authorize
+	@ordinaryPage not path /lti/authorize
+	import portal_browser_csp @ordinaryPage "'self'"
+	import portal_browser_csp @ltiAuthorization "'self' {$PORTAL_LTI_TOOL_ORIGINS:'self'}"
 	route {
 		# Retired bookmarks must not fall through to the application shell.
 		@retiredDemo path /demo /demo/*

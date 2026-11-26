@@ -52,6 +52,7 @@ const allowedApi = [
   "/functions/v1/company-integration/participation",
   "/functions/v1/portal-api/v1/course_workspace?input=%7B%7D",
   "/functions/v1/course-documents",
+  "/functions/v1/learning-lti/jwks",
   "/functions/v1/files?mode=academy-material",
   "/functions/v1/files?mode=course-submission",
   "/functions/v1/files?mode=exam-submission",
@@ -73,6 +74,8 @@ const blockedApi = [
   "/functions/v1/accounts/v1/me",
   "/functions/v1/accounts/openapi.json",
   "/functions/v1/calendar-feed",
+  "/functions/v1/learning-lti",
+  "/functions/v1/learning-lti/jwks/extra",
   "/functions/v1/portal-api",
   "/functions/v1/portal-api/v1/Course_Workspace",
   "/functions/v1/portal-api/v1/course_workspace/extra",
@@ -86,6 +89,9 @@ const blockedApi = [
 const invitationRetry =
   "/functions/v1/accounts/v1/academy/invitations/4f252e76-30c0-4890-9b44-351c754ca240/retry";
 const apiMethodProbes = [
+  ["/functions/v1/learning-lti", "POST", 200],
+  ["/functions/v1/learning-lti", "OPTIONS", 200],
+  ["/functions/v1/learning-lti/jwks", "POST", 404],
   [invitationRetry, "POST", 200],
   [invitationRetry, "OPTIONS", 200],
   [invitationRetry, "GET", 404],

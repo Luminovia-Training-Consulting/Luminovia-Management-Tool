@@ -23,6 +23,7 @@ const PORTAL_FUNCTIONS = new Set([
     "invite-lecturer",
     "accounts",
     "course-documents",
+    "learning-lti",
     "calendar-feed",
     "website-enquiries",
     "mail-admin",
@@ -368,6 +369,7 @@ Deno.serve({onError}, async (req: Request) => {
         service_name === "calendar-feed" &&
         pathname === "/calendar-feed" &&
         req.method === "GET";
+    const publicLtiKeys = pathname === "/learning-lti/jwks" && req.method === "GET";
     const fileMode = url.searchParams.get("mode");
     const academyPwaAsset = pathname === "/files" && (req.method === "GET" || req.method === "HEAD") &&
         (fileMode === "academy-pwa-manifest" || fileMode === "academy-pwa-image");
@@ -389,7 +391,7 @@ Deno.serve({onError}, async (req: Request) => {
             },
         });
     }
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !credentialExchange && !companyIntegrationMethod && !academyPwaAsset) {
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !publicLtiKeys && !credentialExchange && !companyIntegrationMethod && !academyPwaAsset) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);
@@ -456,6 +458,9 @@ Deno.serve({onError}, async (req: Request) => {
         ...Deno.env.toObject(),
         SUPABASE_FUNCTION_SLUG: service_name,
     };
+    if (service_name !== "learning-lti") {
+        delete envVarsObj.LTI_PLATFORM_RSA_PRIVATE_JWK;
+    }
     const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]]);
 
     const callWorker = async (

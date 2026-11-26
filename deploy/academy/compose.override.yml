@@ -52,6 +52,7 @@ services:
       - ${ACADEMY_BIND_ADDRESS:?Set the academy IPv4 bind address}:443:443
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the academy domain}
+      PORTAL_LTI_TOOL_ORIGINS: ${PORTAL_LTI_TOOL_ORIGINS:-'self'}
       PORTAL_API_UPSTREAM: api-ingress:8001
       PORTAL_CADDY_ALIAS_PROFILE: academy_no_aliases
       PORTAL_CADDY_PWA_PROFILE: academy_runtime_pwa

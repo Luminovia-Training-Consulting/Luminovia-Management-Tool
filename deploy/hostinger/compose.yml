@@ -7,6 +7,7 @@ services:
     ports: [ "80:80", "443:443" ]
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
+      PORTAL_LTI_TOOL_ORIGINS: ${PORTAL_LTI_TOOL_ORIGINS:-'self'}
       PORTAL_CADDY_ALIAS_PROFILE: cms_legacy_aliases
       PORTAL_CADDY_RESET_PROFILE: cms_hosted_reset
     volumes:

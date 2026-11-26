@@ -370,6 +370,7 @@ services:
       # Reviewed integration worker only; this adds no listener or separate service.
       - ../../../supabase/functions/website-enquiries:/home/deno/functions/website-enquiries:ro
       - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
+      - ../../../supabase/functions/learning-lti:/home/deno/functions/learning-lti:ro
       - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
       - ../../../supabase/functions/human-login:/home/deno/functions/human-login:ro
       - ../../../supabase/functions/human-recovery:/home/deno/functions/human-recovery:ro
@@ -403,6 +404,8 @@ services:
       SUPABASE_JWKS: ${JWT_JWKS:?Set JWT_JWKS}
       PORTAL_APP_ORIGIN: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
       PORTAL_ALLOWED_ORIGINS: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
+      LTI_PLATFORM_ISSUER: ${LTI_PLATFORM_ISSUER:-}
+      LTI_PLATFORM_RSA_PRIVATE_JWK: ${LTI_PLATFORM_RSA_PRIVATE_JWK:-}
       PORTAL_INVITES_ENABLED: ${PORTAL_INVITES_ENABLED:-false}
       PORTAL_WEBSITE_ENQUIRIES_ENABLED: ${PORTAL_WEBSITE_ENQUIRIES_ENABLED:-false}
       # Keep both credentials/config server-side; missing configuration stays disabled.

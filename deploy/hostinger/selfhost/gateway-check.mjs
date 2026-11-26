@@ -120,6 +120,12 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ],
             ["/functions/v1/accounts/openapi.json", 503, "portal-function-accounts"],
             ["/functions/v1/files", 503, "portal-function-files"],
+            ["/functions/v1/learning-lti", 503, "portal-function-learning-lti", "POST"],
+            ["/functions/v1/learning-lti", 503, "portal-function-learning-lti", "OPTIONS"],
+            ["/functions/v1/learning-lti", 404],
+            ["/functions/v1/learning-lti/jwks", 503, "portal-function-learning-lti-jwks"],
+            ["/functions/v1/learning-lti/jwks", 404, null, "POST"],
+            ["/functions/v1/learning-lti/jwks/extra", 404],
             [
                 "/functions/v1/course-documents",
                 503,

@@ -75,7 +75,6 @@ import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
 import { CourseGradebook } from "./course-gradebook";
-import { CourseLtiTools } from "./lti-course";
 import {
   CompletionRequirements,
   StaffCompletionRequirements,
@@ -100,6 +99,9 @@ const ScormPackageReview = lazy(() =>
   import("./scorm-package-review").then((module) => ({
     default: module.ScormPackageReview,
   })),
+);
+const CourseLtiTools = lazy(() =>
+  import("./lti-course").then((module) => ({ default: module.CourseLtiTools })),
 );
 const CourseOfferForm = __PORTAL_INTERNAL_EDITION__
   ? lazy(() =>
@@ -1494,11 +1496,13 @@ function CourseWorkspaceLayout({
           )}
           {hasLti && currentSection === "course-lti" && (
             <div id="course-lti" className={sectionClass("course-lti")}>
-              <CourseLtiTools
-                key={course.id}
-                actor={actor}
-                course={course.id}
-              />
+              <Suspense fallback={<Loading />}>
+                <CourseLtiTools
+                  key={course.id}
+                  actor={actor}
+                  course={course.id}
+                />
+              </Suspense>
             </div>
           )}
           {hasGradebook && (

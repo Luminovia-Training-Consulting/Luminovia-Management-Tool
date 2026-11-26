@@ -324,6 +324,10 @@ export default defineConfig(({ mode }) => {
             // Packet review and conversion are loaded when explicitly used.
             "**/scorm-package-*.js",
             "**/h5p-import-*.js",
+            "**/h5p-question-import-panel-*.js",
+            "**/lti-course-*.js",
+            // Shared by the on-demand archive tools and XLSX import/export.
+            "**/zip.js-*.js",
           ],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,
@@ -336,6 +340,7 @@ export default defineConfig(({ mode }) => {
             /^\/rest\//,
             /^\/storage\//,
             /^\/functions\//,
+            /^\/lti\/authorize$/,
             /^\/realtime\//,
             /^\/api\/(?:openapi|explorer)\.json$/,
             /^\/api\/client\.(?:ts|py)(?:\?|$)/,
