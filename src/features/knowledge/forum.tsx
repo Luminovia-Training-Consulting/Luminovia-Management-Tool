@@ -21,7 +21,6 @@ import {
   Pencil,
   Pin,
   Plus,
-  Search,
   Settings2,
   Trash2,
 } from "lucide-react";
@@ -54,6 +53,7 @@ import type { ForumPost, ForumThread, KnowledgeCategory } from "./types";
 import { KnowledgeEditor } from "./editor";
 import { ForumMetadataEditor } from "./forum-metadata";
 import { CategoryManager } from "./categories";
+import { KnowledgeCategoryFilter, KnowledgeListSearch } from "./list-filters";
 import "./i18n";
 import "./knowledge.css";
 
@@ -967,44 +967,18 @@ export function ForumPage() {
         className={`knowledge-workspace ${id || writing ? "knowledge-has-selection" : ""}`}
       >
         <aside className="knowledge-directory panel">
-          <form
-            className="knowledge-search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSearch(input.trim());
-            }}
-          >
-            <Field id="forum-search" label={t("searchForum")}>
-              <input
-                id="forum-search"
-                type="search"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                maxLength={200}
-              />
-            </Field>
-            <Button variant="ghost" size="icon" aria-label={t("search")}>
-              <Search size={18} />
-            </Button>
-          </form>
-          <Field id="forum-filter-category" label={t("category")}>
-            <select
-              id="forum-filter-category"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              <option value="">{t("all")}</option>
-              {categories.data
-                ?.filter((item) => !item.archived)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {i18n.language.startsWith("de")
-                      ? item.label_de
-                      : item.label_en}
-                  </option>
-                ))}
-            </select>
-          </Field>
+          <KnowledgeListSearch
+            kind="forum"
+            draft={input}
+            onDraftChange={setInput}
+            onSearch={setSearch}
+          />
+          <KnowledgeCategoryFilter
+            kind="forum"
+            categories={categories.data}
+            value={category}
+            onChange={setCategory}
+          />
           {access.data.can_moderate_forum && (
             <label className="checkbox-label">
               <input

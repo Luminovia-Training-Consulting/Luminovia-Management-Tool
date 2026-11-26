@@ -11,8 +11,6 @@ In **Verwaltung → Unternehmen / Administration → Companies**, an active admi
 
 In **Verwaltung → White Label / Administration → White Label**, select the company and save its account email, brand, domain and licence parameters. The settings are restored when you reopen the company. A verified portal address links directly to the customer administration. Follow [Dedicated Academy installation](../deploy/academy/README.md) to review and sign the handoff and bootstrap the initial administrator on the customer's own system.
 
-In **Verwaltung → Unternehmen / Administration → Companies**, select a company to manage its **Vertriebspipeline / Sales pipeline**. Add an opportunity with a title and optional estimated amount, move it between the bilingual sales stages, and open its saved history. Record an optional close probability (0–100%, up to two decimal places) and expected closing date as forecasts. An empty probability means unknown; 0% is an explicit estimate. Both values can be cleared independently, and every confirmed change is versioned and added to immutable history. Forecasts do not represent actual revenue, accepted prices or currency conversions. Search matches the title without case sensitivity; an optional stage filter can be combined with it. Results load in bounded pages ordered by most recently updated, then by opportunity ID. Changing a filter returns to page one, and the lane badges count only the displayed page. The database checks `organisations.manage` on every read and write; company membership does not grant internal CRM access. Archived companies remain readable and all CRM data is read-only. Estimates keep their selected EUR, AUD, CHF, GBP or USD currency and are not converted, invoiced or treated as accepted terms.
-
 On an already active customer installation, open **Verwaltung → Kundeninstallation → White-Label-Einrichtung öffnen / Administration → Customer installation → Open White Label setup**. Edit the academy name, short name, accent colour and public links, then choose **Einstellungen übernehmen / Apply settings**. The active installation uses the saved settings directly. Logos and app icons remain available in the same dialog. The current address and connection protocol are shown in the form. The operator configures the actual domain, TLS and data location at the hosting layer.
 
 Knowledge & Help includes Support. The header bell shows recent activity by category, including real invoice/payment updates; the full inbox lets you load more history. The category filter applies to the recent/loaded items indicated on screen.
@@ -341,11 +339,19 @@ Under **Nachweis verknüpfen / Link supporting file**, select a file and use **D
 
 ### Programme access prerequisites
 
+When editing a learning programme, open **Kursaktionen / Course actions** beside a selected course to move or remove it. Clear any custom prerequisites and reset the published curriculum before changing the course order.
+
 Before the first participant joins, open an existing **Lernprogramme / Learning programmes** entry and choose **Voraussetzungen für Kurszugang / Course access prerequisites**. Select a course, choose which earlier courses count and set the rule to require them all or at least one. Saving without selected prerequisites restores the programme's normal order for that course. Clear explicit rules before changing the course order.
 
-Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
+Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme.
 
 Course managers can open **Ausnahmen für Kursvoraussetzungen / Course prerequisite exceptions** and record a reason for one active participant and locked programme step. The exception permits starting only that step. Managers can withdraw the exception, and certificate eligibility still depends on the required completion receipts.
+
+### Programme curriculum and electives
+
+After saving the course order and before enrolling participants, choose **Lehrplan bearbeiten / Edit curriculum**. Add programme learning objectives and objectives for each course. Mark courses as required or elective and choose how many electives count toward completion. The entry course is required. Add remediation guidance to a course so learners know what to do when a prerequisite locks the step. Publish the reviewed draft to create a new numbered curriculum revision.
+
+The programme completion document requires valid receipts for all required courses and the selected number of electives. A programme without a published curriculum requires a receipt for every course. The roster locks the curriculum after the first enrolment. When a credited receipt is revoked, the programme recalculates eligibility from the remaining receipts.
 
 ### Released programme grades
 

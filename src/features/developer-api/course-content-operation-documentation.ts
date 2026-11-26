@@ -3,6 +3,16 @@ const uuid = { type: "string", format: "uuid" };
 const revision = { type: "integer", minimum: 0 };
 const positiveRevision = { type: "integer", minimum: 1 };
 
+const lessonBlockProperties = {
+  id: {
+    ...uuid,
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+  },
+  title: { type: "string", maxLength: 120 },
+  text: { type: "string", maxLength: 4000 },
+};
+const lessonBlockRequired = ["id", "kind", "title", "text"];
+
 const courseContent = {
   type: "object",
   additionalProperties: false,
@@ -50,24 +60,27 @@ const courseContent = {
                   type: "array",
                   maxItems: 12,
                   items: {
-                    type: "object",
-                    additionalProperties: false,
-                    required: ["id", "kind", "title", "text"],
-                    properties: {
-                      id: {
-                        ...uuid,
-                        pattern:
-                          "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    oneOf: [
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: lessonBlockRequired,
+                        properties: {
+                          ...lessonBlockProperties,
+                          kind: { const: "practice" },
+                          answer: { type: "string", maxLength: 4000 },
+                        },
                       },
-                      kind: { enum: ["note", "practice", "checklist"] },
-                      title: { type: "string", maxLength: 120 },
-                      text: { type: "string", maxLength: 4000 },
-                      answer: { type: "string", maxLength: 4000 },
-                    },
-                    if: {
-                      properties: { kind: { enum: ["note", "checklist"] } },
-                    },
-                    then: { not: { required: ["answer"] } },
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: lessonBlockRequired,
+                        properties: {
+                          ...lessonBlockProperties,
+                          kind: { enum: ["note", "checklist"] },
+                        },
+                      },
+                    ],
                   },
                 },
                 material_ids: {

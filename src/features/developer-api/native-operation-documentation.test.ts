@@ -63,11 +63,11 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 76 documented operations and keeps deprecated operations download-only", () => {
+  it("covers the 70 documented operations and keeps deprecated operations download-only", () => {
     expect(new Set(definitions.map(([name]) => name)).size).toBe(
       definitions.length,
     );
-    expect(definitions).toHaveLength(76);
+    expect(definitions).toHaveLength(70);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -120,72 +120,6 @@ describe("internal operation documentation", () => {
           expect(current.responses["200"]?.content, name).toBeDefined();
       }
     }
-  });
-
-  it("documents bounded CRM search and pagination constraints", () => {
-    const legacy = input("list_crm_opportunities");
-    expect(legacy.safeParse({ p_organisation_id: id }).success).toBe(true);
-    expect(operation("list_crm_opportunities").description).toContain(
-      "read-only history for archived organisations",
-    );
-
-    const page = input("list_crm_opportunity_page");
-    expect(
-      page.safeParse({
-        p_organisation_id: id,
-        p_search: "campus",
-        p_stage: "contacted",
-        p_limit: 26,
-        p_offset: 25,
-      }).success,
-    ).toBe(true);
-    expect(
-      page.safeParse({
-        p_organisation_id: id,
-        p_search: "campus",
-        p_stage: "contacted",
-        p_limit: 52,
-        p_offset: 25,
-      }).success,
-    ).toBe(false);
-    expect(
-      page.safeParse({
-        p_organisation_id: id,
-        p_search: "campus",
-        p_stage: "contacted",
-        p_limit: 26,
-        p_offset: 10001,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("documents nullable, bounded and versioned CRM forecast updates", () => {
-    const forecast = input("update_crm_opportunity_forecast");
-    const payload = {
-      p_organisation_id: id,
-      p_opportunity_id: id,
-      p_close_probability: 0,
-      p_expected_close_date: "2026-12-15",
-      p_expected_version: 2,
-      p_request_id: id,
-    };
-    expect(forecast.safeParse(payload).success).toBe(true);
-    expect(
-      forecast.safeParse({
-        ...payload,
-        p_close_probability: null,
-        p_expected_close_date: null,
-      }).success,
-    ).toBe(true);
-    expect(
-      forecast.safeParse({ ...payload, p_close_probability: 100.01 }).success,
-    ).toBe(false);
-    expect(
-      forecast.safeParse({ ...payload, p_close_probability: 1.001 }).success,
-    ).toBe(false);
-    expect(
-      operation("update_crm_opportunity_forecast").responses["204"].content,
-    ).toBeUndefined();
   });
 
   it("documents scoped and legacy wiki template calls", () => {
@@ -258,6 +192,43 @@ describe("internal operation documentation", () => {
       },
     });
     expect(saveDraft.success, JSON.stringify(saveDraft)).toBe(true);
+    const lessonBlockDraft = (kind: string) => ({
+      p_run_id: id,
+      p_action: "save_draft",
+      p_payload: {
+        published_version: 0,
+        draft_version: 0,
+        content: {
+          modules: [
+            {
+              id,
+              title: "Fictional module",
+              description: "",
+              lessons: [
+                {
+                  id,
+                  title: "Fictional lesson",
+                  objectives: "",
+                  duration_minutes: 10,
+                  body: { type: "doc", content: [] },
+                  blocks: [
+                    {
+                      id,
+                      kind,
+                      title: "Review",
+                      text: "What changed?",
+                      answer: "The lesson was versioned.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(action.safeParse(lessonBlockDraft("practice")).success).toBe(true);
+    expect(action.safeParse(lessonBlockDraft("note")).success).toBe(false);
     expect(
       action.safeParse({
         p_run_id: id,

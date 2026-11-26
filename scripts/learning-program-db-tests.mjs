@@ -450,10 +450,99 @@ await Promise.all(
         ).progress.completed,
         2,
       );
+
+      const electiveProgramme = randomUUID();
+      const optionalRun = randomUUID();
+      await sql(`insert into public.course_runs(id,template_id,organisation_id,published,time_zone)
+        values (${q(optionalRun)},${q(templateTwo)},${q(org)},true,'UTC');`);
+      await invoke(
+        company,
+        "save_learning_program",
+        `${q(electiveProgramme)},${q(org)},'Required and elective programme','',true,${courses([first, second, optionalRun])},false,0`,
+      );
+      const curriculum = {
+        overview: "Apply the foundation in one workshop",
+        elective_count: 1,
+        steps: {
+          [first]: {
+            required: true,
+            objectives: "Review the foundation",
+            remediation: "Repeat the practice",
+          },
+          [second]: {
+            required: false,
+            objectives: "Practise the method",
+            remediation: "",
+          },
+          [optionalRun]: {
+            required: false,
+            objectives: "Try another workshop",
+            remediation: "",
+          },
+        },
+      };
+      const configure = (who, content, version) =>
+        invoke(
+          who,
+          "configure_learning_program_curriculum",
+          `${q(electiveProgramme)},${q(JSON.stringify(content))}::jsonb,${version}`,
+        );
+      await assert.rejects(configure(learner, curriculum, 1), /42501/);
+      await assert.rejects(
+        configure(company, { ...curriculum, elective_count: 3 }, 1),
+        /22023/,
+      );
+      assert.equal(await configure(company, curriculum, 1), "2");
+      assert.equal(await configure(company, curriculum, 1), "2");
+      await invoke(
+        company,
+        "enrol_learning_program",
+        `${q(electiveProgramme)},${q(learner)},2`,
+      );
+      const electiveView = () =>
+        view(learner, electiveProgramme).then(({ detail }) => detail);
+      const electiveClassProgress = async () =>
+        learningProgramClassProgressResult.parse(
+          JSON.parse(
+            await invoke(
+              company,
+              "learning_program_class_progress",
+              q(electiveProgramme),
+              "GET",
+            ),
+          ),
+        );
+      const finishedElectives = await electiveView();
+      assert.deepEqual(finishedElectives.curriculum, {
+        ...curriculum,
+        revision: 2,
+      });
+      assert.equal(finishedElectives.progress.completed, 2);
+      assert.equal(finishedElectives.progress.total, 2);
+      assert.ok(finishedElectives.progress.completed_at);
+      assert.deepEqual(await electiveClassProgress(), [groupA(1, 1, 2)]);
+      assert.deepEqual(
+        finishedElectives.progress.steps.map(
+          (step) => step.completion_credited,
+        ),
+        [true, true, false],
+      );
+      await assert.rejects(
+        configure(company, { ...curriculum, overview: "Another version" }, 2),
+        /PT409/,
+      );
+
       await invoke(
         admin,
         lessonAction,
         `${q(second)},'completion_revoke',${q(JSON.stringify({ id: secondReceipt, reason: "Fictional review" }))},0`,
+      );
+      const revokedElectives = (await electiveView()).progress;
+      assert.equal(revokedElectives.completed_at, null);
+      assert.equal(revokedElectives.completed, 1);
+      assert.deepEqual(await electiveClassProgress(), [groupA(1, 0, 1)]);
+      console.log(
+        `PASS ${edition} versioned programme curriculum, receipt-based elective completion and revocation`,
       );
       assert.equal((await progress()).completed_at, null);
       assert.equal((await progress()).completed, 1);

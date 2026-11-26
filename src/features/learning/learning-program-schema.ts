@@ -42,6 +42,41 @@ export type ProgrammePathExceptionRequest = z.infer<
   typeof programmePathExceptionRequest
 >;
 
+const programmeCurriculumStep = z.strictObject({
+  objectives: z.string().max(1200),
+  remediation: z.string().max(1200),
+  required: z.boolean(),
+});
+
+const programmeCurriculumShape = z.strictObject({
+  overview: z.string().max(4000),
+  elective_count: z.number().int().min(0).max(29),
+  steps: z.record(learningProgramId, programmeCurriculumStep),
+});
+
+export const programmeCurriculum = programmeCurriculumShape.refine(
+  ({ steps, elective_count }) => {
+    const list = Object.values(steps);
+    return (
+      list.length >= 2 &&
+      list.length <= 30 &&
+      list.some(({ required }) => required) &&
+      elective_count <= list.filter(({ required }) => !required).length
+    );
+  },
+  { message: "Invalid programme completion requirements" },
+);
+export type ProgrammeCurriculum = z.infer<typeof programmeCurriculum>;
+
+export const configureProgrammeCurriculumRequest = z.strictObject({
+  p_program_id: learningProgramId,
+  p_curriculum: programmeCurriculum.nullable(),
+  p_expected_version: z.number().int().positive(),
+});
+export type ConfigureProgrammeCurriculumRequest = z.infer<
+  typeof configureProgrammeCurriculumRequest
+>;
+
 export const learningProgramStates = [
   "completed",
   "unavailable",
@@ -56,6 +91,7 @@ export const learningProgramProgress = z.strictObject({
   steps: z.array(
     programCourse.extend({
       receipt_id: learningProgramId.nullable(),
+      completion_credited: z.boolean().optional(),
       state: z.enum(learningProgramStates),
       can_open: z.boolean(),
       prerequisite_exception: programmePathException.nullish(),
@@ -106,6 +142,9 @@ const programDetail = program.extend({
   can_edit: z.boolean(),
   steps: z.array(programCourse).nullable(),
   path_rules: z.record(z.string(), prerequisiteRule).nullable().optional(),
+  curriculum: programmeCurriculumShape
+    .extend({ revision: z.number().int().positive() })
+    .nullish(),
   progress: learningProgramProgress.nullable(),
   learner_name: z.string().nullable(),
   roster: z.array(learnerEntry).nullable(),

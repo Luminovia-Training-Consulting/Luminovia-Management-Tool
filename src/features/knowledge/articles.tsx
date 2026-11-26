@@ -16,7 +16,6 @@ import {
   History,
   Pencil,
   Plus,
-  Search,
   Settings2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
@@ -45,6 +44,7 @@ import type { KnowledgeCategory, WikiPageRecord } from "./types";
 import { contentIsValid, emptyDocument } from "./content";
 import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
+import { KnowledgeCategoryFilter, KnowledgeListSearch } from "./list-filters";
 import "./i18n";
 import "./knowledge.css";
 import { WikiAttachments } from "./wiki-attachments";
@@ -467,45 +467,19 @@ export function KnowledgeArticles() {
         className={`knowledge-workspace ${id || writing ? "knowledge-has-selection" : ""}`}
       >
         <aside className="knowledge-directory panel">
-          <form
-            className="knowledge-search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSearch(input.trim());
-            }}
-          >
-            <Field id="wiki-search" label={t("searchWiki")}>
-              <input
-                id="wiki-search"
-                type="search"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                maxLength={200}
-              />
-            </Field>
-            <Button variant="ghost" size="icon" aria-label={t("search")}>
-              <Search size={18} />
-            </Button>
-          </form>
+          <KnowledgeListSearch
+            kind="wiki"
+            draft={input}
+            onDraftChange={setInput}
+            onSearch={setSearch}
+          />
           <div className="form-row">
-            <Field id="wiki-filter-category" label={t("category")}>
-              <select
-                id="wiki-filter-category"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-              >
-                <option value="">{t("all")}</option>
-                {categories.data
-                  ?.filter((item) => !item.archived)
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {i18n.language.startsWith("de")
-                        ? item.label_de
-                        : item.label_en}
-                    </option>
-                  ))}
-              </select>
-            </Field>
+            <KnowledgeCategoryFilter
+              kind="wiki"
+              categories={categories.data}
+              value={category}
+              onChange={setCategory}
+            />
             <Field id="wiki-filter-language" label={t("language")}>
               <select
                 id="wiki-filter-language"

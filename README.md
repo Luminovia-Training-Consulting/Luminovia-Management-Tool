@@ -71,6 +71,7 @@ The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Rou
 ## Documentation
 
 - [Product requirements](docs/PRODUCT.md)
+- [LMS implementation and verification backlog](docs/LMS-BACKLOG.md)
 - [Production-readiness evidence and implementation backlog](docs/PRODUCTION-READINESS.md)
 - [User guide](docs/GUIDE.md) and [feature catalogue](docs/FEATURES.md)
 - [Design QA notes](docs/design-qa.md)
