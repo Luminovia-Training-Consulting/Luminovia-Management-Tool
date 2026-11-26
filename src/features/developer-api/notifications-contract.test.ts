@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { inboxWireSchema } from "../notifications/schema";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 import { notificationPaths } from "./notifications-contract";
 
 const backend = "https://portal.example.invalid";

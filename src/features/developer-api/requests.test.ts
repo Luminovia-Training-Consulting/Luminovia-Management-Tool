@@ -4,11 +4,8 @@ import {
   type InstallationBrand,
   internalInstallationBrand,
 } from "../../lib/installation-brand";
-import {
-  internalExplorerDocument,
-  isDocumentedRequest,
-  portalOpenApi,
-} from "./contract";
+import { internalExplorerDocument, portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 import {
   authorizeDocumentedRequest,
   isAcademyExplorerRequest,

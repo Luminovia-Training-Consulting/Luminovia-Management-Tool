@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { internalInstallationBrand } from "../../lib/installation-brand";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract";
 import { academyWorkflowIndex } from "../../../scripts/academy-workflows";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 import { humanAuthPaths } from "./human-auth-contract";
 
 const backend = "https://academy.example.invalid/backend";

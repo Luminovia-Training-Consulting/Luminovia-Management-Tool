@@ -1,7 +1,8 @@
 /** Check interactive waitlists and retained legacy handover contracts. */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 
 const backend = "https://portal.example.invalid";
 const prefix = "/rest/v1/rpc/";

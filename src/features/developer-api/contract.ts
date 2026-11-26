@@ -1,4 +1,3 @@
-import { isInternalExplorerRequest } from "./request-boundary.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -5551,17 +5550,4 @@ function internalDocument(
     paths: documentPaths,
     ...(download && { webhooks: download.webhooks }),
   };
-}
-
-/** Apply the same protective route matching used by the compiled explorer. */
-export function isDocumentedRequest(
-  rawUrl: string,
-  method: string,
-  backend: string,
-) {
-  return isInternalExplorerRequest(
-    { url: rawUrl, method },
-    backend,
-    interactivePaths,
-  );
 }

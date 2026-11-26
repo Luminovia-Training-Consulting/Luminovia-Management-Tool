@@ -6,7 +6,8 @@ import {
   portalHttpPutVersions,
 } from "../../../supabase/functions/_shared/portal-http-methods";
 import { internalInstallationBrand } from "../../lib/installation-brand";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 import {
   authorizeDocumentedRequest,
   isAcademyExplorerRequest,

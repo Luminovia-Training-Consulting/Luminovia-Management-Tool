@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { internalInstallationBrand } from "../../lib/installation-brand";
-import { isDocumentedRequest, portalOpenApi } from "./contract";
+import { portalOpenApi } from "./contract";
+import { isDocumentedRequest } from "./test/internal-explorer";
 
 const backend = "https://portal.example.invalid";
 const paths = portalOpenApi(backend, false).paths as Record<
