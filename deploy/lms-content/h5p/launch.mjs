@@ -148,23 +148,23 @@ async function construct(input, { catalogue, playable }, post) {
     librariesPath: "/h5p/libraries",
     frameJs: "/h5p/player/frame.bundle.js",
     frameCss: "/h5p/player/styles/h5p.css",
+    // The external sandbox is already a frame. Render directly inside it so the
+    // upstream nested-frame bootstrap does not require an inline script.
+    embedType: "div",
+    preventH5PInit: false,
     frame: true,
     copyright: true,
     fullScreen: false,
     assetsRequestFetchOptions: { credentials: "omit", cache: "no-store" },
   });
-  const frame = node.querySelector("iframe");
-  const bind = () => {
-    const dispatcher =
-      frame?.contentWindow?.H5P?.externalDispatcher ??
-      window.H5P?.externalDispatcher;
-    if (dispatcher)
-      dispatcher.on("xAPI", (event) =>
-        report(event?.data?.statement, post, singleQuestion),
-      );
-  };
-  bind();
-  frame?.addEventListener("load", bind, { once: true });
+  const player = window.H5P;
+  // The core populates attribution and other settings in its DOM-ready handler.
+  await new Promise((resolve) => player.jQuery(resolve));
+  player.externalDispatcher.on("xAPI", (event) =>
+    report(event?.data?.statement, post, singleQuestion),
+  );
+  player.init();
+  player.preventInit = false;
   post({ type: "h5p-started" });
 }
 

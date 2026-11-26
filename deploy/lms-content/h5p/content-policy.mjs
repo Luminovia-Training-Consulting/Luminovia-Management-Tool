@@ -98,6 +98,8 @@ function richText(value) {
 }
 
 function deobfuscate(value) {
+  // URL parsers may ignore controls before interpreting the scheme.
+  // eslint-disable-next-line no-control-regex
   return value.trim().replace(/[\u0000-\u0020\u007f]/g, "");
 }
 
