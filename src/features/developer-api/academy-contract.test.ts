@@ -38,6 +38,7 @@ const readPaths = [
   "/rest/v1/rpc/course_assignments",
   "/rest/v1/rpc/course_competencies",
   "/rest/v1/rpc/learning_portfolio",
+  "/rest/v1/rpc/course_peer_feedback",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -70,6 +71,7 @@ const writePaths = [
   "/rest/v1/rpc/course_competency_action",
   "/rest/v1/rpc/learning_portfolio_command",
   "/rest/v1/rpc/set_learning_program_prerequisite",
+  "/rest/v1/rpc/course_peer_feedback_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

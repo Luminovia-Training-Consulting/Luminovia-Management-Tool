@@ -44,6 +44,7 @@ import "./i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseCompetencies } from "./competencies";
+import { CoursePeerFeedback } from "./peer-feedback";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizAttempt } from "./quiz-attempt";
 import { QuestionBank } from "./question-bank";
@@ -1639,6 +1640,9 @@ function CourseWorkspaceLayout({
                   actor={actor}
                   editable={canEdit}
                 />
+              )}
+              {(course.access.staff || learner) && currentSection === "course-learning" && (
+                <CoursePeerFeedback course={course.id} actor={actor} staff={course.access.staff} />
               )}
               {learner && (
                 <Completion

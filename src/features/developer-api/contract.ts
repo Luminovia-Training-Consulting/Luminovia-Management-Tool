@@ -4,6 +4,7 @@ import {
   competencyRead,
   competencyReadResult,
 } from "./competency-contract.ts";
+import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import {
@@ -4494,6 +4495,34 @@ const nativePaths = {
         "200": {
           description: "Confirmed revision",
           content: json(competencyActionResult),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
+  "/rest/v1/rpc/course_peer_feedback": rpc(
+    "readCoursePeerFeedback",
+    "Premium LMS",
+    "Read a current moderated peer feedback round",
+    "Current staff see the review queue. Enrolled learners see their own entry, anonymous assigned text and approved replies addressed to them.",
+    course,
+    peerReadResult,
+  ),
+  "/rest/v1/rpc/course_peer_feedback_action": {
+    post: {
+      operationId: "saveCoursePeerFeedback",
+      tags: ["Premium LMS"],
+      summary: "Join, moderate or respond to the peer feedback round",
+      description:
+        "Current learners opt in and can report a released reply. Current course staff approve entries before assignment and reviews before release. Feedback remains qualitative.",
+      requestBody: { required: true, content: json(peerActionRequest) },
+      responses: {
+        "200": {
+          description: "Confirmed action",
+          content: json({ const: true }),
         },
         "400": error,
         "401": error,

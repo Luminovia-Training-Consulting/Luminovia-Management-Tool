@@ -4,6 +4,7 @@ import {
   competencyRead,
   competencyReadResult,
 } from "./competency-contract.ts";
+import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
@@ -1133,6 +1134,23 @@ const coursePaths = {
       required: ["p_run_id", "p_action", "p_payload", "p_expected_revision"],
     },
     competencyActionResult,
+    true,
+  ),
+  "/rest/v1/rpc/course_peer_feedback": courseOperation(
+    "readAcademyPeerFeedback",
+    "Read a current moderated peer feedback round",
+    "Current staff see the moderation queue. Enrolled participants see their own entry, their anonymous assigned entry, and released feedback addressed to them.",
+    "active-or-grace",
+    record(run),
+    peerReadResult,
+  ),
+  "/rest/v1/rpc/course_peer_feedback_action": courseOperation(
+    "saveAcademyPeerFeedback",
+    "Join, moderate or respond to the peer feedback round",
+    "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Feedback remains qualitative.",
+    "active",
+    { ...peerActionRequest, required: ["p_run_id", "p_action", "p_payload"] },
+    { const: true },
     true,
   ),
   "/rest/v1/rpc/course_gradebook": courseOperation(

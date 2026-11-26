@@ -398,6 +398,8 @@ reissue; the PDF is not a new official qualification or legal signature.
 
 In **Lernaktivitäten → Kompetenzen / Learning activities → Competencies**, course managers can create a reusable framework with named levels and coded competencies, then assign a specific revision to the course. Instructors select a current participant, choose a competency and level, and release a visible reason. They can attach the learner's best attempt on the currently published quiz as evidence. Publishing a correction adds to the learner's history. Revising a framework does not change any earlier assessment.
 
+In **Lernaktivitäten → Peerfeedback / Learning activities → Peer feedback**, a course instructor can open an optional text exchange. Participants submit contributions without identifying details and may withdraw before matching. The teaching team approves each contribution before matching a minimum of three entries. Participants receive one anonymous contribution to review. Staff approve replies before publishing them. Recipients can report released feedback. The teaching team can uphold or withhold the reply and publish a response. Peer feedback remains qualitative.
+
 After a delivered course, an authorised customer can request it again with new future dates. The new request copies teaching time and requirements, with no automatic allocation. Files need new explicit sharing; learner attendance, feedback, notebooks, contracts and quiz attempts are not copied. See [Course workspace](GUIDE.md#section-course-learning-workspace).
 
 <a id="section-user-guide-management-people-expertise-and-access"></a>
