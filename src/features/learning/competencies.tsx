@@ -259,6 +259,7 @@ function FrameworkControls({
   write: Action;
 }) {
   const { t } = useTranslation("learning");
+  const id = useId();
   const [selected, setSelected] = useState("");
   const [editor, setEditor] = useState<CompetencyFramework | null>(null);
   const chosen = data.frameworks.find(({ id }) => id === selected);
@@ -268,8 +269,7 @@ function FrameworkControls({
 
   return (
     <div className="space-y-3">
-      <label className="block">
-        {t("competencyChooseFramework")}
+      <Field id={id} label={t("competencyChooseFramework")}>
         <select
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
@@ -285,7 +285,7 @@ function FrameworkControls({
             </option>
           ))}
         </select>
-      </label>
+      </Field>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
@@ -359,6 +359,7 @@ function AssessmentForm({
   write: Action;
 }) {
   const { t } = useTranslation("learning");
+  const id = useId();
   const [competency, setCompetency] = useState("");
   const [level, setLevel] = useState("");
   const [note, setNote] = useState("");
@@ -397,8 +398,7 @@ function AssessmentForm({
     >
       <fieldset disabled={write.isPending}>
         <legend>{t("competencyAssessment")}</legend>
-        <label>
-          {t("competencyItem")}
+        <Field id={id + "-item"} label={t("competencyItem")}>
           <select
             required
             value={competency}
@@ -411,9 +411,8 @@ function AssessmentForm({
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          {t("competencyLevel")}
+        </Field>
+        <Field id={id + "-level"} label={t("competencyLevel")}>
           <select
             required
             value={level}
@@ -426,9 +425,8 @@ function AssessmentForm({
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          {t("competencyEvidence")}
+        </Field>
+        <Field id={id + "-evidence"} label={t("competencyEvidence")}>
           <textarea
             required
             minLength={3}
@@ -436,7 +434,7 @@ function AssessmentForm({
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
-        </label>
+        </Field>
         <p>{t("competencyEvidenceHint")}</p>
         <label className="checkbox-label">
           <input
