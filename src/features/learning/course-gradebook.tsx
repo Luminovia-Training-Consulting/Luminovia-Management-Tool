@@ -1,11 +1,23 @@
 /** Course-scoped grade release and correction, backed by version-checked RPCs. */
 import { useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { downloadCsv } from "../../lib/csv";
 import { useOnline } from "../../lib/online";
-import { courseAction, courseGradebookQuery } from "./api";
+import {
+  courseAction,
+  courseGradebookHistoryKey,
+  courseGradebookQuery,
+  fetchCourseGradebookExport,
+  fetchCourseGradebookHistory,
+} from "./api";
 import {
   courseGradePolicySchema,
   type CourseGradebook,
@@ -27,18 +39,25 @@ type Command = {
 };
 const mark = (grade: Grade) => grade.grade_label ?? `${grade.grade_percent}%`;
 
+/** A command writes against the policy revision the actor reviewed. */
 function useGradeCommand({ actor, courseId, academy }: Props, version: number) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({ action, payload }: Command) =>
       courseAction(courseId, action, payload, version, academy),
     onSuccess: () =>
-      client.invalidateQueries({
-        queryKey: ["course-gradebook", actor, courseId],
-      }),
+      Promise.all([
+        client.invalidateQueries({
+          queryKey: ["course-gradebook", actor, courseId],
+        }),
+        client.invalidateQueries({
+          queryKey: courseGradebookHistoryKey(actor, courseId),
+        }),
+      ]),
   });
 }
 
+/** Offer an explicit reload after a stale write so the actor can review the replacement preview. */
 function MutationError({
   error,
   refresh,
@@ -64,6 +83,7 @@ function MutationError({
 
 type Projection = CourseGradebook;
 
+/** Validate a detached scale draft and submit a new immutable policy version. */
 function PolicyForm({
   props,
   policy,
@@ -198,6 +218,100 @@ function PolicyForm({
   );
 }
 
+/**
+ * Render grade history only when explicitly opened. Course/actor/learner keying
+ * and immediate cache disposal avoid retaining closed sensitive projections.
+ */
+function GradeHistory({
+  props,
+  learner,
+}: {
+  props: Props;
+  learner: string | null;
+}) {
+  const { t } = useTranslation("learning");
+  const [open, setOpen] = useState(false);
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{t("gradebookHistory")}</summary>
+      {open && <GradeHistoryPage props={props} learner={learner} />}
+    </details>
+  );
+}
+
+/** Follow the cursor returned by the authorised history projection. */
+function GradeHistoryPage({
+  props,
+  learner,
+}: {
+  props: Props;
+  learner: string | null;
+}) {
+  const { t, i18n } = useTranslation("learning");
+  const history = useInfiniteQuery({
+    queryKey: [
+      ...courseGradebookHistoryKey(props.actor, props.courseId),
+      learner,
+    ],
+    queryFn: ({ pageParam, signal }) =>
+      fetchCourseGradebookHistory(props.courseId, learner, pageParam, signal),
+    initialPageParam: null as number | null,
+    getNextPageParam: ({ next_before }) => next_before,
+    retry: false,
+    gcTime: 0,
+  });
+  const formatter = new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+    dateStyle: "medium",
+  });
+  if (history.isPending) return <Loading />;
+  if (history.isError && !history.isFetchNextPageError) {
+    return <ErrorState retry={() => void history.refetch()} />;
+  }
+
+  return (
+    <>
+      <ol role="list" className="learning-resources">
+        {history.data?.pages
+          .flatMap(({ revisions }) => revisions)
+          .map((revision) => (
+            <li key={revision.revision}>
+              <p>
+                {t("gradebookPublished", {
+                  grade: mark(revision),
+                  revision: revision.revision,
+                })}
+              </p>
+              <p>
+                {t("gradebookHistorySource", {
+                  quiz: revision.quiz_version,
+                  policy: revision.policy_version,
+                  date: formatter.format(new Date(revision.published_at)),
+                })}
+              </p>
+              {revision.reason && (
+                <p className="preserve-text">{revision.reason}</p>
+              )}
+            </li>
+          ))}
+      </ol>
+      {history.isFetchNextPageError && (
+        <p role="alert">{t("gradebookHistoryLoadFailed")}</p>
+      )}
+      {history.hasNextPage && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={history.isFetching}
+          onClick={() => void history.fetchNextPage()}
+        >
+          {t("gradebookOlderGrades")}
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** Release the current preview or make a reasoned change to an existing grade. */
 function GradeRow({
   props,
   row,
@@ -213,12 +327,19 @@ function GradeRow({
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
-  const [correction, setCorrection] = useState(false);
+  const [adjustment, setAdjustment] = useState<
+    null | "correct" | "recalculate"
+  >(null);
   const [reason, setReason] = useState("");
   const [value, setValue] = useState("");
   const save = useGradeCommand(props, policy?.version ?? 0);
   const { grade, best_attempt: attempt, preview } = row;
   const disabled = !online || save.isPending;
+  const canRecalculate =
+    grade &&
+    attempt &&
+    (grade.attempt_id !== attempt.id ||
+      grade.policy_version !== policy?.version);
   return (
     <li className="space-y-2">
       <h3>{row.name}</h3>
@@ -239,7 +360,7 @@ function GradeRow({
             })
           : t("gradebookUnpublished")}
       </p>
-      {grade?.reason && <p className="preserve-text">{grade.reason}</p>}
+      {grade && <GradeHistory props={props} learner={row.user_id} />}
       {editable &&
         policy &&
         (!grade && attempt && preview ? (
@@ -261,48 +382,63 @@ function GradeRow({
           </Button>
         ) : (
           grade &&
-          (correction ? (
+          (adjustment ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                if (disabled || reason.trim().length < 3 || !value) return;
-                save.mutate({
-                  action: "gradebook_correct",
-                  payload: {
-                    user_id: row.user_id,
-                    grade_value: value,
-                    expected_revision: grade.revision,
-                    reason: reason.trim(),
-                  },
-                });
+                if (disabled || reason.trim().length < 3) return;
+                const target = {
+                  user_id: row.user_id,
+                  expected_revision: grade.revision,
+                  reason: reason.trim(),
+                };
+                if (adjustment === "recalculate" && canRecalculate) {
+                  save.mutate({
+                    action: "gradebook_publish",
+                    payload: { ...target, attempt_id: attempt.id },
+                  });
+                } else if (adjustment === "correct" && value) {
+                  save.mutate({
+                    action: "gradebook_correct",
+                    payload: { ...target, grade_value: value },
+                  });
+                }
               }}
             >
               <fieldset disabled={disabled}>
-                <legend>{t("gradebookCorrect")}</legend>
-                <label>
-                  {t("gradebookValue")}
-                  {policy.scheme === "percentage" ? (
-                    <input
-                      required
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={value}
-                      onChange={(event) => setValue(event.target.value)}
-                    />
-                  ) : (
-                    <select
-                      required
-                      value={value}
-                      onChange={(event) => setValue(event.target.value)}
-                    >
-                      <option value="">{t("gradebookSelectBand")}</option>
-                      {policy.bands.map((band) => (
-                        <option key={band.minimum}>{band.label}</option>
-                      ))}
-                    </select>
+                <legend>
+                  {t(
+                    adjustment === "recalculate"
+                      ? "gradebookRecalculate"
+                      : "gradebookCorrect",
                   )}
-                </label>
+                </legend>
+                {adjustment === "correct" && (
+                  <label>
+                    {t("gradebookValue")}
+                    {policy.scheme === "percentage" ? (
+                      <input
+                        required
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                      />
+                    ) : (
+                      <select
+                        required
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                      >
+                        <option value="">{t("gradebookSelectBand")}</option>
+                        {policy.bands.map((band) => (
+                          <option key={band.minimum}>{band.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                )}
                 <label>
                   {t("gradebookReason")}
                   <textarea
@@ -315,16 +451,23 @@ function GradeRow({
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    disabled={reason.trim().length < 3 || !value}
+                    disabled={
+                      reason.trim().length < 3 ||
+                      (adjustment === "correct" ? !value : !canRecalculate)
+                    }
                     type="submit"
                   >
-                    {t("gradebookSaveCorrection")}
+                    {t(
+                      adjustment === "recalculate"
+                        ? "gradebookPublishRecalculation"
+                        : "gradebookSaveCorrection",
+                    )}
                   </Button>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={() => {
-                      setCorrection(false);
+                      setAdjustment(null);
                       setReason("");
                       setValue("");
                       save.reset();
@@ -336,13 +479,24 @@ function GradeRow({
               </fieldset>
             </form>
           ) : (
-            <Button
-              variant="secondary"
-              disabled={disabled}
-              onClick={() => setCorrection(true)}
-            >
-              {t("gradebookCorrect")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                disabled={disabled}
+                onClick={() => setAdjustment("correct")}
+              >
+                {t("gradebookCorrect")}
+              </Button>
+              {canRecalculate && (
+                <Button
+                  variant="secondary"
+                  disabled={disabled}
+                  onClick={() => setAdjustment("recalculate")}
+                >
+                  {t("gradebookRecalculate")}
+                </Button>
+              )}
+            </div>
           ))
         ))}
       <MutationError error={save.error} refresh={refresh} />
@@ -350,6 +504,7 @@ function GradeRow({
   );
 }
 
+/** Keep private grade state mounted only in the active, online course panel. */
 export function CourseGradebook(props: Props) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -366,6 +521,64 @@ export function CourseGradebook(props: Props) {
           <p role="status">{t("gradebookOffline")}</p>
         ))}
     </section>
+  );
+}
+
+/** Export only after the current staff request succeeds, with CSV cell protection. */
+function GradeExport({ courseId }: { courseId: string }) {
+  const { t } = useTranslation("learning");
+  const [empty, setEmpty] = useState(false);
+  const report = useMutation({
+    mutationFn: () => fetchCourseGradebookExport(courseId),
+    gcTime: 0,
+  });
+  function exportGrades() {
+    setEmpty(false);
+    report.mutate(undefined, {
+      onSuccess: (rows) => {
+        if (rows.length === 0) {
+          setEmpty(true);
+          report.reset();
+          return;
+        }
+        downloadCsv(`quiz-grades-${courseId}.csv`, [
+          [
+            "participant_id",
+            "name",
+            "grade_percent",
+            "grade_label",
+            "revision",
+            "policy_version",
+            "quiz_version",
+            "published_at",
+          ],
+          ...rows.map(({ user_id, name, grade }) => [
+            user_id,
+            name,
+            grade.grade_percent,
+            grade.grade_label,
+            grade.revision,
+            grade.policy_version,
+            grade.quiz_version,
+            grade.published_at,
+          ]),
+        ]);
+        report.reset();
+      },
+    });
+  }
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="secondary"
+        disabled={report.isPending}
+        onClick={exportGrades}
+      >
+        {t("gradebookExport")}
+      </Button>
+      {empty && <p role="status">{t("gradebookExportEmpty")}</p>}
+      {report.isError && <p role="alert">{t("gradebookExportFailed")}</p>}
+    </div>
   );
 }
 
@@ -388,6 +601,7 @@ function OnlineGradebook(props: Props) {
       ) : props.staff ? (
         <>
           <p>{t("gradebookHelp")}</p>
+          <GradeExport courseId={props.courseId} />
           {data.policy && (
             <p>
               {t("gradebookPolicyVersion", { version: data.policy.version })}
@@ -434,14 +648,17 @@ function OnlineGradebook(props: Props) {
           ) : null}
         </>
       ) : (
-        <p role="status">
-          {data.own_grade
-            ? t("gradebookPublished", {
-                grade: mark(data.own_grade),
-                revision: data.own_grade.revision,
-              })
-            : t("gradebookUnpublished")}
-        </p>
+        <>
+          <p role="status">
+            {data.own_grade
+              ? t("gradebookPublished", {
+                  grade: mark(data.own_grade),
+                  revision: data.own_grade.revision,
+                })
+              : t("gradebookUnpublished")}
+          </p>
+          {data.own_grade && <GradeHistory props={props} learner={null} />}
+        </>
       )}
     </>
   );

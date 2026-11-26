@@ -8,6 +8,8 @@ import type { CourseCurriculum } from "./course-authoring-schema";
 import {
   gradebookPageSize,
   type CourseGradebook,
+  type CourseGradebookExportRow,
+  type CourseGradebookHistory,
 } from "./course-gradebook-schema";
 
 export interface CourseOverview {
@@ -226,6 +228,39 @@ export const courseGradebookQuery = (
     gcTime: 0,
     retry: false,
   });
+export const courseGradebookHistoryKey = (actor: string, run: string) =>
+  ["course-gradebook-history", actor, run] as const;
+
+/** Load one revision page using the server cursor and the current role projection. */
+export async function fetchCourseGradebookHistory(
+  run: string,
+  learner: string | null,
+  before: number | null,
+  signal: AbortSignal,
+) {
+  requireOnline();
+  const { data, error } = await db()
+    .rpc("course_gradebook_history", {
+      p_run_id: run,
+      p_user_id: learner,
+      p_before_revision: before,
+      p_limit: gradebookPageSize,
+    })
+    .abortSignal(signal);
+  if (error) throw error;
+  return data as CourseGradebookHistory;
+}
+
+/** Request a single database snapshot of published quiz grades for staff CSV. */
+export async function fetchCourseGradebookExport(run: string) {
+  requireOnline();
+  const { data, error } = await db().rpc("course_gradebook_export", {
+    p_run_id: run,
+  });
+  if (error) throw error;
+  return data as CourseGradebookExportRow[];
+}
+
 /** Recheck only the caller-scoped Premium link state for a selected base course row. */
 export const courseWorkspaceEntitlementQuery = (
   actor: string,

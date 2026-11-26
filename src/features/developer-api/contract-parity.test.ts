@@ -1258,6 +1258,27 @@ describe("documented Premium course and spending operations", () => {
     });
   });
 
+  it("documents the native gradebook query arguments and required course identifier", () => {
+    const overview = requestSchema("/rest/v1/rpc/course_gradebook");
+    expect(overview.required).toEqual(["p_run_id"]);
+    expect(Object.keys(overview.properties)).toEqual([
+      "p_run_id",
+      "p_offset",
+      "p_limit",
+    ]);
+    const history = requestSchema("/rest/v1/rpc/course_gradebook_history");
+    expect(history.required).toEqual(["p_run_id"]);
+    expect(Object.keys(history.properties)).toEqual([
+      "p_run_id",
+      "p_user_id",
+      "p_before_revision",
+      "p_limit",
+    ]);
+    expect(
+      requestSchema("/rest/v1/rpc/course_gradebook_export").required,
+    ).toEqual(["p_run_id"]);
+  });
+
   it("documents resource, teaching and self-service learning action payloads", () => {
     const actions = requestSchema("/rest/v1/rpc/course_workspace_action").oneOf;
     expect(

@@ -396,6 +396,27 @@ export const courseGradebookResult = record({
   limit: { ...integer, minimum: 1, maximum: 100 },
 });
 
+export const courseGradebookHistoryParameters = record(
+  {
+    p_run_id: uuid,
+    p_user_id: nullable(uuid),
+    p_before_revision: nullable({ ...integer, minimum: 1 }),
+    p_limit: { ...integer, minimum: 1, maximum: 100, default: 20 },
+  },
+  ["p_run_id"],
+);
+export const courseGradebookHistoryResult = record({
+  revisions: {
+    ...itemList({ oneOf: [staffGradebookMark, gradebookMark] }),
+    maxItems: 100,
+  },
+  next_before: nullable({ ...integer, minimum: 1 }),
+});
+export const courseGradebookExportResult = {
+  ...itemList(record({ user_id: uuid, name: text, grade: gradebookMark })),
+  maxItems: 5000,
+};
+
 /** Send the reviewed current version for edits. PostgreSQL defaults omitted versions to zero. */
 const workspaceActions: [action: string, payload: Record<string, unknown>][] = [
   [

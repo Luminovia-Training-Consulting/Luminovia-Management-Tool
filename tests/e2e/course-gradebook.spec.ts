@@ -1,5 +1,6 @@
 /** Staff release a real quiz grade to an enrolled learner on the disposable QA stack. */
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { enablePremiumAndLinkParticipant } from "../../scripts/testing/company-participant.mjs";
@@ -234,6 +235,82 @@ test("staff save the default quiz grading scale and release a grade to the enrol
     await expect(learnerStatus).toHaveText(/\b65\s*%/);
     await expect(
       learnerGradebook.getByText("Fictional correction after review"),
+    ).toHaveCount(0);
+
+    // A changed quiz leaves the previous grade stable until staff confirms
+    // the new preview with a reason. Both actors can see the retained history.
+    await checked(
+      manager.client.rpc("course_workspace_action", {
+        p_run_id: run,
+        p_action: "quiz_config",
+        p_expected_version: 1,
+        p_payload: {
+          questions: [
+            {
+              prompt: "Changes working directory?",
+              options: ["cd", "ls"],
+              correct: 0,
+            },
+          ],
+          pass_percent: 80,
+          max_attempts: 1,
+          published: true,
+        },
+      }),
+    );
+    await checked(
+      learner.client.rpc("course_workspace_action", {
+        p_run_id: run,
+        p_action: "quiz_attempt",
+        p_expected_version: 2,
+        p_payload: { answers: [0], request_id: randomUUID() },
+      }),
+    );
+    await page.reload();
+    await expect(
+      englishGradebook.getByText(/Published grade: 65%/),
+    ).toBeVisible();
+    await englishGradebook
+      .getByRole("button", { name: "Recalculate using current preview" })
+      .click();
+    await englishGradebook
+      .getByLabel("Internal reason")
+      .fill("Fictional revised quiz reviewed");
+    await englishGradebook
+      .getByRole("button", { name: "Publish recalculated grade" })
+      .click();
+    await expect(
+      englishGradebook.getByText(/Published grade: 100%/),
+    ).toBeVisible();
+    await learnerPage.reload();
+    await expect(learnerStatus).toHaveText(/\b100\s*%/);
+    await learnerGradebook.getByText("Notenverlauf", { exact: true }).click();
+    await expect(
+      learnerGradebook.getByText(/Freigegebene Note: 65/),
+    ).toBeVisible();
+    await expect(
+      learnerGradebook.getByText(/Freigegebene Note: 50/),
+    ).toBeVisible();
+    await expect(
+      learnerGradebook.getByText("Fictional revised quiz reviewed"),
+    ).toHaveCount(0);
+
+    // CSV comes from a fresh server snapshot and omits correction reasons.
+    const pendingDownload = page.waitForEvent("download");
+    await englishGradebook
+      .getByRole("button", { name: "Export published grades as CSV" })
+      .click();
+    const download = await pendingDownload;
+    expect(download.suggestedFilename()).toBe(`quiz-grades-${run}.csv`);
+    const csv = await readFile(await download.path(), "utf8");
+    expect(csv).toContain(
+      `"${learner.id}","${learner.name}","100","","3","1","2"`,
+    );
+    expect(csv).not.toContain("Fictional revised quiz reviewed");
+    await expect(
+      learnerGradebook.getByRole("button", {
+        name: "Freigegebene Noten als CSV exportieren",
+      }),
     ).toHaveCount(0);
   } finally {
     await context.close();

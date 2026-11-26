@@ -81,6 +81,51 @@ $$;
 revoke all on function private.course_gradebook_mark(text, jsonb, integer)
   from public, anon, authenticated, service_role;
 
+-- Use the same edition, entitlement and current course authority for both
+-- overview and history. Fail closed if the dedicated licence has no status.
+create function private.course_gradebook_context(p_run_id uuid)
+returns jsonb language plpgsql stable set search_path = '' as $$
+declare
+  context jsonb;
+  edition text := (select installation.edition from private.installation_identity installation);
+  licence_status text;
+begin
+  if edition is distinct from 'internal' then
+    licence_status := private.academy_course_access_status();
+    if licence_status is null or licence_status not in ('active', 'grace') then
+      raise insufficient_privilege;
+    end if;
+  end if;
+  context := private.course_workspace_context(p_run_id);
+  if not coalesce((context->>'lms_enabled')::boolean, false) or
+     (not coalesce((context->>'staff')::boolean, false) and
+      not coalesce((context->>'learner')::boolean, false)) then
+    raise insufficient_privilege;
+  end if;
+  return context || jsonb_build_object('gradebook_can_manage',
+    coalesce((context->>'staff')::boolean, false) and
+    (edition = 'internal' or licence_status = 'active'));
+end;
+$$;
+revoke all on function private.course_gradebook_context(uuid)
+  from public, anon, authenticated, service_role;
+
+-- Project explicit fields so internal correction reasons never reach learners.
+create function private.course_gradebook_revision_json(
+  p_revision private.course_gradebook_revisions, p_staff boolean
+) returns jsonb language sql stable strict set search_path = '' as $$
+  select jsonb_build_object(
+    'revision', p_revision.revision, 'attempt_id', p_revision.attempt_id,
+    'quiz_version', p_revision.quiz_version, 'score', p_revision.source_score,
+    'passed', p_revision.source_passed, 'policy_version', p_revision.policy_version,
+    'grade_percent', p_revision.grade_percent, 'grade_label', p_revision.grade_label,
+    'corrected', p_revision.correction_reason is not null, 'published_at', p_revision.created_at
+  ) || case when p_staff then jsonb_build_object('reason', p_revision.correction_reason)
+    else '{}'::jsonb end;
+$$;
+revoke all on function private.course_gradebook_revision_json(private.course_gradebook_revisions, boolean)
+  from public, anon, authenticated, service_role;
+
 create function private.course_gradebook_projection(
   p_run_id uuid, p_offset integer, p_limit integer
 ) returns jsonb language plpgsql stable security definer set search_path = '' as $$
@@ -96,20 +141,12 @@ declare
   grade_value jsonb;
   can_manage boolean := false;
   total_rows integer := 0;
-  edition text;
 begin
   if p_offset is null or p_offset < 0 or p_limit is null or p_limit not between 1 and 100 then
     raise exception 'Invalid course gradebook page' using errcode = '22023';
   end if;
-  context := private.course_workspace_context(p_run_id);
-  if not coalesce((context->>'lms_enabled')::boolean, false) or
-     (not coalesce((context->>'staff')::boolean, false) and
-      not coalesce((context->>'learner')::boolean, false)) then
-    raise insufficient_privilege;
-  end if;
-  edition := (select installation.edition from private.installation_identity installation);
-  can_manage := coalesce((context->>'staff')::boolean, false) and
-    (edition = 'internal' or private.academy_course_access_status() = 'active');
+  context := private.course_gradebook_context(p_run_id);
+  can_manage := (context->>'gradebook_can_manage')::boolean;
 
   select * into policy_row
   from private.course_gradebook_policies
@@ -155,19 +192,7 @@ begin
       where revision.run_id = p_run_id and revision.user_id = enrolment.user_id
       order by revision.revision desc limit 1;
       if found then
-        grade_value := jsonb_build_object(
-          'revision', current_grade.revision,
-          'attempt_id', current_grade.attempt_id,
-          'quiz_version', current_grade.quiz_version,
-          'score', current_grade.source_score,
-          'passed', current_grade.source_passed,
-          'policy_version', current_grade.policy_version,
-          'grade_percent', current_grade.grade_percent,
-          'grade_label', current_grade.grade_label,
-          'corrected', current_grade.correction_reason is not null,
-          'reason', current_grade.correction_reason,
-          'published_at', current_grade.created_at
-        );
+        grade_value := private.course_gradebook_revision_json(current_grade, true);
       else
         grade_value := null;
       end if;
@@ -191,18 +216,7 @@ begin
     where revision.run_id = p_run_id and revision.user_id = auth.uid()
     order by revision.revision desc limit 1;
     if found then
-      own_grade := jsonb_build_object(
-        'revision', current_grade.revision,
-        'attempt_id', current_grade.attempt_id,
-        'quiz_version', current_grade.quiz_version,
-        'score', current_grade.source_score,
-        'passed', current_grade.source_passed,
-        'policy_version', current_grade.policy_version,
-        'grade_percent', current_grade.grade_percent,
-        'grade_label', current_grade.grade_label,
-        'corrected', current_grade.correction_reason is not null,
-        'published_at', current_grade.created_at
-      );
+      own_grade := private.course_gradebook_revision_json(current_grade, false);
     end if;
   end if;
 
@@ -352,6 +366,10 @@ begin
     and membership.status in ('enrolled', 'completed') for share;
   if not found then raise insufficient_privilege; end if;
   if p_action = 'gradebook_publish' then
+    if jsonb_typeof(p_payload->'attempt_id') is distinct from 'string' or
+       p_payload - array['user_id', 'attempt_id', 'expected_revision', 'reason'] <> '{}'::jsonb then
+      raise exception 'Invalid grade publication' using errcode = '22023';
+    end if;
     -- Use the quiz submission lock and pin its current revision until publication commits.
     perform pg_catalog.pg_advisory_xact_lock(
       pg_catalog.hashtextextended('quiz-attempt:' || p_run_id::text || ':' || target_user::text, 0)
@@ -369,9 +387,6 @@ begin
     limit 1;
     if not found or (p_payload->>'attempt_id')::uuid is distinct from best.id then
       raise exception 'The selected attempt is no longer the best current attempt' using errcode = 'PT409';
-    end if;
-    if p_payload - array['user_id', 'attempt_id', 'expected_revision', 'reason'] <> '{}'::jsonb then
-      raise exception 'Invalid grade publication' using errcode = '22023';
     end if;
   end if;
   if p_action = 'gradebook_correct' and (
@@ -456,17 +471,8 @@ revoke all on function private.course_gradebook_command(uuid, text, jsonb, integ
 
 create function private.course_gradebook(
   p_run_id uuid, p_offset integer default 0, p_limit integer default 20
-) returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare
-  edition text := (select installation.edition from private.installation_identity installation);
-  licence_status text;
-begin
-  if edition is distinct from 'internal' then
-    licence_status := private.academy_course_access_status();
-    if licence_status not in ('active', 'grace') then raise insufficient_privilege; end if;
-  end if;
-  return private.course_gradebook_projection(p_run_id, p_offset, p_limit);
-end;
+) returns jsonb language sql stable security definer set search_path = '' as $$
+  select private.course_gradebook_projection(p_run_id, p_offset, p_limit);
 $$;
 create function public.course_gradebook(
   p_run_id uuid, p_offset integer default 0, p_limit integer default 20
@@ -477,6 +483,108 @@ revoke all on function private.course_gradebook(uuid, integer, integer),
   public.course_gradebook(uuid, integer, integer) from public, anon, service_role;
 grant execute on function private.course_gradebook(uuid, integer, integer),
   public.course_gradebook(uuid, integer, integer) to authenticated;
+
+-- A keyset cursor keeps successive reads stable while additional revisions are
+-- published. Roles see only the retained record scopes that they can currently access.
+create function private.course_gradebook_history(
+  p_run_id uuid, p_user_id uuid default null, p_before_revision integer default null,
+  p_limit integer default 20
+) returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  context jsonb;
+  staff boolean;
+  target_user uuid := coalesce(p_user_id, auth.uid());
+begin
+  if p_limit is null or p_limit not between 1 and 100 or
+     (p_before_revision is not null and p_before_revision < 1) then
+    raise exception 'Invalid gradebook history page' using errcode = '22023';
+  end if;
+  context := private.course_gradebook_context(p_run_id);
+  staff := coalesce((context->>'staff')::boolean, false);
+  if (not staff and target_user is distinct from auth.uid()) or not exists (
+    select 1 from public.course_enrolments membership
+    where membership.course_run_id = p_run_id and membership.user_id = target_user
+      and membership.status in ('enrolled', 'completed')
+  ) then
+    raise insufficient_privilege;
+  end if;
+
+  return (
+    with candidates as materialized (
+      select history as grade, history.revision
+      from private.course_gradebook_revisions history
+      where history.run_id = p_run_id and history.user_id = target_user
+        and (p_before_revision is null or history.revision < p_before_revision)
+      order by history.revision desc limit p_limit + 1
+    ), page as (
+      select * from candidates order by revision desc limit p_limit
+    )
+    select jsonb_build_object(
+      'revisions', coalesce(jsonb_agg(
+        private.course_gradebook_revision_json(grade, staff) order by revision desc
+      ), '[]'::jsonb),
+      'next_before', case when (select count(*) from candidates) > p_limit then min(revision) end
+    ) from page
+  );
+end;
+$$;
+create function public.course_gradebook_history(
+  p_run_id uuid, p_user_id uuid default null, p_before_revision integer default null,
+  p_limit integer default 20
+) returns jsonb language sql stable security invoker set search_path = '' as $$
+  select private.course_gradebook_history(p_run_id, p_user_id, p_before_revision, p_limit);
+$$;
+revoke all on function private.course_gradebook_history(uuid, uuid, integer, integer),
+  public.course_gradebook_history(uuid, uuid, integer, integer) from public, anon, service_role;
+grant execute on function private.course_gradebook_history(uuid, uuid, integer, integer),
+  public.course_gradebook_history(uuid, uuid, integer, integer) to authenticated;
+
+-- Export one transaction-consistent view of the active roster's current grades.
+-- Historical reasons stay in the individually authorized history projection.
+create function private.course_gradebook_export(p_run_id uuid)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  context jsonb := private.course_gradebook_context(p_run_id);
+  maximum_rows constant integer := 5000;
+  grade_rows jsonb;
+begin
+  if not coalesce((context->>'staff')::boolean, false) then
+    raise insufficient_privilege;
+  end if;
+
+  with current_grades as (
+    select membership.user_id, coalesce(profile.display_name, '') as name,
+      history.grade
+    from public.course_enrolments membership
+    join public.profiles profile on profile.id = membership.user_id
+    join lateral (
+      select candidate as grade from private.course_gradebook_revisions candidate
+      where candidate.run_id = membership.course_run_id and candidate.user_id = membership.user_id
+      order by candidate.revision desc limit 1
+    ) history on true
+    where membership.course_run_id = p_run_id and membership.status in ('enrolled', 'completed')
+    order by profile.display_name, membership.user_id limit maximum_rows + 1
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'user_id', user_id, 'name', name,
+    'grade', private.course_gradebook_revision_json(grade, false)
+  ) order by name, user_id), '[]'::jsonb) into grade_rows
+  from current_grades;
+
+  if jsonb_array_length(grade_rows) > maximum_rows then
+    raise exception 'Course grade export exceeds 5000 published grades' using errcode = '22023';
+  end if;
+  return grade_rows;
+end;
+$$;
+create function public.course_gradebook_export(p_run_id uuid)
+returns jsonb language sql stable security invoker set search_path = '' as $$
+  select private.course_gradebook_export(p_run_id);
+$$;
+revoke all on function private.course_gradebook_export(uuid), public.course_gradebook_export(uuid)
+  from public, anon, service_role;
+grant execute on function private.course_gradebook_export(uuid), public.course_gradebook_export(uuid)
+  to authenticated;
 
 -- Internal mutations retain the original Premium and exact-resource command paths.
 alter function private.course_workspace_action(uuid, text, jsonb, integer)
@@ -537,9 +645,9 @@ begin
     raise exception 'Expected Academy course workspace read gate';
   end if;
   execute replace(definition, anchor,
-    anchor || ', ''/rpc/course_gradebook''');
+    anchor || ', ''/rpc/course_gradebook'', ''/rpc/course_gradebook_history'', ''/rpc/course_gradebook_export''');
   execute replace(portal_definition, portal_anchor,
-    'in (''/rpc/course_content_studio'', ''/rpc/course_gradebook'')');
+    'in (''/rpc/course_content_studio'', ''/rpc/course_gradebook'', ''/rpc/course_gradebook_history'', ''/rpc/course_gradebook_export'')');
 end;
 $$;
 

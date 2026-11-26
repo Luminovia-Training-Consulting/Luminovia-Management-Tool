@@ -93,7 +93,7 @@ const groups = {
       "Prüfungen, Aufgaben und Lernfortschritt",
       "Exams, learning activities and progress",
     ],
-    "setAcademyCourseExamRequirement listAcademyStudentExamPdfOptions publishAcademyStudentExamPdf withdrawAcademyExamPdf saveAcademyLearningActivity readAcademyCourseGradebook course_exam_state save_course_exam_schedule submit_course_exam save_course_exam_grades published_course_exam_results",
+    "setAcademyCourseExamRequirement listAcademyStudentExamPdfOptions publishAcademyStudentExamPdf withdrawAcademyExamPdf saveAcademyLearningActivity readAcademyCourseGradebook readAcademyCourseGradebookHistory exportAcademyCourseGradebook course_exam_state save_course_exam_schedule submit_course_exam save_course_exam_grades published_course_exam_results",
   ],
   chat: [
     ["Kurschat und Anhänge", "Course chat and attachments"],

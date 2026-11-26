@@ -114,6 +114,77 @@ it("hides an already loaded grade while offline and restores it online", async (
   expect(await screen.findByText(/Published grade: 82%/)).toBeVisible();
 });
 
+it("requests only the learner's own history and loads older revisions with the returned cursor", async () => {
+  data.own_grade = { ...grade, revision: 2 };
+  rpc.mockImplementation((name, parameters) => ({
+    abortSignal: async () => ({
+      error: null,
+      data:
+        name === "course_gradebook"
+          ? data
+          : parameters.p_before_revision === null
+            ? { revisions: [data.own_grade], next_before: 2 }
+            : { revisions: [grade], next_before: null },
+    }),
+  }));
+  mount(false);
+  const open = await screen.findByText("Grade history");
+  const details = open.closest("details")!;
+  expect(rpc).not.toHaveBeenCalledWith(
+    "course_gradebook_history",
+    expect.anything(),
+  );
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Load older revisions" }),
+  );
+  expect(
+    await screen.findByText("Published grade: 82% (revision 1)"),
+  ).toBeVisible();
+  expect(rpc).toHaveBeenCalledWith("course_gradebook_history", {
+    p_run_id: "fictional-course",
+    p_user_id: null,
+    p_before_revision: 2,
+    p_limit: 20,
+  });
+  expect(
+    screen.queryByRole("button", { name: "Export published grades as CSV" }),
+  ).not.toBeInTheDocument();
+});
+
+it("recalculates from the reviewed replacement attempt and requires an internal reason", async () => {
+  data.learners[0].grade = grade;
+  data.learners[0].best_attempt = { ...attempt, id: "replacement-attempt" };
+  mount(true);
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Recalculate using current preview",
+    }),
+  );
+  const release = screen.getByRole("button", {
+    name: "Publish recalculated grade",
+  });
+  expect(release).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Internal reason"), {
+    target: { value: "Reviewed new quiz" },
+  });
+  fireEvent.click(release);
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith("course_workspace_action", {
+      p_run_id: "fictional-course",
+      p_action: "gradebook_publish",
+      p_expected_version: 1,
+      p_payload: {
+        user_id: "fictional-learner",
+        attempt_id: "replacement-attempt",
+        expected_revision: 1,
+        reason: "Reviewed new quiz",
+      },
+    }),
+  );
+});
+
 it("requires distinct bands and a zero threshold", () => {
   const parse = (bands: { minimum: number; label: string }[]) =>
     courseGradePolicySchema.safeParse({ scheme: "bands", bands }).success;

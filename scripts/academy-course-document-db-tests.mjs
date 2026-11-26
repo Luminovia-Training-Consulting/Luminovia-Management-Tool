@@ -604,6 +604,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const gradebook = (who, course = run) =>
       actor(who, gate("/rpc/course_gradebook") +
         `select public.course_gradebook(${q(course)},0,20)`).then(JSON.parse);
+    const gradebookHistory = (who, target = null, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_gradebook_history") : "") +
+        `select public.course_gradebook_history(${q(run)},${target === null ? "null" : q(target)})`).then(JSON.parse);
+    const gradebookExport = (who, withGate = true) =>
+      actor(who, (withGate ? gate("/rpc/course_gradebook_export") : "") +
+        `select public.course_gradebook_export(${q(run)})`).then(JSON.parse);
     const learningPath = "/rpc/academy_learning_action";
     const learningCall = (name, payload, version = 0) =>
       `select public.academy_learning_action(${q(run)},${q(name)},${q(JSON.stringify(payload))},${version})`;
@@ -649,6 +655,17 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       can_manage: false, policy: null, learners: [], own_grade: mark, total: 0, offset: 0, limit: 20,
     });
 
+    const staffHistory = await gradebookHistory(teacher, learner);
+    const learnerHistory = await gradebookHistory(learner);
+    assert.equal(staffHistory.revisions[0].reason, correct.reason);
+    assert.deepEqual(learnerHistory.revisions.map(({ revision }) => revision), [2, 1]);
+    assert.ok(learnerHistory.revisions.every((revision) => !Object.hasOwn(revision, "reason")));
+    await assert.rejects(gradebookHistory(learner, outside), /42501/);
+    await assert.rejects(gradebookHistory(client, learner), /42501/);
+    const staffExport = await gradebookExport(teacher);
+    assert.deepEqual(staffExport.map(({ user_id, grade }) => ({ user_id, grade })), [{ user_id: learner, grade: mark }]);
+    await assert.rejects(gradebookExport(learner), /42501/);
+
     await renew({
       release_commit: nextRelease,
       issued_at: date(-6),
@@ -657,6 +674,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const graceGradebook = { ...publishedGradebook, can_manage: false };
     assert.deepEqual(await gradebook(teacher), graceGradebook);
     assert.deepEqual(await gradebook(learner), learnerGradebook);
+    assert.deepEqual(await gradebookHistory(teacher, learner), staffHistory);
+    assert.deepEqual(await gradebookHistory(learner), learnerHistory);
+    assert.deepEqual(await gradebookExport(teacher), staffExport);
     // Both the request gate and the dedicated command enforce read-only grace.
     for (const [name, payload] of [
       ["gradebook_policy", policy],
@@ -705,6 +725,10 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);
     await assert.rejects(gradebook(learner), /42501/);
+    for (const withGate of [true, false]) {
+      await assert.rejects(gradebookHistory(teacher, learner, withGate), /42501/);
+      await assert.rejects(gradebookExport(teacher, withGate), /42501/);
+    }
     await assert.rejects(gradebook(teacher), /42501/);
     assert.equal(await storagePath(learnerDraft), "");
     assert.equal(

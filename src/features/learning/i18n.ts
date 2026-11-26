@@ -650,6 +650,36 @@ const pairs: Record<string, [string, string]> = {
   gradebookReason: ["Interne Begründung", "Internal reason"],
   gradebookSaveCorrection: ["Korrektur freigeben", "Publish correction"],
   gradebookCancelCorrection: ["Korrektur abbrechen", "Cancel correction"],
+  gradebookRecalculate: [
+    "Mit aktueller Vorschau neu bewerten",
+    "Recalculate using current preview",
+  ],
+  gradebookPublishRecalculation: [
+    "Neue Berechnung freigeben",
+    "Publish recalculated grade",
+  ],
+  gradebookHistory: ["Notenverlauf", "Grade history"],
+  gradebookHistorySource: [
+    "Freigabe am {{date}} · Quizfassung {{quiz}} · Notenskala {{policy}}",
+    "Published on {{date}} · Quiz version {{quiz}} · Grading scale {{policy}}",
+  ],
+  gradebookOlderGrades: ["Ältere Fassungen laden", "Load older revisions"],
+  gradebookHistoryLoadFailed: [
+    "Ältere Fassungen konnten nicht geladen werden.",
+    "Older revisions could not be loaded.",
+  ],
+  gradebookExport: [
+    "Freigegebene Noten als CSV exportieren",
+    "Export published grades as CSV",
+  ],
+  gradebookExportEmpty: [
+    "Für diesen Kurs sind noch keine Noten freigegeben.",
+    "This course has no published grades yet.",
+  ],
+  gradebookExportFailed: [
+    "Der Notenexport ist fehlgeschlagen.",
+    "The grade export failed.",
+  ],
   gradebookPrevious: ["Vorherige Seite", "Previous page"],
   gradebookNext: ["Nächste Seite", "Next page"],
   gradebookConflict: [

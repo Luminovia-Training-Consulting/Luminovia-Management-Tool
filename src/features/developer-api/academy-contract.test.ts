@@ -29,6 +29,8 @@ const readPaths = [
   "/rest/v1/rpc/search_course_materials",
   "/rest/v1/rpc/course_attendance_summary",
   "/rest/v1/rpc/course_gradebook",
+  "/rest/v1/rpc/course_gradebook_history",
+  "/rest/v1/rpc/course_gradebook_export",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",

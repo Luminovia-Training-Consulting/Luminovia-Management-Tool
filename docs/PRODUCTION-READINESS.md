@@ -104,8 +104,9 @@ Each open row is a scope and acceptance gate, not an implementation claim. For a
 
 ## Verification record for LMS-P0-03
 
-- The quiz-gradebook slice adds private policy and grade revision history. It uses existing quiz attempts and enrolments, retains the original score and pass result, and does not change completion or certificate decisions.
-- Local verification on the integrated baseline passed 1,928 Vitest tests, 16 course-workspace database groups, both Academy edition suites, 11 API groups, the authoring integration, lint, TypeScript, formatting and documentation checks. The gradebook uses shared course styles and does not display cached grades offline. The expanded desktop/mobile Playwright journey was discovered, but could not run because the isolated QA runner was locked. GitHub CI, browser/accessibility acceptance and release remain unverified. See [LMS-BACKLOG.md](LMS-BACKLOG.md) for the remaining gradebook scope.
+- The quiz-gradebook slice adds private policy and grade revisions. Management and instructors can review the best current attempt, publish a grade, publish a reasoned correction or recalculate against a new quiz attempt or policy. Learners see their own published grade and revision history. Course staff can export a snapshot of current published grades. The original quiz score and pass result remain available to their existing completion rules.
+- The focused Vitest run passed 87 gradebook and OpenAPI cases. The isolated PostgreSQL migration replay passed 16 course-workspace groups, the course document and gradebook cases in both Academy editions, and 11 API-surface groups. These checks include simultaneous releases, revision history pagination, staff-only export, learner privacy, and active/grace/expired licence gates. Application and E2E TypeScript and ESLint passed.
+- The focused real Playwright gradebook journey passed on desktop and mobile Chromium on a dedicated, freshly migrated fictional stack. It covers DE/EN, light/dark, keyboard actions, release, correction, recalculation, history, the downloaded CSV, and scoped axe and layout checks. The complete browser suite and the broader acceptance scope in [LMS-BACKLOG.md](LMS-BACKLOG.md) remain open.
 
 ## Verification record for P1-01 opportunity forecasts
 

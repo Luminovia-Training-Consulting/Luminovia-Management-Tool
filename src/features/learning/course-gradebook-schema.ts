@@ -62,6 +62,17 @@ export interface CourseGradebookMark {
   reason?: string | null;
 }
 
+export interface CourseGradebookHistory {
+  revisions: CourseGradebookMark[];
+  next_before: number | null;
+}
+
+export interface CourseGradebookExportRow {
+  user_id: string;
+  name: string;
+  grade: CourseGradebookMark;
+}
+
 export interface CourseGradebook {
   can_manage: boolean;
   policy: {
