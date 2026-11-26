@@ -218,6 +218,7 @@ import {
 } from "../learning/course-classes-schema.ts";
 import {
   assignmentActions,
+  assignmentActionResult,
   courseAssignmentsProjection,
 } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
@@ -4819,7 +4820,7 @@ const nativePaths = {
     "courseAssignmentAction",
     "Premium LMS",
     "Save, publish, submit or assess a course assignment",
-    "Staff can save and publish versioned rubrics, grant an extension, record a review or configure teams. Pass team_id, title, member_ids and a nullable ISO timestamp due_at to save_team. Pass team_id to remove_team. Team membership is fixed after the first accepted submission. Participants submit their exact clean reservation to create an individual or shared team attempt. Writes compare the last read version.",
+    "Staff can save and publish versioned rubrics, grant an extension, record a review or configure teams. Pass team_id, title, member_ids and a nullable ISO timestamp due_at to save_team. Pass team_id to remove_team. Team membership is fixed after the first accepted submission. Participants submit their exact clean reservation to create an individual or shared team attempt. Writes compare the last read version. Use import_reviews with p_expected_version 0 and up to 25 rows with attempt_id, rubric_version, review_version and scores. The batch updates only unpublished drafts.",
     {
       ...course,
       p_assignment_id: uuid,
@@ -4827,7 +4828,7 @@ const nativePaths = {
       p_payload: { type: "object" },
       p_expected_version: version,
     },
-    object({ id: uuid }),
+    z.toJSONSchema(assignmentActionResult),
   ),
   "/rest/v1/rpc/course_submissions": rpc(
     "courseSubmissions",

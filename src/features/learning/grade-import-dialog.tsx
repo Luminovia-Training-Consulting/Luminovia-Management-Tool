@@ -25,7 +25,7 @@ type Props<Row> = {
   version: number;
   rosterSize: number;
   disabled: boolean;
-  mode: "percentage" | "points";
+  mode: "percentage" | "points" | "assignment";
   filePrefix: string;
   headers: readonly string[];
   templateRows: (start: number, end: number) => (string | number | null)[][];
@@ -49,6 +49,7 @@ export function GradeImportDialog<Row extends DraftGradeChange>({
   refresh,
 }: Props<Row>) {
   const { t } = useTranslation("examGradeImport");
+  const title = t(mode === "assignment" ? "assignmentTitle" : "title");
   const id = useId();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
@@ -128,7 +129,7 @@ export function GradeImportDialog<Row extends DraftGradeChange>({
         disabled={disabled || rosterSize === 0}
         onClick={() => setOpen(true)}
       >
-        {t("title")}
+        {title}
       </Button>
       <Dialog
         open={open}
@@ -137,8 +138,14 @@ export function GradeImportDialog<Row extends DraftGradeChange>({
           setOpen(next);
           if (!next) void prepare();
         }}
-        title={t("title")}
-        description={t(mode === "points" ? "pointsHint" : "hint")}
+        title={title}
+        description={t(
+          {
+            percentage: "hint",
+            points: "pointsHint",
+            assignment: "assignmentHint",
+          }[mode],
+        )}
       >
         <div className="space-y-3">
           {pages > 1 && (
@@ -193,7 +200,11 @@ export function GradeImportDialog<Row extends DraftGradeChange>({
           </Field>
           {reading && <p role="status">{t("reading")}</p>}
           {invalidRow && (
-            <Notice kind="error">{t("invalid", { row: invalidRow })}</Notice>
+            <Notice kind="error">
+              {t(mode === "assignment" ? "assignmentInvalid" : "invalid", {
+                row: invalidRow,
+              })}
+            </Notice>
           )}
           {preview?.rows.length === 0 && <p role="status">{t("empty")}</p>}
           {Boolean(preview?.rows.length) && (
@@ -243,7 +254,11 @@ export function GradeImportDialog<Row extends DraftGradeChange>({
               </Button>
             </>
           )}
-          {(stale || conflict) && <Notice kind="error">{t("stale")}</Notice>}
+          {(stale || conflict) && (
+            <Notice kind="error">
+              {t(mode === "assignment" ? "assignmentStale" : "stale")}
+            </Notice>
+          )}
           {save.isError && !stale && !conflict && (
             <Notice kind="error">{t("failed")}</Notice>
           )}

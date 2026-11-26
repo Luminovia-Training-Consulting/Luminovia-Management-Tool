@@ -32,6 +32,12 @@ const AssignmentTeams = lazy(() =>
   })),
 );
 
+const AssignmentGradeImport = lazy(() =>
+  import("./assignment-grade-import-panel").then((module) => ({
+    default: module.AssignmentGradeImport,
+  })),
+);
+
 type Action = (typeof assignmentActions)[number];
 type Command = (
   action: Action,
@@ -790,6 +796,17 @@ export function CourseAssignments({
               )}
               {!staff && !readOnly && !assignment.can_submit && (
                 <p>{t("assignmentsUnavailable")}</p>
+              )}
+              {canManage && assignment.attempts.length > 0 && (
+                <Suspense fallback={null}>
+                  <AssignmentGradeImport
+                    key={assignment.assignment_id + ":" + offset}
+                    course={course}
+                    assignment={assignment}
+                    page={1 + offset / 25}
+                    refresh={refresh}
+                  />
+                </Suspense>
               )}
               {assignment.attempts.length === 0 ? (
                 <p>{t("assignmentsNoAttempts")}</p>

@@ -101,6 +101,7 @@ import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import {
   assignmentActions,
+  assignmentActionResult,
   courseAssignmentsProjection,
 } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
@@ -1433,7 +1434,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_assignment_action": courseOperation(
     "writeAcademyCourseAssignment",
     "Save, publish, submit or assess a course assignment",
-    "Staff use version-checked publication, extensions, review and team management. Pass team_id, title, member_ids and nullable ISO timestamp due_at to save_team or team_id to remove_team. Membership is fixed after the first shared attempt. Learners confirm their own clean scanned version to submit to the individual or shared team attempt.",
+    "Staff use version-checked publication, extensions, review and team management. Pass team_id, title, member_ids and nullable ISO timestamp due_at to save_team or team_id to remove_team. Membership is fixed after the first shared attempt. Learners confirm their own clean scanned version to submit to the individual or shared team attempt. Staff can use import_reviews with p_expected_version 0 and up to 25 rows with attempt_id, rubric_version, review_version and scores to save unpublished grade drafts.",
     "active",
     record({
       ...run,
@@ -1442,7 +1443,7 @@ const coursePaths = {
       p_payload: { type: "object" },
       p_expected_version: expectedVersion,
     }),
-    record({ id: uuid }),
+    z.toJSONSchema(assignmentActionResult),
     true,
   ),
   "/rest/v1/rpc/course_submissions": courseOperation(
