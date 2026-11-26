@@ -767,6 +767,24 @@ const pairs: Record<string, [string, string]> = {
   ltiEdit: ["Registrierung bearbeiten", "Edit registration"],
   ltiField_title: ["Name des Lernwerkzeugs", "Learning tool name"],
   ltiField_client_id: ["LTI-Client-ID", "LTI client ID"],
+  ltiAdvantage: ["LTI-Advantage-Dienste", "LTI Advantage services"],
+  ltiServices: ["Werkzeugberechtigungen", "Tool permissions"],
+  ltiPublicKey: [
+    "Öffentlicher RSA-Schlüssel des Werkzeugs (JWK)",
+    "Tool public RSA key (JWK)",
+  ],
+  ltiRoster: [
+    "Teilnahme und Kursrollen teilen (NRPS)",
+    "Share course membership and roles (NRPS)",
+  ],
+  ltiRosterPrivacy: [
+    "Das Werkzeug sieht pseudonyme Kennungen und aktuelle Kursrollen. Namen und E-Mail-Adressen werden nicht weitergegeben.",
+    "The tool receives pseudonymous identifiers and current course roles. Names and email addresses stay in the portal.",
+  ],
+  ltiAdvantageError: [
+    "Die Einstellungen konnten nicht gespeichert werden. Prüfe den öffentlichen Schlüssel und lade die Registrierung neu.",
+    "Settings could not be saved. Check the public key and reload the registration.",
+  ],
   ltiDeploymentId: ["LTI-Deployment-ID", "LTI deployment ID"],
   ltiField_login_uri: ["Anmelde-URL des Werkzeugs", "Tool login URL"],
   ltiField_redirect_uri: [

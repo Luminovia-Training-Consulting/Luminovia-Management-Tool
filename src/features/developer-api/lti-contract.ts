@@ -6,6 +6,14 @@ const identifier = z.uuid();
 const version = z.number().int().positive();
 const inputVersion = z.number().int().nonnegative();
 const url = z.url().max(1500);
+const toolPublicKey = z.strictObject({
+  kty: z.literal("RSA"),
+  kid: z.string().regex(/^[A-Za-z0-9._-]{1,80}$/),
+  n: z.string().regex(/^[A-Za-z0-9_-]{342,683}$/),
+  e: z.string().regex(/^[A-Za-z0-9_-]{2,8}$/),
+  alg: z.literal("RS256").optional(),
+  use: z.literal("sig").optional(),
+});
 const configuration = {
   client_id: z.string().min(1).max(255),
   login_uri: url,
@@ -56,10 +64,41 @@ export function ltiCoursePaths(academy: boolean) {
                     login_uri: configuration.login_uri.optional(),
                     redirect_uri: configuration.redirect_uri.optional(),
                     target_uri: configuration.target_uri.optional(),
+                    nrps_enabled: z.boolean().optional(),
+                    tool_public_key: toolPublicKey.nullable().optional(),
                   }),
                 ),
               }),
             ),
+          },
+          ...errors,
+        },
+      },
+    },
+    "/rest/v1/rpc/configure_course_lti_advantage": {
+      post: {
+        operationId: "configureCourseLtiAdvantage",
+        summary: "Configure a course LTI tool's roster permission",
+        description:
+          "The course manager pins the public RS256 tool key and can enable NRPS for that one deployment. Changing the registration revision withdraws its existing service tokens. NRPS exposes opaque learner and instructor IDs with roles and no names or email addresses.",
+        tags: ["LTI 1.3"],
+        security,
+        ...(academy ? { "x-portal-licence": "active" } : {}),
+        requestBody: {
+          required: true,
+          content: jsonContent(
+            z.strictObject({
+              p_registration_id: identifier,
+              p_expected_version: version,
+              p_public_key: toolPublicKey.nullable(),
+              p_nrps: z.boolean(),
+            }),
+          ),
+        },
+        responses: {
+          "200": {
+            description: "New registration revision.",
+            content: jsonContent(version),
           },
           ...errors,
         },

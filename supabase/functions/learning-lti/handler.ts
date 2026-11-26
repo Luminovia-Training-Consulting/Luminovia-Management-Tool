@@ -1,4 +1,5 @@
 /** OIDC resource-link message boundary for a locally registered LTI 1.3 tool. */
+import type { createLtiAdvantage } from "./advantage.ts";
 import { boundedJson, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 export interface LaunchHint {
   id: string;
@@ -17,6 +18,7 @@ export interface AuthorizedLaunch {
   target_uri: string;
   redirect_uri: string;
   role: "Instructor" | "Learner";
+  nrps_enabled?: boolean;
 }
 
 type ProtocolRequest = {
@@ -113,6 +115,7 @@ async function signLaunch(
   signing: SigningKey,
   launch: AuthorizedLaunch,
   nonce: string,
+  services: object,
 ) {
   const issued = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT", kid: signing.publicKey.kid };
@@ -124,6 +127,7 @@ async function signLaunch(
     exp: issued + 120,
     jti: crypto.randomUUID(),
     nonce,
+    ...services,
     [claim + "message_type"]: "LtiResourceLinkRequest",
     [claim + "version"]: "1.3.0",
     [claim + "deployment_id"]: launch.id,
@@ -181,6 +185,7 @@ function authorization(body: Record<string, unknown>): ProtocolRequest | null {
 export function createLtiHandler(options: {
   origins: string[];
   signing: SigningKey | null;
+  advantage?: ReturnType<typeof createLtiAdvantage>;
   principal: (bearer: string) => Promise<Principal | null>;
 }) {
   return async (request: Request) => {
@@ -212,6 +217,8 @@ export function createLtiHandler(options: {
         ? json(200, { keys: [options.signing.publicKey] })
         : json(503, { error: "lti_unconfigured" });
     }
+    const service = await options.advantage?.route(request, path);
+    if (service) return service;
     if (!allowed) return json(403, { error: "lti_origin" });
     if (request.method === "OPTIONS") {
       headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -284,7 +291,12 @@ export function createLtiHandler(options: {
       return json(200, {
         redirect: launch.redirect_uri,
         state: protocol.state,
-        id_token: await signLaunch(options.signing, launch, protocol.nonce),
+        id_token: await signLaunch(
+          options.signing,
+          launch,
+          protocol.nonce,
+          options.advantage?.claims(launch) ?? {},
+        ),
       });
     } catch (error) {
       return json(error instanceof RequestBodyTooLarge ? 413 : 400, {

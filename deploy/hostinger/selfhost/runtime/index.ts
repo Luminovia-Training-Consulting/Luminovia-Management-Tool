@@ -370,6 +370,10 @@ Deno.serve({onError}, async (req: Request) => {
         pathname === "/calendar-feed" &&
         req.method === "GET";
     const publicLtiKeys = pathname === "/learning-lti/jwks" && req.method === "GET";
+    const ltiToolService =
+        (pathname === "/learning-lti/token" && req.method === "POST") ||
+        (req.method === "GET" &&
+            /^\/learning-lti\/memberships\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(pathname));
     const fileMode = url.searchParams.get("mode");
     const academyPwaAsset = pathname === "/files" && (req.method === "GET" || req.method === "HEAD") &&
         (fileMode === "academy-pwa-manifest" || fileMode === "academy-pwa-image");
@@ -391,7 +395,7 @@ Deno.serve({onError}, async (req: Request) => {
             },
         });
     }
-    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !publicLtiKeys && !credentialExchange && !companyIntegrationMethod && !academyPwaAsset) {
+    if (req.method !== "OPTIONS" && VERIFY_JWT && !capabilityFeed && !publicLtiKeys && !ltiToolService && !credentialExchange && !companyIntegrationMethod && !academyPwaAsset) {
         const token = getAuthToken(req);
         if (typeof token !== "string") {
             return getAuthErrorResponse(token);

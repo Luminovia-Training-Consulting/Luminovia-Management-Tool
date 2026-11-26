@@ -1,6 +1,6 @@
 /** Exercise course workspace RPCs with fictional actors in an isolated database. */
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
+import {generateKeyPairSync, randomUUID} from "node:crypto";
 import {z} from "zod";
 import {courseXapiArchiveSchema} from "../src/features/learning/xapi-schema.ts";
 import {portalOpenApi} from "../src/features/developer-api/contract.ts";
@@ -1223,12 +1223,71 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await assert.rejects(finish(learner, learnerSession, next, { nonce: "fresh-nonce" }), /PT409/);
         const fresh = await finish(learner, learnerSession, next, {nonce: "fresh-nonce", state: "fresh-state"});
         assert.equal(fresh.subject, launched.subject);
+        // An explicitly enabled roster uses the launch pseudonym and never
+        // returns account UUIDs, customer data or private contact information.
+        const {publicKey} = generateKeyPairSync("rsa", {modulusLength: 2048});
+        const key = {...publicKey.export({format: "jwk"}), kid: "fictional-lti-key"};
+        const configure = (who, session, version, publicKey, nrps) =>
+            invoke(who, session, "configure_course_lti_advantage", [
+                q(deployment), version, publicKey ? q(JSON.stringify(publicKey)) : "null", nrps,
+            ]);
+        const rosterScope = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+        const toolRpc = (name, args) => sql(`
+          begin; set local role service_role;
+          set local request.path=${q("/rpc/" + name)}; set local request.method='POST';
+          set local request.headers='{}'; select public.require_portal_access();
+          select to_jsonb(public.${name}(${args.join(",")})); commit;
+        `).then(JSON.parse);
+        const issue = (assertion, scopes = rosterScope) =>
+            toolRpc("lti_issue_service_token", [
+                q(deployment), 2, q(assertion), "now()+interval '4 minutes'", `array[${q(scopes)}]`,
+            ]);
+        const roster = (token, id = deployment, role = null, after = null, limit = 100) =>
+            toolRpc("lti_course_memberships", [
+                q(id), q(token), role ? q(role) : "null", after ? q(after) : "null", limit,
+            ]);
+        await assert.rejects(configure(learner, learnerSession, 1, key, true), /42501/);
+        await assert.rejects(configure(admin, managerSession, 1, {...key, d: "private-parameter"}, true), /22023/);
+        assert.equal(await configure(admin, managerSession, 1, key, true), 2);
+        await assert.rejects(configure(admin, managerSession, 1, key, true), /PT409/);
+        assert.ok(!Object.hasOwn((await invoke(learner, learnerSession, "course_lti_tools", [q(run)])).tools[0], "tool_public_key"));
+        const enabled = await start(learner, learnerSession);
+        const rosterLaunch = await finish(learner, learnerSession, enabled, {nonce: "roster-nonce", state: "roster-state"});
+        assert.equal(rosterLaunch.nrps_enabled, true);
+        assert.equal(rosterLaunch.subject, launched.subject);
+        assert.deepEqual(await toolRpc("lti_service_registration", [q(clientId), "null"]), {
+            id: deployment, version: 2, key,
+        });
+        await assert.rejects(invoke(admin, managerSession, "lti_service_registration", [q(clientId), q(deployment)]), /42501/);
+        await assert.rejects(issue("wrong-scope", "fictional.scope"), /22023/);
+        const token = await issue("fixture-assertion");
+        assert.match(token, /^[0-9a-f]{64}$/);
+        await assert.rejects(issue("fixture-assertion"), /42501/);
+        await assert.rejects(roster(token, randomUUID()), /42501/);
+        await assert.rejects(roster("0".repeat(64)), /42501/);
+        const membership = await roster(token);
+        assert.equal(membership.context_id, launched.context_id);
+        assert.equal(membership.members.length, 4);
+        assert.ok(membership.members.some(({user_id}) => user_id === launched.subject));
+        assert.ok(membership.members.every((member) => Object.keys(member).sort().join(",") === "roles,status,user_id"));
+        assert.ok(!JSON.stringify(membership).includes(learner));
+        assert.equal((await roster(token, deployment, "Instructor")).members.length, 1);
+        const firstPage = await roster(token, deployment, "Learner", null, 1);
+        assert.equal(firstPage.members.length, 2); // one page plus next-page marker row
+        const secondPage = await roster(token, deployment, "Learner", firstPage.members[0].user_id, 1);
+        assert.equal(secondPage.members[0].user_id, firstPage.members[1].user_id);
+        await sql(`update private.lti_service_tokens set expires_at=now()-interval '1 minute'
+            where token_hash=extensions.digest(${q(token)},'sha256')`);
+        await assert.rejects(roster(token), /42501/);
+        const beforeRevision = await issue("before-revision");
         const withheld = await start(learner, learnerSession);
-        assert.equal(await register(admin, managerSession, 1, login, false), 2);
+        assert.equal(await register(admin, managerSession, 2, login, false), 3);
+        await assert.rejects(roster(beforeRevision), /42501/);
         await assert.rejects(finish(learner, learnerSession, withheld), /42501/);
         await assert.rejects(start(learner, learnerSession), /42501/);
         // Signup/session entitlement is rechecked, even while the profile stays active.
-        assert.equal(await register(admin, managerSession, 2), 3);
+        assert.equal(await register(admin, managerSession, 3), 4);
+        await assert.rejects(roster(beforeRevision), /42501/);
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);

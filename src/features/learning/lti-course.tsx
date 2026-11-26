@@ -18,6 +18,8 @@ type Tool = {
   login_uri?: string;
   redirect_uri?: string;
   target_uri?: string;
+  nrps_enabled?: boolean;
+  tool_public_key?: JsonWebKey | null;
 };
 
 type ToolList = { can_manage: boolean; can_launch: boolean; tools: Tool[] };
@@ -236,6 +238,81 @@ function ToolForm({
   );
 }
 
+/** Enable roster provisioning for a deployment by pinning the tool's public key. */
+function ToolAdvantageForm({ tool, saved }: { tool: Tool; saved: () => void }) {
+  const { t } = useTranslation("learning");
+  const input = useId();
+  const save = useMutation({
+    mutationFn: async (form: FormData) => {
+      requireOnline();
+      const raw = String(form.get("key") ?? "").trim();
+      const key = raw ? JSON.parse(raw) : null;
+      if (key) {
+        const imported = await crypto.subtle.importKey(
+          "jwk",
+          key,
+          { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+          false,
+          ["verify"],
+        );
+        const algorithm = imported.algorithm as RsaHashedKeyAlgorithm;
+        if (algorithm.modulusLength < 2048 || algorithm.modulusLength > 4096)
+          throw new Error("lti_public_key");
+      }
+      const { error } = await db().rpc("configure_course_lti_advantage", {
+        p_registration_id: tool.id,
+        p_expected_version: tool.version,
+        p_public_key: key,
+        p_nrps: form.has("nrps"),
+      });
+      if (error) throw error;
+    },
+    onSuccess: saved,
+  });
+  return (
+    <details>
+      <summary>{t("ltiAdvantage")}</summary>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!save.isPending) save.mutate(new FormData(event.currentTarget));
+        }}
+      >
+        <fieldset disabled={save.isPending}>
+          <legend>{t("ltiServices")}</legend>
+          <label htmlFor={input}>{t("ltiPublicKey")}</label>
+          <textarea
+            id={input}
+            name="key"
+            rows={4}
+            maxLength={4096}
+            spellCheck={false}
+            defaultValue={
+              tool.tool_public_key
+                ? JSON.stringify(tool.tool_public_key, null, 2)
+                : ""
+            }
+          />
+          <label className="checkbox-row">
+            <input
+              name="nrps"
+              type="checkbox"
+              defaultChecked={tool.nrps_enabled}
+            />
+            {t("ltiRoster")}
+          </label>
+          <p>{t("ltiRosterPrivacy")}</p>
+          <div className="form-actions">
+            <Button type="submit">{t("ltiSave")}</Button>
+          </div>
+        </fieldset>
+        {save.isError && <Notice kind="error">{t("ltiAdvantageError")}</Notice>}
+        {save.isSuccess && <Notice>{t("saved")}</Notice>}
+      </form>
+    </details>
+  );
+}
+
 /** Current staff configure tool metadata; only current learners or instructors can launch. */
 export function CourseLtiTools({
   actor,
@@ -319,6 +396,11 @@ export function CourseLtiTools({
                     >
                       {t("ltiEdit")}
                     </Button>
+                    <ToolAdvantageForm
+                      key={tool.version}
+                      tool={tool}
+                      saved={() => void tools.refetch()}
+                    />
                   </>
                 )}
               </li>
