@@ -355,6 +355,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             for (const who of [learner, client, foreign]) await assert.rejects(usage(who), /42501/);
 
             assert.equal((await materialSearch(admin, current))[0].metadata.description, metadata.description);
+            assert.equal((await materialSearch(admin, current))[0].metadata.competencies, undefined);
             assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, true]]);
             await revise(admin, 1, { ...metadata, title: "Destination-only title" }, reused);
             assert.equal((await materialSearch(admin, run))[0].metadata.title, "Fictional workbook");
