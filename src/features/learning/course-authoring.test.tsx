@@ -44,6 +44,7 @@ const publishedContent = {
 };
 
 let studio: CourseContentStudio;
+let rejectSave: boolean;
 
 function mount(editable: boolean, manager = false) {
   const router = createMemoryRouter(
@@ -85,6 +86,7 @@ function mount(editable: boolean, manager = false) {
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
+  rejectSave = false;
   studio = {
     can_edit: true,
     published_version: 1,
@@ -101,6 +103,8 @@ beforeEach(async () => {
     if (name === "course_content_studio")
       return { abortSignal: async () => ({ data: studio, error: null }) };
     if (args.p_action === "save_draft") {
+      if (rejectSave)
+        return Promise.resolve({ data: null, error: { code: "PT409" } });
       studio = {
         ...studio,
         draft_version: studio.draft_version + 1,
@@ -240,4 +244,35 @@ it("blocks leaving a dirty draft until the author keeps editing or discards it",
   expect(
     window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
   ).toBe(true);
+});
+
+it("autosaves a valid draft without publishing it", async () => {
+  mount(true);
+  fireEvent.click(await screen.findByRole("button", { name: "Add module" }));
+  expect(
+    await screen.findByText("The draft was saved.", {}, { timeout: 4000 }),
+  ).toBeVisible();
+  expect(studio.draft_content?.modules.at(-1)?.title).toBe("New module");
+  expect(studio.published_version).toBe(1);
+});
+
+it("keeps local changes after a conflict until the author explicitly reloads", async () => {
+  rejectSave = true;
+  mount(true);
+  fireEvent.click(await screen.findByRole("button", { name: "Add module" }));
+  fireEvent.change(screen.getByLabelText("Module title"), {
+    target: { value: "Local edit" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  const reload = await screen.findByRole("button", {
+    name: "Discard local edits and reload",
+  });
+  expect(screen.getByLabelText("Module title")).toHaveValue("Local edit");
+  expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  studio = { ...studio, draft_version: 1, draft_content: publishedContent };
+  fireEvent.click(reload);
+  expect(await screen.findByText("Draft · revision 1")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Local edit" }),
+  ).not.toBeInTheDocument();
 });

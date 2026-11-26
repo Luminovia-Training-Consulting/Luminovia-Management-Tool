@@ -104,10 +104,9 @@ export function CourseAuthoring({
   const curriculum = useMemo(() => {
     if (dirty) return localDraft.content;
     if (!query.data) return emptyCurriculum;
-    const content =
-      authoring
-        ? (query.data.draft_content ?? query.data.published_content)
-        : query.data.published_content;
+    const content = authoring
+      ? (query.data.draft_content ?? query.data.published_content)
+      : query.data.published_content;
     return normalizeCourseCurriculum(content);
   }, [authoring, dirty, localDraft, query.data]);
 
@@ -140,20 +139,28 @@ export function CourseAuthoring({
   });
   const { mutate, isPending, isError, reset, error } = mutation;
   const conflict =
-    (dirty && (localDraft.published_version !== query.data?.published_version ||
-      localDraft.draft_version !== query.data?.draft_version)) ||
-    (typeof error === "object" && error !== null && "code" in error && error.code === "PT409");
+    (dirty &&
+      (localDraft.published_version !== query.data?.published_version ||
+        localDraft.draft_version !== query.data?.draft_version)) ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "PT409");
   const draftPayload = useMemo(() => {
     if (!localDraft) return null;
     try {
-      return { ...localDraft, content: normalizeCourseCurriculum(localDraft.content) };
+      return {
+        ...localDraft,
+        content: normalizeCourseCurriculum(localDraft.content),
+      };
     } catch {
       return null;
     }
   }, [localDraft]);
 
   useEffect(() => {
-    if (!dirty || !online || !draftPayload || conflict || isPending || isError) return;
+    if (!dirty || !online || !draftPayload || conflict || isPending || isError)
+      return;
     const timer = window.setTimeout(() => {
       mutate({ action: "save_draft", payload: draftPayload });
     }, 1800);
@@ -302,14 +309,18 @@ export function CourseAuthoring({
           <p>{t("curriculumHelp")}</p>
           <p className="course-authoring-status" aria-live="polite">
             {isPending
-              ? t(mutation.variables?.action === "save_draft" ? "curriculumSaving" : "curriculumApplying")
+              ? t(
+                  mutation.variables?.action === "save_draft"
+                    ? "curriculumSaving"
+                    : "curriculumApplying",
+                )
               : state.draft_version > 0
-              ? t("curriculumDraftVersion", { version: state.draft_version })
-              : state.published_version > 0
-                ? t("curriculumPublishedVersion", {
-                    version: state.published_version,
-                  })
-                : t("curriculumUnpublished")}
+                ? t("curriculumDraftVersion", { version: state.draft_version })
+                : state.published_version > 0
+                  ? t("curriculumPublishedVersion", {
+                      version: state.published_version,
+                    })
+                  : t("curriculumUnpublished")}
           </p>
         </div>
         <div className="form-actions">
@@ -323,7 +334,9 @@ export function CourseAuthoring({
           <Button
             type="button"
             variant="secondary"
-            disabled={!online || !dirty || !draftPayload || conflict || isPending}
+            disabled={
+              !online || !dirty || !draftPayload || conflict || isPending
+            }
             onClick={saveDraft}
           >
             {t("curriculumSaveDraft")}
@@ -342,23 +355,36 @@ export function CourseAuthoring({
           </Button>
         </div>
       </header>
-      {dirty && !conflict && <Notice>{t(draftPayload ? "curriculumUnsaved" : "curriculumInvalid")}</Notice>}
+      {dirty && !conflict && (
+        <Notice>
+          {t(draftPayload ? "curriculumUnsaved" : "curriculumInvalid")}
+        </Notice>
+      )}
       {conflict && (
         <div role="alert">
           <p>{t("curriculumConflict")}</p>
-          <Button type="button" variant="secondary" disabled={!online || query.isFetching} onClick={async () => {
-            const result = await query.refetch();
-            if (result.isSuccess) {
-              setLocalDraft(null);
-              reset();
-            }
-          }}>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!online || query.isFetching}
+            onClick={async () => {
+              const result = await query.refetch();
+              if (result.isSuccess) {
+                setLocalDraft(null);
+                reset();
+              }
+            }}
+          >
             {t("curriculumReloadDiscard")}
           </Button>
         </div>
       )}
       {isError && !conflict && <ErrorState />}
-      {mutation.isSuccess && !dirty && mutation.variables?.action === "save_draft" && <Notice>{t("curriculumSaved")}</Notice>}
+      {mutation.isSuccess &&
+        !dirty &&
+        mutation.variables?.action === "save_draft" && (
+          <Notice>{t("curriculumSaved")}</Notice>
+        )}
 
       {preview ? (
         <CourseContents curriculum={curriculum} />
@@ -499,7 +525,7 @@ export function CourseAuthoring({
                   value={activeLesson.body}
                   onChange={(body) => reviseLesson({ body })}
                   label={t("lessonContent")}
-                  readOnly={isPending}
+                  disabled={isPending}
                 />
                 <div className="form-actions">
                   <Button
@@ -687,7 +713,9 @@ export function CourseAuthoring({
             <Button
               type="button"
               variant="secondary"
-              disabled={!online || !participantId || dirty || mutation.isPending}
+              disabled={
+                !online || !participantId || dirty || mutation.isPending
+              }
               onClick={() =>
                 mutation.mutate({
                   action: "migrate",

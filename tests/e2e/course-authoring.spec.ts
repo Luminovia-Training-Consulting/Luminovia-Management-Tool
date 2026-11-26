@@ -11,7 +11,7 @@ test.skip(
 test("course author publishes a versioned module and learner sees only the assigned publication", async ({
   page,
   browser,
-}) => {
+}, info) => {
   test.setTimeout(120_000);
   const manager = await actor("Fictional course author", "admin");
   const company = await actor("Fictional course contact", "client");
@@ -93,6 +93,8 @@ test("course author publishes a versioned module and learner sees only the assig
   await page.getByLabel("Modultitel").fill(`Fictional module ${suffix}`);
   await page.getByRole("button", { name: "Lektion hinzufügen" }).click();
   await page.getByLabel("Lektionstitel").fill(`Fictional lesson ${suffix}`);
+  const lessonText = `Fictional lesson body ${suffix}`;
+  await page.getByRole("textbox", { name: "Lektionsinhalt" }).fill(lessonText);
   await page.getByRole("button", { name: "Entwurf speichern" }).click();
   await expect(page.getByText(/Entwurf · Fassung 1/)).toBeVisible();
   await page.getByRole("button", { name: "Veröffentlichen" }).click();
@@ -108,21 +110,32 @@ test("course author publishes a versioned module and learner sees only the assig
   expect(learnerState.draft_content).toBeNull();
   expect(learnerState.versions).toEqual([]);
 
-  const learnerPage = await browser.newPage({
-    viewport: page.viewportSize() ?? undefined,
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL!,
+    viewport: info.project.use.viewport,
+    isMobile: info.project.use.isMobile,
+    hasTouch: info.project.use.hasTouch,
   });
-  await login(learnerPage, learner.email, /\/learning$/);
-  await learnerPage.goto(workspace);
-  await expect(
-    learnerPage.getByRole("heading", { name: `Fictional module ${suffix}` }),
-  ).toBeVisible();
-  await expect(
-    learnerPage.getByRole("heading", { name: `Fictional lesson ${suffix}` }),
-  ).toBeVisible();
-  await expect(
-    learnerPage.getByRole("button", { name: "Entwurf speichern" }),
-  ).toHaveCount(0);
-  await expect(
-    learnerPage.getByRole("button", { name: "Veröffentlichen" }),
-  ).toHaveCount(0);
+  try {
+    const learnerPage = await context.newPage();
+    await login(learnerPage, learner.email, /\/learning$/);
+    await learnerPage.goto(workspace);
+    await expect(
+      learnerPage.getByRole("heading", { name: `Fictional module ${suffix}` }),
+    ).toBeVisible();
+    await expect(
+      learnerPage.getByRole("heading", { name: `Fictional lesson ${suffix}` }),
+    ).toBeVisible();
+    await expect(
+      learnerPage.getByText(lessonText, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      learnerPage.getByRole("button", { name: "Entwurf speichern" }),
+    ).toHaveCount(0);
+    await expect(
+      learnerPage.getByRole("button", { name: "Veröffentlichen" }),
+    ).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
 });
