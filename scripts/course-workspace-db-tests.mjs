@@ -256,6 +256,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
             assert.deepEqual(await materialSearch(learner), [{
                 ...match, course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
+                can_edit_metadata: false, metadata: null, metadata_revision: 0,
             }]);
             assert.equal((await materialSearch(admin, run))[0].can_upload, true);
             assert.equal((await materialSearch(teacher, run))[0].can_upload, true);
@@ -265,6 +266,31 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.deepEqual(await materialSearch(learner, run, "AGREED", "material", 1), []);
             assert.deepEqual(await materialSearch(client, run), []);
             assert.deepEqual(await materialSearch(foreign), []);
+            const metadata = { title: "  Fictional workbook  ", description: "Course handout", subject: "Local storage", licence: "CC BY 4.0", language: "en", tags: ["filesystems"] };
+            const revise = (who, expected, content = metadata, id = resource) =>
+                rpc(who, "set_course_material_metadata", [q(id), expected, `${q(JSON.stringify(content))}::jsonb`]);
+            assert.equal((await materialSearch(admin, run))[0].can_edit_metadata, true);
+            assert.equal((await materialSearch(teacher, run))[0].can_edit_metadata, false);
+            for (const who of [learner, teacher, client, foreign]) {
+                await assert.rejects(revise(who, 0), /42501/);
+            }
+            await assert.rejects(revise(admin, 0, { ...metadata, tags: ["Alpha", "alpha"] }), /22023/);
+            assert.equal(await revise(admin, 0), 1);
+            assert.equal(await revise(admin, 0), 1);
+            const revised = await Promise.allSettled([
+                revise(admin, 1, { ...metadata, description: "Edited concurrently A" }),
+                revise(admin, 1, { ...metadata, description: "Edited concurrently B" }),
+            ]);
+            assert.equal(revised.filter(({status}) => status === "fulfilled").length, 1);
+            assert.match(revised.find(({status}) => status === "rejected").reason.message, /PT409/);
+            const rows = await materialSearch(learner, run, "FILESYSTEMS");
+            assert.equal(rows.length, 1);
+            assert.deepEqual(rows[0].metadata, { ...metadata, title: "Fictional workbook", description: rows[0].metadata.description });
+            assert.match(rows[0].metadata.description, /^Edited concurrently [AB]$/);
+            assert.equal(rows[0].metadata_revision, 2);
+            assert.deepEqual(await materialSearch(foreign, run, "filesystems"), []);
+            assert.equal(await sql(`select content->>'description' from private.course_material_metadata_revisions where resource_id=${q(resource)} and revision=1`), "Course handout");
+            assert.equal(await sql(`select count(*) from public.audit_events where resource_id=${q(resource)} and action='course.material_metadata_revised'`), "2");
             await actor(learner, `set local request.path='/rpc/search_course_materials';
               set local request.method='POST';select public.require_portal_access()`);
             assert.equal((await workspace(client)).resources.length, 0);
@@ -299,6 +325,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(acknowledgedPlan.can_confirm, false);
             assert.ok(acknowledgedPlan.blockers.some(({kind}) => kind === "private.course_resources"));
             assert.deepEqual(await materialSearch(learner), []);
+            assert.deepEqual(await materialSearch(learner, run, "filesystems"), []);
+            await assert.rejects(revise(admin, 2), /42501/);
             await assert.rejects(
                 rpc(learner, "course_document_access", [q("resource"), q(resource)]),
                 /42501/,

@@ -26,60 +26,12 @@ export const operationsRpcDocumentation = {
   list_crm_opportunities: {
     summary: "List sales opportunities for one organisation",
     description:
-      "Requires organisations.manage on every request; company membership alone is not sufficient. Lists no more than 200 opportunities for the specified existing organisation, including read-only history for archived organisations. Values are estimates in their recorded currency and are not converted or invoiced.",
+      "Requires organisations.manage on every request; company membership alone is not sufficient. Returns up to 200 opportunities for the specified existing organisation, including read-only history for archived organisations. Estimated values and optional close forecasts retain their recorded currency and are not actual revenue, converted or invoiced.",
     parameters: {
       p_organisation_id: id,
       p_limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
     },
     required: ["p_organisation_id"],
-    result: {
-      type: "array",
-      items: {
-        type: "object",
-        required: [
-          "id",
-          "organisation_id",
-          "title",
-          "stage",
-          "estimated_value",
-          "currency",
-          "version",
-          "created_at",
-          "updated_at",
-        ],
-        properties: {
-          id,
-          organisation_id: id,
-          title: { type: "string" },
-          stage: {
-            type: "string",
-            enum: [
-              "identified",
-              "outreach_qualified",
-              "contacted",
-              "response_received",
-              "qualified_opportunity",
-              "meeting_scheduled",
-              "negotiation",
-              "proposal_submitted",
-              "contract_pending",
-              "contract_signed",
-              "active_customer",
-              "lost",
-              "dormant",
-            ],
-          },
-          estimated_value: { type: ["number", "null"] },
-          currency: {
-            type: "string",
-            enum: ["EUR", "AUD", "CHF", "GBP", "USD"],
-          },
-          version: { type: "integer", minimum: 1 },
-          created_at: { type: "string", format: "date-time" },
-          updated_at: { type: "string", format: "date-time" },
-        },
-      },
-    },
     errors: {
       "403":
         "The caller does not have current organisations.manage permission.",
@@ -134,6 +86,8 @@ export const operationsRpcDocumentation = {
           "stage",
           "estimated_value",
           "currency",
+          "close_probability",
+          "expected_close_date",
           "version",
           "created_at",
           "updated_at",
@@ -165,6 +119,12 @@ export const operationsRpcDocumentation = {
             type: "string",
             enum: ["EUR", "AUD", "CHF", "GBP", "USD"],
           },
+          close_probability: {
+            type: ["number", "null"],
+            minimum: 0,
+            maximum: 100,
+          },
+          expected_close_date: { type: ["string", "null"], format: "date" },
           version: { type: "integer", minimum: 1 },
           created_at: { type: "string", format: "date-time" },
           updated_at: { type: "string", format: "date-time" },
@@ -200,6 +160,10 @@ export const operationsRpcDocumentation = {
           "event_type",
           "from_stage",
           "to_stage",
+          "from_close_probability",
+          "to_close_probability",
+          "from_expected_close_date",
+          "to_expected_close_date",
           "actor_id",
           "request_id",
           "occurred_at",
@@ -209,9 +173,27 @@ export const operationsRpcDocumentation = {
           opportunity_id: id,
           organisation_id: id,
           version: { type: "integer", minimum: 1 },
-          event_type: { type: "string", enum: ["created", "stage_changed"] },
+          event_type: {
+            type: "string",
+            enum: ["created", "stage_changed", "forecast_updated"],
+          },
           from_stage: { type: ["string", "null"] },
           to_stage: { type: "string" },
+          from_close_probability: {
+            type: ["number", "null"],
+            minimum: 0,
+            maximum: 100,
+          },
+          to_close_probability: {
+            type: ["number", "null"],
+            minimum: 0,
+            maximum: 100,
+          },
+          from_expected_close_date: {
+            type: ["string", "null"],
+            format: "date",
+          },
+          to_expected_close_date: { type: ["string", "null"], format: "date" },
           actor_id: id,
           request_id: id,
           occurred_at: { type: "string", format: "date-time" },
@@ -280,6 +262,40 @@ export const operationsRpcDocumentation = {
       "404": "The opportunity is unavailable under the specified organisation.",
       "409":
         "The opportunity version changed; reload before retrying the stage change.",
+    },
+  },
+  update_crm_opportunity_forecast: {
+    summary:
+      "Update the probability and expected close date for an opportunity",
+    description:
+      "Requires organisations.manage and an active organisation. Submit the version from the latest list call; stale edits fail without overwriting another update. Keep p_request_id for an identical retry. Probability is an optional 0–100 percent estimate with at most two decimal places; null means unknown, while zero is an explicit estimate. The expected date is optional and independently clearable. These fields are forecasts, not actual revenue, accepted prices, or currency-converted values. Every committed update creates an immutable history event.",
+    parameters: {
+      p_organisation_id: id,
+      p_opportunity_id: id,
+      p_close_probability: {
+        type: ["number", "null"],
+        minimum: 0,
+        maximum: 100,
+        multipleOf: 0.01,
+        description:
+          "Optional estimated close probability; null means unknown.",
+      },
+      p_expected_close_date: {
+        type: ["string", "null"],
+        format: "date",
+        description: "Optional expected date; null clears the estimate.",
+      },
+      p_expected_version: { type: "integer", minimum: 1 },
+      p_request_id: requestId,
+    },
+    errors: {
+      "400":
+        "The forecast is invalid, unchanged, or the request ID was reused with different input.",
+      "403":
+        "The caller lacks organisations.manage permission or the organisation is archived.",
+      "404": "The opportunity is unavailable under the specified organisation.",
+      "409":
+        "The opportunity version changed; reload before retrying the forecast.",
     },
   },
   organisation_contracts: {

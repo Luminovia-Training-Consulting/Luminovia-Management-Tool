@@ -1,4 +1,4 @@
-/** Native course file sharing through Auth, the scanner and the protected download gateway. */
+/** Native course file sharing and catalogue discovery through Auth, the scanner and the protected download gateway. */
 import {expect, type BrowserContext, type Page, test} from "@playwright/test";
 import {createHash, randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
@@ -68,6 +68,12 @@ const courseFiles = (page: Page) => page.getByRole("region", {name: "Kursdateien
 const courseFile = (page: Page, name: string) => courseFiles(page).getByRole("listitem").filter({
     has: page.getByText(name, {exact: true}),
 });
+const materialsPath = "/learning?view=materials";
+const materialLibrary = (page: Page) => page.getByRole("region", {name: "Kursmaterialien", exact: true});
+const libraryFile = (page: Page, name: string) => materialLibrary(page).getByRole("listitem").filter({
+    has: page.getByText(name, {exact: true}),
+});
+const editMetadataName = "Metadaten bearbeiten";
 const withdrawName = "Aus Kurs entfernen";
 
 /** Share fixtures only with audiences accepted by the course selector and server action. */
@@ -83,13 +89,18 @@ async function upload(page: Page, name: string, bytes: Buffer, audience: CourseR
     await expect(courseFile(page, name)).toBeVisible();
 }
 
-test("the assigned lecturer can scan, share and withdraw their own course material within the audience", async ({page, browser}) => {
+test("the assigned lecturer can scan, share, describe and withdraw their own course material within the audience", async ({page, browser}) => {
     test.setTimeout(150_000);
     const f = await fixture();
     const path = `/courses/${f.run}/workspace#course-materials`;
     const staffName = `Fictional-staff-${f.suffix}.txt`;
     const participantName = `Fictional-course-${f.suffix}.txt`;
     const participantBytes = Buffer.from(`Fictional reviewed course material ${f.suffix}.`);
+    const materialTitle = "Fictional orbital map";
+    const description = "Practice reading a fictional star chart.";
+    const subject = `Orbital cartography ${f.suffix}`;
+    const participantTag = `chart-exercise-${f.suffix}`;
+    const staffTag = `tutor-notes-${f.suffix}`;
     const contexts: BrowserContext[] = [];
 
     async function openAs(email: string, landing = /\/$/) {
@@ -140,6 +151,24 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
             p_action: "resource_remove", p_payload: {id: staffResource.id}, p_expected_version: 0});
         expect(forbiddenWithdrawal.error?.code).toBe("42501");
 
+        // Tag the existing staff share as its manager; no extra upload or browser setup.
+        expect(await checked(f.admin.rpc("set_course_material_metadata", {
+            p_resource_id: staffResource.id, p_expected_revision: 0,
+            p_metadata: {title: "", description: "", subject: "", language: "", licence: "", tags: [staffTag]},
+        }), {requireData: true})).toBe(1);
+
+        await page.goto(materialsPath);
+        await materialLibrary(page).getByRole("searchbox").fill(participantName);
+        const editableMaterial = libraryFile(page, participantName);
+        await editableMaterial.getByRole("button", {name: editMetadataName, exact: true}).click();
+        await page.getByLabel("Titel", {exact: true}).fill(materialTitle);
+        await page.getByLabel("Beschreibung", {exact: true}).fill(description);
+        await page.getByLabel("Fachgebiet", {exact: true}).fill(subject);
+        await page.getByLabel("Schlagwörter", {exact: true}).fill(`map-review, ${participantTag}`);
+        await page.getByRole("button", {name: "Metadaten speichern", exact: true}).click();
+        await expect(editableMaterial.getByText(materialTitle, {exact: true})).toBeVisible();
+        await page.goto(path);
+
         const learnerPage = await openAs(f.learner.email, /\/learning$/);
         const learner = await signIn(f.learner.email);
         const sharedFile = courseFile(learnerPage, participantName);
@@ -157,10 +186,25 @@ test("the assigned lecturer can scan, share and withdraw their own course materi
         const materialQuery = {p_course_id: null, p_search: f.suffix, p_category: "material", p_offset: 0};
         expect((await checked(learner.client.rpc("search_course_materials", materialQuery), {requireData: true}))
             .map((resource: {name: string}) => resource.name)).toEqual([participantName]);
-        await learnerPage.goto("/learning?view=materials");
-        await learnerPage.getByRole("searchbox", {name: "Nach Dateiname suchen"}).fill(f.suffix);
-        await expect(learnerPage.getByRole("button", {name: `${participantName} herunterladen`})).toBeVisible();
-        await expect(learnerPage.getByRole("button", {name: `${staffName} herunterladen`})).toHaveCount(0);
+        await learnerPage.goto(materialsPath);
+        const learnerLibrary = materialLibrary(learnerPage);
+        const search = learnerLibrary.getByRole("searchbox");
+        const noMatches = learnerLibrary.getByText("Keine passenden Dateien gefunden.", {exact: true});
+        const sharedMaterial = libraryFile(learnerPage, participantName);
+
+        // Start each metadata lookup from a settled empty result, so a stale row cannot pass the assertion.
+        await search.fill(staffName);
+        await expect(noMatches).toBeVisible();
+        await search.fill(subject);
+        await expect(sharedMaterial.getByText(description, {exact: true})).toBeVisible();
+        await search.fill(staffTag);
+        await expect(noMatches).toBeVisible();
+        await expect(learnerLibrary.getByRole("listitem")).toHaveCount(0);
+        await search.fill(participantTag);
+        await expect(sharedMaterial.getByText(materialTitle, {exact: true})).toBeVisible();
+        await expect(sharedMaterial.getByText(description, {exact: true})).toBeVisible();
+        await expect(sharedMaterial.getByRole("button", {name: `${participantName} herunterladen`, exact: true})).toBeVisible();
+        await expect(sharedMaterial.getByRole("button", {name: editMetadataName, exact: true})).toHaveCount(0);
         await learnerPage.goto(path);
         const mobileNavigation = learnerPage.getByLabel("Kursbereich", {exact: true});
         if ((learnerPage.viewportSize()?.width ?? Infinity) <= 850) {

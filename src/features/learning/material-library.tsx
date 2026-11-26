@@ -1,5 +1,10 @@
-import { useDeferredValue, useId, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+/** Permission-filtered course catalogue and the exact-share metadata editor. */
+import { useDeferredValue, useId, useRef, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -7,8 +12,10 @@ import {
   Field,
   Loading,
   NextPageError,
+  Notice,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { requireOnline, useOnline } from "../../lib/online";
 import { canRetryNextPage, throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import {
@@ -16,6 +23,11 @@ import {
   type CourseOverview,
   type CourseResource,
 } from "./api";
+import {
+  materialLanguage,
+  materialMetadataSchema,
+  type MaterialMetadata,
+} from "./material-metadata-schema";
 import { DownloadButton } from "./resources";
 
 const pageSize = 24;
@@ -26,7 +38,266 @@ type Material = Pick<CourseResource, "id" | "name" | "version" | "category"> & {
   course_title: string;
   organisation_name: string | null;
   can_upload: boolean;
+  can_edit_metadata: boolean;
+  metadata: MaterialMetadata | null;
+  metadata_revision: number;
 };
+
+const emptyMetadata: MaterialMetadata = {
+  title: "",
+  description: "",
+  subject: "",
+  licence: "",
+  language: "",
+  tags: [],
+};
+const languageLabels = {
+  "": "materialLanguageUnspecified",
+  de: "materialLanguageGerman",
+  en: "materialLanguageEnglish",
+  other: "materialLanguageOther",
+} as const;
+
+/** Keep the revision that opened the form; background refreshes must not rebase unsaved text. */
+function MaterialMetadataEditor({
+  actor,
+  material,
+  onClose,
+}: {
+  actor: string;
+  material: Material;
+  onClose: (saved?: boolean) => void;
+}) {
+  const { t } = useTranslation("learning");
+  const id = useId();
+  const online = useOnline();
+  const queryClient = useQueryClient();
+  const [revision] = useState(material.metadata_revision);
+  const [metadata, setMetadata] = useState(material.metadata ?? emptyMetadata);
+  const [tags, setTags] = useState(metadata.tags.join(", "));
+  const [invalid, setInvalid] = useState(false);
+  const save = useMutation({
+    networkMode: "always",
+    mutationFn: async (data: MaterialMetadata) => {
+      requireOnline();
+      const { error } = await db().rpc("set_course_material_metadata", {
+        p_resource_id: material.id,
+        p_expected_revision: revision,
+        p_metadata: data,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: courseMaterialLibraryKey(actor),
+      });
+      onClose(true);
+    },
+  });
+  const conflict =
+    material.metadata_revision !== revision ||
+    (save.error && "code" in save.error && save.error.code === "PT409");
+
+  return (
+    <form
+      className="material-metadata-form"
+      aria-label={t("materialEditMetadata")}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!online || save.isPending || conflict) return;
+        const data = materialMetadataSchema.safeParse({
+          ...metadata,
+          tags: tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        });
+        setInvalid(!data.success);
+        if (data.success) save.mutate(data.data);
+      }}
+    >
+      <fieldset disabled={save.isPending}>
+        <p>{t("materialMetadataVisibility")}</p>
+        <Field id={`${id}-title`} label={t("materialMetadataTitle")}>
+          <input
+            maxLength={160}
+            value={metadata.title}
+            onChange={(event) =>
+              setMetadata({ ...metadata, title: event.target.value })
+            }
+          />
+        </Field>
+        <Field
+          id={`${id}-description`}
+          label={t("materialMetadataDescription")}
+        >
+          <textarea
+            rows={3}
+            maxLength={2000}
+            value={metadata.description}
+            onChange={(event) =>
+              setMetadata({ ...metadata, description: event.target.value })
+            }
+          />
+        </Field>
+        <Field id={`${id}-subject`} label={t("materialMetadataSubject")}>
+          <input
+            maxLength={120}
+            value={metadata.subject}
+            onChange={(event) =>
+              setMetadata({ ...metadata, subject: event.target.value })
+            }
+          />
+        </Field>
+        <Field
+          id={`${id}-tags`}
+          label={t("materialMetadataTags")}
+          hint={t("materialMetadataTagHelp")}
+          error={invalid}
+        >
+          <input
+            maxLength={420}
+            value={tags}
+            onChange={(event) => {
+              setTags(event.target.value);
+              setInvalid(false);
+            }}
+          />
+        </Field>
+        <Field id={`${id}-language`} label={t("materialMetadataLanguage")}>
+          <select
+            value={metadata.language}
+            onChange={(event) =>
+              setMetadata({
+                ...metadata,
+                language: materialLanguage.parse(event.target.value),
+              })
+            }
+          >
+            {materialLanguage.options.map((value) => (
+              <option key={value} value={value}>
+                {t(languageLabels[value])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field id={`${id}-licence`} label={t("materialMetadataLicence")}>
+          <input
+            maxLength={160}
+            value={metadata.licence}
+            onChange={(event) =>
+              setMetadata({ ...metadata, licence: event.target.value })
+            }
+          />
+        </Field>
+      </fieldset>
+      {conflict ? (
+        <Notice kind="error">{t("materialMetadataConflict")}</Notice>
+      ) : (
+        save.isError && (
+          <Notice kind="error">{t("materialMetadataSaveFailed")}</Notice>
+        )
+      )}
+      {!online && <p role="status">{t("materialMetadataOffline")}</p>}
+      <div className="form-actions">
+        <Button
+          type="submit"
+          disabled={!online || save.isPending || Boolean(conflict)}
+        >
+          {t("materialSaveMetadata")}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={save.isPending}
+          onClick={() => {
+            if (conflict)
+              void queryClient.invalidateQueries({
+                queryKey: courseMaterialLibraryKey(actor),
+              });
+            onClose();
+          }}
+        >
+          {t("materialCancelMetadata")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Presentation and editing share the same row; downloads always use the original resource ID. */
+function MaterialItem({
+  actor,
+  material,
+  readOnly,
+}: {
+  actor: string;
+  material: Material;
+  readOnly: boolean;
+}) {
+  const { t } = useTranslation("learning");
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const edit = useRef<HTMLButtonElement>(null);
+  const metadata = material.metadata;
+  const detail = [
+    metadata?.subject,
+    metadata?.language && t(languageLabels[metadata.language]),
+    metadata?.licence,
+  ].filter(Boolean);
+  return (
+    <li>
+      {metadata?.title && <h3>{metadata.title}</h3>}
+      <strong>{material.name}</strong>
+      <small>
+        {t(material.category)} · {t("version", { version: material.version })}
+      </small>
+      {metadata?.description && (
+        <p className="material-metadata-description">{metadata.description}</p>
+      )}
+      {detail.length > 0 && <p>{detail.join(" · ")}</p>}
+      {!!metadata?.tags.length && (
+        <small>
+          {t("materialMetadataTags")}: {metadata.tags.join(", ")}
+        </small>
+      )}
+      <div className="form-actions">
+        <DownloadButton
+          kind="resource"
+          id={material.id}
+          name={material.name}
+          label={t("materialDownload", { name: material.name })}
+        />
+        {!readOnly && material.can_edit_metadata && (
+          <Button
+            ref={edit}
+            type="button"
+            variant="secondary"
+            aria-expanded={editing}
+            onClick={() => {
+              setSaved(false);
+              setEditing(true);
+            }}
+          >
+            {t("materialEditMetadata")}
+          </Button>
+        )}
+      </div>
+      {saved && <Notice>{t("materialMetadataSaved")}</Notice>}
+      {!readOnly && material.can_edit_metadata && editing && (
+        <MaterialMetadataEditor
+          actor={actor}
+          material={material}
+          onClose={(confirmed) => {
+            setSaved(Boolean(confirmed));
+            setEditing(false);
+            edit.current?.focus();
+          }}
+        />
+      )}
+    </li>
+  );
+}
 
 export function MaterialLibrary({
   actor,
@@ -104,7 +375,11 @@ export function MaterialLibrary({
             ))}
           </select>
         </Field>
-        <Field id={id + "-search"} label={t("materialSearch")}>
+        <Field
+          id={id + "-search"}
+          label={t("materialSearch")}
+          hint={t("materialSearchHint")}
+        >
           <input
             id={id + "-search"}
             type="search"
@@ -148,19 +423,12 @@ export function MaterialLibrary({
               {first.organisation_name && <p>{first.organisation_name}</p>}
               <ul className="learning-resources">
                 {resources.map((resource) => (
-                  <li key={resource.id}>
-                    <strong>{resource.name}</strong>
-                    <small>
-                      {t(resource.category)} ·{" "}
-                      {t("version", { version: resource.version })}
-                    </small>
-                    <DownloadButton
-                      kind="resource"
-                      id={resource.id}
-                      name={resource.name}
-                      label={t("materialDownload", { name: resource.name })}
-                    />
-                  </li>
+                  <MaterialItem
+                    key={resource.id}
+                    actor={actor}
+                    material={resource}
+                    readOnly={readOnly}
+                  />
                 ))}
               </ul>
               <div className="button-row">

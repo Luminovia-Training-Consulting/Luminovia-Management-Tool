@@ -87,6 +87,30 @@
   color: var(--muted);
 }
 
+.material-metadata-form {
+  margin-block-start: 0.75rem;
+  max-inline-size: 38rem;
+}
+
+.material-metadata-form fieldset {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.material-metadata-description {
+  white-space: pre-wrap;
+}
+
+.course-gradebook-band-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  column-gap: 1rem;
+}
+
 .learning-progress {
   font-weight: 650;
 }

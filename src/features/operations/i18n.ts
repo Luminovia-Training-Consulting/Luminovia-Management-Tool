@@ -17,6 +17,35 @@ const pairs: Record<string, [string, string]> = {
   crmOpportunityTitle: ["Vertriebschance", "Opportunity"],
   crmEstimatedValue: ["Geschätzter Wert", "Estimated value"],
   crmCurrency: ["Währung", "Currency"],
+  crmCloseProbabilityLabel: [
+    "Abschlusswahrscheinlichkeit (%)",
+    "Close probability (%)",
+  ],
+  crmExpectedCloseDateLabel: [
+    "Voraussichtliches Abschlussdatum",
+    "Expected closing date",
+  ],
+  crmForecastHelp: [
+    "Leere Felder bedeuten unbekannt; 0 % ist eine bekannte Einschätzung. Diese Werte sind Prognosen, kein Umsatz oder verbindlicher Preis.",
+    "Empty fields mean unknown; 0% is an explicit estimate. These are forecasts, not revenue or a committed price.",
+  ],
+  crmCurrentForecast: [
+    "Gespeicherte Prognose: {{probability}} · {{date}}",
+    "Saved forecast: {{probability}} · {{date}}",
+  ],
+  crmSaveForecast: ["Prognose speichern", "Save forecast"],
+  crmForecastValidation: [
+    "Wahrscheinlichkeit muss zwischen 0 und 100 liegen (höchstens zwei Nachkommastellen); prüfe auch das Datum.",
+    "Probability must be between 0 and 100 (at most two decimals); also check the date.",
+  ],
+  crmForecastSaveError: [
+    "Die Prognose wurde nicht bestätigt. Der gespeicherte Stand bleibt maßgeblich.",
+    "The forecast was not confirmed. The persisted state remains authoritative.",
+  ],
+  crmOpportunityForecastChanged: [
+    "Prognose geändert: Wahrscheinlichkeit {{fromProbability}} → {{toProbability}}, Abschlussdatum {{fromDate}} → {{toDate}}",
+    "Forecast changed: probability {{fromProbability}} → {{toProbability}}, closing date {{fromDate}} → {{toDate}}",
+  ],
   crmCreateOpportunity: ["Chance anlegen", "Create opportunity"],
   crmValueUnspecified: ["Wert nicht angegeben", "Value not specified"],
   crmSaveError: [

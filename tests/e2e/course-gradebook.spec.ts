@@ -1,6 +1,7 @@
 /** Staff release a real quiz grade to an enrolled learner on the disposable QA stack. */
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { enablePremiumAndLinkParticipant } from "../../scripts/testing/company-participant.mjs";
 import { actor, api, checked, login } from "./helpers/accounts-support";
 
@@ -132,6 +133,7 @@ test("staff save the default quiz grading scale and release a grade to the enrol
 
   await login(page, manager.email);
   await page.goto(workspace);
+  await page.getByLabel("Farbschema", { exact: true }).selectOption("light");
   const staffGradebook = page.getByRole("region", title);
   await expect(staffGradebook.getByRole("heading", title)).toBeVisible();
   await expect(staffGradebook.getByRole("combobox")).toHaveValue("percentage");
@@ -141,8 +143,21 @@ test("staff save the default quiz grading scale and release a grade to the enrol
   const release = learnerRow.getByRole("button", releaseGrade);
   await expect(learnerRow).toBeVisible();
   await expect(release).toHaveCount(0);
-  await staffGradebook.getByRole("button", saveScale).click();
+  await staffGradebook.getByRole("button", saveScale).press("Enter");
   await expect(release).toBeEnabled();
+  const checkLayout = async () => {
+    expect(
+      await staffGradebook.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    const result = await new AxeBuilder({ page })
+      .include(".course-gradebook")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(result.violations).toEqual([]);
+  };
+  await checkLayout();
   // The release action must still be available after loading the saved scale.
   await page.reload();
   await expect(release).toBeEnabled();
@@ -174,6 +189,52 @@ test("staff save the default quiz grading scale and release a grade to the enrol
     await expect(staffUnpublished).toHaveCount(0);
     await learnerPage.reload();
     await expect(learnerStatus).toHaveText(/\b50\s*%/);
+
+    // Verify a reasoned correction with the other supported language and theme.
+    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    const englishGradebook = page.getByRole("region", {
+      name: "Quiz gradebook",
+      exact: true,
+    });
+    const openCorrection = englishGradebook.getByRole("button", {
+      name: "Correct grade",
+      exact: true,
+    });
+    await openCorrection.press("Enter");
+    const correction = englishGradebook.getByRole("group", {
+      name: "Correct grade",
+      exact: true,
+    });
+    await expect(
+      correction.getByRole("button", { name: "Publish correction" }),
+    ).toBeDisabled();
+    await correction.getByLabel("New grade").fill("65");
+    await correction
+      .getByLabel("Internal reason")
+      .fill("Fictional correction after review");
+    expect(
+      await englishGradebook.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    const darkAudit = await new AxeBuilder({ page })
+      .include(".course-gradebook")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(darkAudit.violations).toEqual([]);
+    await correction
+      .getByRole("button", { name: "Publish correction" })
+      .press("Enter");
+    await expect(
+      englishGradebook.getByText(/Published grade: 65%/),
+    ).toBeVisible();
+    await learnerPage.reload();
+    await expect(learnerStatus).toHaveText(/\b65\s*%/);
+    await expect(
+      learnerGradebook.getByText("Fictional correction after review"),
+    ).toHaveCount(0);
   } finally {
     await context.close();
   }

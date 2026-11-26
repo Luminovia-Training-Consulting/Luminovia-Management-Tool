@@ -6,6 +6,7 @@ import {
   crmOpportunitiesQuery,
   crmOpportunityEventsQuery,
   moveCrmOpportunity,
+  updateCrmOpportunityForecast,
 } from "./api";
 
 const { rpc, requireOnline } = vi.hoisted(() => ({
@@ -38,6 +39,8 @@ describe("CRM pipeline RPC adapters", () => {
           stage: "identified",
           estimated_value: 1250.5,
           currency: "EUR",
+          close_probability: null,
+          expected_close_date: null,
           version: 1,
           created_at: createdAt,
           updated_at: createdAt,
@@ -82,6 +85,8 @@ describe("CRM pipeline RPC adapters", () => {
         stage: "identified",
         estimated_value: null,
         currency: "EUR",
+        close_probability: null,
+        expected_close_date: null,
         version: 1,
         created_at: createdAt,
         updated_at: createdAt,
@@ -134,6 +139,10 @@ describe("CRM pipeline RPC adapters", () => {
           event_type: "created",
           from_stage: null,
           to_stage: "identified",
+          from_close_probability: null,
+          to_close_probability: null,
+          from_expected_close_date: null,
+          to_expected_close_date: null,
           actor_id: actor,
           request_id: requestId,
           occurred_at: createdAt,
@@ -209,5 +218,60 @@ describe("CRM pipeline RPC adapters", () => {
       p_expected_version: 3,
       p_request_id: requestId,
     });
+  });
+
+  it("sends explicit zero and date values without converting the forecast into revenue", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    await updateCrmOpportunityForecast({
+      organisationId,
+      opportunityId,
+      closeProbability: 0,
+      expectedCloseDate: "2026-12-15",
+      expectedVersion: 4,
+      requestId,
+    });
+
+    expect(requireOnline).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("update_crm_opportunity_forecast", {
+      p_organisation_id: organisationId,
+      p_opportunity_id: opportunityId,
+      p_close_probability: 0,
+      p_expected_close_date: "2026-12-15",
+      p_expected_version: 4,
+      p_request_id: requestId,
+    });
+  });
+
+  it("allows clearing unknown forecast values and rejects out-of-range input locally", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    await updateCrmOpportunityForecast({
+      organisationId,
+      opportunityId,
+      closeProbability: null,
+      expectedCloseDate: null,
+      expectedVersion: 5,
+      requestId,
+    });
+    expect(rpc).toHaveBeenCalledWith("update_crm_opportunity_forecast", {
+      p_organisation_id: organisationId,
+      p_opportunity_id: opportunityId,
+      p_close_probability: null,
+      p_expected_close_date: null,
+      p_expected_version: 5,
+      p_request_id: requestId,
+    });
+
+    rpc.mockClear();
+    await expect(
+      updateCrmOpportunityForecast({
+        organisationId,
+        opportunityId,
+        closeProbability: 100.01,
+        expectedCloseDate: null,
+        expectedVersion: 5,
+        requestId,
+      }),
+    ).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

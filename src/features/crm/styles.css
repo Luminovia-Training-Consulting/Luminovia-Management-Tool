@@ -20,6 +20,26 @@
   gap: 0.875rem;
 }
 
+.crm-forecast-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 0.65rem;
+  margin-block: 0.75rem;
+  padding-block-start: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.crm-forecast-help,
+.crm-forecast-current {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.crm-forecast-form > button {
+  justify-self: start;
+}
+
 .crm-pipeline-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -137,5 +157,9 @@
 
   .crm-pipeline-board {
     grid-auto-columns: minmax(min(80vw, 18rem), 1fr);
+  }
+
+  .crm-forecast-form {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

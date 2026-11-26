@@ -16,11 +16,14 @@ import {
 } from "./course-gradebook-schema";
 import "./i18n";
 
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+const { rpc, useOnline } = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  useOnline: vi.fn(),
+}));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 vi.mock("../../lib/online", () => ({
   requireOnline: vi.fn(),
-  useOnline: () => true,
+  useOnline,
 }));
 
 const time = "2026-11-26T07:00:00Z";
@@ -46,8 +49,9 @@ const grade = {
 let data: Projection;
 
 function mount(staff: boolean, academy = false, readOnly = false) {
-  render(
-    <QueryClientProvider client={new QueryClient()}>
+  const client = new QueryClient();
+  const content = () => (
+    <QueryClientProvider client={client}>
       <CourseGradebook
         actor="fictional-actor"
         courseId="fictional-course"
@@ -56,12 +60,15 @@ function mount(staff: boolean, academy = false, readOnly = false) {
         staff={staff}
         readOnly={readOnly}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(content());
+  return () => view.rerender(content());
 }
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
+  useOnline.mockReturnValue(true);
   data = {
     can_manage: true,
     policy: { version: 1, scheme: "percentage", bands: [], created_at: time },
@@ -90,6 +97,21 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   rpc.mockReset();
+});
+
+it("hides an already loaded grade while offline and restores it online", async () => {
+  data.own_grade = grade;
+  const rerender = mount(false);
+  expect(await screen.findByText(/Published grade: 82%/)).toBeVisible();
+
+  useOnline.mockReturnValue(false);
+  rerender();
+  expect(screen.queryByText(/Published grade: 82%/)).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(/online/i);
+
+  useOnline.mockReturnValue(true);
+  rerender();
+  expect(await screen.findByText(/Published grade: 82%/)).toBeVisible();
 });
 
 it("requires distinct bands and a zero threshold", () => {

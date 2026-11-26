@@ -51,7 +51,7 @@ function MutationError({
   const conflict =
     typeof error === "object" && "code" in error && error.code === "PT409";
   return (
-    <div role="alert">
+    <div role="alert" className="space-y-2">
       <p>{t(conflict ? "gradebookConflict" : "gradebookSaveFailed")}</p>
       {conflict && (
         <Button type="button" variant="secondary" onClick={refresh}>
@@ -124,42 +124,44 @@ function PolicyForm({
             {bands.map((band, index) => (
               <fieldset key={index}>
                 <legend>{t("gradebookBand", { number: index + 1 })}</legend>
-                <label>
-                  {t("gradebookMinimum")}
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={band.minimum}
-                    onChange={(event) =>
-                      setBands((items) =>
-                        items.map((item, n) =>
-                          n === index
-                            ? { ...item, minimum: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <label>
-                  {t("gradebookLabel")}
-                  <input
-                    required
-                    maxLength={80}
-                    value={band.label}
-                    onChange={(event) =>
-                      setBands((items) =>
-                        items.map((item, n) =>
-                          n === index
-                            ? { ...item, label: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                </label>
+                <div className="course-gradebook-band-fields">
+                  <label>
+                    {t("gradebookMinimum")}
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={band.minimum}
+                      onChange={(event) =>
+                        setBands((items) =>
+                          items.map((item, n) =>
+                            n === index
+                              ? { ...item, minimum: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t("gradebookLabel")}
+                    <input
+                      required
+                      maxLength={80}
+                      value={band.label}
+                      onChange={(event) =>
+                        setBands((items) =>
+                          items.map((item, n) =>
+                            n === index
+                              ? { ...item, label: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                </div>
                 {bands.length > 2 && (
                   <Button
                     type="button"
@@ -173,20 +175,22 @@ function PolicyForm({
                 )}
               </fieldset>
             ))}
-            {bands.length < 10 && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  setBands((items) => [...items, { minimum: "", label: "" }])
-                }
-              >
-                {t("gradebookAddBand")}
-              </Button>
-            )}
           </>
         )}
-        <Button type="submit">{t("gradebookSavePolicy")}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit">{t("gradebookSavePolicy")}</Button>
+          {scheme === "bands" && bands.length < 10 && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setBands((items) => [...items, { minimum: "", label: "" }])
+              }
+            >
+              {t("gradebookAddBand")}
+            </Button>
+          )}
+        </div>
       </fieldset>
       {invalid && <p role="alert">{t("gradebookPolicyInvalid")}</p>}
       <MutationError error={save.error} refresh={refresh} />
@@ -216,7 +220,7 @@ function GradeRow({
   const { grade, best_attempt: attempt, preview } = row;
   const disabled = !online || save.isPending;
   return (
-    <li>
+    <li className="space-y-2">
       <h3>{row.name}</h3>
       <p>
         {attempt
@@ -309,9 +313,26 @@ function GradeRow({
                     onChange={(event) => setReason(event.target.value)}
                   />
                 </label>
-                <Button disabled={reason.trim().length < 3} type="submit">
-                  {t("gradebookSaveCorrection")}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={reason.trim().length < 3 || !value}
+                    type="submit"
+                  >
+                    {t("gradebookSaveCorrection")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setCorrection(false);
+                      setReason("");
+                      setValue("");
+                      save.reset();
+                    }}
+                  >
+                    {t("gradebookCancelCorrection")}
+                  </Button>
+                </div>
               </fieldset>
             </form>
           ) : (
@@ -331,26 +352,39 @@ function GradeRow({
 
 export function CourseGradebook(props: Props) {
   const { t } = useTranslation("learning");
+  const online = useOnline();
+  return (
+    <section
+      className="panel learning-panel course-gradebook space-y-4"
+      aria-labelledby="course-gradebook-title"
+    >
+      <h2 id="course-gradebook-title">{t("gradebookTitle")}</h2>
+      {props.active &&
+        (online ? (
+          <OnlineGradebook {...props} />
+        ) : (
+          <p role="status">{t("gradebookOffline")}</p>
+        ))}
+    </section>
+  );
+}
+
+/** Mount the sensitive projection only while the gradebook is open and online. */
+function OnlineGradebook(props: Props) {
+  const { t } = useTranslation("learning");
   const [offset, setOffset] = useState(0);
-  const query = useQuery({
-    ...courseGradebookQuery(props.actor, props.courseId, offset),
-    enabled: props.active,
-  });
+  const query = useQuery(
+    courseGradebookQuery(props.actor, props.courseId, offset),
+  );
   const data = query.data;
   const refresh = () => void query.refetch();
   const editable = Boolean(data?.can_manage && !props.readOnly);
   return (
-    <section
-      className="panel learning-panel course-gradebook"
-      aria-labelledby="course-gradebook-title"
-    >
-      <h2 id="course-gradebook-title">{t("gradebookTitle")}</h2>
+    <>
       {query.isError ? (
         <ErrorState retry={refresh} />
       ) : !data ? (
-        props.active ? (
-          <Loading />
-        ) : null
+        <Loading />
       ) : props.staff ? (
         <>
           <p>{t("gradebookHelp")}</p>
@@ -368,7 +402,7 @@ export function CourseGradebook(props: Props) {
             />
           )}
           {!data.learners.length && <p>{t("gradebookNoLearners")}</p>}
-          <ul className="course-gradebook-list">
+          <ul role="list" className="learning-resources">
             {data.learners.map((row) => (
               <GradeRow
                 key={`${row.user_id}:${row.grade?.revision}:${data.policy?.version}`}
@@ -381,7 +415,7 @@ export function CourseGradebook(props: Props) {
             ))}
           </ul>
           {data.total > data.limit || offset > 0 ? (
-            <div className="actions">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
                 disabled={offset === 0}
@@ -409,6 +443,6 @@ export function CourseGradebook(props: Props) {
             : t("gradebookUnpublished")}
         </p>
       )}
-    </section>
+    </>
   );
 }

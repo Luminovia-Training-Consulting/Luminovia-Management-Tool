@@ -136,6 +136,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const access = (who, selected = share, kind = "resource") =>
       actor(who, gate() + read(selected, kind)).then(JSON.parse);
     const searchPath = "/rpc/search_course_materials";
+    const metadataPath = "/rpc/set_course_material_metadata";
+    const metadata = { title: "Fictional catalogue title", description: "", subject: "", licence: "", language: "", tags: ["catalogue-fixture"] };
+    const revise = (who, id = share, throughGate = true) =>
+      actor(who, (throughGate ? gate(metadataPath) : "") +
+        `select public.set_course_material_metadata(${q(id)},0,${q(JSON.stringify(metadata))}::jsonb)`).then(JSON.parse);
     const importPath = "/rpc/import_table_row";
     const search = (who) =>
       actor(who, gate(searchPath) +
@@ -200,6 +205,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.academy_assign_course_instructor(${q(run)},${q(teacher)},${q(randomUUID())})`,
     ).then(JSON.parse);
     assert.equal(assignment.status, "confirmed");
+    assert.equal((await search(teacher)).find(({id}) => id === share).can_edit_metadata, true);
+    for (const who of [learner, manager, client, outside]) await assert.rejects(revise(who), /42501/);
+    await assert.rejects(revise(teacher, unscannedShare), /42501/);
+    assert.equal(await revise(teacher), 1);
+    assert.deepEqual((await search(learner))[0].metadata, metadata);
+    assert.equal((await search(teacher)).find(({id}) => id === staffShare).metadata, null);
     const incoming = "Fictional newly scanned teaching material";
     const digest = hash(incoming);
     const uploadId = randomUUID();
@@ -662,6 +673,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const graceMaterials = await search(teacher);
     assert.ok(graceMaterials.some((row) => row.id === share));
     assert.ok(graceMaterials.every((row) => !row.can_upload));
+    assert.ok(graceMaterials.every((row) => !row.can_edit_metadata));
+    await assert.rejects(revise(teacher), /42501/);
+    await assert.rejects(revise(teacher, share, false), /42501/);
     await assert.rejects(enrolmentGate(manager), /42501/);
     const gracePage = await submissions(learner);
     assert.equal(gracePage.can_upload, false);

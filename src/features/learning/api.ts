@@ -211,6 +211,7 @@ export const courseGradebookQuery = (
   queryOptions({
     queryKey: courseGradebookKey(actor, run, offset),
     queryFn: async ({ signal }) => {
+      requireOnline();
       const { data, error } = await db()
         .rpc("course_gradebook", {
           p_run_id: run,
@@ -222,6 +223,7 @@ export const courseGradebookQuery = (
       return data as CourseGradebook;
     },
     staleTime: 0,
+    gcTime: 0,
     retry: false,
   });
 /** Recheck only the caller-scoped Premium link state for a selected base course row. */

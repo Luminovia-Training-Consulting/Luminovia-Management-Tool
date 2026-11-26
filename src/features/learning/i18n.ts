@@ -592,6 +592,10 @@ const pairs: Record<string, [string, string]> = {
   materialLibrary: ["Kursmaterialien", "Course materials"],
   materialCourseFilter: ["Nach Kurs filtern", "Filter by course"],
   gradebookTitle: ["Quiz-Notenbuch", "Quiz gradebook"],
+  gradebookOffline: [
+    "Das Notenbuch ist nur online verfügbar.",
+    "The gradebook is only available online.",
+  ],
   gradebookHelp: [
     "Die Vorschau verwendet den besten Versuch der aktuell veröffentlichten Quizfassung. Freigegebene Noten bleiben bei Änderungen an Quiz oder Skala unverändert.",
     "The preview uses the best attempt on the current published quiz version. Changing the quiz or scale does not change released grades.",
@@ -645,6 +649,7 @@ const pairs: Record<string, [string, string]> = {
   gradebookSelectBand: ["Stufe wählen", "Select a band"],
   gradebookReason: ["Interne Begründung", "Internal reason"],
   gradebookSaveCorrection: ["Korrektur freigeben", "Publish correction"],
+  gradebookCancelCorrection: ["Korrektur abbrechen", "Cancel correction"],
   gradebookPrevious: ["Vorherige Seite", "Previous page"],
   gradebookNext: ["Nächste Seite", "Next page"],
   gradebookConflict: [
@@ -657,6 +662,47 @@ const pairs: Record<string, [string, string]> = {
   ],
   materialAllCourses: ["Alle freigegebenen Kurse", "All available courses"],
   materialSearch: ["Nach Dateiname suchen", "Search by file name"],
+  materialSearchHint: [
+    "Sucht auch in Titel, Beschreibung, Fachgebiet und Schlagwörtern.",
+    "Also searches titles, descriptions, subjects and tags.",
+  ],
+  materialEditMetadata: ["Metadaten bearbeiten", "Edit metadata"],
+  materialSaveMetadata: ["Metadaten speichern", "Save metadata"],
+  materialCancelMetadata: ["Abbrechen", "Cancel"],
+  materialMetadataTitle: ["Titel", "Title"],
+  materialMetadataDescription: ["Beschreibung", "Description"],
+  materialMetadataSubject: ["Fachgebiet", "Subject"],
+  materialMetadataTags: ["Schlagwörter", "Tags"],
+  materialMetadataTagHelp: [
+    "Bis zu 10 unterschiedliche Schlagwörter mit je höchstens 40 Zeichen, durch Kommas getrennt.",
+    "Enter up to 10 distinct tags of at most 40 characters each, separated by commas.",
+  ],
+  materialMetadataLanguage: ["Sprache", "Language"],
+  materialMetadataLicence: ["Lizenz", "Licence"],
+  materialLanguageUnspecified: ["Nicht angegeben", "Not specified"],
+  materialLanguageGerman: ["Deutsch", "German"],
+  materialLanguageEnglish: ["Englisch", "English"],
+  materialLanguageOther: ["Andere Sprache", "Other language"],
+  materialMetadataVisibility: [
+    "Die Angaben sind für alle sichtbar, für die diese Dateifassung freigegeben ist.",
+    "Anyone who can access this shared file version can see these details.",
+  ],
+  materialMetadataConflict: [
+    "Die Metadaten wurden inzwischen geändert. Sichere bei Bedarf deinen Text, schließe das Formular und öffne es erneut.",
+    "The metadata has changed. Copy any text you need, then close and reopen the form.",
+  ],
+  materialMetadataSaveFailed: [
+    "Die Metadaten konnten nicht gespeichert werden.",
+    "The metadata could not be saved.",
+  ],
+  materialMetadataSaved: [
+    "Die Metadaten wurden gespeichert.",
+    "The metadata was saved.",
+  ],
+  materialMetadataOffline: [
+    "Zum Speichern ist eine Verbindung erforderlich.",
+    "A connection is required to save.",
+  ],
   materialNoMatches: [
     "Keine passenden Dateien gefunden.",
     "No matching files found.",
