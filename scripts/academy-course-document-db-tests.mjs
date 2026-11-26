@@ -703,6 +703,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.deepEqual(await portfolio(teacher, run), sharedPortfolio);
     assert.deepEqual(await portfolio(learner), personalPortfolio);
     await assert.rejects(portfolioEdit(learner, "revoke", {share_id: receipt.share_id}), /42501/);
+    await assert.rejects(portfolioEdit(learner, "archive", {state_revision: 0}, 1), /42501/);
+    await assert.rejects(actor(learner,
+      `select public.learning_portfolio_command(${q(portfolioEntry)},'archive','{"state_revision":0}',1)`), /42501/);
     const graceGradebook = { ...publishedGradebook, can_manage: false };
     assert.deepEqual(await gradebook(teacher), graceGradebook);
     assert.deepEqual(await gradebook(learner), learnerGradebook);
@@ -757,6 +760,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     await assert.rejects(portfolio(learner), /42501/);
     await assert.rejects(portfolio(teacher, run, false), /42501/);
+    await assert.rejects(portfolioEdit(learner, "delete", {state_revision: 0, title: note.title}, 1), /42501/);
     await assert.rejects(access(learner), /42501/);
     await assert.rejects(search(learner), /42501/);
     await assert.rejects(submissions(learner), /42501/);

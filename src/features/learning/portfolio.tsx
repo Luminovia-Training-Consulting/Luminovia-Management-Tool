@@ -19,6 +19,7 @@ import {
   type PortfolioEntry,
   type PortfolioShareTarget,
 } from "./portfolio-schema";
+import "./portfolio-lifecycle-i18n";
 
 /** Invalidate only this actor's permission-scoped snapshots after a write. */
 function usePortfolioCommand(actor: string) {
@@ -209,7 +210,15 @@ function EntryRow({
   const { t } = useTranslation("learning");
   const [history, setHistory] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const revoke = usePortfolioCommand(actor);
+  const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
+  const [title, setTitle] = useState("");
+  const change = usePortfolioCommand(actor);
+  const archived = entry.archived_at !== null;
+  const entryVersion = {
+    p_entry_id: entry.id,
+    p_expected_revision: entry.current.revision,
+  };
+  const state = { state_revision: entry.state_revision };
   return (
     <li className="panel learning-panel space-y-2">
       <h3>{entry.current.title}</h3>
@@ -218,7 +227,7 @@ function EntryRow({
         <summary>{t("portfolioHistory")}</summary>
         {history && <EntryHistory actor={actor} entry={entry.id} />}
       </details>
-      {!readOnly && (
+      {!readOnly && !archived && (
         <div className="form-actions">
           <Button type="button" variant="secondary" onClick={edit}>
             {t("portfolioEdit")}
@@ -233,9 +242,115 @@ function EntryRow({
               {t("portfolioShare")}
             </Button>
           )}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setConfirm("archive")}
+          >
+            {t("portfolioArchive")}
+          </Button>
         </div>
       )}
-      {sharing && !readOnly && (
+      {!readOnly && archived && !confirm && (
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={change.isPending}
+            onClick={() =>
+              change.mutate({
+                ...entryVersion,
+                p_action: "restore",
+                p_payload: state,
+              })
+            }
+          >
+            {t("portfolioRestore")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => setConfirm("delete")}
+          >
+            {t("portfolioDelete")}
+          </Button>
+        </div>
+      )}
+      {!readOnly && confirm && (
+        <form
+          className="space-y-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (
+              change.isPending ||
+              (confirm === "delete" && title !== entry.current.title)
+            )
+              return;
+            const done = () => setConfirm(null);
+            if (confirm === "archive") {
+              change.mutate(
+                { ...entryVersion, p_action: "archive", p_payload: state },
+                { onSuccess: done },
+              );
+            } else {
+              change.mutate(
+                {
+                  ...entryVersion,
+                  p_action: "delete",
+                  p_payload: { ...state, title },
+                },
+                { onSuccess: done },
+              );
+            }
+          }}
+        >
+          <p>
+            {t(
+              confirm === "archive"
+                ? "portfolioArchiveHelp"
+                : "portfolioDeleteHelp",
+            )}
+          </p>
+          {confirm === "delete" && (
+            <label>
+              {t("portfolioConfirmTitle")}
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.currentTarget.value)}
+                required
+              />
+            </label>
+          )}
+          <div className="form-actions">
+            <Button
+              type="submit"
+              variant={confirm === "delete" ? "danger" : "default"}
+              disabled={
+                change.isPending ||
+                (confirm === "delete" && title !== entry.current.title)
+              }
+            >
+              {t(
+                confirm === "archive"
+                  ? "portfolioArchiveConfirm"
+                  : "portfolioDeleteConfirm",
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={change.isPending}
+              onClick={() => {
+                setConfirm(null);
+                setTitle("");
+              }}
+            >
+              {t("portfolioCancel")}
+            </Button>
+          </div>
+        </form>
+      )}
+      {sharing && !readOnly && !archived && (
         <EntryShare
           key={entry.current.revision}
           actor={actor}
@@ -259,9 +374,9 @@ function EntryRow({
                   <Button
                     type="button"
                     variant="secondary"
-                    disabled={revoke.isPending}
+                    disabled={change.isPending}
                     onClick={() =>
-                      revoke.mutate({
+                      change.mutate({
                         p_entry_id: entry.id,
                         p_action: "revoke",
                         p_expected_revision: 0,
@@ -277,7 +392,7 @@ function EntryRow({
           ))}
         </ul>
       )}
-      <PortfolioMutationError error={revoke.error} />
+      <PortfolioMutationError error={change.error} />
     </li>
   );
 }
@@ -293,17 +408,21 @@ export function PersonalPortfolio({
   const { t } = useTranslation("learning");
   const query = useQuery(personalPortfolioQuery(actor));
   const [editor, setEditor] = useState<PortfolioEntry | null | undefined>();
+  const [showArchived, setShowArchived] = useState(false);
   const exportData = useMutation({ mutationFn: exportPortfolio, gcTime: 0 });
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
   if (!query.data) return <Loading />;
   const { entries, targets } = query.data;
+  const visibleEntries = entries.filter(
+    (entry) => Boolean(entry.archived_at) === showArchived,
+  );
 
   return (
     <section className="learning-panel space-y-4" aria-label={t("portfolio")}>
       <h2>{t("portfolio")}</h2>
       <p>{t("portfolioPrivate")}</p>
       <div className="form-actions">
-        {!readOnly && (
+        {!readOnly && !showArchived && (
           <Button
             type="button"
             disabled={entries.length >= 40}
@@ -333,6 +452,14 @@ export function PersonalPortfolio({
           {t("portfolioExport")}
         </Button>
       </div>
+      <label className="check-row">
+        <input
+          type="checkbox"
+          checked={showArchived}
+          onChange={(event) => setShowArchived(event.currentTarget.checked)}
+        />
+        {t("portfolioShowArchived")}
+      </label>
       <PortfolioMutationError error={exportData.error} />
       {editor !== undefined && !readOnly && (
         <EntryEditor
@@ -342,11 +469,13 @@ export function PersonalPortfolio({
           close={() => setEditor(undefined)}
         />
       )}
-      {entries.length === 0 && <p>{t("portfolioEmpty")}</p>}
+      {visibleEntries.length === 0 && (
+        <p>{t(showArchived ? "portfolioArchiveEmpty" : "portfolioEmpty")}</p>
+      )}
       <ul className="learning-resources">
-        {entries.map((entry) => (
+        {visibleEntries.map((entry) => (
           <EntryRow
-            key={entry.id}
+            key={`${entry.id}:${entry.current.revision}:${entry.state_revision}`}
             actor={actor}
             entry={entry}
             targets={targets}

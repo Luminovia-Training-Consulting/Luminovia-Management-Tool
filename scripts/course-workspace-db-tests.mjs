@@ -1061,6 +1061,35 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await edit(learner, "revoke", {share_id: receipt}, 0);
         assert.deepEqual((await read(teacher, run)).shares, []);
         assert.ok((await read(learner, null, id)).entries[0].shares[0].revoked_at);
+        await edit(learner, "share", recipient, 2);
+        assert.equal((await read(teacher, run)).shares[0].revision, 2);
+        await assert.rejects(edit(admin, "archive", {state_revision: 0}, 2), /42501/);
+        await assert.rejects(edit(learner, "archive", {state_revision: 0}, 1), /PT409/);
+        await assert.rejects(edit(learner, "delete", {state_revision: 0, title: secondRevision.title}, 2), /22023/);
+        await Promise.all([
+            edit(learner, "archive", {state_revision: 0}, 2),
+            edit(learner, "archive", {state_revision: 0}, 2),
+        ]);
+        const archived = (await read(learner, null, id)).entries[0];
+        assert.equal(archived.state_revision, 1);
+        assert.ok(archived.archived_at && archived.shares.every((share) => share.revoked_at));
+        assert.deepEqual((await read(teacher, run)).shares, []);
+        await assert.rejects(edit(learner, "share", recipient, 2), /PT409/);
+        await assert.rejects(edit(learner, "save", first, 2), /PT409/);
+        await assert.rejects(edit(learner, "restore", {state_revision: 0}, 2), /PT409/);
+        await edit(learner, "restore", {state_revision: 1}, 2);
+        assert.equal((await read(learner, null, id)).entries[0].archived_at, null);
+        assert.deepEqual((await read(teacher, run)).shares, []);
+        await edit(learner, "archive", {state_revision: 2}, 2);
+        await assert.rejects(edit(learner, "delete", {state_revision: 3, title: "Wrong title"}, 2), /22023/);
+        const erase = {state_revision: 3, title: secondRevision.title};
+        assert.deepEqual(await edit(learner, "delete", erase, 2), {deleted: true});
+        assert.deepEqual(await edit(learner, "delete", erase, 2), {deleted: true});
+        assert.deepEqual((await read(learner, null, null, true)).entries, []);
+        await assert.rejects(read(learner, null, id), /42501/);
+        await assert.rejects(edit(learner, "save", first, 0), /42501/);
+        assert.equal(await sql(`select count(*) from private.learning_portfolio_revisions where entry_id=${q(id)};`), "0");
+        assert.equal(await sql(`select count(*) from private.learning_portfolio_shares where entry_id=${q(id)};`), "0");
     });
     await check("LTI tool registration and launch bind current course roles, Auth sessions and one-time proof", async () => {
         const deployment = randomUUID();

@@ -1689,6 +1689,33 @@ test("a personal portfolio shares only the reviewed revision with the chosen cou
         await expect(ownPortfolio.getByText("Widerrufen", {exact: true})).toBeVisible();
         await teacher.reload();
         await expect(assigned.getByText("Für dich sind keine Portfolioeinträge freigegeben.")).toBeVisible();
+        await ownPortfolio.getByRole("button", {name: "Fassung teilen", exact: true}).click();
+        await ownPortfolio.getByLabel("Lehrkraft und Kurs").selectOption(f.run + ":" + f.teacher.id);
+        await ownPortfolio.getByRole("button", {name: "Fassung 2 freigeben", exact: true}).click();
+        await expect(ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true})).toBeVisible();
+        await teacher.reload();
+        await expect(assigned.getByText("Version two. Private.", {exact: true})).toBeVisible();
+        const archiveEntry = async () => {
+            await ownPortfolio.getByRole("button", {name: "Eintrag archivieren", exact: true}).click();
+            await ownPortfolio.getByRole("button", {name: "Archivierung bestätigen", exact: true}).click();
+            await expect(ownPortfolio.getByRole("heading", {name: "Fictional reflection"})).toHaveCount(0);
+        };
+        await archiveEntry();
+        await teacher.reload();
+        await expect(assigned.getByText("Für dich sind keine Portfolioeinträge freigegeben.")).toBeVisible();
+        const archived = ownPortfolio.getByRole("checkbox", {name: "Archivierte Einträge anzeigen"});
+        await archived.check();
+        await ownPortfolio.getByRole("button", {name: "Eintrag wiederherstellen", exact: true}).click();
+        await expect(ownPortfolio.getByText("Dein Archiv ist leer.")).toBeVisible();
+        await archived.uncheck();
+        await archiveEntry();
+        await archived.check();
+        await ownPortfolio.getByRole("button", {name: "Eintrag löschen", exact: true}).click();
+        const remove = ownPortfolio.getByRole("button", {name: "Endgültig löschen", exact: true});
+        await expect(remove).toBeDisabled();
+        await ownPortfolio.getByLabel("Titel zur Bestätigung eingeben").fill("Fictional reflection");
+        await remove.click();
+        await expect(ownPortfolio.getByText("Dein Archiv ist leer.")).toBeVisible();
     } finally {
         await instructor.close();
     }

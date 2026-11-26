@@ -321,6 +321,8 @@ Open **Mein Portfolio / My portfolio** from the learning area. Create a text ent
 
 Choose **Fassung teilen / Share revision**, select the course and instructor, and confirm the numbered revision. Only that named instructor can read the chosen snapshot under **Geteilte Portfolios / Shared portfolios** in the course workspace, while both actors retain the required course access. Edits stay private until you share a new revision. **Freigabe widerrufen / Revoke share** removes subsequent access to the old snapshot. Academy grace permits reads and personal exports.
 
+**Eintrag archivieren / Archive entry** keeps your revisions and revokes every active share. Open **Archivierte Einträge anzeigen / Show archived entries** to restore the entry privately or delete it by entering its exact title. Deletion removes every stored revision and share receipt from the portfolio. Copies exported earlier are outside the portfolio.
+
 ### Programme access prerequisites
 
 Before the first participant joins, open an existing **Lernprogramme / Learning programmes** entry and choose **Voraussetzungen für Kurszugang / Course access prerequisites**. Select a course, choose which earlier courses count and set the rule to require them all or at least one. Saving without selected prerequisites restores the programme's normal order for that course. Clear explicit rules before changing the course order.

@@ -52,18 +52,20 @@ export function portfolioPaths(academy: boolean) {
         ...common,
         operationId: "changeLearningPortfolio",
         summary:
-          "Create a personal revision, share it with a named instructor, or revoke a share",
+          "Edit, share, archive, restore or erase an owned portfolio entry",
         description:
-          "Save and share operations compare the reviewed entry revision. Sharing requires current course enrolment and a current named instructor. Revocation is available to the owner even after course access changes.",
+          "Save and share compare the reviewed entry revision. Sharing requires current course enrolment and a named current instructor. Archiving revokes active shares. Archive, restore and erase compare content and state revisions. Erasing also requires an archived entry and its exact title.",
         ...(academy ? { "x-portal-licence": "active" } : {}),
         requestBody: { required: true, content: jsonContent(portfolioCommand) },
         responses: {
           "200": {
-            description: "Saved revision number or named share receipt.",
+            description:
+              "Saved revision number, named share receipt or erasure confirmation.",
             content: jsonContent(
               z.union([
                 z.strictObject({ revision: z.number().int().positive() }),
                 z.strictObject({ share_id: z.uuid() }),
+                z.strictObject({ deleted: z.literal(true) }),
               ]),
             ),
           },

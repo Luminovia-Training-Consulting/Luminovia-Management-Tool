@@ -12,6 +12,8 @@ const revision = z.strictObject({
 });
 export const portfolioEntry = z.strictObject({
   id: uuid,
+  archived_at: date.nullable().default(null),
+  state_revision: z.number().int().nonnegative().default(0),
   current: revision,
   history: z.array(revision).nullable(),
   shares: z.array(
@@ -62,6 +64,7 @@ const commandKey = {
   p_entry_id: uuid,
   p_expected_revision: z.number().int().min(0).max(30),
 };
+const stateRevision = z.number().int().min(0).max(999_999_999);
 export const portfolioCommand = z.discriminatedUnion("p_action", [
   z.strictObject({
     ...commandKey,
@@ -80,6 +83,19 @@ export const portfolioCommand = z.discriminatedUnion("p_action", [
     ...commandKey,
     p_action: z.literal("revoke"),
     p_payload: z.strictObject({ share_id: uuid }),
+  }),
+  z.strictObject({
+    ...commandKey,
+    p_action: z.enum(["archive", "restore"]),
+    p_payload: z.strictObject({ state_revision: stateRevision }),
+  }),
+  z.strictObject({
+    ...commandKey,
+    p_action: z.literal("delete"),
+    p_payload: z.strictObject({
+      state_revision: stateRevision,
+      title: z.string().min(1).max(140),
+    }),
   }),
 ]);
 export type PortfolioCommand = z.infer<typeof portfolioCommand>;
