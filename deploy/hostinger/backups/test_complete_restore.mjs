@@ -2,12 +2,12 @@
  * Native recovery drill using a synthetic complete backup. Real age/PostgreSQL/file operations exercise recovery; normal instances and real accounts are not fixtures.
  */
 import assert from "node:assert/strict";
-import {mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import {lstat, mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {candidateDatabaseImage, createIsolatedDatabase} from "../restore-check.mjs";
 import {collectCommand} from "../backup.mjs";
-import {restoreComplete} from "./restore_complete.mjs";
+import {backupAgeSeconds, restoreComplete} from "./restore_complete.mjs";
 import {installExtensionRecovery} from "./extension_recovery.mjs";
 import {verifiesScram} from "./credential_recovery.mjs";
 
@@ -16,6 +16,9 @@ const age = process.env.AGE_TEST_BINARY ?? "age";
 const keygen = process.env.AGE_KEYGEN_TEST_BINARY ?? "age-keygen";
 const privateRoot = resolve(here, "../../../.local/hostinger");
 const previousUmask = process.umask(0o077);
+assert.equal(backupAgeSeconds("2026-11-26T11:00:00.000Z", Date.parse("2026-11-26T12:00:00.000Z")), 3600);
+assert.equal(backupAgeSeconds(undefined, Date.parse("2026-11-26T12:00:00.000Z")), null);
+assert.equal(backupAgeSeconds("2026-11-26T13:00:00.000Z", Date.parse("2026-11-26T12:00:00.000Z")), null);
 await mkdir(privateRoot, {recursive: true, mode: 0o700});
 const temporary = await mkdtemp(resolve(privateRoot, "complete-fixture-"));
 let source;
@@ -86,6 +89,17 @@ try {
         ]),
     );
     assert.equal(generated.status, "complete");
+    const wrongIdentity = resolve(temporary, "wrong-fictional.agekey");
+    await collectCommand(keygen, ["-o", wrongIdentity]);
+    const report = resolve(generated.backup, "desktop-restore-result.json");
+    await assert.rejects(
+        restoreComplete({
+            backup: generated.backup,
+            identity: wrongIdentity,
+            age,
+        }),
+    );
+    await assert.rejects(readFile(report), {code: "ENOENT"});
     const result = await restoreComplete({
         backup: generated.backup,
         identity,
@@ -109,8 +123,35 @@ try {
     );
     assert.equal(result.privateFileBytesAndSecretConfigurationHashesExact, true);
     assert.equal(result.extensionRecoveryEmbedded, true);
+    assert.equal(result.backupAgeEvidence, "encrypted-catalog-startedAt");
+    assert.equal(Number.isInteger(result.backupAgeAtNativeVerificationSeconds), true);
+    assert.equal(result.nativeVerificationDurationMs > 0, true);
+    assert.equal(typeof result.nativeVerificationStartedAt, "string");
+    assert.equal(typeof result.nativeVerificationCompletedAt, "string");
+    const reportStat = await lstat(report);
+    assert.equal(reportStat.mode & 0o777, 0o600);
+    assert.deepEqual(JSON.parse(await readFile(report, "utf8")), result);
+    const previousEvidence = await readFile(report);
+    await assert.rejects(
+        restoreComplete({
+            backup: generated.backup,
+            identity: wrongIdentity,
+            age,
+        }),
+    );
+    assert.deepEqual(await readFile(report), previousEvidence);
+    const replacement = await restoreComplete({
+        backup: generated.backup,
+        identity,
+        age,
+    });
+    const replacementEvidence = await readFile(report);
+    assert.notDeepEqual(replacementEvidence, previousEvidence);
+    assert.deepEqual(JSON.parse(replacementEvidence), replacement);
+    const replacementStat = await lstat(report);
+    assert.equal(replacementStat.mode & 0o777, 0o600);
     console.log(
-        "PASS real complete encrypted fixture:3 PostgreSQL databases, password-bearing roles/grantors, RLS/data counts, secret config/TLS/key/mail/object hashes; only networkless owned containers/volumes/private extraction used.",
+        `- **Native complete encrypted recovery passed** — ${replacement.databases} PostgreSQL databases; ${replacement.files} files; native verification ${replacement.nativeVerificationDurationMs} ms; conservative backup age ${replacement.backupAgeAtNativeVerificationSeconds} s. Fictional data, isolated networkless resources; live-service RTO not measured.`,
     );
 } finally {
     process.umask(previousUmask);

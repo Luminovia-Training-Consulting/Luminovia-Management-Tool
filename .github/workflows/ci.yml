@@ -301,6 +301,9 @@ jobs:
           cache: npm
       - if: needs.scope.outputs.profile != 'docs'
         run: npm ci
+      - name: Install official age tools for the encrypted recovery drill
+        if: needs.scope.outputs.profile == 'full'
+        run: sudo apt-get update -qq && sudo apt-get install -y age
       - name: PR isolated PostgreSQL migration, permissions and concurrency checks
         if: github.event_name == 'pull_request' && needs.scope.outputs.profile != 'docs'
         run: node scripts/ci-pr-check.mjs sql
@@ -327,6 +330,9 @@ jobs:
           mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
           git archive "$baseline" | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
           echo "commit=$baseline" >> "$GITHUB_OUTPUT"
+      - name: Restore a fictional complete encrypted backup in isolation
+        if: needs.scope.outputs.profile == 'full'
+        run: node deploy/hostinger/backups/test_complete_restore.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Complete isolated native selfhost verification
         if: needs.scope.outputs.profile == 'full'
         env:

@@ -196,6 +196,13 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     const native = ci.jobs["verify-selfhost"].steps.find((step) =>
         step.run?.includes("selfhost-candidate-check.mjs --run"),
     );
+    const selfhost = ci.jobs["verify-selfhost"];
+    const ageInstall = selfhost.steps.find(
+        (step) => step.name === "Install official age tools for the encrypted recovery drill",
+    );
+    const recovery = selfhost.steps.find(
+        (step) => step.name === "Restore a fictional complete encrypted backup in isolation",
+    );
     const sql = ci.jobs["verify-selfhost"].steps.find(
         (step) => step.run === "node scripts/ci-pr-check.mjs sql",
     );
@@ -204,6 +211,15 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     );
     assert.equal(baseline.env.PREVIOUS_MAIN_SHA, "${{ github.event.before }}");
     assert.equal(native.env.BASELINE_COMMIT, "${{ steps.baseline.outputs.commit }}");
+    assert.equal(ageInstall.if, "needs.scope.outputs.profile == 'full'");
+    assert.match(ageInstall.run, /apt-get install -y age/);
+    assert.equal(recovery.if, "needs.scope.outputs.profile == 'full'");
+    assert.equal(
+        recovery.run,
+        'node deploy/hostinger/backups/test_complete_restore.mjs | tee -a "$GITHUB_STEP_SUMMARY"',
+    );
+    assert.ok(selfhost.steps.indexOf(ageInstall) < selfhost.steps.indexOf(recovery));
+    assert.ok(selfhost.steps.indexOf(recovery) < selfhost.steps.indexOf(native));
     // Ready/risky PRs/main/manual run both complete suites; proven Draft UI/docs
     // take faster paths. SQL shards still exercise the new runner on a risky PR.
     for (const [event_name, profile] of [
