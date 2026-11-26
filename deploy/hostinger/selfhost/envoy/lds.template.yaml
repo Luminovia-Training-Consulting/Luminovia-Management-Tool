@@ -431,7 +431,7 @@ resources:
                       - name: portal-function-learning-lti-memberships
                         match:
                           safe_regex:
-                            regex: /functions/v1/learning-lti/memberships/[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}
+                            regex: /functions/v1/learning-lti/memberships/[0-9a-f-]+
                           headers:
                             - name: ':method'
                               string_match:
