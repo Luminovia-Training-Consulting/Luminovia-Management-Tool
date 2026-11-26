@@ -326,6 +326,7 @@ export default defineConfig(({ mode }) => {
             // Packet review and conversion are loaded when explicitly used.
             "**/scorm-package-*.js",
             "**/scorm-static-package-*.js",
+            "**/active-scorm-player-*.js",
             "**/h5p-import-*.js",
             "**/h5p-question-import-panel-*.js",
             "**/course-package-archive-*.js",

@@ -1,4 +1,10 @@
-import { readScormPackages, scormCourseCommand } from "./scorm-contract.ts";
+import {
+  readScormPackages,
+  scormCourseCommand,
+  scormRuntimeReadRequest,
+  scormRuntimeReadResult,
+  scormRuntimeWriteRequest,
+} from "./scorm-contract.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -1325,6 +1331,23 @@ const coursePaths = {
       }),
     ),
     z.toJSONSchema(courseXapiArchiveSchema),
+  ),
+  "/rest/v1/rpc/read_course_scorm_runtime": courseOperation(
+    "readAcademyScormRuntimeState",
+    "Read an active SCORM lesson and the learner’s saved state",
+    "Current staff may preview without a learner record. Enrolled learners receive their own pseudonymous lesson state and revision. Grace is read-only.",
+    "active-or-grace",
+    scormRuntimeReadRequest,
+    scormRuntimeReadResult,
+  ),
+  "/rest/v1/rpc/save_course_scorm_runtime": courseOperation(
+    "saveAcademyScormRuntimeState",
+    "Commit one learner’s active SCORM lesson state",
+    "Reports only supported SCORM 1.2 CMI fields for a published clean lesson in the current course. The revision must match. An older revision returns a conflict.",
+    "active",
+    scormRuntimeWriteRequest,
+    { type: "integer", minimum: 1 },
+    true,
   ),
   "/rest/v1/rpc/course_gradebook": courseOperation(
     "readAcademyCourseGradebook",

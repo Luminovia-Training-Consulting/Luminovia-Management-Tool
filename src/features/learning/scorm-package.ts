@@ -267,6 +267,7 @@ export async function reviewScormPackage(
   bytes: ArrayBuffer,
   signal?: AbortSignal,
   inspectLaunch?: (path: string, bytes: Uint8Array) => void,
+  runtimeFiles?: Map<string, Uint8Array<ArrayBuffer>>,
 ): Promise<ScormPackageReview> {
   signal?.throwIfAborted();
   if (bytes.byteLength < 4 || bytes.byteLength > scormPackageMaxBytes)
@@ -357,12 +358,20 @@ export async function reviewScormPackage(
       if (name === manifestName) continue;
       // Check every CRC. Static playback only reads the actual launch bytes, bounded
       // more tightly than general package resources and retained by the caller alone.
-      if (inspectLaunch && launchPaths.has(name)) {
-        if (entry.uncompressedSize > maxManifestBytes)
+      const isLaunch = launchPaths.has(name);
+      const retain =
+        runtimeFiles &&
+        (isLaunch ||
+          /\.(?:js|css|png|gif|jpe?g|webp|mp3|mp4|ogg|wav|woff2?)$/i.test(
+            name,
+          ));
+      if (retain || (inspectLaunch && isLaunch)) {
+        if (isLaunch && entry.uncompressedSize > maxManifestBytes)
           throw new ScormReviewError("archive_limits");
-        const page = new Uint8Array(entry.uncompressedSize);
-        await consumePackageEntry(entry, page, signal);
-        inspectLaunch(name, page);
+        const content = new Uint8Array(entry.uncompressedSize);
+        await consumePackageEntry(entry, content, signal);
+        if (retain) runtimeFiles.set(name, content);
+        if (isLaunch) inspectLaunch?.(name, content);
       } else await consumePackageEntry(entry, null, signal);
     }
     signal?.throwIfAborted();

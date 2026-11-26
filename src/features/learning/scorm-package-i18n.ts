@@ -44,6 +44,27 @@ export const scormReviewTexts = {
     "Für diese Prüfung ist ein SCORM-1.2-Paket mit lokaler HTML-Kursstruktur erforderlich.",
     "This review requires a SCORM 1.2 package with a local HTML course outline.",
   ],
+  scormUseRuntime: [
+    "Interaktive SCORM-Wiedergabe",
+    "Interactive SCORM playback",
+  ],
+  scormRuntimePublishHelp: [
+    "Die Startseiten laufen in einer separaten Lernumgebung. Nur im Paket enthaltene Ressourcen werden geladen.",
+    "Launch pages run in a separate learning environment. The player loads resources from the package.",
+  ],
+  scormRuntimeUnavailable: [
+    "Für diese Installation ist keine interaktive SCORM-Wiedergabe eingerichtet.",
+    "Interactive SCORM playback is not configured for this installation.",
+  ],
+  scormRuntimeError: [
+    "Die Lektion konnte nicht geladen oder der Lernfortschritt nicht gespeichert werden.",
+    "The lesson could not load or its progress could not be saved.",
+  ],
+  scormRuntimeSaving: [
+    "Lernfortschritt wird gespeichert …",
+    "Saving lesson progress…",
+  ],
+  scormRuntimeSaved: ["Lernfortschritt gespeichert.", "Lesson progress saved."],
   scormPublishHelp: [
     "Du kannst dieses Paket für den Kurs veröffentlichen, wenn alle Startseiten unterstützte HTML-Inhalte verwenden.",
     "You can publish this package to the course if all launch pages use supported HTML content.",

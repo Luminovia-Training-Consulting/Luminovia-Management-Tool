@@ -1,5 +1,5 @@
 /** Learner or staff projection of verified, script-free course packages. */
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
@@ -13,6 +13,12 @@ import {
   type CourseScormPackage,
 } from "./scorm-course-schema";
 import "./i18n";
+
+const ActiveScormPlayer = lazy(() =>
+  import("./active-scorm-player").then((module) => ({
+    default: module.ActiveScormPlayer,
+  })),
+);
 
 export const courseScormKey = (actor: string, course: string) =>
   ["course-scorm-packages", actor, course] as const;
@@ -252,15 +258,25 @@ export function CourseScormPlayer({
               </div>
             </>
           )}
-          {active && (
-            <StaticScormPlayer
-              key={active.id}
-              actor={actor}
-              course={course}
-              summary={active}
-              canComplete={catalogue.data.can_complete}
-            />
-          )}
+          {active &&
+            (active.playback === "runtime" ? (
+              <Suspense fallback={<Loading />}>
+                <ActiveScormPlayer
+                  key={active.id}
+                  actor={actor}
+                  course={course}
+                  summary={active}
+                />
+              </Suspense>
+            ) : (
+              <StaticScormPlayer
+                key={active.id}
+                actor={actor}
+                course={course}
+                summary={active}
+                canComplete={catalogue.data.can_complete}
+              />
+            ))}
         </>
       )}
       <Dialog

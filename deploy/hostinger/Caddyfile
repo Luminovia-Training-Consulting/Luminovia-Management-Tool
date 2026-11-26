@@ -146,7 +146,7 @@
 }
 
 (portal_browser_csp) {
-	header {args[0]} Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action {args[1]}; upgrade-insecure-requests"
+	header {args[0]} Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob: https://*.{$PORTAL_SCORM_RUNTIME_DOMAIN:scorm-disabled.invalid}; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action {args[1]}; upgrade-insecure-requests"
 }
 
 {$PORTAL_DOMAIN} {

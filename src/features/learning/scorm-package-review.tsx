@@ -11,6 +11,7 @@ import {
   changeCourseScormPackage,
   courseScormKey,
 } from "./course-scorm-player";
+import { scormRuntimeAddress } from "./scorm-runtime-address";
 import type { ScormPackageReview as Review } from "./scorm-package";
 
 export function ScormPackageReview({
@@ -27,6 +28,9 @@ export function ScormPackageReview({
   const [chosen, setChosen] = useState<{ file: File; clientId: string }>();
   const file = chosen?.file;
   const [busy, setBusy] = useState(false);
+  const [useRuntime, setUseRuntime] = useState(false);
+  const runtimeAvailable =
+    scormRuntimeAddress("", new URL(location.href)) !== null;
   const [report, setReport] = useState<Review>();
   const [error, setError] = useState<string>();
   const active = useRef<AbortController>(null);
@@ -42,11 +46,16 @@ export function ScormPackageReview({
       clientId: string;
       reviewed: Review;
     }) => {
-      const staticProfile = await import("./scorm-static-package");
-      const prepared = await staticProfile.loadScormStaticPackage(
-        await file.arrayBuffer(),
-      );
-      if (prepared.report.sha256 !== reviewed.sha256)
+      const bytes = await file.arrayBuffer();
+      const actual =
+        useRuntime && runtimeAvailable
+          ? await (await import("./scorm-package")).reviewScormPackage(bytes)
+          : (
+              await (
+                await import("./scorm-static-package")
+              ).loadScormStaticPackage(bytes)
+            ).report;
+      if (actual.sha256 !== reviewed.sha256)
         throw new Error("scorm_publication_changed");
       const version = await uploadCourseScormPackage(file, course, clientId);
       const { data, error } = await db().auth.getSession();
@@ -56,6 +65,7 @@ export function ScormPackageReview({
         title: reviewed.organisation,
         sha256: reviewed.sha256,
         lessons: reviewed.launches.map(({ id, title }) => ({ id, title })),
+        ...(useRuntime && runtimeAvailable ? { playback: "runtime" } : {}),
       });
     },
     onSuccess: () =>
@@ -121,6 +131,7 @@ export function ScormPackageReview({
                   : undefined,
               );
               publish.reset();
+              setUseRuntime(false);
               setError(undefined);
               setReport(undefined);
             }}
@@ -167,7 +178,22 @@ export function ScormPackageReview({
           </ol>
           {chosen && (
             <>
-              <p>{t("scormPublishHelp")}</p>
+              {runtimeAvailable && (
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useRuntime}
+                    disabled={publish.isPending || publish.isSuccess}
+                    onChange={(event) =>
+                      setUseRuntime(event.currentTarget.checked)
+                    }
+                  />
+                  {t("scormUseRuntime")}
+                </label>
+              )}
+              <p>
+                {t(useRuntime ? "scormRuntimePublishHelp" : "scormPublishHelp")}
+              </p>
               <Button
                 type="button"
                 disabled={!online || publish.isPending || publish.isSuccess}

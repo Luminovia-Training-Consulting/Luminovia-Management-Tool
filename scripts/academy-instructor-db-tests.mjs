@@ -19,6 +19,10 @@ const configure = (id, release, enabled = true) =>
 // published quiz, a confirmed scan or a registered external tool.
 const featureFixtureOperations = new Map([
   [
+    "course-scorm-runtime-db-tests.mjs",
+    ["read_course_scorm_runtime", "save_course_scorm_runtime"],
+  ],
+  [
     "learning-program-db-tests.mjs",
     ["set_learning_program_prerequisite", "learning_program_grade_report"],
   ],

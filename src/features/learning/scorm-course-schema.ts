@@ -11,6 +11,7 @@ const packageSchema = z.strictObject({
   sha256: z.hash("sha256"),
   lessons: z.array(scormLessonSchema).min(1).max(100),
   completed: z.array(z.string()).max(100),
+  playback: z.literal("runtime").optional(),
 });
 export const scormPackageList = z.strictObject({
   can_publish: z.boolean(),

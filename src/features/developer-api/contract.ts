@@ -1,4 +1,10 @@
-import { readScormPackages, scormCourseCommand } from "./scorm-contract.ts";
+import {
+  readScormPackages,
+  scormCourseCommand,
+  scormRuntimeReadRequest,
+  scormRuntimeReadResult,
+  scormRuntimeWriteRequest,
+} from "./scorm-contract.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -4701,6 +4707,34 @@ const nativePaths = {
     },
     z.toJSONSchema(courseXapiArchiveSchema),
   ),
+  "/rest/v1/rpc/read_course_scorm_runtime": rpc(
+    "readCourseScormRuntimeState",
+    "Premium LMS",
+    "Read an active SCORM lesson and the learner’s saved state",
+    "Current staff may preview. Enrolled learners receive their own pseudonymous lesson state and revision.",
+    scormRuntimeReadRequest.properties!,
+    scormRuntimeReadResult,
+  ),
+  "/rest/v1/rpc/save_course_scorm_runtime": {
+    post: {
+      operationId: "saveCourseScormRuntimeState",
+      tags: ["Premium LMS"],
+      summary: "Commit one learner’s active SCORM lesson state",
+      description:
+        "Write supported SCORM 1.2 CMI fields for the exact clean lesson. Send the current revision and the same launch-session ID for all commits in that session.",
+      requestBody: { required: true, content: json(scormRuntimeWriteRequest) },
+      responses: {
+        "200": {
+          description: "Committed revision",
+          content: json({ type: "integer", minimum: 1 }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",
