@@ -175,6 +175,13 @@ async function runFixture({
         root: "/owned-qa/source",
         runtimeDir: "/owned-qa/reports",
         runtimeSnapshotSource: () => true,
+        prepareH5pBrowserRuntime: async (directory) => ({
+            host: "launch.h5p-content.test:40001",
+            sample: join(directory, "H5P.TrueFalse.h5p"),
+            certificatePin: "fixture-pin",
+            async start() {},
+            async close() {},
+        }),
         runtimeTestPhasePlan,
         runBounded,
         runtimeTestArguments,
@@ -710,6 +717,18 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     );
     assert.equal(desktop.env.PORTAL_DB_CONTAINER, seed.env.PORTAL_DB_CONTAINER);
     assert.equal(desktop.env.PORTAL_BROWSER_STAGE, "application");
+    const h5pBuild = relevant.find(({args}) => args.includes("deploy/lms-content/h5p/build.mjs"));
+    assert.ok(h5pBuild);
+    assert.ok(relevant.indexOf(h5pBuild) < relevant.indexOf(discovery));
+    assert.equal(h5pBuild.env.LUMINOVIA_H5P_BUILD_TEST_SAMPLE, "/owned-qa/run/h5p/H5P.TrueFalse.h5p");
+    for (const command of [discovery, desktop]) {
+        assert.equal(command.env.E2E_H5P_CONTENT_HOST, "launch.h5p-content.test:40001");
+        assert.equal(command.env.E2E_H5P_SAMPLE, h5pBuild.env.LUMINOVIA_H5P_BUILD_TEST_SAMPLE);
+        assert.equal(command.env.E2E_H5P_CERTIFICATE_PIN, "fixture-pin");
+    }
+    assert.ok(browser.reports.some(({path, value}) =>
+        path.endsWith("/.env.development.local") && value === "VITE_H5P_CONTENT_HOST=launch.h5p-content.test:40001\n",
+    ));
     assert.equal(desktop.timeoutMs, 2 * 65 * 60_000);
     assert.equal(
         discovery.timeoutMs,
@@ -740,6 +759,7 @@ test("browser phase gets its own snapshot, retained real services and explicit o
         pwa && pwaDiscovery,
         "Built PWA also requires its own inventory and execution",
     );
+    assert.equal(pwa.env.E2E_H5P_CONTENT_HOST, undefined);
     assert.deepEqual(pwa.args, [
         "--no-install",
         "playwright",
