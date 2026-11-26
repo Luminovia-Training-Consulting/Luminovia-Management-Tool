@@ -240,20 +240,19 @@ export async function runOperationalForwardChecks({
                                 `select l.lanname from pg_catalog.pg_proc p join pg_catalog.pg_language l on l.oid=p.prolang where p.oid=${q(name)}::regprocedure`,
                             );
                             if (name === "private.notification_target(text,uuid)") {
-                                // A later calendar-invitation migration intentionally
-                                // replaces this API-compatible resolver with SQL. The
-                                // PL/pgSQL checker rejects SQL functions by definition;
-                                // runtime resolution above and SQL compilation cover it.
-                                assert.equal(language, "sql", name);
-                            } else {
-                                assert.equal(language, "plpgsql", name);
-                                const diagnostics = JSON.parse(
-                                    await sql(
-                                        `select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from extensions.plpgsql_check_function_tb(${q(name)}::regprocedure)t`,
-                                    ),
+                                assert.ok(
+                                    ["sql", "plpgsql"].includes(language),
+                                    `${name} must use SQL or PL/pgSQL`,
                                 );
-                                assert.deepEqual(diagnostics, [], name);
+                                if (language === "sql") continue;
                             }
+                            assert.equal(language, "plpgsql", name);
+                            const diagnostics = JSON.parse(
+                                await sql(
+                                    `select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from extensions.plpgsql_check_function_tb(${q(name)}::regprocedure)t`,
+                                ),
+                            );
+                            assert.deepEqual(diagnostics, [], name);
                         }
                         for (const name of functions)
                             for (const role of ["anon", "authenticated", "service_role"])
