@@ -11,7 +11,7 @@ In **Verwaltung → Unternehmen / Administration → Companies**, an active admi
 
 In **Verwaltung → White Label / Administration → White Label**, select the company and save its account email, brand, domain and licence parameters. The settings are restored when you reopen the company. A verified portal address links directly to the customer administration. Follow [Dedicated Academy installation](../deploy/academy/README.md) to review and sign the handoff and bootstrap the initial administrator on the customer's own system.
 
-In **Verwaltung → Unternehmen / Administration → Companies**, select a company to manage its **Vertriebspipeline / Sales pipeline**. Add an opportunity with a title and optional estimated amount, move it between the bilingual sales stages, and open its saved stage history. Search matches the title without case sensitivity; an optional stage filter can be combined with it. Results load in bounded pages ordered by most recently updated, then by opportunity ID. Changing a filter returns to page one, and the lane badges count only the displayed page. The database checks `organisations.manage` on every read and write; company membership does not grant internal CRM access. Archived companies remain readable, with creation and stage changes disabled. Estimates keep their selected EUR, AUD, CHF, GBP or USD currency and are not converted, invoiced or treated as accepted terms. Lead imports, outreach, email synchronisation, quotations, pipeline ownership and a full relationship timeline remain open CRM backlog work.
+In **Verwaltung → Unternehmen / Administration → Companies**, select a company to manage its **Vertriebspipeline / Sales pipeline**. Add an opportunity with a title and optional estimated amount, move it between the bilingual sales stages, and open its saved history. Record an optional close probability (0–100%, up to two decimal places) and expected closing date as forecasts. An empty probability means unknown; 0% is an explicit estimate. Both values can be cleared independently, and every confirmed change is versioned and added to immutable history. Forecasts do not represent actual revenue, accepted prices or currency conversions. Search matches the title without case sensitivity; an optional stage filter can be combined with it. Results load in bounded pages ordered by most recently updated, then by opportunity ID. Changing a filter returns to page one, and the lane badges count only the displayed page. The database checks `organisations.manage` on every read and write; company membership does not grant internal CRM access. Archived companies remain readable and all CRM data is read-only. Estimates keep their selected EUR, AUD, CHF, GBP or USD currency and are not converted, invoiced or treated as accepted terms. Lead imports, outreach, email synchronisation, quotations, pipeline ownership and a full relationship timeline remain open CRM backlog work.
 
 On an already active customer installation, open **Verwaltung → Kundeninstallation → White-Label-Einrichtung öffnen / Administration → Customer installation → Open White Label setup**. Edit the academy name, short name, accent colour and public links, then choose **Einstellungen übernehmen / Apply settings**. The active installation uses the saved settings directly. Logos and app icons remain available in the same dialog. The current address and connection protocol are shown in the form. The operator configures the actual domain, TLS and data location at the hosting layer.
 
@@ -706,7 +706,7 @@ The dashboard connects the existing job, calendar and earnings cards with person
 ## Content by account and permission
 
 | Area                               | Content and boundary                                                                                                                                                                                                                                                                                   |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Suggested jobs                     | Published jobs with a claim deadline that remains valid. Verified, unexpired expertise prioritises matching requirements. Authoritative eligibility, contract and conflict checks still occur on the server during the actual claim.                                                                   |
 | Calendar                           | The actor's own private events in the next 30 days and own confirmed assignment sessions, sorted together by start. The preview shows at most five entries. Administrative permissions do not extend this query to other people's private appointments.                                                |
 | Messages and notifications         | Unread messages from the actor's own permitted chat rooms, the unread notification count and at most three recent notices. Full contents and currently checked links remain in chat or the inbox.                                                                                                      |
@@ -872,7 +872,7 @@ and saved-view operations. Existing `job_detail` and `job_dashboard` implementat
 [The marketplace candidate migration](../supabase/migrations/20261124164736_optimize_job_discovery_candidates.sql) applies the active-offer and filter conditions before checking visibility and pricing. It looks up the first session for the open or earliest-start view and calculates total teaching time only when the sort or filters require it. The public response, cursor format and existing visibility and pricing rules are preserved.
 
 | Public RPC                                                | Purpose                                                                                                     |
-|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `job_discovery(p_filters,p_cursor,p_limit)`               | Up to 100 authorised offers, `has_more`, next-page cursor and canonical filters in a bounded JSON response. |
 | `job_detail(p_job_id)`                                    | One permitted job with sessions, requirements and aggregate position counts.                                |
 | `job_dashboard()`                                         | Authorised counts, two suggestions and bounded own upcoming allocations.                                    |
@@ -1071,7 +1071,7 @@ have an empty search path and explicit execution grants. Authentication comes fr
 `auth.uid()` and database permissions, never a caller-supplied role/user ID.
 
 | RPC                                                                                           | Purpose                                                                                                                                           |
-|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `job_lifecycle(p_job_id)`                                                                     | Authorized version, actions, position counts and own/managed claim history. Other lecturers' identities are not exposed through aggregate counts. |
 | `manage_job_offer(p_job_id,p_action,p_expected_version,p_request_id,p_payload)`               | Versioned `draft`, `published`, `archived`, `edit`, `duplicate`, `reopen`; reopening requires `reason`.                                           |
 | `cancel_job_assignment(p_claim_id,p_reason,p_request_id)`                                     | Audited own/authorized whole-block cancellation.                                                                                                  |
@@ -1338,7 +1338,7 @@ are recorded in the audit trail. Existing ambiguous rows are never auto-classifi
 ## API and privacy
 
 | RPC                                                                             | Result and scope                                                                                                                                     |
-|---------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `resolve_participant_chat_origin(p_room,p_user,p_independent)`                  | A current authorized room manager explicitly records the basis of a participant-room membership.                                                     |
 | `assignment_withdrawals(p_job_id)`                                              | Current actor's confirmed claims and own applications, or current authorized management applications. Null job selects a bounded cross-job snapshot. |
 | `request_assignment_withdrawal(p_claim_id,p_reason,p_request_id)`               | Own confirmed future assignment only; returns application ID and current status.                                                                     |
@@ -1443,7 +1443,7 @@ All other supplied codes remain separate: BVMM1, CIS2–CIS5, COS1–COS2, DLO2,
 ## Data and authority
 
 | Owning entity                                                | Purpose                                                                                                                                      |
-|--------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data/course-building-blocks.json`                           | Reviewed import artifact with 22 source-derived curriculum definitions and 24 exact-byte source versions; no PDFs or absolute personal paths |
 | `building_blocks`                                            | Curated source curriculum, identity, stated duration, notes and default reusable template                                                    |
 | `building_block_sources`                                     | Immutable filename/hash/page/date versions; only the primary-selector flag can change                                                        |
@@ -1553,7 +1553,7 @@ All UI labels and explanatory notices are DE/EN; authored syllabus, questions, a
 Migration `20261116091015_course_learning_workspace.sql` adds private RLS tables for course settings, preparation, exact resource shares/receipts, attendance/corrections, Q&A, owner notebooks, protected feedback, quiz versions/attempts and immutable completion facts with auditable revocation. Direct browser table access is revoked. Public functions remain invoker wrappers around checked private implementations:
 
 | RPC                                                                       | Purpose                                                                                                |
-|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `my_course_workspaces()`                                                  | Bounded list of current authorised course runs                                                         |
 | `course_workspace(p_run_id)`                                              | Permission-scoped course projection, exact file versions and current action flags                      |
 | `course_workspace_action(p_run_id,p_action,p_payload,p_expected_version)` | Explicit checked preparation/contact/resource/notebook/Q&A/feedback/attendance/quiz/completion actions |
@@ -1643,7 +1643,7 @@ Queries refresh on focus/reconnect and every 30 seconds while the centre is open
 The additive `20261116121554_course_readiness.sql` migration creates five private RLS-enabled ledgers: settings, tasks, instruction receipts, request idempotency and preparation events. Historical migrations are unchanged. These public authenticated functions form the API:
 
 | RPC                                                                         | Purpose                                                                                                                                                                      |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `course_readiness(p_course_run_id?)`                                        | Authorised current snapshots; an explicit inaccessible ID fails closed. The overview bounds results to 250 nonarchived courses, excluding those ended more than 30 days ago. |
 | `save_readiness_settings(run, payload, expected_version, request_id)`       | Versioned applicability, instructions, meeting and deadline.                                                                                                                 |
 | `confirm_course_sessions(run, expected_version, request_id)`                | Confirm the current source schedule fingerprint.                                                                                                                             |
@@ -1716,7 +1716,7 @@ replacement revision.
 The additive `attendance_delivery` migration creates four RLS-enabled private tables with no browser table grants:
 
 | Record                         | Purpose                                                                                                      |
-|--------------------------------|--------------------------------------------------------------------------------------------------------------|
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `private.delivery_records`     | Session identity, current workflow state, CAS version and editable unsubmitted draft                         |
 | `private.delivery_submissions` | Immutable lecturer-authored numbered evidence, actual interval/zone and original scheduled interval snapshot |
 | `private.delivery_events`      | Immutable submission/review/customer events, actor and timestamp with appropriate explanations               |
@@ -1733,7 +1733,7 @@ triggers.
 ## SQL API
 
 | RPC                                                                                 | Behavior                                                                                                 |
-|-------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `delivery_sessions(p_scope, p_before_at, p_before_id, p_limit)`                     | Cursor-paged own, MFA management or organisation-scoped customer projection; explicit `has_more`         |
 | `delivery_session(p_session_id)`                                                    | Exact currently authorized detail, including older notification deep links                               |
 | `delivery_history(p_session_id)`                                                    | Revision and event history, redacted for customer representatives                                        |
@@ -2081,7 +2081,7 @@ Optional links accept only `https://` with ASCII DNS names or a complete IPv4 ad
 Additive migration created with the actually pinned Supabase CLI: `20261116080743_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
 
 | RPC                                                                                     | Purpose                                                                                                                                                    |
-|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `global_calendar_events(p_from,p_to,p_manage,p_search,p_before_at,p_before_id,p_limit)` | Authorised overlap within a bounded range; at most 100 records, `has_more` and a tuple cursor. `p_manage=true` requires current management permission/MFA. |
 | `manage_global_event(p_id,p_action,p_expected_version,p_request_id,p_payload)`          | Versioned/idempotent `save`, `publish`, `unpublish`, `archive`, `recover` actions. New drafts use `p_id=null`, version 0.                                  |
 
@@ -2276,7 +2276,7 @@ This module is an intentional internal staff directory with resource-scoped clie
 ## API contract
 
 | RPC                       | Parameters and result                                                                                                                                                                                                                                                    |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `people_directory`        | Optional `p_search` (100 chars), `p_label` (40 chars), `p_topic_id` UUID. Returns up to 200 safe profile summaries with authored biography, country/languages/labels/topics and permission-scoped average/count.                                                         |
 | `person_profile`          | `p_user_id`. Returns the intentional profile projection plus teaching experience and `can_moderate`. No email, phone, CV, rates or financial fields.                                                                                                                     |
 | `profile_courses`         | `p_user_id`. Returns confirmed taught course blocks grouped by actual assignment instants: `current`, `upcoming`, `past`, with course ID/title/timezone/topic IDs and `can_open` matching full-course read permission. No rates, terms or private customer contact data. |
@@ -2348,7 +2348,7 @@ Withdrawal, replacement, document archiving or removal of a topic ends the forme
 New CLI migration: `20261116080746_qualification_evidence_and_attestation_history.sql`. Existing migrations remain unchanged. Private tables `qualification_states`, `qualification_evidence`, `qualification_events` and `qualification_requests` have RLS and no browser table grants. Current topic selections remain in `lecturer_topics`; the new core does not alter underlying job claims, accepted terms or calendar allocations.
 
 | RPC                              | Contract                                                                                             |
-|----------------------------------|------------------------------------------------------------------------------------------------------|
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `own_qualification_certificates` | Only own clean personal certificate versions, literal search and a bounded cursor.                   |
 | `qualification_review`           | Current topic state, CAS version and only currently shared version metadata.                         |
 | `save_qualification_evidence`    | Own explicit binding; `p_version_id=null` withdraws access; CAS and request ID required.             |
@@ -2543,7 +2543,7 @@ Migration `20261116080730_chat_structured_mentions.sql` is additive. All earlier
 delivered migrations stay unchanged.
 
 | API                                                                                            | Contract                                                                                                                                            |
-|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `chat_mention_candidates(p_room_id)`                                                           | Current active, role-eligible room members, excluding the caller; unauthorized rooms are denied.                                                    |
 | `send_message_with_mentions(p_room_id,p_body,p_client_id,p_document_id,p_mention_ids)`         | Atomic message, whole selected recipient list, first-mention notices and idempotency record; returns confirmed message UUID.                        |
 | `edit_message_with_mentions(p_message_id,p_body,p_expected_version,p_client_id,p_mention_ids)` | Sender-only, current membership, existing 15 minute window, bounded rate, expected content version and exact retry binding; returns `{id,version}`. |
@@ -2709,7 +2709,7 @@ Records and earlier text versions are stored in unexposed private tables with RL
 ## API
 
 | RPC                                                                   | Behaviour                                                                                                                                     |
-|-----------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `comment_context(p_kind,p_id)`                                        | Current writing/moderation capabilities; no rows when access is denied.                                                                       |
 | `resource_comments(p_kind,p_id,p_before_at,p_before_id,p_limit)`      | Newest first, complete timestamp/UUID cursor, at most 100 rows. Hidden posts are visible only to their author and authorised moderators.      |
 | `add_resource_comment(p_kind,p_id,p_body,p_request_id)`               | 1–5000 characters, actual actor identity, durable resource-bound retry with the same UUID; at most 10 new posts/minute and 100/day per actor. |
@@ -2824,7 +2824,7 @@ list queries start from current publication pointers rather than loading revisio
 history. No public table grants expose drafts, audiences or operation parameters.
 
 | Public RPC                                                                     | Contract                                                                                                                                                                   |
-|--------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `manage_announcement(p_id,p_action,p_expected_version,p_request_id,p_payload)` | Current MFA management; `save`, `publish`, `archive`, `recover`; exact request binding and atomic side effects. New draft creation uses null ID and expected version zero. |
 | `admin_announcements(p_search,p_state,p_before_at,p_before_id,p_limit)`        | Bounded metadata pages; finite, complete tuple cursors and literal search.                                                                                                 |
 | `admin_announcement(p_id)`                                                     | Current authorized draft and published snapshots for the editor.                                                                                                           |
@@ -3133,7 +3133,7 @@ rotating the token also changes its sender-scoped retry/rate namespace.
 The JSON body contains:
 
 | Field                                            | Contract                                                                                     |
-|--------------------------------------------------|----------------------------------------------------------------------------------------------|
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `submission_id`                                  | Stable UUID reused for an uncertain retry.                                                   |
 | `company_name`, `contact_name`, `email`, `phone` | Bounded, validated contact input; optional phone is an empty string.                         |
 | `topic`, `message`                               | Authored training topic and requirements; literal text, no authored HTML execution.          |
@@ -3299,7 +3299,7 @@ Offline/optimistic confirmation remains prohibited.
 Three different states must remain distinct:
 
 | Value and source                                                                     | Meaning                                                                                                                                           | Required handling                                                                                                                  |
-|--------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Numeric `0` in the directly readable job columns for a role-dependent offer          | A storage sentinel; it is not the current actor's quote.                                                                                          | Read the authorised discovery/detail projection or supported `job_offers()` interface instead of calculating a fee from the table. |
 | `null` in an authorised prospective quote                                            | No applicable monetary quote is available to that actor, including nonlecturer management or an offer whose private policy is not yet configured. | Preserve `null`, show restricted compensation and disable an unpriced claim. Never coerce absence to zero.                         |
 | A numeric amount, including a genuine numeric zero, returned by the authorised quote | The actor's applicable prospective compensation under that offer's captured policy.                                                               | Display the returned value without treating all numeric zeros as missing. The server still decides whether a claim is eligible.    |
@@ -3318,16 +3318,16 @@ handles an absent field for compatibility with an older backend. None of these v
 
 This guide describes the current 36-migration main source, including the merged discovery and role-quote bridge. The relevant reading path is:
 
-| Source                                                                                                                       | Owning contract                                                                                                                                                                                 |
-|------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Private role-pricing migration](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql)            | Current policy/offer snapshots, `job_offers`, role-specific quote versions, claim checks/triggers and the role-aware lifecycle budget. Read its later definitions after the earlier migrations. |
-| [Discovery and saved-view migration](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql)                   | Introduces the public discovery/detail/dashboard and own saved-view interfaces. Later private definitions below govern their current quote projection.                                          |
-| [Role-aware discovery bridge](../supabase/migrations/20261116080748_role_aware_job_discovery.sql)                               | Owns the current private quote/context helpers and replacement candidate/item/page implementations, including price filters, sorting and cursor context.                                        |
-| [Discovery API and DTOs](../src/features/jobs/discovery-api.ts)                                                                 | Calls the bounded discovery, exact-detail and dashboard RPCs; validates nullable numeric quotes without coercion and includes observed role context in page keys.                               |
-| [Shared DTOs](../src/lib/types.ts)                                                                                              | Prospective `Job.amount` and `Job.total_amount` are nullable; accepted `Claim` amounts remain separate numeric snapshots.                                                                       |
+| Source                                                                                                                                | Owning contract                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Private role-pricing migration](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql)                  | Current policy/offer snapshots, `job_offers`, role-specific quote versions, claim checks/triggers and the role-aware lifecycle budget. Read its later definitions after the earlier migrations. |
+| [Discovery and saved-view migration](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql)                         | Introduces the public discovery/detail/dashboard and own saved-view interfaces. Later private definitions below govern their current quote projection.                                          |
+| [Role-aware discovery bridge](../supabase/migrations/20261116080748_role_aware_job_discovery.sql)                                     | Owns the current private quote/context helpers and replacement candidate/item/page implementations, including price filters, sorting and cursor context.                                        |
+| [Discovery API and DTOs](../src/features/jobs/discovery-api.ts)                                                                       | Calls the bounded discovery, exact-detail and dashboard RPCs; validates nullable numeric quotes without coercion and includes observed role context in page keys.                               |
+| [Shared DTOs](../src/lib/types.ts)                                                                                                    | Prospective `Job.amount` and `Job.total_amount` are nullable; accepted `Claim` amounts remain separate numeric snapshots.                                                                       |
 | [Marketplace](../src/features/jobs/discovery.tsx), [cards](../src/features/jobs/card.tsx) and [detail](../src/features/jobs/jobs.tsx) | Server filters, private saved views and explicit next pages; restricted-price rendering, the full displayed-consent fingerprint and the online claim request.                                   |
-| [Lifecycle API](../src/features/jobs/lifecycle-api.ts) and [lifecycle UI](../src/features/jobs/lifecycle.tsx)                      | Read the server budget, preserve an explicitly protected `null` and perform versioned lifecycle actions.                                                                                        |
-| [Commercial pricing UI](../src/features/commercial/pricing.tsx)                                                                 | Uses the permission-scoped financial APIs for the captured offer policy; the ordinary job projection does not disclose policy percentages.                                                      |
+| [Lifecycle API](../src/features/jobs/lifecycle-api.ts) and [lifecycle UI](../src/features/jobs/lifecycle.tsx)                         | Read the server budget, preserve an explicitly protected `null` and perform versioned lifecycle actions.                                                                                        |
+| [Commercial pricing UI](../src/features/commercial/pricing.tsx)                                                                       | Uses the permission-scoped financial APIs for the captured offer policy; the ordinary job projection does not disclose policy percentages.                                                      |
 
 The former unpaginated `jobsQuery` browser-list path is no longer the marketplace owner. The current server filters before its page boundary; the UI requests 50 results and the API permits 1–100 per page. Loading a page or selecting an own saved view is not an allocation or a replacement for final server checks. [Job discovery](GUIDE.md#section-job-discovery) describes the complete filter, saved-view and paging workflow.
 
@@ -3517,9 +3517,10 @@ The actor/job-scoped `job-briefing` query is refreshed after real claims and can
 Both new browser journeys passed on96c3c5c with fictional data. The complete run still requires correction/repetition for its separate existing mobile-board failure; see the relevant pull request checks.
 
 | Layout  | Management, German/light | Revoked contact, English/dark     |
-|---------|--------------------------|-----------------------------------|
+| ------- | ------------------------ | --------------------------------- |
 | Desktop | Saved optional details   | Contact hidden after cancellation |
 | Mobile  | Saved optional details   | Contact hidden after cancellation |
+
 ## Assignment change requests
 
 Open **Assignment changes** or follow the link from one of your confirmed jobs.

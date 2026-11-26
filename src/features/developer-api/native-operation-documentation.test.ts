@@ -149,6 +149,35 @@ describe("internal operation documentation", () => {
     ).toBe(false);
   });
 
+  it("documents nullable, bounded and versioned CRM forecast updates", () => {
+    const forecast = input("update_crm_opportunity_forecast");
+    const payload = {
+      p_organisation_id: id,
+      p_opportunity_id: id,
+      p_close_probability: 0,
+      p_expected_close_date: "2026-12-15",
+      p_expected_version: 2,
+      p_request_id: id,
+    };
+    expect(forecast.safeParse(payload).success).toBe(true);
+    expect(
+      forecast.safeParse({
+        ...payload,
+        p_close_probability: null,
+        p_expected_close_date: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      forecast.safeParse({ ...payload, p_close_probability: 100.01 }).success,
+    ).toBe(false);
+    expect(
+      forecast.safeParse({ ...payload, p_close_probability: 1.001 }).success,
+    ).toBe(false);
+    expect(
+      operation("update_crm_opportunity_forecast").responses["204"].content,
+    ).toBeUndefined();
+  });
+
   it("documents scoped and legacy wiki template calls", () => {
     const page = { p_page_id: id };
     const scoped = { ...page, p_organisation_id: id };

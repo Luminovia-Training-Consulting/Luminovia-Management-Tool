@@ -31,6 +31,8 @@ const opportunitySchema = z.object({
   stage: crmStageSchema,
   estimated_value: z.number().nullable(),
   currency: z.enum(["EUR", "AUD", "CHF", "GBP", "USD"]),
+  close_probability: z.number().min(0).max(100).nullable(),
+  expected_close_date: z.iso.date().nullable(),
   version: z.number().int().positive(),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
@@ -55,9 +57,13 @@ const opportunityEventSchema = z.object({
   opportunity_id: z.uuid(),
   organisation_id: z.uuid(),
   version: z.number().int().positive(),
-  event_type: z.enum(["created", "stage_changed"]),
+  event_type: z.enum(["created", "stage_changed", "forecast_updated"]),
   from_stage: crmStageSchema.nullable(),
   to_stage: crmStageSchema,
+  from_close_probability: z.number().min(0).max(100).nullable(),
+  to_close_probability: z.number().min(0).max(100).nullable(),
+  from_expected_close_date: z.iso.date().nullable(),
+  to_expected_close_date: z.iso.date().nullable(),
   actor_id: z.uuid(),
   request_id: z.uuid(),
   occurred_at: z.iso.datetime({ offset: true }),
@@ -175,6 +181,37 @@ export async function moveCrmOpportunity(input: {
     p_organisation_id: input.organisationId,
     p_opportunity_id: input.opportunityId,
     p_stage: input.stage,
+    p_expected_version: input.expectedVersion,
+    p_request_id: input.requestId,
+  });
+  if (error) throw error;
+}
+
+/** Save a versioned probability/date forecast; null means unknown or intentionally cleared. */
+export async function updateCrmOpportunityForecast(input: {
+  organisationId: string;
+  opportunityId: string;
+  closeProbability: number | null;
+  expectedCloseDate: string | null;
+  expectedVersion: number;
+  requestId: string;
+}) {
+  requireOnline();
+  const closeProbability = z
+    .number()
+    .min(0)
+    .max(100)
+    .nullable()
+    .parse(input.closeProbability);
+  const expectedCloseDate = z.iso
+    .date()
+    .nullable()
+    .parse(input.expectedCloseDate);
+  const { error } = await db().rpc("update_crm_opportunity_forecast", {
+    p_organisation_id: input.organisationId,
+    p_opportunity_id: input.opportunityId,
+    p_close_probability: closeProbability,
+    p_expected_close_date: expectedCloseDate,
     p_expected_version: input.expectedVersion,
     p_request_id: input.requestId,
   });
