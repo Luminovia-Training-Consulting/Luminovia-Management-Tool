@@ -1,3 +1,4 @@
+/** Validate current licence requests and preserve the audit chain of recorded v1 receipts. */
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
@@ -11,18 +12,22 @@ export const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const instant = z.iso.datetime({ precision: 3 });
 const requestId = z.uuidv4().toLowerCase();
-const initial = ["initial-trial", "initial-licensed"];
-const adopt = ["adopt-trial", "adopt-licensed"];
-const trialStart = ["initial-trial", "adopt-trial"];
+const currentActions = z.enum(["initial-licensed", "adopt-licensed", "renew"]);
+const recordedV1Actions = z.enum([
+  ...currentActions.options,
+  "initial-trial",
+  "adopt-trial",
+  "convert-trial",
+]);
 const envelopeSchema = z
   .string()
   .max(16384)
   .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{86}$/);
-const licenceRequestSchema = z.strictObject({
+const recordedV1Request = z.strictObject({
   version: z.literal(1),
   action_id: requestId,
   draft_request_id: requestId,
-  action: z.enum([...initial, ...adopt, "renew", "convert-trial"]),
+  action: recordedV1Actions,
   preceding_licence_sha256: digestSchema.nullable(),
   existing_licence_sha256: digestSchema.nullable().default(null),
   agreement_reference: reference,
@@ -34,8 +39,14 @@ const licenceRequestSchema = z.strictObject({
   grace_until: instant,
 });
 
+// Keep the original field order for already approved v1 request digests.
+const licenceRequestSchema = recordedV1Request.extend({
+  version: z.union([z.literal(1), z.literal(2)]),
+  action: currentActions,
+});
+
 export const licenceReceiptSchema = z.strictObject({
-  request: licenceRequestSchema,
+  request: z.union([licenceRequestSchema, recordedV1Request]),
   installation_id: z.uuid(),
   tier: z.enum(["trial", "licensed"]),
   approval_sha256: digestSchema,
@@ -47,6 +58,7 @@ export const licenceReceiptSchema = z.strictObject({
 export const sha256 = (value) =>
   createHash("sha256").update(value).digest("hex");
 
+/** Accept eligible new actions only, before any signing or registry write. */
 export function parseLicenceRequest(input) {
   const parsed = licenceRequestSchema.safeParse(input);
   if (!parsed.success)
@@ -54,8 +66,20 @@ export function parseLicenceRequest(input) {
   return parsed.data;
 }
 
-// Calculate the exact transition that was reviewed and the unmodified v1 wire terms.
-export function planLicenceAction(receipt, request, previous) {
+/** Calculate the reviewed transition for the licensed terms issued by the CLI. */
+export function planLicenceAction(receipt, input, previous) {
+  const request = parseLicenceRequest(input);
+  if (request.version === 1 && previous?.tier === "trial")
+    throw new Error("Use a version 2 request to issue the next licensed term.");
+  return planRecordedTransition(receipt, request, previous);
+}
+
+/** Recompute a receipt from its original format without changing signed wire terms. */
+function planRecordedTransition(receipt, request, previous) {
+  const adopting = ["adopt-licensed", "adopt-trial"].includes(request.action);
+  const issuing = ["initial-licensed", "initial-trial"].includes(
+    request.action,
+  );
   if (request.action_id === request.draft_request_id)
     throw new Error("Use a separate licence action ID.");
   if (previous) {
@@ -75,15 +99,12 @@ export function planLicenceAction(receipt, request, previous) {
         "The requested change is unavailable for the current licence tier.",
       );
   } else {
-    if (
-      request.preceding_licence_sha256 !== null ||
-      (!initial.includes(request.action) && !adopt.includes(request.action))
-    )
+    if (request.preceding_licence_sha256 !== null || (!issuing && !adopting))
       throw new Error(
         "Start with an initial licence or register an existing signed licence.",
       );
     if (
-      initial.includes(request.action) &&
+      issuing &&
       (request.release_commit !== receipt.draft.licence.release_commit ||
         JSON.stringify(request.limits) !==
           JSON.stringify(receipt.draft.licence.limits))
@@ -93,21 +114,20 @@ export function planLicenceAction(receipt, request, previous) {
       );
   }
 
-  if (
-    adopt.includes(request.action) !==
-    (request.existing_licence_sha256 !== null)
-  )
+  if (adopting !== (request.existing_licence_sha256 !== null))
     throw new Error(
       "An existing envelope hash is required only when registering a licence.",
     );
 
   const { issued_at, starts_at, expires_at, grace_until } = request;
-  const tier =
-    request.action === "renew"
-      ? previous.tier
-      : trialStart.includes(request.action)
-        ? "trial"
-        : "licensed";
+  // Only historical records use the old commercial tier metadata. It is
+  // outside the signed entitlement terms, which keep their existing format.
+  let tier = "licensed";
+  if (request.version === 1) {
+    if (request.action === "renew") tier = previous.tier;
+    if (["initial-trial", "adopt-trial"].includes(request.action))
+      tier = "trial";
+  }
   const terms = {
     installation_id: receipt.installation_id,
     edition: receipt.draft.target.edition,
@@ -129,6 +149,7 @@ export function planLicenceAction(receipt, request, previous) {
   return { terms, tier, approval_sha256 };
 }
 
+/** Verify append-only history, including receipts written by earlier operators. */
 export function indexLicenceActions(registry) {
   const drafts = new Map(
     registry.drafts.map((receipt) => [receipt.draft.request_id, receipt]),
@@ -140,7 +161,8 @@ export function indexLicenceActions(registry) {
   for (const receipt of registry.licences ?? []) {
     const draft = drafts.get(receipt.request.draft_request_id);
     const previous = latest.get(receipt.request.draft_request_id);
-    const plan = draft && planLicenceAction(draft, receipt.request, previous);
+    const plan =
+      draft && planRecordedTransition(draft, receipt.request, previous);
     if (
       !plan ||
       actions.has(receipt.request.action_id) ||
