@@ -72,12 +72,13 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-08 — P0 end-to-end and regression acceptance
 
-- **Priority / status:** P0 · partial test scaffolding added; complete lifecycle gate is open.
+- **Priority / status:** P0 · one integrated lifecycle passed locally for the implemented rules. The completed backlog remains the full acceptance scope.
 - **Dependencies / affected modules:** LMS-P0-01–07 and all existing course, assessment, notification, certificate and analytics owners.
 - **Data and security:** Fictional fixtures only; replay migrations from supported baselines; preserve existing records and CI checks.
 - **Tasks / acceptance:** Complete author → publish → enrol → learn → submit → assess → feedback → competency → completion → certificate → report journey; add SQL/RLS/API, browser, concurrency, accessibility, responsive and language coverage; document actual local/CI/external evidence separately.
 - **Actual results:** The integrated interim checkout passed 1,944 Vitest tests, application and E2E type checks, ESLint, and 11 PostgreSQL API-surface checks. Disposable PostgreSQL suites exercised assessment, grade release, scanned assignments, completion, programme prerequisites and licensing across the internal and Academy paths. Twelve repeated, focused browser cases passed in desktop and mobile Chromium, including authoring review, exact bytes, assignment feedback, certificate PDF delivery and programme proof. Complete lifecycle, the full browser suite, broader accessibility and CI acceptance remain open.
-- **Remaining acceptance:** A continuous fixture journey must cover the connected authoring, learner, assessment and reporting workflows once the remaining P0 rules are implemented.
+- **Integrated follow-up:** 1,968 Vitest tests, application and E2E TypeScript, ESLint, the production bundle budgets and the PostgreSQL API sweep passed. One uninterrupted native browser fixture passed in desktop and mobile Chromium from curriculum publication and participant enrolment to scanned assignment submission, released rubric feedback, a scored quiz, a released competency, the actual certificate PDF, the xAPI archive and the small-cohort report. The same integrated browser run passed SCORM preflight and H5P-to-quiz import on both viewports.
+- **Remaining acceptance:** Exercise the remaining P0 rules after implementation and run the complete browser suite and formal accessibility acceptance.
 
 ## P1 — advanced functionality and interoperability
 

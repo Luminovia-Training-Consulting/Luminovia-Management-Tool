@@ -1490,25 +1490,61 @@ test("completed Premium course records a named closeout follow-up without resend
 
 });
 
-/** Current evidence drives the visible issue button in the actual learner workspace. */
-test("completion status explains blockers for course staff and lets the learner issue the document when ready", async ({ page, browser, baseURL }, info) => {
-    test.setTimeout(90_000);
+/** Follow one fictional enrolment from curriculum publication to its released evidence and reports. */
+test("LMS lifecycle links curriculum, assignments, competency, completion and reports", async ({ page, browser, baseURL }, info) => {
+    test.setTimeout(120_000);
     const f = await fixture();
-    const learner = await linkWorkspaceLearner(f);
+    await linkWorkspaceLearner(f);
+    const course = `/courses/${f.run}/workspace`;
+    const curriculum = `${course}#course-curriculum`;
+    const assignments = `${course}#course-submissions`;
+    const workspace = `${course}#course-learning`;
+    await adminLogin(page, f.manager);
+    await page.goto(curriculum);
+    await page.getByRole("button", {name: "Modul hinzufügen"}).click();
+    await page.getByLabel("Modultitel").fill("Fiktives CLI-Modul");
+    await page.getByRole("button", {name: "Lektion hinzufügen"}).click();
+    await page.getByLabel("Lektionstitel").fill("Arbeitsverzeichnis anzeigen");
+    await page.getByRole("textbox", {name: "Lektionsinhalt"}).fill("Der Befehl pwd zeigt das Arbeitsverzeichnis.");
+    await page.getByRole("button", {name: "Veröffentlichen", exact: true}).click();
+    await expect(page.getByText(/Veröffentlicht · Fassung 1/)).toBeVisible();
+
+    const assignment = (target: Page) => target.getByRole("region", {name: "Kursaufgaben", exact: true});
+    await page.goto(assignments);
+    const assess = assignment(page);
+    await assess.getByRole("button", {name: "Aufgabe erstellen", exact: true}).click();
+    await assess.getByLabel("Titel der Aufgabe", {exact: true}).fill("Fiktive CLI-Übung");
+    await assess.getByLabel("Arbeitsauftrag", {exact: true}).fill("Lade die geprüfte Ausgabe als Textdatei hoch.");
+    await assess.getByLabel("Name des Kriteriums", {exact: true}).fill("Ausgabe");
+    await assess.getByLabel("Name der Stufe", {exact: true}).nth(0).fill("Offen");
+    await assess.getByLabel("Name der Stufe", {exact: true}).nth(1).fill("Bestätigt");
+    await assess.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
+    await assess.getByRole("button", {name: "Aufgabe veröffentlichen", exact: true}).click();
+    await expect(assess.getByText("Version 1 veröffentlicht", {exact: true})).toBeVisible();
+
     const enrol = (status: "enrolled" | "completed") => checked(f.adminClient.rpc("manage_course_enrolment", {
         p_course_run_id: f.run, p_user_id: f.learner.id, p_status: status,
     }));
-    const action = (client: typeof learner, name: string, payload: Record<string, unknown>, version = 0) =>
-        checked(client.rpc("course_workspace_action", {
-            p_run_id: f.run, p_action: name, p_payload: payload, p_expected_version: version,
+    const action = (name: string, payload: Record<string, unknown>) =>
+        checked(f.adminClient.rpc("course_workspace_action", {
+            p_run_id: f.run, p_action: name, p_payload: payload, p_expected_version: 0,
         }));
+    const competency = (name: string, payload: Record<string, unknown>) =>
+        checked(f.adminClient.rpc("course_competency_action", {
+            p_run_id: f.run, p_action: name, p_payload: payload, p_expected_revision: 0,
+        }));
+    const framework = randomUUID(), guided = randomUUID(), independent = randomUUID(), skill = randomUUID();
+    await competency("save_framework", {id: framework, content: {
+        title: "Fiktive Linux-Kompetenzen",
+        levels: [{id: guided, title: "Mit Anleitung"}, {id: independent, title: "Selbstständig"}],
+        competencies: [{id: skill, code: "CLI", title: "Arbeitsverzeichnis bestimmen"}],
+    }});
+    await competency("pin", {framework_id: framework, framework_revision: 1});
     await enrol("enrolled");
-    await action(f.adminClient, "quiz_config", {
+    await action("quiz_config", {
         questions: [{ prompt: "Print the current working directory?", options: ["pwd", "ls"], correct: 0 }],
         pass_percent: 80, max_attempts: 2, published: true,
     });
-    const workspace = `/courses/${f.run}/workspace#course-learning`;
-    await adminLogin(page, f.manager);
     await page.goto(workspace);
     const staffStatus = page.getByRole("region", { name: "Abschlussstatus", exact: true });
     await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
@@ -1523,20 +1559,56 @@ test("completion status explains blockers for course staff and lets the learner 
     try {
         const learnerPage = await context.newPage();
         await login(learnerPage, f.learner.email, /\/learning$/);
+        await learnerPage.goto(curriculum);
+        await expect(learnerPage.getByText("Der Befehl pwd zeigt das Arbeitsverzeichnis.")).toBeVisible();
+        await learnerPage.goto(assignments);
+        const submission = assignment(learnerPage);
+        const selectAssignment = (target: Page) => assignment(target)
+            .getByRole("combobox", {name: "Aufgabe auswählen", exact: true})
+            .selectOption({label: "Fiktive CLI-Übung"});
+        await selectAssignment(learnerPage);
+        const filename = "fiktive-ausgabe.txt";
+        await submission.getByLabel("Datei auswählen", {exact: true}).setInputFiles({
+            name: filename, mimeType: "text/plain", buffer: Buffer.from("/tmp/fictional-lab\n"),
+        });
+        await submission.getByRole("button", {name: "Datei abgeben", exact: true}).click();
+        await expect(submission.getByText(filename, {exact: true})).toBeVisible();
+        await page.goto(assignments);
+        await selectAssignment(page);
+        const review = assess.getByRole("listitem").filter({hasText: filename});
+        const feedback = "Die Ausgabe belegt das richtige Arbeitsverzeichnis.";
+        await review.getByRole("combobox", {name: "Ausgabe", exact: true}).selectOption("1");
+        await review.getByLabel("Rückmeldung für Teilnehmende", {exact: true}).fill(feedback);
+        await review.getByRole("combobox", {name: "Veröffentlichung", exact: true}).selectOption("released");
+        await review.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
+        await expect(review.getByText("Rückmeldung freigegeben", {exact: true})).toBeVisible();
+        await learnerPage.reload();
+        await selectAssignment(learnerPage);
+        await expect(submission.getByText(feedback, {exact: true})).toBeVisible();
         await learnerPage.goto(workspace);
         const learnerStatus = learnerPage.getByRole("region", { name: "Mein Abschlussdokument", exact: true });
         await expect(learnerStatus.getByText(/0 von 1 bestätigt/)).toBeVisible();
         const issue = learnerStatus.getByRole("button", {name: "Voraussetzungen prüfen und Dokument ausstellen", exact: true});
         await expect(issue).toBeDisabled();
 
+        const quiz = learnerPage.getByRole("region", {name: "Mini-Quiz"});
+        await quiz.getByRole("radio", {name: "pwd", exact: true}).check();
+        await quiz.getByRole("button", {name: "Antworten verbindlich abgeben"}).click();
+        await expect(quiz.getByText(/Ergebnis: 100 %.*Bestanden/)).toBeVisible();
+        const evidence = "Fiktiver Quiznachweis zum Arbeitsverzeichnis.";
+        await competency("assess", {pin_revision: 1, user_id: f.learner.id, competency_id: skill,
+            level_id: independent, evidence_note: evidence, include_quiz: true});
         await enrol("completed");
-        // Use the same authorized commands as the normal teaching and quiz controls.
-        await action(f.adminClient, "attendance_verify", {
+        await action("attendance_verify", {
             session_id: f.session, user_id: f.learner.id, state: "attended", minutes: 48,
             reason: "Fictional attendance reviewed",
         });
-        await action(learner, "quiz_attempt", {answers: [0], request_id: randomUUID()}, 1);
         await learnerPage.reload();
+        const competencies = learnerPage.locator("details").filter({
+            has: learnerPage.getByText("Kompetenzen", {exact: true}),
+        });
+        await competencies.getByText("Kompetenzen", {exact: true}).click();
+        await expect(competencies.getByText(evidence, {exact: true})).toBeVisible();
         await expect(learnerStatus.getByText(/Alle Voraussetzungen/)).toBeVisible();
         await issue.click();
         await expect(issue).toHaveCount(0);
@@ -1545,7 +1617,7 @@ test("completion status explains blockers for course staff and lets the learner 
         const downloaded = await pdf;
         expect(downloaded.suggestedFilename()).toBe("course-completion.pdf");
         expect((await readFile(await downloaded.path())).subarray(0, 5).toString()).toBe("%PDF-");
-        await page.reload();
+        await page.goto(workspace);
         await staffStatus.getByLabel("Teilnehmende Person auswählen").selectOption(f.learner.id);
         await expect(staffStatus.getByText("Abschlussdokument ausgestellt.")).toBeVisible();
         const exportPanel = page.getByRole("region", {name: "Lernaktivitäten exportieren"});
@@ -1559,7 +1631,11 @@ test("completion status explains blockers for course staff and lets the learner 
         ]);
         expect(JSON.stringify(archive)).not.toContain(f.learner.id);
         await expect(learnerPage.getByRole("region", {name: "Lernaktivitäten exportieren"})).toHaveCount(0);
-
+        await page.goto("/admin/finance/analytics/learning");
+        const report = page.getByRole("region", {name: "Bewertungen und Abgaben je Kurs"});
+        const row = report.getByRole("row").filter({hasText: f.title});
+        await expect(row).toBeVisible();
+        await expect(row.getByRole("cell", {name: "—", exact: true})).toHaveCount(11);
     } finally {
         await context.close();
     }
