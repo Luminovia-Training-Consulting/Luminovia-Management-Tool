@@ -44,7 +44,6 @@ import { CompanyLecturerBlocks } from "./company-lecturer-blocks";
 import { CompanyIntegrations } from "./company-integrations";
 import { CompanyParticipantsPanel } from "./company-participants";
 import { CompanyContracts } from "./company-contract-trigger";
-import { CompanyOpportunityPipeline } from "../crm/sales-pipeline";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const orgSchema = z.object({
@@ -660,12 +659,6 @@ function ClientWorkspace({
                 />
               )}
             </div>
-            <CompanyOpportunityPipeline
-              key={`crm-pipeline:${organisation.id}`}
-              actor={actor}
-              organisationId={organisation.id}
-              archived={Boolean(organisation.archived_at)}
-            />
             <section className="company-detail-group">
               <h3>{t("notes")}</h3>
               {notes.isPending ? (

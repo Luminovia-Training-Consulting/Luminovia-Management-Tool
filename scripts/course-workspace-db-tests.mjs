@@ -256,7 +256,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             const match = {id: resource, course_id: run, name: "Agreed.pdf", version: 1, category: "material"};
             assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
             assert.deepEqual(await materialSearch(learner), [{
-                ...match, course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
+                ...match, audience: "participants", course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
                 can_edit_metadata: false, can_read_metadata_history: false, can_reuse: false, metadata: null, metadata_revision: 0,
             }]);
             assert.equal((await materialSearch(admin, run))[0].can_upload, true);

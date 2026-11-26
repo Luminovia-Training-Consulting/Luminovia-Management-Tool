@@ -214,36 +214,49 @@ function ProgramEditor({
             <li key={module.course_id ?? `unavailable-${index}`}>
               <div className="programme-step">
                 <strong>{module.title}</strong>
-                <div className="form-actions">
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    disabled={hasPathRules || index === 0}
-                    onClick={() => move(index, -1)}
+                {!hasPathRules && (
+                  <details
+                    className="programme-step-actions"
+                    name={`programme-course-actions-${id}`}
                   >
-                    {t("moveUp")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    disabled={hasPathRules || index === modules.length - 1}
-                    onClick={() => move(index, 1)}
-                  >
-                    {t("moveDown")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    disabled={hasPathRules}
-                    onClick={() =>
-                      setModules(
-                        modules.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
-                  >
-                    {t("remove")}
-                  </Button>
-                </div>
+                    <summary
+                      aria-label={t("courseActionsFor", {
+                        title: module.title,
+                      })}
+                    >
+                      {t("courseActions")}
+                    </summary>
+                    <div className="form-actions">
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        {t("moveUp")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        disabled={index === modules.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        {t("moveDown")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() =>
+                          setModules((items) =>
+                            items.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
+                        {t("remove")}
+                      </Button>
+                    </div>
+                  </details>
+                )}
               </div>
             </li>
           ))}

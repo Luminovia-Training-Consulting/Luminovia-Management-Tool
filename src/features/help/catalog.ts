@@ -729,14 +729,7 @@ export const guideModules: GuideModule[] = [
         "Ask the responsible administrator to check. Lecturer access does not grant general access to company contacts.",
       ],
     },
-    keywords: [
-      "kunde",
-      "client",
-      "organisation",
-      "organization",
-      "kontakt",
-      "crm",
-    ],
+    keywords: ["kunde", "client", "organisation", "organization", "kontakt"],
   },
   {
     id: "wiki",

@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -144,7 +145,11 @@ it("saves an ordered programme of distinct selected course runs", async () => {
     fireEvent.change(picker, { target: { value: course } });
     fireEvent.click(screen.getByRole("button", { name: "Kurs hinzufügen" }));
   }
-  fireEvent.click(screen.getAllByRole("button", { name: "Nach oben" })[1]);
+  const summary = screen.getByLabelText("Kursaktionen für Foundation");
+  const actions = summary.closest("details")!;
+  fireEvent.click(summary);
+  expect(actions).toHaveAttribute("open");
+  fireEvent.click(within(actions).getByRole("button", { name: "Nach oben" }));
   fireEvent.click(screen.getByRole("button", { name: "Programm speichern" }));
   await waitFor(() =>
     expect(fixture.save).toHaveBeenCalledWith(
