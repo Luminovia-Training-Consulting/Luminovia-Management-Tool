@@ -95,6 +95,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   course_gradebook: "GET",
   course_gradebook_export: "GET",
   course_gradebook_history: "GET",
+  course_question_bank: "GET",
   course_operation_destinations: "GET",
   course_readiness: "GET",
   course_run_job_defaults: "GET",

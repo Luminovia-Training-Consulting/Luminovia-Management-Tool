@@ -64,6 +64,7 @@ export interface QuizQuestion {
   prompt: string;
   options: string[];
   correct?: number;
+  source?: { question_id: string; revision: number };
 }
 
 export interface CourseWorkspace {

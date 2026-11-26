@@ -116,6 +116,12 @@ import {
   courseGradebookHistoryResult,
   courseGradebookParameters,
   courseGradebookResult,
+  questionBankParameters,
+  questionBankOptionalParameters,
+  questionBankResult,
+  questionBankActionParameters,
+  questionBankActionVariants,
+  questionBankActionResult,
   courseWelcomePublishedResult,
   courseWelcomeResult,
   courseWelcomeWrite,
@@ -4392,6 +4398,42 @@ const nativePaths = {
     course,
     internalWorkspaceResult,
   ),
+  "/rest/v1/rpc/course_question_bank": rpc(
+    "readCourseQuestionBank",
+    "Premium LMS",
+    "List reusable course quiz questions",
+    "Current course staff can search question prompts and topics in the course organisation. Returns up to twenty current revisions with answer keys and edit capability.",
+    questionBankParameters,
+    questionBankResult,
+    questionBankOptionalParameters,
+  ),
+  "/rest/v1/rpc/course_question_bank_action": {
+    post: {
+      operationId: "saveCourseQuestionBank",
+      tags: ["Premium LMS"],
+      summary: "Save question revisions or configure a quiz from the bank",
+      description:
+        "Save, archive or restore an organisation question with its last-read revision. Configure pins selected revisions and saves the canonical quiz snapshot in one transaction. Optional shuffling covers the whole new quiz revision.",
+      requestBody: {
+        required: true,
+        content: json({
+          ...object(questionBankActionParameters),
+          required: Object.keys(questionBankActionParameters),
+          oneOf: questionBankActionVariants,
+        }),
+      },
+      responses: {
+        "200": {
+          description: "Confirmed revision",
+          content: json(questionBankActionResult),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",

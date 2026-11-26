@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
+import { questionDifficulties } from "../learning/question-bank-schema.ts";
 import { materialMetadataSchema } from "../learning/material-metadata-schema.ts";
 import {
   courseWelcomePublishRequestSchema,
@@ -170,6 +171,77 @@ const quizQuestion = {
   options,
   correct: { ...integer, maximum: 5 },
 };
+const questionBankSource = record({
+  question_id: uuid,
+  revision: { ...integer, minimum: 1 },
+});
+const questionBankItem = record(quizQuestion);
+const questionBankContentFields = {
+  content: questionBankItem,
+  topic: { ...text, minLength: 1, maxLength: 120 },
+  difficulty: { type: "string", enum: [...questionDifficulties] },
+};
+export const questionBankParameters = {
+  p_run_id: uuid,
+  p_search: { ...text, maxLength: 120, default: "" },
+  p_include_archived: { ...boolean, default: false },
+  p_offset: { ...integer, default: 0 },
+};
+export const questionBankOptionalParameters = [
+  "p_search",
+  "p_include_archived",
+  "p_offset",
+];
+export const questionBankResult = record({
+  items: {
+    ...itemList(
+      record({
+        ...questionBankContentFields,
+        id: uuid,
+        revision: { ...integer, minimum: 1 },
+        archived: boolean,
+        can_edit: boolean,
+      }),
+    ),
+    maxItems: 20,
+  },
+  has_more: boolean,
+});
+export const questionBankActionParameters = {
+  p_run_id: uuid,
+  p_action: { type: "string", enum: ["save", "set_archived", "configure"] },
+  p_payload: { type: "object" },
+  p_expected_version: integer,
+};
+export const questionBankActionVariants = [
+  ["save", record({ id: uuid, ...questionBankContentFields })],
+  ["set_archived", record({ id: uuid, archived: boolean })],
+  [
+    "configure",
+    record({
+      entries: {
+        ...itemList({ oneOf: [questionBankItem, questionBankSource] }),
+        minItems: 1,
+        maxItems: 20,
+      },
+      pass_percent: { ...score, minimum: 50 },
+      max_attempts: { ...integer, minimum: 1, maximum: 10 },
+      published: boolean,
+      shuffle: boolean,
+    }),
+  ],
+].map(([action, payload]) =>
+  record({
+    ...questionBankActionParameters,
+    p_action: { const: action },
+    p_payload: payload,
+  }),
+);
+export const questionBankActionResult = record(
+  { version: { ...integer, minimum: 1 }, id: uuid },
+  ["version"],
+);
+
 const dateRange = { starts_at: dateTime, ends_at: dateTime };
 const resourceReference = { id: uuid, name: text, version: integer };
 
@@ -259,7 +331,12 @@ const workspaceFields = {
       published: boolean,
       pass_percent: { ...score, minimum: 50 },
       max_attempts: { ...integer, minimum: 1, maximum: 10 },
-      questions: itemList(record(quizQuestion, ["prompt", "options"])),
+      questions: itemList(
+        record({ ...quizQuestion, source: questionBankSource }, [
+          "prompt",
+          "options",
+        ]),
+      ),
       attempts: integer,
       passed: boolean,
       last_score: nullable(score),

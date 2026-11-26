@@ -42,6 +42,8 @@ import "./i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
 import { CourseWelcomeContent } from "./welcome-content";
+import { QuestionBank } from "./question-bank";
+import { questionBankAction, questionBankKey } from "./question-bank-api";
 import { CourseMeetingLinkEditor } from "./meeting-link";
 import { CourseTeachingChecklist } from "./course-teaching-checklist";
 import { courseClassroom } from "./meeting-url";
@@ -483,6 +485,27 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
   const { t } = useTranslation("learning");
   const online = useOnline();
   const save = useAction(course.id, actor, Boolean(academy));
+  const [shuffle, setShuffle] = useState(false);
+  const cache = useQueryClient();
+  const saveFromBank = useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      questionBankAction(
+        course.id,
+        "configure",
+        payload,
+        course.quiz?.version ?? 0,
+      ),
+    onSuccess: () =>
+      cache.invalidateQueries({
+        queryKey: courseWorkspaceKey(actor, course.id),
+      }),
+  });
+  const pending = save.isPending || saveFromBank.isPending;
+  const conflict =
+    typeof saveFromBank.error === "object" &&
+    saveFromBank.error !== null &&
+    "code" in saveFromBank.error &&
+    saveFromBank.error.code === "PT409";
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     course.quiz?.questions ?? [{ prompt: "", options: ["", ""], correct: 0 }],
   );
@@ -494,120 +517,227 @@ function QuizEditor({ course, actor, academy }: ActivityProps) {
       items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     );
   }
+  const selected = new Set(
+    questions.flatMap((question) =>
+      question.source ? [question.source.question_id] : [],
+    ),
+  );
+  const hasOnlyPlaceholder =
+    questions.length === 1 &&
+    !questions[0].source &&
+    !questions[0].prompt &&
+    questions[0].options.every((option) => !option);
   return (
-    <form
-      className="learning-quiz-editor"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate({
-          action: "quiz_config",
-          payload: {
-            questions,
+    <>
+      {course.lms_enabled && (
+        <QuestionBank
+          actor={actor}
+          courseId={course.id}
+          selected={selected}
+          canSelect={!pending && questions.length < 20}
+          onSelect={(question) => {
+            const selectedQuestion = {
+              ...question.content,
+              source: { question_id: question.id, revision: question.revision },
+            };
+            setQuestions((items) =>
+              hasOnlyPlaceholder
+                ? [selectedQuestion]
+                : [...items, selectedQuestion],
+            );
+          }}
+        />
+      )}
+      <form
+        className="learning-quiz-editor"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (pending || !online) return;
+          const settings = {
             pass_percent: pass,
             max_attempts: attempts,
             published,
-          },
-          version: course.quiz?.version ?? 0,
-        });
-      }}
-    >
-      {questions.map((question, index) => (
-        <fieldset key={index}>
-          <legend>{t("quizQuestion", { number: index + 1 })}</legend>
-          <label>
-            {t("prompt")}
+          };
+          if (selected.size || shuffle) {
+            save.reset();
+            saveFromBank.mutate({
+              ...settings,
+              entries: questions.map((question) => question.source ?? question),
+              shuffle,
+            });
+          } else {
+            saveFromBank.reset();
+            save.mutate({
+              action: "quiz_config",
+              payload: { ...settings, questions },
+              version: course.quiz?.version ?? 0,
+            });
+          }
+        }}
+      >
+        {questions.map((question, index) => (
+          <fieldset key={index} disabled={pending}>
+            <legend>{t("quizQuestion", { number: index + 1 })}</legend>
+            {question.source ? (
+              <>
+                <p>{question.prompt}</p>
+                <ol className="list-decimal ps-6">
+                  {question.options.map((option, position) => (
+                    <li key={position}>
+                      {position === question.correct ? (
+                        <strong>{option}</strong>
+                      ) : (
+                        option
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                <p>
+                  {t("correctAnswer")}:{" "}
+                  {question.options[question.correct ?? 0]}
+                </p>
+                <p>
+                  {t("questionBankSource", {
+                    revision: question.source.revision,
+                  })}
+                </p>
+              </>
+            ) : (
+              <>
+                <label>
+                  {t("prompt")}
+                  <input
+                    required
+                    maxLength={500}
+                    value={question.prompt}
+                    onChange={(event) =>
+                      update(index, { prompt: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  {t("options")}
+                  <textarea
+                    required
+                    value={question.options.join("\n")}
+                    onChange={(event) =>
+                      update(index, { options: event.target.value.split("\n") })
+                    }
+                  />
+                </label>
+                <label>
+                  {t("correctAnswer")}
+                  <select
+                    value={question.correct ?? 0}
+                    onChange={(event) =>
+                      update(index, { correct: Number(event.target.value) })
+                    }
+                  >
+                    {question.options.map((option, i) => (
+                      <option value={i} key={i}>
+                        {i + 1}. {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
+            {(questions.length > 1 || question.source) && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  setQuestions((items) =>
+                    items.length === 1
+                      ? [{ prompt: "", options: ["", ""], correct: 0 }]
+                      : items.filter((_, i) => i !== index),
+                  )
+                }
+              >
+                {t("removeQuestion")}
+              </Button>
+            )}
+          </fieldset>
+        ))}
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={pending || questions.length >= 20}
+          onClick={() =>
+            setQuestions((items) => [
+              ...items,
+              { prompt: "", options: ["", ""], correct: 0 },
+            ])
+          }
+        >
+          <Plus size={16} />
+          {t("addQuestion")}
+        </Button>
+        <label>
+          {t("passPercent")}
+          <input
+            type="number"
+            min={50}
+            max={100}
+            value={pass}
+            onChange={(event) => setPass(Number(event.target.value))}
+          />
+        </label>
+        <label>
+          {t("maxAttempts")}
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={attempts}
+            onChange={(event) => setAttempts(Number(event.target.value))}
+          />
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={published}
+            onChange={(event) => setPublished(event.target.checked)}
+          />
+          {t("publishQuiz")}
+        </label>
+        {course.lms_enabled && (
+          <label className="checkbox-label">
             <input
-              required
-              maxLength={500}
-              value={question.prompt}
-              onChange={(event) =>
-                update(index, { prompt: event.target.value })
-              }
+              type="checkbox"
+              checked={shuffle}
+              onChange={(event) => setShuffle(event.target.checked)}
             />
+            {t("questionBankShuffle")}
           </label>
-          <label>
-            {t("options")}
-            <textarea
-              required
-              value={question.options.join("\n")}
-              onChange={(event) =>
-                update(index, { options: event.target.value.split("\n") })
-              }
-            />
-          </label>
-          <label>
-            {t("correctAnswer")}
-            <select
-              value={question.correct ?? 0}
-              onChange={(event) =>
-                update(index, { correct: Number(event.target.value) })
-              }
-            >
-              {question.options.map((option, i) => (
-                <option value={i} key={i}>
-                  {i + 1}. {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          {questions.length > 1 && (
+        )}
+        <Button disabled={!online || pending}>{t("saveQuiz")}</Button>
+        {conflict && (
+          <Notice kind="error">
+            {t("questionBankConflict")}
             <Button
               type="button"
-              variant="ghost"
-              onClick={() =>
-                setQuestions((items) => items.filter((_, i) => i !== index))
-              }
+              variant="secondary"
+              onClick={() => {
+                saveFromBank.reset();
+                void cache.invalidateQueries({
+                  queryKey: courseWorkspaceKey(actor, course.id),
+                });
+                void cache.invalidateQueries({
+                  queryKey: questionBankKey(actor, course.id),
+                });
+              }}
             >
-              {t("removeQuestion")}
+              {t("questionBankReload")}
             </Button>
-          )}
-        </fieldset>
-      ))}
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={questions.length >= 20}
-        onClick={() =>
-          setQuestions((items) => [
-            ...items,
-            { prompt: "", options: ["", ""], correct: 0 },
-          ])
-        }
-      >
-        <Plus size={16} />
-        {t("addQuestion")}
-      </Button>
-      <label>
-        {t("passPercent")}
-        <input
-          type="number"
-          min={50}
-          max={100}
-          value={pass}
-          onChange={(event) => setPass(Number(event.target.value))}
+          </Notice>
+        )}
+        <Result
+          error={save.isError || (saveFromBank.isError && !conflict)}
+          success={save.isSuccess || saveFromBank.isSuccess}
         />
-      </label>
-      <label>
-        {t("maxAttempts")}
-        <input
-          type="number"
-          min={1}
-          max={10}
-          value={attempts}
-          onChange={(event) => setAttempts(Number(event.target.value))}
-        />
-      </label>
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={published}
-          onChange={(event) => setPublished(event.target.checked)}
-        />
-        {t("publishQuiz")}
-      </label>
-      <Button disabled={!online || save.isPending}>{t("saveQuiz")}</Button>
-      <Result error={save.isError} success={save.isSuccess} />
-    </form>
+      </form>
+    </>
   );
 }
 /** Submits an eligible attempt with a stable retry ID; correct answers remain server-private. */

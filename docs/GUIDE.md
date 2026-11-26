@@ -359,6 +359,8 @@ Use the attendance register to mark present, absent or excused by session, optio
 
 Ended-course feedback is available to eligible learners and customers. Ordinary summaries omit authors and remain withheld until three responses. The server retains the author privately for eligibility and duplicates.
 
+In **Mini-Quiz**, open **Fragenbank / Question bank** to search prompts and topics from the course organisation. Create a question with two to six answer options and mark the correct choice. Add a bank question to the quiz to pin the displayed revision. You can combine it with manual questions, adjust the pass threshold and attempt limit, and optionally shuffle the entire new quiz revision on save. Changes or archiving in the bank leave already published questions and accepted attempts intact.
+
 A published mini quiz shows current questions and your attempt allowance. Correct answers stay server-private. Submission and pass state require online confirmation; retries cannot create a duplicate accepted attempt. Completion additionally requires completed enrolment, ended sessions, verified attendance of at least 80% per session and a passed current required published quiz. Only then can the server issue a protected completion PDF of frozen facts. Revocation retains history and constrains
 reissue; the PDF is not a new official qualification or legal signature.
 

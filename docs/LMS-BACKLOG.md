@@ -43,11 +43,9 @@ This ledger tracks the educational-only LMS extension from the implementation di
 
 ### LMS-P0-04 — reusable question bank and examination builder
 
-- **Priority / status:** P0 · planned; existing quiz revisions and examination files remain authoritative.
-- **Dependencies / affected modules:** Existing course quizzes, scanned examination documents, assignment submission and authorisation gateways.
-- **Data and security:** Immutable question revisions referenced by attempts; objective scoring stays deterministic; answer keys and model answers withheld until their explicit release condition; no AI grading.
-- **Tasks / acceptance:** Add question taxonomy, objective/manual question types, rubrics/blueprints, pools, server-generated randomisation, time/attempt rules, answer autosave, recovery, manual grading, moderation and exports. Test question-version integrity, timing/expiry, duplicate and concurrent submit, answer exposure and cross-tenant access.
-- **Test results / commits / limitations:** Not implemented or tested; no commit. Standards-based exam import and proctoring are not implied.
+- **Priority / status:** P0 · partially implemented. Course staff can create, search, revise, archive and restore reusable objective questions by organisation, topic and difficulty. The quiz builder can mix manual entries with exact bank revisions. Optional server-side shuffling sets the order for the whole newly saved quiz revision.
+- **Data and security:** Append-only question history and per-quiz provenance preserve the accepted question and options across edits. Current course staff can read their organisation's bank; authors and course managers can change items. Learners receive only the prompt and options from the published quiz. The canonical attempt, scoring, certificate and gradebook sources continue to consume the existing quiz versions and attempt records. In dedicated Academy editions the bank can be read during grace, with an active licence required to write.
+- **Verification and remaining work:** Local PostgreSQL covers scope, append-only revisions, conflicting edits, snapshot integrity, archiving, restore and scoring with an idempotent attempt. A focused desktop and mobile Chromium journey exercised bank creation, quiz publication, a later bank revision and a learner submission against isolated Auth and PostgREST. Timed drawn exams, per-attempt pools, server-side answer autosave and recovery, manual question types, rubric/blueprint moderation and exam exports remain open. External standards import and proctoring require their own product scope.
 
 ### LMS-P0-05 — rubrics, assignments, resubmission and feedback
 

@@ -33,6 +33,7 @@ const readPaths = [
   "/rest/v1/rpc/course_gradebook",
   "/rest/v1/rpc/course_gradebook_history",
   "/rest/v1/rpc/course_gradebook_export",
+  "/rest/v1/rpc/course_question_bank",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -59,6 +60,7 @@ const writePaths = [
   "/rest/v1/rpc/import_table_row",
   "/rest/v1/rpc/set_course_material_metadata",
   "/rest/v1/rpc/reuse_course_material",
+  "/rest/v1/rpc/course_question_bank_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
