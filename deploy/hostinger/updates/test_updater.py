@@ -2,11 +2,14 @@
 """Offline update-policy and real archive/filesystem/lock regression tests."""
 
 import copy
+import fcntl
 import hashlib
 import io
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -512,6 +515,80 @@ class ReleaseTests(unittest.TestCase):
                     updater.api("/branches/main")
 
 
+# Verify the actual operator CLI against temporary on-disk records and an active release link.
+class InstalledReleaseTests(unittest.TestCase):
+    def inspect(self, root, *options):
+        return subprocess.run(
+            [sys.executable, u.__file__, "--installed", "--root", str(root), *options],
+            capture_output=True, text=True, timeout=5,
+        )
+
+    def assert_refused(self, root, code):
+        result = self.inspect(root)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {"status": "failed", "failureCode": code})
+
+    def test_reports_only_the_installed_version_and_sha_without_changing_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = instance(directory)
+            updater = u.Updater(root)
+            u.atomic_json(updater.state_file, {"currentCommit": OLD, "failedCommit": COMMIT, "status": "failed", "lastBackup": "private fixture path"})
+            lock = updater.control / "updater.lock"
+            lock.touch(mode=0o600)
+            (root / "www/releases/bootstrap/index.html").parent.rename(root / "www/releases" / OLD)
+            updater.promote("releases/" + OLD)
+            state_before = updater.state_file.read_bytes()
+            result = self.inspect(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), {"status": "installed", "version": "cms-dev-" + OLD, "commit": OLD})
+            self.assertEqual(updater.state_file.read_bytes(), state_before)
+            self.assertEqual(lock.read_bytes(), b"")
+            self.assertEqual(os.readlink(root / "www/current"), "releases/" + OLD)
+            incompatible = self.inspect(root, "--once")
+            self.assertEqual(incompatible.returncode, 2)
+
+    def test_refuses_to_guess_when_installation_changes_or_evidence_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = instance(directory)
+            updater = u.Updater(root)
+            self.assert_refused(root, "installation_not_initialized")
+            self.assertFalse(updater.control.exists())
+            u.atomic_json(updater.state_file, {"currentCommit": COMMIT})
+            lock = updater.control / "updater.lock"
+            lock.touch(mode=0o600)
+            with lock.open("rb+") as stream:
+                fcntl.flock(stream, fcntl.LOCK_EX)
+                self.assert_refused(root, "installation_update_running")
+            self.assert_refused(root, "installation_release_mismatch")
+            updater.promote("releases/" + COMMIT)
+            self.assert_refused(root, "installation_release_missing")
+            release = root / "www/releases" / COMMIT
+            release.mkdir()
+            (release / "index.html").symlink_to("../bootstrap/index.html")
+            self.assert_refused(root, "installation_release_missing")
+            updater.maintenance.touch()
+            self.assert_refused(root, "installation_maintenance_active")
+            updater.maintenance.unlink()
+            u.atomic_json(updater.state_file, {"currentCommit": COMMIT, "manualRecoveryRequired": True})
+            self.assert_refused(root, "installation_recovery_required")
+            u.atomic_json(updater.state_file, {"currentCommit": COMMIT.upper()})
+            self.assert_refused(root, "installation_state_invalid")
+
+    def test_never_reads_a_symlinked_or_nonprivate_state_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = instance(directory)
+            updater = u.Updater(root)
+            u.atomic_json(updater.state_file, {"currentCommit": COMMIT})
+            lock = updater.control / "updater.lock"
+            lock.touch(mode=0o600)
+            updater.state_file.chmod(0o644)
+            self.assert_refused(root, "installation_evidence_not_private")
+            target = updater.control / "other.json"
+            updater.state_file.rename(target)
+            updater.state_file.symlink_to(target)
+            self.assert_refused(root, "installation_evidence_unavailable")
+
+
 # Exercise ordering, rollback and mutation fences of the real updater state machine in owned local file trees.
 class InstallationTests(unittest.TestCase):
     def test_registry_pull_outage_backs_off_before_mutation_then_installs_after_deadline(self):
@@ -833,6 +910,8 @@ class InstallationTests(unittest.TestCase):
             updater.download = download
             self.assertEqual(updater.once()["status"], "updated")
             self.assertFalse(json.loads(updater.state_file.read_text())["bootstrapApproved"])
+            # Inspect the real receipt and symlink written by the update, not a GitHub candidate.
+            self.assertEqual(u.installed_release(root), {"status": "installed", "version": "cms-dev-" + COMMIT, "commit": COMMIT})
 
     def test_other_operator_maintenance_and_manual_recovery_block_automatic_install(self):
         with tempfile.TemporaryDirectory() as directory:

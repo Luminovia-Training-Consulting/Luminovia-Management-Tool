@@ -29,6 +29,7 @@ from pathlib import Path, PurePosixPath
 
 REPOSITORY = "Luminovia-Training-Consulting/Luminovia-Management-Tool"
 BRANCH = "main"
+CMS_RELEASE_PREFIX = "cms-dev-"
 API = "https://api.github.com/repos/" + REPOSITORY
 DB = "luminovia-supabase-db-1"
 SHA = re.compile(r"[a-f0-9]{40}\Z")
@@ -521,7 +522,7 @@ class Updater:
         if commit == self.state.get("failedCommit"):
             return {"status": "failed_release_suppressed", "commit": commit}
         # Three API calls only for a new release; normal polls use one.
-        tag_name = "cms-dev-" + commit
+        tag_name = CMS_RELEASE_PREFIX + commit
         release = self.api("/releases/tags/" + tag_name, missing_ok=True)
         if release is None or isinstance(release, dict) and release.get("draft"):
             return {"status": "waiting_for_main_release", "commit": commit}
@@ -1371,11 +1372,80 @@ class Updater:
             os.close(lock)
 
 
+@contextlib.contextmanager
+def open_installation_evidence(path):
+    """Read only private, operator-owned regular files; never follow a final symlink."""
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as stream:
+        metadata = os.fstat(stream.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+            raise UpdateError("installation_evidence_not_private")
+        yield stream
+
+
+def installed_release(root):
+    """Project matching local updater and frontend evidence without querying GitHub or the runtime."""
+    private = root / "private"
+    control = private / "updates"
+    www = root / "www"
+    try:
+        for directory in (private, control):
+            metadata = directory.lstat()
+            if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+                raise UpdateError("installation_evidence_not_private")
+        # Hold the same lock as once() while comparing state and the live link;
+        # do not create the lock or wait on an active writer.
+        with open_installation_evidence(control / "updater.lock") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise UpdateError("installation_update_running") from error
+            with open_installation_evidence(control / "state.json") as stream:
+                limit = 4 * 1024 * 1024
+                raw = stream.read(limit + 1)
+            if len(raw) > limit:
+                raise UpdateError("installation_state_invalid")
+            try:
+                state = json.loads(raw)
+            except (ValueError, RecursionError) as error:
+                raise UpdateError("installation_state_invalid") from error
+            if not isinstance(state, dict):
+                raise UpdateError("installation_state_invalid")
+            if state.get("manualRecoveryRequired") is True:
+                raise UpdateError("installation_recovery_required")
+            if os.path.lexists(www / "maintenance.enabled"):
+                raise UpdateError("installation_maintenance_active")
+            commit = state.get("currentCommit")
+            if commit is None:
+                raise UpdateError("installation_not_initialized")
+            if not isinstance(commit, str) or not SHA.fullmatch(commit):
+                raise UpdateError("installation_state_invalid")
+            current = www / "current"
+            if not current.is_symlink() or os.readlink(current) != "releases/" + commit:
+                raise UpdateError("installation_release_mismatch")
+            releases = www / "releases"
+            release = releases / commit
+            try:
+                if any(not stat.S_ISDIR(path.lstat().st_mode) for path in (www, releases, release)):
+                    raise UpdateError("installation_release_missing")
+                index = (release / "index.html").lstat()
+                if not stat.S_ISREG(index.st_mode) or index.st_size == 0:
+                    raise UpdateError("installation_release_missing")
+            except FileNotFoundError as error:
+                raise UpdateError("installation_release_missing") from error
+            return {"status": "installed", "version": CMS_RELEASE_PREFIX + commit, "commit": commit}
+    except FileNotFoundError as error:
+        raise UpdateError("installation_not_initialized") from error
+    except OSError as error:
+        raise UpdateError("installation_evidence_unavailable") from error
+
+
 # Separate the documented operating modes and expose stable results/error codes without private process details.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="Read-only GitHub/current-release inspection")
+    mode.add_argument("--installed", action="store_true", help="Read-only local installed CMS version and commit")
     mode.add_argument("--once", action="store_true", help="Apply an eligible release once")
     mode.add_argument("--plan-migrations", action="store_true", help="Read-only exact migration plan; does not authorise or apply it")
     parser.add_argument("--root", type=Path, default=Path("/opt/luminovia-portal"))
@@ -1390,8 +1460,8 @@ def main():
     arguments = parser.parse_args()
     if bool(arguments.package) != bool(arguments.manifest):
         parser.error("Local packages require --package and --manifest together")
-    if arguments.check and (arguments.package or arguments.retry_failed or arguments.reviewed_migration_plan):
-        parser.error("--check cannot apply a local release or reviewed plan")
+    if (arguments.check or arguments.installed) and (arguments.package or arguments.retry_failed or arguments.reviewed_migration_plan):
+        parser.error("Read-only inspection cannot apply a local release or reviewed plan")
     if arguments.plan_migrations:
         if not arguments.package or arguments.retry_failed or arguments.reviewed_migration_plan:
             parser.error("--plan-migrations requires a local release and cannot apply or retry")
@@ -1402,6 +1472,9 @@ def main():
     if arguments.reviewed_migration_plan and (not arguments.once or not arguments.package):
         parser.error("Reviewed application requires --once --package --manifest --reviewed-migration-plan")
     try:
+        if arguments.installed:
+            print(json.dumps(installed_release(arguments.root), sort_keys=True))
+            return 0
         updater = Updater(arguments.root)
         if arguments.plan_migrations:
             manifest = json.loads(arguments.manifest.read_text(encoding="utf8"))

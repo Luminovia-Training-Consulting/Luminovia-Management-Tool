@@ -43,6 +43,12 @@ Each open row is a scope and acceptance gate, not an implementation claim. For a
 - Not claimed: GitHub execution of the changed publisher, full local native/browser acceptance, live migration or rollback, load measurements, real email or push acceptance, or any production changes. The workflow gate does not retroactively attest older packages. Repository branch rules still own review and merge approvals; a merged-PR match is not itself an approval check.
 - Next: review P0-02; then take up P0-01 (authorization matrix) and P0-03/P0-04 (controlled lifecycle and restore evidence) without disturbing other worktrees or hosted data.
 
+## Verification record for P0-03 installed CMS diagnostics
+
+- The existing CMS development updater now offers an operator-only `--installed` inspection, with no migration, HTTP endpoint, credential changes or new deployment path. It compares private updater state under the existing lock with the active frontend release and reports the exact local CMS release identifier and full commit, not the current GitHub candidate.
+- Local subprocess tests exercise the CLI on temporary installation trees: matching state/link, failed-candidate isolation, lock contention, maintenance/recovery, and rejected missing, malformed or non-private evidence. The updater test suite also verifies that the diagnostic can read the state, lock and link produced by its successful installation path.
+- Next: run the diagnostic on an authorised staging installation and compare it with the exact verified package and actual service health before and after an approved upgrade and rollback. The diagnostic does not itself attest browser/HTTPS behavior, backend state or environment separation; P0-03 remains partial. See the [operator runbook](../deploy/hostinger/maintenance/README.md#operations).
+
 ## Verification record for P0-04 native restore evidence
 
 - The full `verify-selfhost` profile installs the distribution's official `age` package and runs `deploy/hostinger/backups/test_complete_restore.mjs` before the existing native selfhost compatibility check. The fixture uses a generated fictional backup, real age encryption/decryption and owned networkless PostgreSQL containers; it never uses hosted/customer data.
