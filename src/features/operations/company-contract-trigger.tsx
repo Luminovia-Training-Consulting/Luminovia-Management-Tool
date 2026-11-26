@@ -18,11 +18,13 @@ export function CompanyContracts({
   organisationId,
   organisationName,
   archived,
+  showOrganisationName = false,
 }: {
   actor: string;
   organisationId: string;
   organisationName: string;
   archived: boolean;
+  showOrganisationName?: boolean;
 }) {
   const { t } = useTranslation("operations");
   const [open, setOpen] = useState(false);
@@ -37,6 +39,7 @@ export function CompanyContracts({
         onClick={() => setOpen(true)}
       >
         {t("companyContracts")}
+        {showOrganisationName && <span>· {organisationName}</span>}
       </Button>
       <Dialog
         open={open}
@@ -47,6 +50,7 @@ export function CompanyContracts({
         {open && (
           <Suspense fallback={<Loading />}>
             <ContractFiles
+              key={`${actor}:${organisationId}`}
               actor={actor}
               organisationId={organisationId}
               archived={archived}

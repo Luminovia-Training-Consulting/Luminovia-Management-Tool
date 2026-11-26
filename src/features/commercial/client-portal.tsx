@@ -12,6 +12,7 @@ import {
   AdditionalCompanyDecisions,
   CompanyDecisions,
 } from "./company-decisions";
+import { CompanyContracts } from "../operations/company-contract-trigger";
 /**
  * Organization-scoped course requests and client spending views. Membership limits available
  * organizations; publication and lecturer allocation remain separate server operations.
@@ -866,6 +867,18 @@ export function ClientPortalPage() {
             />
           )}
           <div className="section-stack company-operation-sections">
+            {orgs.data
+              .filter((org) => !organisation || organisation === org.id)
+              .map((org) => (
+                <CompanyContracts
+                  key={`${actor}:${org.id}`}
+                  actor={actor}
+                  organisationId={org.id}
+                  organisationName={org.name}
+                  archived={false}
+                  showOrganisationName={orgs.data.length > 1}
+                />
+              ))}
             <CompanyDispatchSettings actor={actor} organisations={orgs.data} />
             <CompanyLecturerBlocks actor={actor} organisations={orgs.data} />
             <CompanyLecturers actor={actor} organisations={orgs.data} />

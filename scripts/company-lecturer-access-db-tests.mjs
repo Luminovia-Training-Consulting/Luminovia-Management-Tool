@@ -95,6 +95,15 @@ await withTestDatabase("company_lecturer_access", async ({ sql, actor }) => {
     [lecturer],
   );
   assert.deepEqual(await rows(unrelatedClient, "chat_contacts"), []);
+  // A separate teaching role cannot turn a company account into an unscoped company contact.
+  await sql(`insert into public.user_roles(user_id,role) values (${q(unrelatedClient)},'lecturer')`);
+  try {
+    assert.ok(!(await rows(lecturer, "chat_contacts")).some(({ id }) => id === unrelatedClient));
+    assert.ok(!(await rows(unrelatedClient, "chat_contacts")).some(({ id }) => id === lecturer));
+    await assert.rejects(value(unrelatedClient, "person_profile", [lecturer]), /42501/);
+  } finally {
+    await sql(`delete from public.user_roles where user_id=${q(unrelatedClient)} and role='lecturer'`);
+  }
   assert.ok(
     !(await rows(lecturer, "chat_contacts")).some(
       (contact) => contact.id === unrelatedClient,

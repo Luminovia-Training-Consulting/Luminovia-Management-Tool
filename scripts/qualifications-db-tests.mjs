@@ -107,6 +107,12 @@ await withTestDatabase("qualification", async ({sql, actor}) => {
     await check(
         "Foreign certificate blanket removed; independent permission CV policy retained",
         async () => {
+            for (const {doc} of [cert, cv]) {
+                assert.equal(await actor(peer, `select count(*) from public.documents where id=${q(doc)}`), "0");
+                assert.equal(await actor(peer, `select count(*) from public.document_versions where document_id=${q(doc)}`), "0");
+                await assert.rejects(actor(peer, `select public.rename_document(${q(doc)},'Fictional renamed.pdf',false)`), /42501/);
+                await assert.rejects(actor(peer, `select public.rename_document(${q(doc)},null,true)`), /42501/);
+            }
             assert.equal(
                 await actor(
                     manager,

@@ -43,6 +43,7 @@ const pairs: Record<string, [string, string]> = {
     "Lade deinen ausgeführten Vertrag selbst hoch. Die Verwaltung kann ihn für den Vertragseintrag auswählen, aber nicht herunterladen.",
     "Upload your executed contract yourself. Management can select it for the contract record but cannot download it.",
   ],
+  ownContractFiles: ["Meine Vertragsdateien", "My contract files"],
   contractCandidate: ["Hochgeladene Vertragsdatei", "Uploaded contract file"],
   contractCandidateHint: [
     "Die Datei ist für die dozierende Person und die Person zugänglich, die sie berechtigt für sie hochgeladen hat.",
