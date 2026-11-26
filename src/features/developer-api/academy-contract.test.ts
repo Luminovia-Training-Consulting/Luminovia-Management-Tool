@@ -74,6 +74,7 @@ const writePaths = [
   "/rest/v1/rpc/reuse_course_material",
   "/rest/v1/rpc/course_question_bank_action",
   "/rest/v1/rpc/course_h5p_question_import",
+  "/rest/v1/rpc/course_h5p_collection_import",
   "/rest/v1/rpc/course_assignment_action",
   "/rest/v1/rpc/save_course_quiz_draft",
   "/rest/v1/rpc/start_course_quiz_pool",

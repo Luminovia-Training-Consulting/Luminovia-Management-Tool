@@ -10,6 +10,7 @@ import {
 } from "../learning/course-completion-policy-schema.ts";
 import {
   h5pAttributionSchema,
+  h5pCollectionImportSchema,
   h5pQuestionImportSchema,
 } from "../learning/h5p-import-schema.ts";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
@@ -228,6 +229,17 @@ export const h5pQuestionImportParameters = {
 export const h5pQuestionImportResult = record({
   ...questionBankEntryFields,
   h5p_attribution: h5pAttribution,
+});
+export const h5pCollectionImportParameters = {
+  p_run_id: uuid,
+  p_package: z.toJSONSchema(h5pCollectionImportSchema),
+};
+export const h5pCollectionImportResult = record({
+  questions: {
+    ...itemList(h5pQuestionImportResult),
+    minItems: 1,
+    maxItems: 20,
+  },
 });
 export const questionBankActionParameters = {
   p_run_id: uuid,

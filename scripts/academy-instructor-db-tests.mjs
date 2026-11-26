@@ -50,7 +50,7 @@ const featureFixtureOperations = new Map([
   ],
   ["course-submissions-db-tests.mjs", ["set_course_exam_extra_time"]],
   ["academy-course-quiz-pool-db-tests.mjs", ["start_course_quiz_pool"]],
-  ["academy-course-h5p-import-db-tests.mjs", ["course_h5p_question_import"]],
+  ["academy-course-h5p-import-db-tests.mjs", ["course_h5p_question_import", "course_h5p_collection_import"]],
   [
     "academy-question-bank-db-tests.mjs",
     [

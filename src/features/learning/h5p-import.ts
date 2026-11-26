@@ -8,7 +8,14 @@ import {
 import { objectiveQuestionInput } from "./question-bank-schema";
 import {
   h5pAttributionSchema,
-  type H5pQuestionImport,
+  h5pCollectionImportSchema,
+  h5pCollectionLibraries,
+  h5pCollectionLimit,
+  h5pQuestionImportSchema,
+  h5pSimpleLibraries,
+  h5pCollectionItemSchema,
+  type H5pCollectionItem,
+  type H5pImport,
 } from "./h5p-import-schema";
 
 const maxPackageSize = 8 * 1024 * 1024;
@@ -90,6 +97,43 @@ const trueFalse = question.extend({
     .optional(),
 });
 
+const choiceSet = z.object({
+  choices: z
+    .array(
+      z.object({
+        question: z.string(),
+        answers: z.array(z.string()).min(2).max(4),
+      }),
+    )
+    .min(1)
+    .max(h5pCollectionLimit),
+});
+const containedAttribution = manifest
+  .pick({
+    title: true,
+    language: true,
+    license: true,
+    licenseVersion: true,
+    licenseExtras: true,
+    author: true,
+    authors: true,
+    source: true,
+    changes: true,
+  })
+  .partial();
+const questionSet = z.object({
+  questions: z
+    .array(
+      z.object({
+        library: z.enum(["H5P.MultiChoice 1.16", "H5P.TrueFalse 1.8"]),
+        params: z.unknown(),
+        metadata: containedAttribution.optional(),
+      }),
+    )
+    .min(1)
+    .max(h5pCollectionLimit),
+});
+
 export class H5pImportError extends Error {
   constructor(readonly reason: "archive" | "question" | "license") {
     super(reason);
@@ -167,7 +211,13 @@ function plainText(input: string) {
 }
 
 /** Keep CC attribution and supplied modification notices, rejecting ambiguous licences. */
-function attribution(data: z.infer<typeof manifest>, library: string) {
+function attribution(
+  data: z.infer<typeof containedAttribution> & {
+    title: string;
+    language: string;
+  },
+  library: string,
+) {
   const code = data.license?.trim().toUpperCase();
   const version = data.licenseVersion?.trim().toUpperCase();
   const cc0 =
@@ -246,6 +296,10 @@ function normalizeQuestion(data: unknown, library: string, language: string) {
     };
   } else throw new H5pImportError("question");
 
+  return validateQuestion(imported);
+}
+
+function validateQuestion(imported: unknown) {
   const parsed = objectiveQuestionInput.safeParse(imported);
   if (
     !parsed.success ||
@@ -256,8 +310,77 @@ function normalizeQuestion(data: unknown, library: string, language: string) {
   return parsed.data;
 }
 
-/** Inspect archive entry metadata, decompress only JSON and fingerprint the original bytes. */
-export async function readH5pQuestion(file: File): Promise<H5pQuestionImport> {
+/** Convert supported collections to separate, native-scored bank questions. */
+function normalizeCollection(
+  data: unknown,
+  library: string,
+  definition: z.infer<typeof manifest>,
+): H5pCollectionItem[] {
+  if (library === "H5P.SingleChoiceSet 1.11") {
+    const parsed = choiceSet.safeParse(data);
+    if (!parsed.success) throw new H5pImportError("question");
+    return parsed.data.choices.map(({ question, answers }) => ({
+      question: validateQuestion({
+        prompt: plainText(question),
+        options: answers.map(plainText),
+        correct: 0,
+      }),
+      library,
+      subcontent: null,
+    }));
+  }
+
+  const parsed = questionSet.safeParse(data);
+  if (!parsed.success) throw new H5pImportError("question");
+  const declared = new Set(
+    definition.preloadedDependencies.map(
+      (item) => `${item.machineName} ${item.majorVersion}.${item.minorVersion}`,
+    ),
+  );
+  return parsed.data.questions.map(
+    ({ library: itemLibrary, params, metadata }) => {
+      if (!declared.has(itemLibrary)) throw new H5pImportError("question");
+      const question = normalizeQuestion(
+        params,
+        itemLibrary,
+        metadata?.language ?? definition.language,
+      );
+      // Retain explicit child credits separately. An undeclared child licence
+      // is inherited only when there are no independent child credits.
+      const hasCredits =
+        metadata &&
+        (metadata.license !== undefined ||
+          metadata.licenseVersion !== undefined ||
+          metadata.author !== undefined ||
+          metadata.authors !== undefined ||
+          metadata.source !== undefined ||
+          metadata.licenseExtras !== undefined ||
+          metadata.changes !== undefined);
+      const subcontent = hasCredits
+        ? attribution(
+            {
+              ...metadata,
+              title:
+                metadata.title ??
+                Array.from(question.prompt).slice(0, 150).join(""),
+              language: metadata.language ?? definition.language,
+            },
+            itemLibrary,
+          )
+        : null;
+      const result = h5pCollectionItemSchema.safeParse({
+        question,
+        library: itemLibrary,
+        subcontent,
+      });
+      if (!result.success) throw new H5pImportError("question");
+      return result.data;
+    },
+  );
+}
+
+/** Inspect archive metadata, decompress only JSON and fingerprint the original bytes. */
+export async function readH5pPackage(file: File): Promise<H5pImport> {
   if (
     !file.name.toLowerCase().endsWith(".h5p") ||
     !file.size ||
@@ -307,17 +430,30 @@ export async function readH5pQuestion(file: File): Promise<H5pQuestionImport> {
     );
     if (main.length !== 1) throw new H5pImportError("question");
     const library = `${main[0].machineName} ${main[0].majorVersion}.${main[0].minorVersion}`;
-    const item = normalizeQuestion(
-      await readJson(selected.get(packagePaths[1])),
-      library,
-      data.data.language,
+    const collection = h5pCollectionLibraries.some(
+      (candidate) => candidate === library,
     );
-    const credits = attribution(data.data, library);
-    return {
+    if (
+      !collection &&
+      !h5pSimpleLibraries.some((candidate) => candidate === library)
+    )
+      throw new H5pImportError("question");
+    const body = await readJson(selected.get(packagePaths[1]));
+    const common = {
       package_sha256: await coursePackageDigest(bytes),
-      attribution: credits,
-      question: item,
+      attribution: attribution(data.data, library),
     };
+    const result = collection
+      ? h5pCollectionImportSchema.safeParse({
+          ...common,
+          questions: normalizeCollection(body, library, data.data),
+        })
+      : h5pQuestionImportSchema.safeParse({
+          ...common,
+          question: normalizeQuestion(body, library, data.data.language),
+        });
+    if (!result.success) throw new H5pImportError("question");
+    return result.data;
   } catch (error) {
     if (error instanceof H5pImportError) throw error;
     throw new H5pImportError("archive");

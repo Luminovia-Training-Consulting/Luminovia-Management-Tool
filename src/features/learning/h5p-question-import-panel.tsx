@@ -1,4 +1,4 @@
-/** Preview and explicitly import a text H5P question through the normal bank authority. */
+/** Review and atomically import normalized H5P questions through course-scoped bank authority. */
 import { useId } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -8,7 +8,7 @@ import { requireOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { questionBankKey } from "./question-bank-api";
 import { H5pAttribution } from "./h5p-attribution";
-import type { H5pQuestionImport } from "./h5p-import-schema";
+import type { H5pImport } from "./h5p-import-schema";
 import type { BankQuestion } from "./question-bank-schema";
 
 export function H5pQuestionImportPanel({
@@ -29,17 +29,20 @@ export function H5pQuestionImportPanel({
   const cache = useQueryClient();
   const parse = useMutation({
     mutationFn: async (file: File) =>
-      (await import("./h5p-import")).readH5pQuestion(file),
+      (await import("./h5p-import")).readH5pPackage(file),
   });
   const save = useMutation({
-    mutationFn: async (pkg: H5pQuestionImport) => {
+    mutationFn: async (pkg: H5pImport) => {
       requireOnline();
-      const { data, error } = await db().rpc("course_h5p_question_import", {
-        p_run_id: courseId,
-        p_package: pkg,
-      });
+      const isCollection = "questions" in pkg;
+      const { data, error } = await db().rpc(
+        isCollection
+          ? "course_h5p_collection_import"
+          : "course_h5p_question_import",
+        { p_run_id: courseId, p_package: pkg },
+      );
       if (error) throw error;
-      return data as BankQuestion;
+      return (isCollection ? data.questions : [data]) as BankQuestion[];
     },
     onSuccess: () =>
       cache.invalidateQueries({ queryKey: questionBankKey(actor, courseId) }),
@@ -47,6 +50,12 @@ export function H5pQuestionImportPanel({
   const reason =
     parse.error && "reason" in parse.error ? parse.error.reason : "archive";
   const preview = parse.data;
+  const collection = Boolean(preview && "questions" in preview);
+  const items =
+    preview &&
+    ("questions" in preview
+      ? preview.questions
+      : [{ question: preview.question, subcontent: null }]);
   return (
     <details className="space-y-2">
       <summary>{t("h5pImportTitle")}</summary>
@@ -76,31 +85,40 @@ export function H5pQuestionImportPanel({
           )}
         </Notice>
       )}
-      {preview && !save.data && (
+      {preview && items && !save.data && (
         <>
-          <p className="preserve-text">{preview.question.prompt}</p>
-          <ol className="list-decimal ps-6">
-            {preview.question.options.map((option, index) => (
-              <li key={index}>
-                {index === preview.question.correct ? (
-                  <strong>{option}</strong>
-                ) : (
-                  option
+          {collection && <p>{t("h5pCollectionConversion")}</p>}
+          <ol className="space-y-2">
+            {items.map(({ question, subcontent }, itemIndex) => (
+              <li key={itemIndex} className="space-y-2">
+                <p className="preserve-text font-medium">{question.prompt}</p>
+                <ol className="list-decimal ps-6">
+                  {question.options.map((option, index) => (
+                    <li key={option}>
+                      {index === question.correct ? (
+                        <strong>{option}</strong>
+                      ) : (
+                        option
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                <p>
+                  {t("correctAnswer")}: {question.options[question.correct]}
+                </p>
+                {subcontent && (
+                  <H5pAttribution credits={subcontent} questionSource />
                 )}
               </li>
             ))}
           </ol>
-          <p>
-            {t("correctAnswer")}:{" "}
-            {preview.question.options[preview.question.correct]}
-          </p>
           <H5pAttribution credits={preview.attribution} />
           <Button
             type="button"
             disabled={save.isPending}
             onClick={() => save.mutate(preview)}
           >
-            {t("h5pImportSave")}
+            {t(collection ? "h5pImportCollectionSave" : "h5pImportSave")}
           </Button>
         </>
       )}
@@ -108,20 +126,36 @@ export function H5pQuestionImportPanel({
       {save.data && (
         <>
           <Notice>
-            {t(save.data.archived ? "h5pImportArchived" : "h5pImportSaved")}
+            {collection
+              ? t("h5pImportCollectionSaved", { count: save.data.length })
+              : t(
+                  save.data[0].archived
+                    ? "h5pImportArchived"
+                    : "h5pImportSaved",
+                )}
           </Notice>
-          {!save.data.archived && (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canSelect || selected.has(save.data.id)}
-              onClick={() => {
-                if (save.data) onSelect(save.data);
-              }}
-            >
-              {t("questionBankUse")}
-            </Button>
-          )}
+          <ul className="space-y-2">
+            {save.data.map((question) => (
+              <li
+                key={question.id}
+                className="flex flex-wrap items-center gap-2"
+              >
+                {collection && <span>{question.content.prompt}</span>}
+                {question.archived ? (
+                  collection && <p>{t("h5pImportArchived")}</p>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canSelect || selected.has(question.id)}
+                    onClick={() => onSelect(question)}
+                  >
+                    {t("questionBankUse")}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </details>

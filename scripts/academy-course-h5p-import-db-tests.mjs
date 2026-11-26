@@ -108,15 +108,62 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const imported = JSON.parse((await submit(admin)).trim());
     assert.equal(imported.revision, 1);
     assert.deepEqual(imported.h5p_attribution, payload.attribution);
+    const collection = {
+      package_sha256: "ac".repeat(32),
+      attribution: {
+        ...payload.attribution,
+        title: "Fictional collection",
+        library: "H5P.SingleChoiceSet 1.11",
+      },
+      questions: [
+        {
+          question: { ...payload.question, prompt: "Item one" },
+          library: "H5P.SingleChoiceSet 1.11",
+          subcontent: null,
+        },
+        {
+          question: { ...payload.question, prompt: "Item two" },
+          library: "H5P.SingleChoiceSet 1.11",
+          subcontent: null,
+        },
+      ],
+    };
+    const collectionCommand = `select public.course_h5p_collection_import(${q(run)},${q(JSON.stringify(collection))})`;
+    const submitCollection = (who) =>
+      actor(
+        who,
+        gate("course_h5p_collection_import", "POST") + collectionCommand,
+      );
+    await assert.rejects(submitCollection(learner), /42501/);
+    await assert.rejects(submitCollection(absentTeacher), /42501/);
+    const collectionReceipt = JSON.parse(
+      (await submitCollection(admin)).trim(),
+    );
+    assert.equal(collectionReceipt.questions.length, 2);
+    assert.deepEqual(
+      JSON.parse((await submitCollection(admin)).trim()),
+      collectionReceipt,
+    );
     await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     assert.equal((await bank()).items[0].can_edit, false);
     assert.deepEqual(
-      (await bank()).items[0].h5p_attribution,
+      (await bank()).items.find(({ id }) => id === imported.id).h5p_attribution,
       payload.attribution,
     );
     await assert.rejects(submit(admin), /42501/);
     await assert.rejects(actor(admin, command), /42501/);
+    await assert.rejects(submitCollection(admin), /42501/);
+    await assert.rejects(actor(admin, collectionCommand), /42501/);
+    const graceItems = (await bank()).items;
+    assert.deepEqual(
+      graceItems
+        .filter(({ id }) =>
+          collectionReceipt.questions.some((question) => question.id === id),
+        )
+        .map(({ h5p_attribution }) => h5p_attribution),
+      [collection.attribution, collection.attribution],
+    );
     await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     await assert.rejects(bank(), /42501/);

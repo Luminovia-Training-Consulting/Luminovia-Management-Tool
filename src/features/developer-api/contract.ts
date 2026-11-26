@@ -137,6 +137,8 @@ import {
   questionBankParameters,
   questionBankOptionalParameters,
   questionBankResult,
+  h5pCollectionImportParameters,
+  h5pCollectionImportResult,
   h5pQuestionImportParameters,
   h5pQuestionImportResult,
   questionBankActionParameters,
@@ -4461,6 +4463,14 @@ const nativePaths = {
     "Send the caller's exact published quiz version, next attempt number, stable request ID, expected draft revision, and one option index or null per question. The reply is the confirmed draft revision. The draft stays learner-private and consumes no attempt. The current course workspace returns this draft to its owner. Changing a stale revision returns 409.",
     quizDraftParameters,
     quizDraftRevision,
+  ),
+  "/rest/v1/rpc/course_h5p_collection_import": rpc(
+    "importH5pCollection",
+    "Premium LMS",
+    "Import a licensed H5P text question collection",
+    "Current course staff import up to 20 normalized questions from a supported text-only SingleChoiceSet or QuestionSet. One transaction stores every question and its exact archive position, including declared licence information. An identical retry returns the saved bank entries in package order.",
+    h5pCollectionImportParameters,
+    h5pCollectionImportResult,
   ),
   "/rest/v1/rpc/course_h5p_question_import": rpc(
     "importH5pQuestion",
