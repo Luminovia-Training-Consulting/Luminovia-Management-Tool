@@ -38,7 +38,7 @@ def synthetic_set(root, ordinal, *, hours=0):
         path.chmod(0o600)
         parts[name] = {"sha256": b.digest(path), "bytes": path.stat().st_size}
     stamp = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)).isoformat()
-    b.write_json(directory / "manifest.json", {"format": b.FORMAT, "status": "complete", "databaseCount": 2, "completedAt": stamp, "parts": parts})
+    b.write_json(directory / "manifest.json", {"format": b.FORMAT, "status": "complete", "databaseCount": 2, "startedAt": stamp, "completedAt": stamp, "parts": parts})
     return directory
 
 
@@ -224,6 +224,112 @@ class BackupSafetyTests(unittest.TestCase):
                         manifest["completedAt"] = completion
                     b.write_json(manifest_path, manifest)
                 self.assertFalse(self.backup.fresh(max_age_hours=26))
+
+    # Verify a copied recovery set only against a manifest pin supplied independently of that copy.
+    def run_replica_verification(self, directory, pin=None, *, max_age_hours=26):
+        command = [
+            sys.executable,
+            str(HERE / "complete_backup.py"),
+            "--verify-replica",
+            str(directory),
+            "--max-age-hours",
+            str(max_age_hours),
+        ]
+        if pin is not None:
+            command.extend(["--manifest-sha256", pin])
+        return subprocess.run(command, capture_output=True, text=True, check=False)
+
+    def copy_replica(self, source, name):
+        replica = self.root / name
+        shutil.copytree(source, replica)
+        return replica
+
+    def test_replica_cli_accepts_exact_copied_ciphertext_with_independent_manifest_pin(self):
+        source = synthetic_set(self.destination, 1)
+        manifest_bytes = (source / "manifest.json").read_bytes()
+        pin = hashlib.sha256(manifest_bytes).hexdigest()
+        replica = self.copy_replica(source, "independent-reader-copy")
+
+        result = self.run_replica_verification(replica, pin)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        evidence = json.loads(result.stdout)
+        self.assertEqual(evidence["status"], "replica_ciphertext_verified")
+        self.assertEqual(evidence["manifestSha256"], pin)
+        self.assertEqual(evidence["decryptionPerformed"], False)
+        self.assertGreaterEqual(evidence["backupAgeSeconds"], 0)
+        self.assertEqual(evidence["maxAgeHours"], 26)
+
+    def test_replica_cli_rejects_missing_or_mismatched_manifest_pin_without_falling_through(self):
+        source = synthetic_set(self.destination, 1)
+        replica = self.copy_replica(source, "untrusted-reader-copy")
+
+        missing_pin = self.run_replica_verification(replica)
+        self.assertNotEqual(missing_pin.returncode, 0)
+        self.assertEqual(json.loads(missing_pin.stderr)["errorCode"], "replica_manifest_pin_required")
+
+        wrong_pin = self.run_replica_verification(replica, "0" * 64)
+        self.assertNotEqual(wrong_pin.returncode, 0)
+        self.assertEqual(json.loads(wrong_pin.stderr)["errorCode"], "manifest_pin_mismatch")
+
+        malformed_pin = self.run_replica_verification(replica, "not-a-sha256")
+        self.assertNotEqual(malformed_pin.returncode, 0)
+        self.assertEqual(json.loads(malformed_pin.stderr)["errorCode"], "invalid_manifest_pin")
+
+        pin_without_replica_mode = subprocess.run(
+            [
+                sys.executable,
+                str(HERE / "complete_backup.py"),
+                "--run",
+                "--manifest-sha256",
+                "0" * 64,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(pin_without_replica_mode.returncode, 0)
+        self.assertEqual(
+            json.loads(pin_without_replica_mode.stderr)["errorCode"],
+            "manifest_pin_requires_replica_mode",
+        )
+
+    def test_replica_cli_rejects_tampered_and_partial_copies(self):
+        source = synthetic_set(self.destination, 1)
+        pin = hashlib.sha256((source / "manifest.json").read_bytes()).hexdigest()
+        tampered = self.copy_replica(source, "tampered-reader-copy")
+        (tampered / "globals.sql.age").write_bytes(b"changed ciphertext")
+        tampered_result = self.run_replica_verification(tampered, pin)
+        self.assertNotEqual(tampered_result.returncode, 0)
+
+        partial = self.copy_replica(source, "partial-reader-copy")
+        (partial / "database-001.dump.age").unlink()
+        partial_result = self.run_replica_verification(partial, pin)
+        self.assertNotEqual(partial_result.returncode, 0)
+
+    def test_replica_cli_rejects_stale_future_and_invalid_freshness_evidence(self):
+        cases = [
+            (1, "stale", dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=30)),
+            (2, "future", dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)),
+            (3, "invalid", "not-a-timestamp"),
+        ]
+        for ordinal, name, completed_at in cases:
+            with self.subTest(case=name):
+                source = synthetic_set(self.destination, ordinal)
+                replica = self.copy_replica(source, name + "-reader-copy")
+                manifest_path = replica / "manifest.json"
+                manifest = json.loads(manifest_path.read_text())
+                manifest["completedAt"] = (
+                    completed_at.isoformat()
+                    if isinstance(completed_at, dt.datetime)
+                    else completed_at
+                )
+                b.write_json(manifest_path, manifest)
+                pin = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+
+                result = self.run_replica_verification(replica, pin, max_age_hours=24)
+
+                self.assertNotEqual(result.returncode, 0)
 
     def test_shared_updater_lock_excludes_backup_without_stopping_services(self):
         b.private_dir(self.backup.lock.parent)

@@ -108,11 +108,28 @@ future 100 GB document capacity and production retention/off-site recovery plan 
 
 A local VPS recovery set is not off-site retention. A manually downloaded desktop set is an off-server copy at that point; this module does not promise recurring desktop uploads while the desktop is offline. Configure provider/off-site retention only through the separately authorised service.
 
+### Read-only check of a copied replica
+
+An authorised reader can check a fully copied encrypted set without a decryption key or any write operation:
+
+```bash
+python3 deploy/hostinger/backups/complete_backup.py \
+  --verify-replica /srv/authorised-reader/complete-backups/SET_ID \
+  --manifest-sha256 TRUSTED_SOURCE_MANIFEST_SHA256 \
+  --max-age-hours 26
+```
+
+Obtain the SHA-256 of the source `manifest.json` through a separately authenticated channel before relying on the copy; never calculate the trust pin from the replica itself. The verifier first pins the exact manifest bytes, then validates every declared encrypted file's name, private permissions, age header, byte length and SHA-256. It requires zoned `startedAt`/`completedAt` evidence in order, rejects future timestamps and exits unsuccessfully if the completion is older than the requested limit (1–48 hours). Success emits `replica_ciphertext_verified`, the pin and observed age, and explicitly reports `decryptionPerformed: false`; no age identity, database, or plaintext is needed.
+
+This proves only that the observed directory matches the trusted manifest and passes ciphertext/freshness checks at that time. It does not establish that the reader is physically or administratively independent, that a scheduled transfer/monitor/alert exists, or that the replica can be decrypted or restored. A successful command must not be reported as a restore or production RPO/RTO test.
+
 ## Executed implementation checks
 
-The implementation passed 25 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, future-image proof/source binding, preserving existing maintenance and resuming only previously running services. Three additional desktop witness tests exercise unchanged-prefix acceptance and rejection of altered/incomplete/mismatched proofs, current files,
+All 31 Python backup tests passed, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, future-image proof/source binding, preserving existing maintenance, resuming only previously running services, and replica pin/freshness rejection. Three additional desktop witness tests exercise unchanged-prefix acceptance and rejection of altered/incomplete/mismatched proofs, current files,
 restored ledger, container identities, tags and major versions. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. It also uses genuine legacy extension installers/settings, checks the saved fixture SCRAM password and rejects a wrong password. The fixture contains fictional data and does not replace the actual VPS
 backup/restore drill.
+
+The latest native fixture also copied its complete encrypted set into a separate reader directory and passed `--verify-replica` using the source manifest's exact SHA-256 pin obtained before the copy. The fixture's complete decrypt/restore then passed for 3 databases and 8 files (native verification 5,693 ms; catalog-based age 10 seconds). These synthetic results validate the implementation paths only, not recurring replication, physical independence, off-site freshness or production RPO/RTO.
 
 Actual VPS acceptance on 15 November 2026: the self-contained encrypted set completed at **18:41:10 UTC** (20,979,948 ciphertext bytes, 45.8 seconds for the service). Its isolated desktop restore passed at **18:42:32 UTC**, covering three databases, 1,817 physical files/38,090,950 bytes, exact source globals/permissions/settings/extension versions, the embedded original installers, all five runtime database credentials and all three saved fictional Auth passwords. The separate earlier first set
 also passed recovery after the legacy-extension gap was identified and fixed. No live database was restored.

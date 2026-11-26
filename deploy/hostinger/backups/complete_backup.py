@@ -209,13 +209,23 @@ def encrypt_command(arguments, path, recipient, *, age="age", reserve=MIN_FREE):
 
 
 # Check ciphertext parts, lengths, permissions and manifest completeness before accepting a set.
-def verify_complete(path):
+def verify_complete(path, *, expected_manifest_sha256=None):
     """Ciphertext integrity only. No private identity is present on the VPS."""
     path = Path(path)
     if path.is_symlink() or not path.is_dir():
         raise BackupError("unsafe_backup_set")
-    private_file(path / "manifest.json")
-    manifest = json.loads((path / "manifest.json").read_text())
+    directory = path.lstat()
+    if directory.st_uid != os.geteuid() or directory.st_mode & 0o077:
+        raise BackupError("unsafe_backup_set")
+    manifest_path = path / "manifest.json"
+    private_file(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    if expected_manifest_sha256 is not None and hashlib.sha256(manifest_bytes).hexdigest() != expected_manifest_sha256:
+        raise BackupError("manifest_pin_mismatch")
+    try:
+        manifest = json.loads(manifest_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BackupError("invalid_backup_manifest") from error
     if manifest.get("format") != FORMAT or manifest.get("status") != "complete":
         raise BackupError("incomplete_backup_set")
     parts = manifest.get("parts", {})
@@ -235,6 +245,46 @@ def verify_complete(path):
         if file.stat().st_size != item["bytes"] or digest(file) != item["sha256"]:
             raise BackupError("ciphertext_checksum_mismatch")
     return manifest
+
+
+# Require zoned, ordered completion evidence; a replica is fresh only when its pinned set is recent now.
+def verify_replica(path, *, manifest_sha256, max_age_hours=26, now=None):
+    if not isinstance(manifest_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", manifest_sha256):
+        raise BackupError("invalid_manifest_pin")
+    if not isinstance(max_age_hours, int) or not 1 <= max_age_hours <= 48:
+        raise BackupError("invalid_backup_freshness_limit")
+    manifest = verify_complete(path, expected_manifest_sha256=manifest_sha256)
+
+    def parse_timestamp(value):
+        if not isinstance(value, str):
+            raise BackupError("invalid_replica_freshness_evidence")
+        try:
+            parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise BackupError("invalid_replica_freshness_evidence") from error
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise BackupError("invalid_replica_freshness_evidence")
+        return parsed.astimezone(dt.timezone.utc)
+
+    started = parse_timestamp(manifest.get("startedAt"))
+    completed = parse_timestamp(manifest.get("completedAt"))
+    measured_at = now or dt.datetime.now(dt.timezone.utc)
+    if measured_at.tzinfo is None or measured_at.utcoffset() is None:
+        raise BackupError("invalid_replica_clock")
+    measured_at = measured_at.astimezone(dt.timezone.utc)
+    if started > completed or completed > measured_at:
+        raise BackupError("replica_backup_future_dated_or_unordered")
+    age_seconds = int((measured_at - completed).total_seconds())
+    if age_seconds > max_age_hours * 3600:
+        raise BackupError("replica_backup_stale")
+    return {
+        "status": "replica_ciphertext_verified",
+        "manifestSha256": manifest_sha256,
+        "verifiedAt": measured_at.isoformat(),
+        "backupAgeSeconds": age_seconds,
+        "maxAgeHours": max_age_hours,
+        "decryptionPerformed": False,
+    }
 
 
 # Consider only owned, complete, successfully verified sets for retention.
@@ -680,13 +730,25 @@ def main():
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--run", action="store_true")
     action.add_argument("--verify-ciphertext", type=Path)
+    action.add_argument("--verify-replica", type=Path)
     action.add_argument("--check-fresh", action="store_true")
     action.add_argument("--ensure-fresh", action="store_true")
     parser.add_argument("--max-age-hours", type=int, default=26)
+    parser.add_argument("--manifest-sha256")
     args = parser.parse_args()
     if not 1 <= args.max_age_hours <= 48:
         raise BackupError("invalid_backup_freshness_limit")
     os.umask(0o077)
+    if args.manifest_sha256 is not None and args.verify_replica is None:
+        raise BackupError("manifest_pin_requires_replica_mode")
+    if args.verify_replica is not None:
+        if args.manifest_sha256 is None:
+            raise BackupError("replica_manifest_pin_required")
+        return verify_replica(
+            args.verify_replica,
+            manifest_sha256=args.manifest_sha256,
+            max_age_hours=args.max_age_hours,
+        )
     if args.verify_ciphertext:
         verify_complete(args.verify_ciphertext)
         return {"status": "ciphertext_verified", "decryptionPerformed": False}

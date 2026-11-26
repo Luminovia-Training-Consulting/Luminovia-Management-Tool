@@ -2,7 +2,8 @@
  * Native recovery drill using a synthetic complete backup. Real age/PostgreSQL/file operations exercise recovery; normal instances and real accounts are not fixtures.
  */
 import assert from "node:assert/strict";
-import {lstat, mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import {createHash} from "node:crypto";
+import {cp, lstat, mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {candidateDatabaseImage, createIsolatedDatabase} from "../restore-check.mjs";
@@ -89,6 +90,25 @@ try {
         ]),
     );
     assert.equal(generated.status, "complete");
+    const sourceManifest = await readFile(resolve(generated.backup, "manifest.json"));
+    const sourceManifestSha256 = createHash("sha256").update(sourceManifest).digest("hex");
+    const replica = resolve(temporary, "independent-reader", "copied-backup");
+    await mkdir(dirname(replica), {recursive: true, mode: 0o700});
+    await cp(generated.backup, replica, {recursive: true});
+    const replicaEvidence = JSON.parse(
+        await collectCommand("python3", [
+            resolve(here, "complete_backup.py"),
+            "--verify-replica",
+            replica,
+            "--manifest-sha256",
+            sourceManifestSha256,
+            "--max-age-hours",
+            "48",
+        ]),
+    );
+    assert.equal(replicaEvidence.status, "replica_ciphertext_verified");
+    assert.equal(replicaEvidence.manifestSha256, sourceManifestSha256);
+    assert.equal(replicaEvidence.decryptionPerformed, false);
     const wrongIdentity = resolve(temporary, "wrong-fictional.agekey");
     await collectCommand(keygen, ["-o", wrongIdentity]);
     const report = resolve(generated.backup, "desktop-restore-result.json");
