@@ -1091,7 +1091,7 @@ test("Versioned assignment uses the scanner, requests a revision and releases pr
         expect(await readFile(await download.path(), "utf8")).toBe(firstBytes);
         await first.getByLabel("Rückmeldung für Teilnehmende", {exact: true}).fill("Bitte ergänze die Beobachtungen.");
         await first.getByLabel("Private Notiz für das Kursteam", {exact: true}).fill("Nur im Kursteam sichtbar");
-        await first.getByLabel("Veröffentlichung", {exact: true}).selectOption("revision_requested");
+        await first.getByRole("combobox", {name: "Veröffentlichung", exact: true}).selectOption("revision_requested");
         await first.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
         await expect(first.getByText("Überarbeitung erbeten", {exact: true})).toBeVisible();
 
@@ -1102,8 +1102,8 @@ test("Versioned assignment uses the scanner, requests a revision and releases pr
         await submit(secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
         await prepare(page);
         const second = author.getByRole("listitem").filter({hasText: secondFile});
-        await second.getByLabel("Protokoll", {exact: true}).selectOption("1");
-        await second.getByLabel("Veröffentlichung", {exact: true}).selectOption("released");
+        await second.getByRole("combobox", {name: "Protokoll", exact: true}).selectOption("1");
+        await second.getByRole("combobox", {name: "Veröffentlichung", exact: true}).selectOption("released");
         await second.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
         await expect(second.getByText("Rückmeldung freigegeben", {exact: true})).toBeVisible();
         await prepare(learner);
