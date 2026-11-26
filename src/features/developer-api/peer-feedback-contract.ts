@@ -16,7 +16,18 @@ const command = <Action extends string>(action: Action, payload: z.ZodType) =>
 
 export const peerActionRequest = z.toJSONSchema(
   z.discriminatedUnion("p_action", [
-    command("open", z.strictObject({ ...round, body: body(1000) })),
+    command(
+      "open",
+      z.union([
+        z.strictObject({ ...round, body: body(1000) }),
+        z.strictObject({
+          ...round,
+          body: body(1000),
+          assignment_id: id,
+          assignment_version: z.number().int().min(1).max(999_999_999),
+        }),
+      ]),
+    ),
     command("entry", z.strictObject({ ...round, body: body(2000), revision })),
     command("withdraw", z.strictObject({ ...round, revision })),
     command(

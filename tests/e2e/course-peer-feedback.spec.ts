@@ -210,8 +210,47 @@ test("approved anonymous peer feedback reaches only its assigned recipient", asy
       )
       .toBe(feedback);
     expect((await state(learners[0])).received).toBeNull();
+    const assignmentId = randomUUID();
+    const criterion = "Reproduce the result with another file";
+    const assignmentTitle = "Fictional peer assessment rubric";
+    const assignmentCommand = (
+      action: string,
+      version: number,
+      payload: object,
+    ) =>
+      checked(
+        admin.client.rpc("course_assignment_action", {
+          p_run_id: run,
+          p_assignment_id: assignmentId,
+          p_action: action,
+          p_payload: payload,
+          p_expected_version: version,
+        }),
+        { requireData: true },
+      );
+    await assignmentCommand("save", 0, {
+      title: assignmentTitle,
+      instructions: "Describe the procedure and its outcome.",
+      due_at: new Date(Date.now() + 86_400_000).toISOString(),
+      max_attempts: 1,
+      rubric: [
+        {
+          label: criterion,
+          levels: [
+            { label: "Missing", points: 0 },
+            { label: "Documented", points: 1 },
+          ],
+        },
+      ],
+    });
+    await assignmentCommand("publish", 1, {});
+    await page.reload();
+    await staffPanel.getByText("Peerfeedback", { exact: true }).click();
     await staffPanel.getByText("Neue Feedbackrunde", { exact: true }).click();
     const secondPrompt = "Review a second example with independent entries";
+    await staffPanel
+      .getByLabel("Bewertungskriterien übernehmen")
+      .selectOption({ label: `${assignmentTitle} · Version 1` });
     await staffPanel
       .getByLabel("Aufgabenstellung für den Austausch")
       .fill(secondPrompt);
@@ -227,6 +266,9 @@ test("approved anonymous peer feedback reaches only its assigned recipient", asy
       learnerPanel.getByText(secondPrompt, { exact: true }),
     ).toBeVisible();
     await expect(learnerPanel.getByLabel("Dein Beitrag")).toHaveValue("");
+    await expect(
+      learnerPanel.getByText(criterion, { exact: true }),
+    ).toBeVisible();
     await round.press("End");
     await expect(
       learnerPanel.getByRole("heading", { name: "Erhaltene Rückmeldung" }),

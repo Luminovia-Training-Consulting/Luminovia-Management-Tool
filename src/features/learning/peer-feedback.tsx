@@ -145,6 +145,17 @@ function OpenPeerFeedback({ actor, course, staff }: Props) {
           {query.data.prompt && (
             <p className="preserve-text">{query.data.prompt}</p>
           )}
+          {query.data.assignment_rubric && (
+            <section>
+              <h3>{t("peerCriteriaTitle")}</h3>
+              <p>{t("peerCriteriaOption", query.data.assignment_rubric)}</p>
+              <ul>
+                {query.data.assignment_rubric.criteria.map((criterion) => (
+                  <li key={criterion}>{criterion}</li>
+                ))}
+              </ul>
+            </section>
+          )}
           {staff ? (
             <PeerModeration key={query.data.round_number ?? 0} {...controls} />
           ) : (
@@ -156,16 +167,7 @@ function OpenPeerFeedback({ actor, course, staff }: Props) {
             query.data.round_number === query.data.rounds[0]?.number && (
               <details>
                 <summary>{t("peerOpenNext")}</summary>
-                <PeerTextForm
-                  key={(query.data.round_number ?? 0) + 1}
-                  label={t("peerPrompt")}
-                  submitLabel={t("peerOpen")}
-                  max={1000}
-                  pending={write.isPending}
-                  onSubmit={(body) =>
-                    controls.run({ action: "open", payload: { body } })
-                  }
-                />
+                <StartPeerRound key={query.data.round_number} {...controls} />
               </details>
             )}
         </>
@@ -239,18 +241,67 @@ function PeerTextForm({
   );
 }
 
+function StartPeerRound({ state, pending, run }: Controls) {
+  const { t } = useTranslation("learning");
+  const id = useId();
+  const [assignment, setAssignment] = useState<string>("");
+  const selected = state.available_assignments.find(
+    ({ id, version }) => `${id}:${version}` === assignment,
+  );
+  const stale = Boolean(assignment && !selected);
+  return (
+    <PeerTextForm
+      label={t("peerPrompt")}
+      submitLabel={t("peerOpen")}
+      max={1000}
+      pending={pending || stale}
+      onSubmit={(body) =>
+        run({
+          action: "open",
+          payload: {
+            body,
+            ...(selected
+              ? {
+                  assignment_id: selected.id,
+                  assignment_version: selected.version,
+                }
+              : {}),
+          },
+        })
+      }
+    >
+      {(state.available_assignments.length > 0 || stale) && (
+        <Field id={id} label={t("peerCriteriaAssignment")}>
+          <select
+            id={id}
+            value={assignment}
+            disabled={pending}
+            onChange={(event) => setAssignment(event.currentTarget.value)}
+          >
+            <option value="">{t("peerCriteriaNone")}</option>
+            {stale && (
+              <option value={assignment} disabled>
+                {t("peerCriteriaChanged")}
+              </option>
+            )}
+            {state.available_assignments.map((option) => (
+              <option key={option.id} value={`${option.id}:${option.version}`}>
+                {t("peerCriteriaOption", option)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+    </PeerTextForm>
+  );
+}
+
 function PeerModeration({ state, pending, run }: Controls) {
   const { t } = useTranslation("learning");
   const blocked = pending || !state.can_moderate;
   if (!state.stage)
     return state.can_moderate ? (
-      <PeerTextForm
-        label={t("peerPrompt")}
-        submitLabel={t("peerOpen")}
-        max={1000}
-        pending={blocked}
-        onSubmit={(body) => run({ action: "open", payload: { body } })}
-      />
+      <StartPeerRound state={state} pending={blocked} run={run} />
     ) : (
       <p>{t("peerNoRound")}</p>
     );

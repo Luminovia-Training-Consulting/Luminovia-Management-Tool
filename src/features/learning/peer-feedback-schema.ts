@@ -10,6 +10,20 @@ const entry = z.strictObject({
   approved: z.boolean(),
 });
 export const peerFeedbackState = z.strictObject({
+  assignment_rubric: z
+    .strictObject({
+      title: body,
+      version: z.number().int().positive(),
+      criteria: z.array(body).min(1).max(20),
+    })
+    .nullable(),
+  available_assignments: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      title: body,
+      version: z.number().int().positive(),
+    }),
+  ),
   round_number: peerRoundNumber.nullable(),
   rounds: z.array(
     z.strictObject({ number: peerRoundNumber, prompt: body, stage }),

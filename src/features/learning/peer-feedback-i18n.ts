@@ -10,6 +10,20 @@ const labels = {
   peerPrompt: ["Aufgabenstellung für den Austausch", "Prompt for the exchange"],
   peerOpen: ["Runde öffnen", "Open round"],
   peerOpenNext: ["Neue Feedbackrunde", "New feedback round"],
+  peerCriteriaAssignment: [
+    "Bewertungskriterien übernehmen",
+    "Use assignment criteria",
+  ],
+  peerCriteriaChanged: [
+    "Aufgabenversion geändert. Bitte neu auswählen.",
+    "Assignment version changed. Choose again.",
+  ],
+  peerCriteriaNone: ["Ohne Aufgabenkriterien", "Without assignment criteria"],
+  peerCriteriaOption: [
+    "{{title}} · Version {{version}}",
+    "{{title}} · version {{version}}",
+  ],
+  peerCriteriaTitle: ["Kriterien für die Rückmeldung", "Feedback criteria"],
   peerSelectRound: ["Feedbackrunde", "Feedback round"],
   peerRoundOption: [
     "Runde {{number}} · {{stage}} · {{prompt}}",

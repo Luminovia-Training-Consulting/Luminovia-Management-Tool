@@ -158,7 +158,69 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     command(first, "dispute", { body: "This is not my review" }),
     /42501/,
   );
-  const newRound = { round: 2, body: "Review a solution to another problem" };
+  const localAssignment = randomUUID();
+  const outOfScope = randomUUID();
+  const definition = (title, label) => ({
+    title,
+    instructions: "Provide a written solution.",
+    due_at: new Date(Date.now() + 86_400_000).toISOString(),
+    max_attempts: 1,
+    rubric: [
+      {
+        label,
+        levels: [
+          { label: "Missing", points: 0 },
+          { label: "Provided", points: 1 },
+        ],
+      },
+    ],
+  });
+  const assignment = (run, id, action, body, version) =>
+    rpc(
+      admin,
+      "course_assignment_action",
+      q(run),
+      q(id),
+      q(action),
+      q(JSON.stringify(body)),
+      version,
+    );
+  await assignment(
+    course,
+    localAssignment,
+    "save",
+    definition("Fictional rubric", "Explain results"),
+    0,
+  );
+  assert.deepEqual((await read(admin)).available_assignments, []);
+  await assignment(course, localAssignment, "publish", {}, 1);
+  await assignment(
+    foreignCourse,
+    outOfScope,
+    "save",
+    definition("Foreign rubric", "Foreign results"),
+    0,
+  );
+  await assignment(foreignCourse, outOfScope, "publish", {}, 1);
+  assert.deepEqual((await read(first)).available_assignments, []);
+  assert.deepEqual(
+    (await read(admin)).available_assignments.map(({ id }) => id),
+    [localAssignment],
+  );
+  const newRound = {
+    round: 2,
+    body: "Review a solution to another problem",
+    assignment_id: localAssignment,
+    assignment_version: 1,
+  };
+  await assert.rejects(
+    command(admin, "open", { ...newRound, assignment_id: outOfScope }),
+    /PT409/,
+  );
+  await assert.rejects(
+    command(admin, "open", { ...newRound, assignment_version: 2 }),
+    /PT409/,
+  );
   const concurrentOpens = await Promise.allSettled([
     command(admin, "open", newRound),
     command(admin, "open", newRound),
@@ -173,6 +235,24 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
   );
   const secondRound = await read(first);
   assert.equal(secondRound.round_number, 2);
+  assert.deepEqual(secondRound.assignment_rubric, {
+    title: "Fictional rubric",
+    version: 1,
+    criteria: ["Explain results"],
+  });
+  assert.equal((await read(first, course, 1)).assignment_rubric, null);
+  await assignment(
+    course,
+    localAssignment,
+    "save",
+    definition("Revised rubric", "New criteria"),
+    1,
+  );
+  await assignment(course, localAssignment, "publish", {}, 2);
+  assert.equal(
+    (await read(first)).assignment_rubric.criteria[0],
+    "Explain results",
+  );
   assert.deepEqual(
     secondRound.rounds.map(({ number, stage }) => [number, stage]),
     [
