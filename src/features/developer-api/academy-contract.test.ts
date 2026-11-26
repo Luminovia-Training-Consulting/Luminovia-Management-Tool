@@ -92,6 +92,7 @@ const writePaths = [
   "/rest/v1/rpc/course_weighted_gradebook_command",
   "/rest/v1/rpc/set_learning_program_prerequisite",
   "/rest/v1/rpc/set_learning_program_path_exception",
+  "/rest/v1/rpc/configure_learning_program_curriculum",
   "/rest/v1/rpc/report_course_xapi_delivery",
   "/rest/v1/rpc/course_peer_feedback_action",
   "/rest/v1/rpc/course_scorm_action",

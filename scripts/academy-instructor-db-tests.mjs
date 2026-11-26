@@ -29,6 +29,7 @@ const featureFixtureOperations = new Map([
       "learning_program_grade_report",
       "set_learning_program_path_exception",
       "learning_program_cohort_grades",
+      "configure_learning_program_curriculum",
     ],
   ],
   [
