@@ -323,6 +323,9 @@ function ExamAuthor({
   const [opens, setOpens] = useState(localTime(paper?.opens_at));
   const [closes, setCloses] = useState(localTime(paper?.closes_at));
   const [minimum, setMinimum] = useState(String(paper?.pass_percent ?? 70));
+  const [secondReviewer, setSecondReviewer] = useState(
+    paper?.second_reviewer_required ?? false,
+  );
   const [nextQuestion, setNextQuestion] = useState(
     (paper?.questions?.length ?? 1) + 1,
   );
@@ -369,6 +372,7 @@ function ExamAuthor({
             opens_at: window.starts_at,
             closes_at: window.ends_at,
             pass_percent: Number(minimum),
+            second_reviewer_required: secondReviewer,
             questions: questions.map((question) => ({
               prompt: question.prompt,
               max_points: Number(question.points),
@@ -421,6 +425,16 @@ function ExamAuthor({
               />
             </Field>
           </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={secondReviewer}
+              onChange={(event) =>
+                setSecondReviewer(event.currentTarget.checked)
+              }
+            />
+            {t("secondReviewer")}
+          </label>
           {questions.map((question, index) => (
             <fieldset
               className="space-y-2 rounded-md border p-3"
@@ -825,11 +839,16 @@ function ReviewForm({
           <Button disabled={!dirty}>{t("saveReview")}</Button>
         </fieldset>
       </form>
+      {review &&
+        !review.released_at &&
+        !dirty &&
+        review.can_release === false &&
+        !disabled && <p role="status">{t("awaitingSecondReviewer")}</p>}
       {review && !review.released_at && !dirty && (
         <Confirm
           label={t("release")}
           details={t("releasePrompt")}
-          disabled={disabled}
+          disabled={disabled || review.can_release === false}
           submit={() =>
             run({
               p_action: "release",

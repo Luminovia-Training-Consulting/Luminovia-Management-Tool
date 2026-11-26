@@ -14,6 +14,7 @@ export const textExamDraft = z.strictObject({
   opens_at: timestamp,
   closes_at: timestamp,
   pass_percent: z.number().int().min(1).max(100),
+  second_reviewer_required: z.boolean().optional(),
   questions: z.array(question).min(1).max(20),
 });
 const exam = textExamDraft.extend({
@@ -36,6 +37,7 @@ const review = z.strictObject({
   score: z.number().int().nonnegative(),
   max_points: z.number().int().positive(),
   passed: z.boolean(),
+  can_release: z.boolean().optional(),
 });
 export const textExamState = z.strictObject({
   now: timestamp,
