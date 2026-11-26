@@ -15,9 +15,8 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     insert into auth.users(id,email,email_confirmed_at) values
       (${q(manager)},${q(`${manager}@example.invalid`)},now()),
       (${q(companyMember)},${q(`${companyMember}@example.invalid`)},now());
-    insert into public.profiles(id,display_name) values
-      (${q(manager)},'Fictional CRM Manager'),
-      (${q(companyMember)},'Fictional Company Member');
+    update public.profiles set display_name = 'Fictional CRM Manager' where id = ${q(manager)};
+    update public.profiles set display_name = 'Fictional Company Member' where id = ${q(companyMember)};
     insert into public.user_roles(user_id,role) values
       (${q(manager)},'management'),
       (${q(companyMember)},'client');
@@ -350,7 +349,7 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
   assert.equal(
     (
       await rows(manager, "list_crm_opportunities", [activeOrganisation, 100])
-    )[0].stage,
+    ).find(({ id }) => id === opportunityId)?.stage,
     "contacted",
     "archiving retains read access to the organisation's sales history",
   );
