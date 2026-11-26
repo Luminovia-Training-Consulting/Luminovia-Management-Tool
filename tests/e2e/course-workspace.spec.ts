@@ -1369,6 +1369,21 @@ test("scoped LMS assessment exports protect small cohorts and company views", as
     expect((await readFile(await xlsx.path())).subarray(0, 2).toString("ascii")).toBe("PK");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 
+    // Emulate print media and export the real Chromium-rendered page. Invoke
+    // the browser dialog only in interactive usage, not in the test runner.
+    await page.evaluate(() => { window.print = () => {}; });
+    await page.getByRole("button", { name: english ? "Print this page" : "Diese Seite drucken" }).click();
+    const printReport = page.locator(".learning-report-print");
+    await expect(printReport).toHaveCount(1);
+    await expect(printReport).toBeHidden();
+    await page.emulateMedia({ media: "print" });
+    await expect(printReport).toBeVisible();
+    await expect(printReport.getByText(f.title)).toBeVisible();
+    await expect(assessment).toBeHidden();
+    expect((await page.pdf({preferCSSPageSize: true})).subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await page.emulateMedia({ media: "screen" });
+
     const company = await browser.newContext({
         baseURL, viewport: info.project.use.viewport, isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
     });

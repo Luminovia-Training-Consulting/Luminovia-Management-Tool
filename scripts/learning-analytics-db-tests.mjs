@@ -401,6 +401,25 @@ for (const edition of [
     assert.equal(Object.hasOwn(companyScope, "assessment"), false);
     await assert.rejects(report(company, "staff", org), denied);
 
+    // A labelled correction supersedes the old numeric grade. This measure
+    // must redact independently when the remaining numeric sample falls below three.
+    await sql(`
+      insert into private.course_gradebook_policies(run_id,version,scheme,bands)
+        values(${q(finished)},2,'bands','[{"minimum":0,"label":"In development"},{"minimum":70,"label":"Competent"}]');
+      insert into private.course_gradebook_revisions
+        (run_id,user_id,revision,attempt_id,quiz_version,source_score,source_passed,policy_version,grade_label,correction_reason)
+        values(${q(finished)},${q(learner)},3,${q(quizAttempts[0])},1,90,true,2,'Competent','Released labelled scale');
+      insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+        values (${q(submissions[0])},3,'revision_requested','[]','Private revision request','Private note');
+    `);
+    const mixed = (await report(manager, "staff", org, "all", "100%"))
+      .assessment.courses[0];
+    assert.equal(mixed.published_grades, 3);
+    assert.equal(mixed.published_grade_average, null);
+    assert.equal(mixed.submission_attempts, 3);
+    assert.equal(mixed.released_reviews, null);
+    assert.equal(mixed.quiz_best_average, 75);
+
     // The same credible facts become inadmissible as soon as a current
     // participant leaves. There must be no small-cohort totals or inference via
     // direct repeated search of a single course.
