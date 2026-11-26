@@ -40,6 +40,13 @@ async function loadReference(path) {
   }
 }
 
+assert.throws(() =>
+  createScormHost({
+    portalOrigin: "https://portal.training.example",
+    domain: "scorm.training.example",
+  }),
+);
+
 const portal = createServer();
 portal.listen(0, "127.0.0.1");
 await once(portal, "listening");

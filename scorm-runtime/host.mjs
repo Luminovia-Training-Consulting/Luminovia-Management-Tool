@@ -30,8 +30,8 @@ export function createScormHost({ portalOrigin, domain, localHost = null }) {
       (localHost ||
         !originPattern.test(portalOrigin) ||
         !domainPattern.test(domain) ||
-        portal.hostname === domain ||
-        portal.hostname.endsWith("." + domain)))
+        portal.hostname.split(".").slice(-2).join(".") ===
+          domain.split(".").slice(-2).join(".")))
   ) {
     throw new Error(
       "The SCORM launcher requires a separate approved runtime domain and portal origin.",

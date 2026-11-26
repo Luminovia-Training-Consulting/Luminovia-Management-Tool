@@ -15,8 +15,8 @@ export function scormRuntimeAddress(launch: string, parent: URL) {
   if (
     !domain ||
     !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain) ||
-    parent.hostname === domain ||
-    parent.hostname.endsWith("." + domain)
+    parent.hostname.split(".").slice(-2).join(".") ===
+      domain.split(".").slice(-2).join(".")
   )
     return null;
   return new URL(
