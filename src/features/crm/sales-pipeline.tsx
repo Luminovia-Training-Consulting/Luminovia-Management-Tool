@@ -23,11 +23,13 @@ import {
   CRM_PAGE_SIZE,
   crmOpportunitiesQuery,
   crmOpportunityEventsQuery,
+  crmWeightedPipelineQuery,
   crmStageSchema,
   moveCrmOpportunity,
   updateCrmOpportunityForecast,
   type CrmOpportunity,
   type CrmOpportunityEvent,
+  type CrmWeightedPipelineRow,
   type CrmStage,
 } from "./api";
 
@@ -226,12 +228,20 @@ function OpportunityForecast({
         queryClient.invalidateQueries({
           queryKey: ["crm", "opportunity-events", actor, organisationId],
         }),
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+        }),
       ]);
     },
     onError: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["crm", "opportunities", actor, organisationId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "opportunities", actor, organisationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+        }),
+      ]);
     },
   });
 
@@ -325,6 +335,72 @@ function OpportunityForecast({
   );
 }
 
+/** Display the permission-checked aggregate separately from filters and opportunity details. */
+function WeightedPipelineSummary({
+  actor,
+  organisationId,
+}: {
+  actor: string;
+  organisationId: string;
+}) {
+  const { t, i18n } = useTranslation("operations");
+  const summary = useQuery(crmWeightedPipelineQuery(actor, organisationId));
+  const language = i18n.language.startsWith("de") ? "de-DE" : "en-GB";
+  const formatValue = (row: CrmWeightedPipelineRow) =>
+    row.weighted_value === null
+      ? t("crmWeightedPipelineNoValue")
+      : new Intl.NumberFormat(language, {
+          style: "currency",
+          currency: row.currency,
+        }).format(row.weighted_value);
+
+  return (
+    <section
+      className="crm-weighted-summary"
+      aria-labelledby={`crm-weighted-title-${organisationId}`}
+      aria-busy={summary.isFetching}
+    >
+      <h4 id={`crm-weighted-title-${organisationId}`}>
+        {t("crmWeightedPipelineTitle")}
+      </h4>
+      <p className="muted">{t("crmWeightedPipelineDescription")}</p>
+      {summary.isPending ? (
+        <p className="muted" role="status">
+          {t("crmWeightedPipelineLoading")}
+        </p>
+      ) : summary.isError ? (
+        <Notice kind="error">
+          <span>{t("crmWeightedPipelineError")}</span>{" "}
+          <Button
+            type="button"
+            onClick={() => void summary.refetch()}
+            disabled={summary.isFetching}
+          >
+            {t("crmWeightedPipelineRetry")}
+          </Button>
+        </Notice>
+      ) : summary.data.length === 0 ? (
+        <p>{t("crmWeightedPipelineEmpty")}</p>
+      ) : (
+        <ul className="crm-weighted-summary-list">
+          {summary.data.map((row) => (
+            <li key={row.currency}>
+              <h5>{row.currency}</h5>
+              <p>{formatValue(row)}</p>
+              <p className="muted">
+                {t("crmWeightedPipelineCoverage", {
+                  included: row.included_opportunity_count,
+                  incomplete: row.incomplete_opportunity_count,
+                })}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** Build the company board only after the live permission query allows its RPC reads. */
 export function CompanyOpportunityPipeline({
   actor,
@@ -380,9 +456,14 @@ export function CompanyOpportunityPipeline({
       setSearch("");
       setStageFilter("all");
       setPage(0);
-      await queryClient.invalidateQueries({
-        queryKey: ["crm", "opportunities", actor, organisationId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "opportunities", actor, organisationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+        }),
+      ]);
     },
   });
   const move = useMutation({
@@ -411,6 +492,9 @@ export function CompanyOpportunityPipeline({
         queryClient.invalidateQueries({
           queryKey: ["crm", "opportunity-events", actor, organisationId],
         }),
+        queryClient.invalidateQueries({
+          queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+        }),
       ]);
     },
     onError: async (error, input) => {
@@ -419,9 +503,14 @@ export function CompanyOpportunityPipeline({
           moveRequests.current.get(input.opportunity.id)?.id === input.requestId
         )
           moveRequests.current.delete(input.opportunity.id);
-        await queryClient.invalidateQueries({
-          queryKey: ["crm", "opportunities", actor, organisationId],
-        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ["crm", "opportunities", actor, organisationId],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+          }),
+        ]);
       }
     },
   });
@@ -434,6 +523,9 @@ export function CompanyOpportunityPipeline({
       });
       queryClient.removeQueries({
         queryKey: ["crm", "opportunity-events", actor, organisationId],
+      });
+      queryClient.removeQueries({
+        queryKey: ["crm", "weighted-pipeline", actor, organisationId],
       });
     }
   }, [actor, canManage, organisationId, permissions.data, queryClient]);
@@ -469,6 +561,7 @@ export function CompanyOpportunityPipeline({
           <p className="muted">{t("crmPipelineDescription")}</p>
         </div>
       </header>
+      <WeightedPipelineSummary actor={actor} organisationId={organisationId} />
       <div className="crm-filter-form">
         <Field id={`crm-search-${organisationId}`} label={t("crmSearchLabel")}>
           <input

@@ -1,6 +1,13 @@
 /** Verify the company CRM board checks capability, persists transitions and keeps retry identity. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
@@ -18,6 +25,14 @@ const { crmState, createOpportunity, moveOpportunity, updateForecast } =
       opportunities: { items: [] as unknown[], hasNextPage: false },
       events: [] as unknown[],
       filters: [] as { page: number; search: string; stage: string | null }[],
+      weightedPipeline: [] as {
+        currency: "EUR" | "AUD" | "CHF" | "GBP" | "USD";
+        weighted_value: number | null;
+        included_opportunity_count: number;
+        incomplete_opportunity_count: number;
+      }[],
+      weightedPipelineError: false,
+      weightedPipelineReads: 0,
     },
     createOpportunity: vi.fn(),
     moveOpportunity: vi.fn(),
@@ -60,6 +75,15 @@ vi.mock("./api", async (importOriginal) => {
     ) => ({
       queryKey: ["crm", "opportunity-events", id, companyId, opportunityKey],
       queryFn: async () => crmState.events,
+    }),
+    crmWeightedPipelineQuery: (id: string, companyId: string) => ({
+      queryKey: ["crm", "weighted-pipeline", id, companyId],
+      queryFn: async () => {
+        crmState.weightedPipelineReads += 1;
+        if (crmState.weightedPipelineError)
+          throw new Error("fictional CRM summary read failure");
+        return crmState.weightedPipeline;
+      },
     }),
     createCrmOpportunity: createOpportunity,
     moveCrmOpportunity: moveOpportunity,
@@ -156,6 +180,9 @@ describe("CompanyOpportunityPipeline", () => {
     crmState.opportunities = { items: [], hasNextPage: false };
     crmState.events = [];
     crmState.filters = [];
+    crmState.weightedPipeline = [];
+    crmState.weightedPipelineError = false;
+    crmState.weightedPipelineReads = 0;
   });
   afterEach(async () => {
     cleanup();
@@ -468,5 +495,97 @@ describe("CompanyOpportunityPipeline", () => {
     expect(screen.getByRole("heading", { name: "Identified" })).toBeVisible();
     english.unmount();
     await act(() => i18n.changeLanguage("de"));
+  });
+
+  it("shows a currency-separated forecast summary and refreshes it after a saved forecast", async () => {
+    const user = userEvent.setup();
+    crmState.opportunities = {
+      items: [opportunity()],
+      hasNextPage: false,
+    };
+    crmState.weightedPipeline = [
+      {
+        currency: "EUR",
+        weighted_value: 12500,
+        included_opportunity_count: 2,
+        incomplete_opportunity_count: 1,
+      },
+      {
+        currency: "USD",
+        weighted_value: null,
+        included_opportunity_count: 0,
+        incomplete_opportunity_count: 1,
+      },
+    ];
+    updateForecast.mockImplementation(async () => {
+      crmState.weightedPipeline = [
+        {
+          currency: "EUR",
+          weighted_value: 0,
+          included_opportunity_count: 1,
+          incomplete_opportunity_count: 0,
+        },
+      ];
+      crmState.opportunities = {
+        items: [
+          {
+            ...opportunity("identified", 2),
+            close_probability: 0,
+          },
+        ],
+        hasNextPage: false,
+      };
+    });
+    mount();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /gewichtete vertriebspipeline/i,
+      }),
+    ).toBeVisible();
+    expect(await screen.findByText(/12\.500,00/)).toBeVisible();
+    expect(
+      within(
+        screen.getByRole("region", { name: "Gewichtete Vertriebspipeline" }),
+      ).getByText("USD"),
+    ).toBeVisible();
+    expect(
+      within(
+        screen.getByRole("region", { name: "Gewichtete Vertriebspipeline" }),
+      ).getAllByText(/unvollständig: 1/i),
+    ).toHaveLength(2);
+
+    await user.type(
+      await screen.findByRole("spinbutton", {
+        name: /abschlusswahrscheinlichkeit/i,
+      }),
+      "0",
+    );
+    await user.click(
+      screen.getByRole("button", { name: /prognose speichern/i }),
+    );
+
+    expect(
+      await within(
+        screen.getByRole("region", { name: "Gewichtete Vertriebspipeline" }),
+      ).findByText(/^0,00/),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(crmState.weightedPipelineReads).toBeGreaterThan(1),
+    );
+  });
+
+  it("keeps the opportunity board usable when the independent summary fails and translates it", async () => {
+    crmState.weightedPipelineError = true;
+    await act(() => i18n.changeLanguage("en"));
+    mount();
+
+    expect(
+      await screen.findByRole("heading", { name: "Sales pipeline" }),
+    ).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { name: "Weighted sales pipeline" }),
+    ).toBeVisible();
+    expect(await screen.findByText(/could not be loaded/i)).toBeVisible();
   });
 });

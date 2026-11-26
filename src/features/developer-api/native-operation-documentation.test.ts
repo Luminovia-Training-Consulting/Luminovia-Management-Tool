@@ -63,9 +63,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 75 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(75);
-    expect(definitions).toHaveLength(75);
+  it("covers the 76 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(76);
+    expect(definitions).toHaveLength(76);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -184,6 +184,18 @@ describe("internal operation documentation", () => {
     expect(
       operation("update_crm_opportunity_forecast").responses["204"].content,
     ).toBeUndefined();
+  });
+
+  it("documents a permission-checked, currency-separated weighted CRM report", () => {
+    const report = input("get_crm_weighted_pipeline");
+    expect(report.safeParse({ p_organisation_id: id }).success).toBe(true);
+    expect(report.safeParse({ p_organisation_id: null }).success).toBe(false);
+    expect(operation("get_crm_weighted_pipeline").description).toContain(
+      "Currencies are never combined or converted",
+    );
+    expect(operation("get_crm_weighted_pipeline").description).toContain(
+      "numeric zero",
+    );
   });
 
   it("documents scoped and legacy wiki template calls", () => {

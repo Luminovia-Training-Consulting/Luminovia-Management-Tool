@@ -42,6 +42,35 @@ const pairs: Record<string, [string, string]> = {
     "Die Prognose wurde nicht bestätigt. Der gespeicherte Stand bleibt maßgeblich.",
     "The forecast was not confirmed. The persisted state remains authoritative.",
   ],
+  crmWeightedPipelineTitle: [
+    "Gewichtete Vertriebspipeline",
+    "Weighted sales pipeline",
+  ],
+  crmWeightedPipelineDescription: [
+    "Offene Chancen werden je Originalwährung mit Betrag × Abschlusswahrscheinlichkeit gewichtet. Chancen ohne Betrag oder Wahrscheinlichkeit zählen als unvollständig. Unterschriebene, aktive, verlorene und ruhende Chancen sind ausgeschlossen; dies ist kein verbuchter Umsatz.",
+    "Open opportunities are weighted by amount × close probability in their recorded currency. Opportunities missing an amount or probability count as incomplete. Signed, active, lost, and dormant stages are excluded; this is not recognised revenue.",
+  ],
+  crmWeightedPipelineLoading: [
+    "Gewichtete Prognose wird geladen …",
+    "Loading weighted forecast …",
+  ],
+  crmWeightedPipelineError: [
+    "Die gewichtete Prognose konnte nicht geladen werden.",
+    "The weighted forecast could not be loaded.",
+  ],
+  crmWeightedPipelineRetry: ["Erneut versuchen", "Retry"],
+  crmWeightedPipelineEmpty: [
+    "Keine offenen Vertriebschancen für diese Firma.",
+    "There are no open opportunities for this company.",
+  ],
+  crmWeightedPipelineNoValue: [
+    "Kein berechenbarer Wert",
+    "No computable value",
+  ],
+  crmWeightedPipelineCoverage: [
+    "Berechenbar: {{included}} · Unvollständig: {{incomplete}}",
+    "Computable: {{included}} · Incomplete: {{incomplete}}",
+  ],
   crmOpportunityForecastChanged: [
     "Prognose geändert: Wahrscheinlichkeit {{fromProbability}} → {{toProbability}}, Abschlussdatum {{fromDate}} → {{toDate}}",
     "Forecast changed: probability {{fromProbability}} → {{toProbability}}, closing date {{fromDate}} → {{toDate}}",

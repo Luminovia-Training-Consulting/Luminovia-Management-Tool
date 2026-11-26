@@ -298,6 +298,40 @@ export const operationsRpcDocumentation = {
         "The opportunity version changed; reload before retrying the forecast.",
     },
   },
+  get_crm_weighted_pipeline: {
+    summary: "Get the weighted open sales pipeline for one organisation",
+    description:
+      "Requires current organisations.manage permission on every request; company membership alone is insufficient. Returns one row per recorded currency for open opportunities, weighting each row as estimated amount × close probability / 100. Signed, active, lost, and dormant stages are excluded. Opportunities missing either input count as incomplete and are not valued. weighted_value is null when no opportunity in that currency is computable and numeric zero when computable estimates sum to zero. Currencies are never combined or converted; these estimates are not recognised revenue.",
+    parameters: { p_organisation_id: id },
+    required: ["p_organisation_id"],
+    result: {
+      type: "array",
+      items: {
+        type: "object",
+        required: [
+          "currency",
+          "weighted_value",
+          "included_opportunity_count",
+          "incomplete_opportunity_count",
+        ],
+        properties: {
+          currency: {
+            type: "string",
+            enum: ["EUR", "AUD", "CHF", "GBP", "USD"],
+          },
+          weighted_value: { type: ["number", "null"] },
+          included_opportunity_count: { type: "integer", minimum: 0 },
+          incomplete_opportunity_count: { type: "integer", minimum: 0 },
+        },
+      },
+    },
+    errors: {
+      "400": "The organisation identifier is missing.",
+      "403":
+        "The caller does not have current organisations.manage permission.",
+      "404": "The specified organisation does not exist.",
+    },
+  },
   organisation_contracts: {
     summary: "List scanned private PDFs filed for one company",
     description:

@@ -51,6 +51,34 @@ export type CrmOpportunityPage = {
   hasNextPage: boolean;
 };
 
+/** Per-currency weighted estimate and data-coverage counts for open opportunities only. */
+const weightedPipelineRowSchema = z.object({
+  currency: z.enum(["EUR", "AUD", "CHF", "GBP", "USD"]),
+  weighted_value: z.number().nullable(),
+  included_opportunity_count: z.number().int().nonnegative(),
+  incomplete_opportunity_count: z.number().int().nonnegative(),
+});
+
+export type CrmWeightedPipelineRow = z.infer<typeof weightedPipelineRowSchema>;
+
+/** Read an actor- and organisation-partitioned aggregate independent of board filters. */
+export const crmWeightedPipelineQuery = (
+  actor: string,
+  organisationId: string,
+) =>
+  queryOptions({
+    queryKey: ["crm", "weighted-pipeline", actor, organisationId],
+    queryFn: async () => {
+      const { data, error } = await db().rpc(
+        "get_crm_weighted_pipeline",
+        { p_organisation_id: organisationId },
+        { get: true },
+      );
+      if (error) throw error;
+      return z.array(weightedPipelineRowSchema).parse(data);
+    },
+  });
+
 /** Immutable version event used by the bounded opportunity history view. */
 const opportunityEventSchema = z.object({
   id: z.uuid(),

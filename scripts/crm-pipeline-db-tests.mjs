@@ -9,6 +9,7 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
   const activeOrganisation = randomUUID();
   const foreignOrganisation = randomUUID();
   const archivedOrganisation = randomUUID();
+  const weightedOrganisation = randomUUID();
   const createRequest = randomUUID();
 
   await sql(`
@@ -23,7 +24,8 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     insert into public.organisations(id,name,archived_at) values
       (${q(activeOrganisation)},'Fictional CRM Current Company',null),
       (${q(foreignOrganisation)},'Fictional CRM Other Company',null),
-      (${q(archivedOrganisation)},'Fictional CRM Archived Company',now());
+      (${q(archivedOrganisation)},'Fictional CRM Archived Company',now()),
+      (${q(weightedOrganisation)},'Fictional CRM Forecast Company',null);
     insert into public.client_organisation_memberships(user_id,organisation_id) values
       (${q(companyMember)},${q(activeOrganisation)});
   `);
@@ -509,6 +511,137 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     /P0002|CRM opportunity not found/,
   );
 
+  /** Create representative forecasts through the same versioned RPCs used by the UI. */
+  const addWeightedOpportunity = async ({
+    title,
+    estimatedValue,
+    currency,
+    probability,
+    stage = "identified",
+  }) => {
+    const id = await call(manager, "create_crm_opportunity", [
+      weightedOrganisation,
+      title,
+      estimatedValue,
+      currency,
+      randomUUID(),
+    ]);
+    let version = 1;
+    if (probability !== null) {
+      await call(manager, "update_crm_opportunity_forecast", [
+        weightedOrganisation,
+        id,
+        probability,
+        null,
+        version,
+        randomUUID(),
+      ]);
+      version += 1;
+    }
+    if (stage !== "identified") {
+      await call(manager, "move_crm_opportunity", [
+        weightedOrganisation,
+        id,
+        stage,
+        version,
+        randomUUID(),
+      ]);
+    }
+    return id;
+  };
+  await addWeightedOpportunity({
+    title: "Fictional weighted EUR opportunity",
+    estimatedValue: "10000.00",
+    currency: "EUR",
+    probability: "50",
+  });
+  await addWeightedOpportunity({
+    title: "Fictional zero probability opportunity",
+    estimatedValue: "5000.00",
+    currency: "EUR",
+    probability: "0",
+  });
+  await addWeightedOpportunity({
+    title: "Fictional missing value opportunity",
+    estimatedValue: null,
+    currency: "EUR",
+    probability: "40",
+  });
+  await addWeightedOpportunity({
+    title: "Fictional missing probability opportunity",
+    estimatedValue: "7500.00",
+    currency: "EUR",
+    probability: null,
+  });
+  await addWeightedOpportunity({
+    title: "Fictional weighted USD opportunity",
+    estimatedValue: "2000.00",
+    currency: "USD",
+    probability: "25",
+  });
+  await addWeightedOpportunity({
+    title: "Fictional computed zero opportunity",
+    estimatedValue: "900.00",
+    currency: "GBP",
+    probability: "0",
+  });
+  await addWeightedOpportunity({
+    title: "Fictional incomplete CHF opportunity",
+    estimatedValue: "3000.00",
+    currency: "CHF",
+    probability: null,
+  });
+  for (const [index, stage] of [
+    "contract_signed",
+    "active_customer",
+    "lost",
+    "dormant",
+  ].entries()) {
+    await addWeightedOpportunity({
+      title: `Fictional excluded ${stage} opportunity ${index}`,
+      estimatedValue: "99000.00",
+      currency: "EUR",
+      probability: "100",
+      stage,
+    });
+  }
+
+  assert.deepEqual(
+    await rows(manager, "get_crm_weighted_pipeline", [weightedOrganisation]),
+    [
+      {
+        currency: "CHF",
+        weighted_value: null,
+        included_opportunity_count: 0,
+        incomplete_opportunity_count: 1,
+      },
+      {
+        currency: "EUR",
+        weighted_value: 5000,
+        included_opportunity_count: 2,
+        incomplete_opportunity_count: 2,
+      },
+      {
+        currency: "GBP",
+        weighted_value: 0,
+        included_opportunity_count: 1,
+        incomplete_opportunity_count: 0,
+      },
+      {
+        currency: "USD",
+        weighted_value: 500,
+        included_opportunity_count: 1,
+        incomplete_opportunity_count: 0,
+      },
+    ],
+    "the aggregate separates currencies, reports incomplete inputs, keeps numeric zero, and excludes closed stages",
+  );
+  assert.deepEqual(
+    await rows(manager, "get_crm_weighted_pipeline", [foreignOrganisation]),
+    [],
+    "the aggregate is bound to the requested organisation",
+  );
+
   await assert.rejects(
     call(companyMember, "list_crm_opportunities", [activeOrganisation, 100]),
     /42501|organisations.manage required/,
@@ -524,6 +657,11 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     ]),
     /42501|organisations.manage required/,
     "company membership does not confer access to the CRM page RPC",
+  );
+  await assert.rejects(
+    call(companyMember, "get_crm_weighted_pipeline", [weightedOrganisation]),
+    /42501|organisations.manage required/,
+    "company membership does not confer access to the weighted report",
   );
   await assert.rejects(
     call(companyMember, "update_crm_opportunity_forecast", [
@@ -576,6 +714,13 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     ),
     /42501|permission denied/,
     "the privileged API role cannot bypass the versioned stage RPC",
+  );
+  await assert.rejects(
+    sql(
+      `set role service_role; select * from public.get_crm_weighted_pipeline(${q(weightedOrganisation)})`,
+    ),
+    /42501|permission denied/,
+    "the privileged API role cannot bypass the caller-scoped report RPC",
   );
   await assert.rejects(
     sql("set role service_role; truncate public.crm_opportunity_events"),
@@ -660,6 +805,11 @@ await withTestDatabase("crm_pipeline", async ({ sql, actor }) => {
     ]),
     /organisations.manage required/,
     "role revocation also removes forecast history access",
+  );
+  await assert.rejects(
+    rows(manager, "get_crm_weighted_pipeline", [weightedOrganisation]),
+    /organisations.manage required/,
+    "role revocation also removes weighted report access",
   );
 });
 

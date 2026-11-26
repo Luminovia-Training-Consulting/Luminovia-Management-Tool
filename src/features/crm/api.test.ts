@@ -5,6 +5,7 @@ import {
   CRM_PAGE_LIMIT,
   crmOpportunitiesQuery,
   crmOpportunityEventsQuery,
+  crmWeightedPipelineQuery,
   moveCrmOpportunity,
   updateCrmOpportunityForecast,
 } from "./api";
@@ -273,5 +274,43 @@ describe("CRM pipeline RPC adapters", () => {
       }),
     ).rejects.toThrow();
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("reads an actor- and organisation-scoped weighted aggregate without merging currencies", async () => {
+    const summary = [
+      {
+        currency: "EUR",
+        weighted_value: 0,
+        included_opportunity_count: 1,
+        incomplete_opportunity_count: 2,
+      },
+      {
+        currency: "USD",
+        weighted_value: null,
+        included_opportunity_count: 0,
+        incomplete_opportunity_count: 1,
+      },
+    ];
+    rpc.mockResolvedValue({ data: summary, error: null });
+
+    const query = crmWeightedPipelineQuery(actor, organisationId);
+    expect(query.queryKey).toEqual([
+      "crm",
+      "weighted-pipeline",
+      actor,
+      organisationId,
+    ]);
+    await expect(query.queryFn!({} as never)).resolves.toEqual(summary);
+    expect(rpc).toHaveBeenCalledWith(
+      "get_crm_weighted_pipeline",
+      { p_organisation_id: organisationId },
+      { get: true },
+    );
+
+    rpc.mockResolvedValue({
+      data: [{ ...summary[0], currency: "INVALID" }],
+      error: null,
+    });
+    await expect(query.queryFn!({} as never)).rejects.toThrow();
   });
 });
