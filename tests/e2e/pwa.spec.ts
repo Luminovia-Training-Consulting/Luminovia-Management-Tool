@@ -5,7 +5,7 @@
  */
 import {expect, test, type Page} from "@playwright/test";
 import {createECDH, randomUUID} from "node:crypto";
-import {actor, api, checked, login} from "./helpers/accounts-support";
+import {actor, api, checked, login, signOut} from "./helpers/accounts-support";
 
 test.skip(
     process.env.E2E_PWA !== "1",
@@ -380,9 +380,7 @@ test("built PWA cold offline page reads only its opted-in schedule and purges it
         await expect(
             current.getByText("Kalender abonnieren", {exact: true}),
         ).toBeVisible();
-        await current
-            .getByRole("button", {name: "Abmelden", exact: true})
-            .click();
+        await signOut(current);
         await expect(current).toHaveURL(/\/login$/);
         await expect.poll(async () => Boolean(await snapshot())).toBe(false);
         await login(current, peer.email);

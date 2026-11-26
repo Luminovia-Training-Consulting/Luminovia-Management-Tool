@@ -28,6 +28,7 @@ const knownKinds = new Set([
   "assignment_withdrawal_withdrawn",
   "job_reopened",
   "job_matching",
+  "course_offer_published",
   "chat_message",
   "forum_reply",
   "session_reminder",

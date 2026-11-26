@@ -319,7 +319,9 @@ describe("server-confirmed logout", () => {
         { name: "Abmelden" },
       );
       await user.click(signout);
-      expect(await screen.findByRole("alert")).toBeVisible();
+      expect(
+        await within(screen.getByRole("main")).findByRole("alert"),
+      ).toBeVisible();
       expect(screen.getByText("Private workspace")).toBeVisible();
       expect(client.getQueryData(["private", "actor"])).toBe(
         "Owned private data",
@@ -330,6 +332,33 @@ describe("server-confirmed logout", () => {
       expect(client.getQueryData(["private", "actor"])).toBeUndefined();
     },
   );
+  it("places mobile sign-out in the menu footer and keeps retry available after failure", async () => {
+    signOut
+      .mockReset()
+      .mockRejectedValueOnce(new Error("Network unavailable"))
+      .mockResolvedValueOnce({ error: null });
+    const { client, user } = setup();
+    expect(document.querySelector(".mobile-signout")).toBeNull();
+    const more = document.querySelector<HTMLDetailsElement>(
+      "details.mobile-more",
+    );
+    if (!more) throw new Error("Mobile navigation disclosure is missing");
+    await user.click(more.querySelector("summary")!);
+    const panel = more.querySelector<HTMLElement>(".mobile-menu-panel");
+    if (!panel) throw new Error("Mobile navigation panel is missing");
+    expect(panel.lastElementChild).toHaveClass("mobile-menu-footer");
+    const signout = within(panel).getByRole("button", { name: "Abmelden" });
+    await user.click(signout);
+    expect(await within(panel).findByRole("alert")).toBeVisible();
+    expect(signout).toBeEnabled();
+    expect(screen.getByText("Private workspace")).toBeVisible();
+    expect(client.getQueryData(["private", "actor"])).toBe(
+      "Owned private data",
+    );
+    await user.click(signout);
+    expect(await screen.findByText("Login screen")).toBeVisible();
+    expect(client.getQueryData(["private", "actor"])).toBeUndefined();
+  });
   it("does not clear private data or submit twice before server acknowledgement", async () => {
     let complete!: (value: { error: null }) => void;
     signOut.mockReturnValue(
@@ -584,7 +613,10 @@ describe("native mobile More navigation", () => {
     expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
     expect(
       screen.getByRole("banner").querySelector(".mobile-signout"),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
+    expect(
+      within(menu).getByRole("button", { name: "Abmelden" }).parentElement,
+    ).toHaveClass("mobile-menu-footer");
   });
 
   it("does not rerender the shell while typing and clears the search when the account changes", async () => {

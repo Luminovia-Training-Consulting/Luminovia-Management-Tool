@@ -409,6 +409,7 @@ export function Shell() {
                 )}
                 <button
                   type="button"
+                  className="account-menu-signout"
                   disabled={signoutPending}
                   onClick={() => void logout()}
                 >
@@ -416,23 +417,11 @@ export function Shell() {
                 </button>
               </div>
             </details>
-            <Button
-              variant="ghost"
-              className="mobile-signout"
-              onClick={() => void logout()}
-              aria-label={t("logout")}
-              disabled={signoutPending}
-            >
-              <LogOut size={18} aria-hidden="true" />
-            </Button>
             <details className="mobile-more" {...mobileDisclosure}>
-              <summary
-                aria-label={t("more")}
-                aria-controls="mobile-shell-navigation"
-              >
+              <summary aria-label={t("more")} aria-controls="mobile-shell-menu">
                 <Menu size={20} aria-hidden="true" />
               </summary>
-              <div className="mobile-menu-panel">
+              <div id="mobile-shell-menu" className="mobile-menu-panel">
                 <PortalNavigation
                   id="mobile-shell-navigation"
                   items={navigation}
@@ -440,12 +429,30 @@ export function Shell() {
                   renderLabel={t}
                   onItemClick={() => closeMobileMore(true)}
                 />
+                <div className="mobile-menu-footer">
+                  {signoutFailed && (
+                    <Notice kind="error">{t("signOutFailed")}</Notice>
+                  )}
+                  <Button
+                    variant="ghost"
+                    className="mobile-menu-signout"
+                    onClick={() => void logout()}
+                    disabled={signoutPending}
+                  >
+                    <LogOut size={18} aria-hidden="true" />
+                    <span>{t("logout")}</span>
+                  </Button>
+                </div>
               </div>
             </details>
           </div>
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
-          {signoutFailed && <Notice kind="error">{t("signOutFailed")}</Notice>}
+          {signoutFailed && (
+            <div className="shell-signout-failure">
+              <Notice kind="error">{t("signOutFailed")}</Notice>
+            </div>
+          )}
           {uiSaveFailed && (
             <Notice kind="error">{t("uiPreferenceNotSaved")}</Notice>
           )}

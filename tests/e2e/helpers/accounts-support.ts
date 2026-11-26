@@ -109,3 +109,16 @@ export async function login(page: Page, email: string, landing = /\/$/) {
 export async function adminLogin(page: Page, user: { email: string }) {
     await login(page, user.email);
 }
+
+export async function signOut(page: Page) {
+    const mobileMenu = page.locator(".mobile-more > summary");
+    const button = {name: /^(Abmelden|Sign out)$/};
+    if (await mobileMenu.isVisible()) {
+        const disclosure = page.locator(".mobile-more");
+        if (!(await disclosure.evaluate((menu) => menu.hasAttribute("open"))))
+            await mobileMenu.click();
+        await disclosure.getByRole("button", button).click();
+    } else {
+        await page.locator(".sidebar").getByRole("button", button).click();
+    }
+}

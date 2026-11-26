@@ -5,7 +5,7 @@
 import {expect, test} from "@playwright/test";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {checked} from "./helpers/accounts-support";
+import {checked, signOut} from "./helpers/accounts-support";
 
 test.skip(
     !process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -59,7 +59,7 @@ test("actual Auth invitation link opens password setup and the invited account c
     // Sign in again below to prove the new password survived sign-out.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("region", {name: "Arbeitsbereich"})).toBeVisible();
-    await page.getByRole("button", {name: "Abmelden", exact: true}).click();
+    await signOut(page);
     await expect(page).toHaveURL(/\/login/);
     await page.getByLabel("E-Mail", {exact: true}).fill(email);
     await page.getByLabel("Passwort", {exact: true}).fill(password);
@@ -139,7 +139,7 @@ test("real browser password recovery consumes a Mailpit email and keeps the PKCE
     await expect(page.getByRole("status")).toContainText(
         "Dein Passwort wurde gespeichert.",
     );
-    await page.getByRole("button", {name: "Abmelden", exact: true}).click();
+    await signOut(page);
     await page.getByLabel("E-Mail", {exact: true}).fill(email);
     await page.getByLabel("Passwort", {exact: true}).fill(password);
     await page.getByRole("button", {name: "Anmelden", exact: true}).click();

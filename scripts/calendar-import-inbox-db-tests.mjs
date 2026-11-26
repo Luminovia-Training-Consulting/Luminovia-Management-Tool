@@ -9,7 +9,7 @@ await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
         peer = randomUUID(),
         inactive = randomUUID();
     await sql(
-        `insert into auth.users(id,email) values(${q(owner)},'import-owner@example.invalid'),(${q(peer)},'import-peer@example.invalid'),(${q(inactive)},'inactive-import@example.invalid');insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(inactive)},'lecturer');update public.profiles set active=false where id=${q(inactive)}`,
+        `insert into auth.users(id,email,email_confirmed_at) values(${q(owner)},'import-owner@example.invalid',now()),(${q(peer)},'import-peer@example.invalid',now()),(${q(inactive)},'inactive-import@example.invalid',now());insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(inactive)},'lecturer');update public.profiles set active=false where id=${q(inactive)}`,
     );
     const appointment = {
         uid: "fictional-stable-import\n2040-01-02T09:00:00Z",
@@ -123,6 +123,11 @@ await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
         ),
     );
     const invoice = randomUUID();
+    await sql(`update private.delivery_preferences set email_enabled=true where user_id in (${q(owner)},${q(peer)});
+      update private.push_configuration set enabled=true;
+      insert into private.push_subscriptions(user_id,endpoint,p256dh,auth_secret,device_token,label)
+      select id,'https://fcm.googleapis.com/' || id::text,'fixture','fixture',gen_random_uuid(),'Fictional device'
+      from public.profiles where id in (${q(owner)},${q(peer)});`);
     await sql(
         `update public.document_versions set status='clean',sha256=repeat('b',64) where id=${q(reserved.version_id)};update public.documents set status='clean' where id=${q(reserved.document_id)};insert into public.invoices(id,user_id,number,issued_on,due_on,currency,total_amount,document_version_id,status,client_id) values(${q(invoice)},${q(owner)},'Fictional-ICS-test',current_date,current_date+30,'EUR',100,${q(reserved.version_id)},'submitted',${q(randomUUID())});update public.invoices set status='approved' where id=${q(invoice)}`,
     );
@@ -152,6 +157,30 @@ await withTestDatabase("calendar_import_inbox", async ({sql, actor}) => {
     const hidden = foreign.items.find((item) => item.kind === "invoice_approved");
     assert.equal(hidden.href, null);
     assert.equal(hidden.title, "");
+    // Both transports resolve the resource against the current invoice owner.
+    for (const [table, lease, prepare] of [
+        ["email", "lease_notification_emails", "prepare_notification_email"],
+        ["push", "lease_notification_push", "prepare_notification_push"],
+    ]) {
+        const service = async (call) => JSON.parse(await sql(`begin;set local role service_role;
+          select coalesce(to_jsonb(public.${call}), 'null'::jsonb);commit;`));
+        const approved = JSON.parse(await sql(`select jsonb_object_agg(notice.user_id, delivery.id)
+          from private.notification_${table}_outbox delivery
+          join public.notifications notice on notice.id=delivery.notification_id
+          where notice.resource_id=${q(invoice)} and notice.kind='invoice_approved';`));
+        const leases = await service(`${lease}(20)`);
+        for (const user of [owner, peer]) {
+            const entry = leases.find(({id}) => id === approved[user]);
+            assert.ok(entry);
+            const message = await service(`${prepare}(${q(entry.id)},${q(entry.lease_token)})`);
+            if (user === peer) assert.equal(message, null);
+            else {
+                assert.ok(message);
+                assert.doesNotMatch(JSON.stringify(message), /Fictional-ICS-test/);
+                if (table === "email") assert.equal(message.recipient, "import-owner@example.invalid");
+            }
+        }
+    }
     await sql(`update public.profiles set active=false where id=${q(owner)}`);
     await assert.rejects(
         actor(owner, "select public.notification_inbox()"),

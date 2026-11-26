@@ -6,7 +6,7 @@ import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
-import {actor, api, assertPasswordOnly, checked} from "./helpers/accounts-support";
+import {actor, api, assertPasswordOnly, checked, signOut} from "./helpers/accounts-support";
 
 const configured = Boolean(
     process.env.SUPABASE_URL &&
@@ -687,7 +687,7 @@ test("admin verifies self-selected expertise and suspends/reactivates a fictiona
             return data?.verified;
         })
         .toBe(false);
-    await page.getByRole("button", {name: "Abmelden", exact: true}).click();
+    await signOut(page);
     await adminSession(page);
     await page.goto("/admin/people");
     await expect(page).toHaveURL(/\/people$/);

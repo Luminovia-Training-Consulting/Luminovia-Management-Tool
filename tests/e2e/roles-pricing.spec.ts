@@ -1,7 +1,7 @@
 import {expect, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
-import {actor, adminLogin, api, checked} from "./helpers/accounts-support";
+import {actor, adminLogin, api, checked, signOut} from "./helpers/accounts-support";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -157,7 +157,7 @@ test("management assigns only subordinate roles while only administration sees a
         await page
             .getByRole("combobox", {name: "Language", exact: true})
             .selectOption("de");
-        await page.getByRole("button", {name: "Abmelden", exact: true}).click();
+        await signOut(page);
         await expect(page).toHaveURL(/\/login$/);
         await adminLogin(page, admin);
         const adminApi = api(process.env.SUPABASE_ANON_KEY!);
