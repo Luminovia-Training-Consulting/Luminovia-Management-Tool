@@ -28,6 +28,8 @@ export const assignmentTeamInput = z.object({
   title: z.string().trim().min(1).max(100),
   due_at: instant.nullable(),
   member_ids: z.array(z.uuid()).min(1).max(20),
+  max_attempts: z.number().int().min(1).max(10).nullable().optional(),
+  rubric: rubric.nullable().optional(),
 });
 
 const assignmentTeam = assignmentTeamInput.omit({ team_id: true }).extend({

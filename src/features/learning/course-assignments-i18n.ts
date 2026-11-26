@@ -62,9 +62,30 @@ const assignmentTexts = {
     "Für diese Aufgabe wurden keine Teams eingerichtet.",
     "No teams have been set up for this assignment.",
   ],
+  assignmentsTeamOverrides: ["Teamregeln", "Team settings"],
+  assignmentsTeamOverrideHelp: [
+    "Für bestehende Abgaben gilt weiterhin das Bewertungsraster, das beim Einreichen gültig war.",
+    "Submitted work keeps the rubric that applied when it was submitted.",
+  ],
+  assignmentsTeamAttemptLimit: [
+    "Versuchslimit für das Team (optional)",
+    "Team attempt limit (optional)",
+  ],
+  assignmentsTeamOwnRubric: [
+    "Eigenes Bewertungsraster verwenden",
+    "Use a team-specific rubric",
+  ],
+  assignmentsTeamAttemptSummary_one: [
+    "{{count}} Versuch für das Team",
+    "{{count}} attempt for the team",
+  ],
+  assignmentsTeamAttemptSummary_other: [
+    "{{count}} Versuche für das Team",
+    "{{count}} attempts for the team",
+  ],
   assignmentsTeamInvalid: [
-    "Gib einen Namen, 1 bis 20 Mitglieder und bei Bedarf eine gültige Teamfrist an.",
-    "Enter a team name, select 1 to 20 members and check the optional deadline.",
+    "Prüfe Teamname, Mitgliederliste und die optionalen Teamregeln. Im Raster beginnt jedes Kriterium bei null. Die Punkte müssen steigen.",
+    "Check the team name, member list and optional settings. Each rubric criterion starts at zero points. Level points must increase.",
   ],
   assignmentsTeamShared: [
     "Team {{title}}. Dein Team teilt sich die Abgaben und Rückmeldungen.",

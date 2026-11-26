@@ -5,13 +5,17 @@ import { useTranslation } from "react-i18next";
 import { Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { zonedInstantForScheduleEdit } from "../../lib/dates";
+import { AssignmentRubricEditor } from "./assignment-rubric-editor";
 import {
   assignmentTeamInput,
+  rubricIsOrdered,
+  type AssignmentDefinition,
   type CourseAssignmentTeam,
 } from "./course-assignment-schema";
 
 type AssignmentTeamProps = {
   teams: CourseAssignmentTeam[];
+  defaultRubric: AssignmentDefinition["rubric"];
   participants: Array<{ user_id: string; name: string; status: string }>;
   zone: string;
   canManage: boolean;
@@ -31,6 +35,7 @@ type TeamEditorProps = Omit<AssignmentTeamProps, "teams" | "canManage"> & {
 
 function TeamEditor({
   team,
+  defaultRubric,
   command,
   zone,
   participants,
@@ -48,6 +53,10 @@ function TeamEditor({
           .toFormat("yyyy-MM-dd'T'HH:mm")
       : "",
   );
+  const [maxAttempts, setMaxAttempts] = useState(
+    String(team?.max_attempts ?? ""),
+  );
+  const [rubric, setRubric] = useState(team?.rubric ?? null);
   const [members, setMembers] = useState(team?.member_ids ?? []);
   const [invalid, setInvalid] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -75,8 +84,13 @@ function TeamEditor({
       title,
       due_at: instant,
       member_ids: members,
+      max_attempts: maxAttempts === "" ? null : Number(maxAttempts),
+      rubric,
     });
-    const valid = payload.success && (!due || Boolean(instant));
+    const valid =
+      payload.success &&
+      (!due || Boolean(instant)) &&
+      (!rubric || rubricIsOrdered(rubric));
     setInvalid(!valid);
     if (valid) save.mutate(payload.data);
   }
@@ -106,6 +120,33 @@ function TeamEditor({
             />
           </label>
         </div>
+        <details open={Boolean(maxAttempts || rubric) || undefined}>
+          <summary>{t("assignmentsTeamOverrides")}</summary>
+          <p>{t("assignmentsTeamOverrideHelp")}</p>
+          <label>
+            {t("assignmentsTeamAttemptLimit")}
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={maxAttempts}
+              onChange={(event) => setMaxAttempts(event.currentTarget.value)}
+            />
+          </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={rubric !== null}
+              onChange={(event) =>
+                setRubric(event.currentTarget.checked ? defaultRubric : null)
+              }
+            />
+            {t("assignmentsTeamOwnRubric")}
+          </label>
+          {rubric && (
+            <AssignmentRubricEditor rubric={rubric} onChange={setRubric} />
+          )}
+        </details>
         <fieldset disabled={team?.locked} className="space-y-2">
           <legend>{t("assignmentsTeamMembers")}</legend>
           {team?.locked && <p>{t("assignmentsTeamLocked")}</p>}
