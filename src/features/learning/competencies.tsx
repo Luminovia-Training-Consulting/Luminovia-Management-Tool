@@ -364,6 +364,13 @@ function AssessmentForm({
   const [level, setLevel] = useState("");
   const [note, setNote] = useState("");
   const [includeQuiz, setIncludeQuiz] = useState(false);
+  const [assignment, setAssignment] = useState("");
+  const assignmentOptions = data.assignment_options.map((item) => ({
+    ...item,
+    key: `${item.attempt_id}:${item.review_version}`,
+  }));
+  const selected = assignmentOptions.find(({ key }) => key === assignment);
+  const staleSelection = Boolean(assignment && !selected);
   const definition = data.pinned_framework?.content;
   if (!definition) return null;
 
@@ -372,7 +379,13 @@ function AssessmentForm({
       className="learning-quiz-editor"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!competency || !level || note.trim().length < 3 || write.isPending)
+        if (
+          !competency ||
+          !level ||
+          note.trim().length < 3 ||
+          staleSelection ||
+          write.isPending
+        )
           return;
         write.mutate(
           {
@@ -385,12 +398,20 @@ function AssessmentForm({
               level_id: level,
               evidence_note: note,
               include_quiz: includeQuiz,
+              ...(selected && {
+                assignment_evidence: {
+                  assignment_id: selected.assignment_id,
+                  attempt_id: selected.attempt_id,
+                  review_version: selected.review_version,
+                },
+              }),
             },
           },
           {
             onSuccess: () => {
               setNote("");
               setIncludeQuiz(false);
+              setAssignment("");
             },
           },
         );
@@ -444,7 +465,29 @@ function AssessmentForm({
           />
           {t("competencyIncludeQuiz")}
         </label>
-        <Button type="submit">{t("competencyPublishDecision")}</Button>
+        {(assignmentOptions.length > 0 || staleSelection) && (
+          <Field id={id + "-assignment"} label={t("competencyAssignment")}>
+            <select
+              value={assignment}
+              onChange={(event) => setAssignment(event.target.value)}
+            >
+              <option value="">{t("competencyNoAssignment")}</option>
+              {staleSelection && (
+                <option value={assignment} disabled>
+                  {t("competencyConflict")}
+                </option>
+              )}
+              {assignmentOptions.map(({ key, title, score }) => (
+                <option key={key} value={key}>
+                  {t("competencyAssignmentEvidence", { title, score })}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        <Button type="submit" disabled={staleSelection}>
+          {t("competencyPublishDecision")}
+        </Button>
       </fieldset>
     </form>
   );
@@ -487,6 +530,14 @@ function DecisionHistory({
                   version: decision.quiz_evidence.quiz_version,
                   score: decision.quiz_evidence.score,
                 })}
+              </p>
+            )}
+            {decision.assignment_evidence && (
+              <p>
+                {t(
+                  "competencyAssignmentEvidence",
+                  decision.assignment_evidence,
+                )}
               </p>
             )}
             <time dateTime={decision.created_at}>

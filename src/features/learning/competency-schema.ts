@@ -19,6 +19,15 @@ const framework = z.strictObject({
   revision,
   content: competencyFrameworkDefinition,
 });
+export const competencyAssignmentEvidenceReference = z.strictObject({
+  assignment_id: id,
+  attempt_id: id,
+  review_version: revision,
+});
+const assignmentEvidence = competencyAssignmentEvidenceReference.extend({
+  title: z.string().min(1).max(160),
+  score: z.number().min(0).max(100),
+});
 const decision = z.strictObject({
   pin_revision: revision,
   revision,
@@ -37,6 +46,7 @@ const decision = z.strictObject({
       score: z.number().int().min(0).max(100),
     })
     .nullable(),
+  assignment_evidence: assignmentEvidence.nullable().default(null),
 });
 export const courseCompetenciesSchema = z.strictObject({
   can_manage: z.boolean(),
@@ -45,6 +55,7 @@ export const courseCompetenciesSchema = z.strictObject({
   pinned_framework: framework.nullable(),
   frameworks: z.array(framework).max(20),
   decisions: z.array(decision).max(50),
+  assignment_options: z.array(assignmentEvidence).max(100).default([]),
   current_revisions: z.record(id, revision),
   has_more: z.boolean(),
 });

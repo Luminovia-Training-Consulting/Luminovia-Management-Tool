@@ -1,6 +1,7 @@
 /** Reviewed, role-scoped competency commands for both portal editions. */
 import { z } from "zod";
 import {
+  competencyAssignmentEvidenceReference,
   competencyFrameworkDefinition,
   courseCompetenciesSchema,
 } from "../learning/competency-schema.ts";
@@ -24,6 +25,7 @@ const decision = z.strictObject({
   level_id: id,
   evidence_note: z.string().min(3).max(1500),
   include_quiz: z.boolean(),
+  assignment_evidence: competencyAssignmentEvidenceReference.optional(),
 });
 export const competencyAction = z.toJSONSchema(
   z.discriminatedUnion("p_action", [

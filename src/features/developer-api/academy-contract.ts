@@ -1169,7 +1169,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_competencies": courseOperation(
     "readAcademyCourseCompetencies",
     "Read a pinned competency framework and scoped decision history",
-    "Staff can select one current learner. Learners receive only their own released decisions. Managers can read organisation framework definitions and revisions.",
+    "Staff can select one current learner and see available released assignment evidence while the licence is active. Learners receive their own released decisions. Managers can read organisation framework definitions and revisions.",
     "active-or-grace",
     competencyRead,
     competencyReadResult,
@@ -1177,7 +1177,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_competency_action": courseOperation(
     "saveAcademyCourseCompetency",
     "Save a framework revision, pin it to a course or release a decision",
-    "Managers can revise and pin organisation definitions. Current staff can release evidence-bound learner decisions. Send the last-read framework, pin or decision revision with the corresponding action.",
+    "Managers can revise and pin organisation definitions. Current staff can release decisions for learners. To attach a released assignment, send the exact assignment, attempt and review revision from the staff projection. Send the last-read framework, pin or decision revision with the corresponding action.",
     "active",
     {
       ...competencyAction,

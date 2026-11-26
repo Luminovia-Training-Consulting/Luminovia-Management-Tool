@@ -1736,9 +1736,21 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         await quiz.getByRole("radio", {name: "pwd", exact: true}).check();
         await quiz.getByRole("button", {name: "Antworten verbindlich abgeben"}).click();
         await expect(quiz.getByText(/Ergebnis: 100 %.*Bestanden/)).toBeVisible();
-        const evidence = "Fiktiver Quiznachweis zum Arbeitsverzeichnis.";
-        await competency("assess", {pin_revision: 1, user_id: f.learner.id, competency_id: skill,
-            level_id: independent, evidence_note: evidence, include_quiz: true});
+        const evidence = "Fiktiver Nachweis zum Arbeitsverzeichnis.";
+        await page.goto(workspace);
+        const staffCompetencies = page.locator("details").filter({
+            has: page.getByText("Kompetenzen", {exact: true}),
+        });
+        await staffCompetencies.getByText("Kompetenzen", {exact: true}).click();
+        await staffCompetencies.getByRole("combobox", {name: "Teilnehmende Person", exact: true}).selectOption(f.learner.id);
+        await staffCompetencies.getByRole("combobox", {name: "Kompetenz", exact: true}).selectOption(skill);
+        await staffCompetencies.getByRole("combobox", {name: "Stufe", exact: true}).selectOption(independent);
+        await staffCompetencies.getByLabel("Begründung und Lernnachweis").fill(evidence);
+        await staffCompetencies.getByRole("checkbox", {name: /Besten Versuch/}).check();
+        await staffCompetencies.getByRole("combobox", {name: "Freigegebene Aufgabenbewertung"})
+            .selectOption({label: "Fiktive CLI-Übung · 100 %"});
+        await staffCompetencies.getByRole("button", {name: "Beurteilung freigeben"}).click();
+        await expect(staffCompetencies.getByText(evidence, {exact: true})).toBeVisible();
         await enrol("completed");
         await action("attendance_verify", {
             session_id: f.session, user_id: f.learner.id, state: "attended", minutes: 36,
@@ -1750,6 +1762,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         });
         await competencies.getByText("Kompetenzen", {exact: true}).click();
         await expect(competencies.getByText(evidence, {exact: true})).toBeVisible();
+        await expect(competencies.getByText("Fiktive CLI-Übung · 100 %", {exact: true})).toBeVisible();
         await expect(learnerStatus.getByText(/Kompetenzstufe erreicht/)).toBeVisible();
         await expect(issue).toBeDisabled();
         await page.goto(workspace);

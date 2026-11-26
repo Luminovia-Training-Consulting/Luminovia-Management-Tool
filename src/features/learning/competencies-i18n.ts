@@ -51,6 +51,15 @@ const labels = {
     "Besten Versuch des aktuell veröffentlichten Quiz als Nachweis speichern",
     "Include the best current published quiz attempt as evidence",
   ],
+  competencyAssignment: [
+    "Freigegebene Aufgabenbewertung",
+    "Released assignment grade",
+  ],
+  competencyNoAssignment: ["Ohne Aufgabenbewertung", "No assignment grade"],
+  competencyAssignmentEvidence: [
+    "{{title}} · {{score}} %",
+    "{{title}} · {{score}}%",
+  ],
   competencyPublishDecision: ["Beurteilung freigeben", "Release assessment"],
   competencyHistory: ["Freigegebene Beurteilungen", "Released assessments"],
   competencyNoDecisions: [

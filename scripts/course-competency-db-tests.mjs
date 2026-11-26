@@ -173,6 +173,65 @@ await withTestDatabase("course_competencies", async ({ sql, actor }) => {
   );
   assert.equal((await action(teacher, "assess", assessment, 0)).revision, 1);
   assert.equal((await action(teacher, "assess", assessment, 0)).revision, 1);
+  const assignment = randomUUID(),
+    attempt = randomUUID();
+  const rubric = JSON.stringify([
+    {
+      label: "Accuracy",
+      levels: [0, 8, 10].map((points) => ({ label: String(points), points })),
+    },
+  ]);
+  await sql(`
+    insert into private.course_assignments(id,run_id,current_version,published_version)
+      values (${q(assignment)},${q(run)},1,1);
+    insert into private.course_assignment_definitions(assignment_id,version,title,instructions,due_at,max_attempts,rubric)
+      values (${q(assignment)},1,'Fictional lab write-up','Attach work',now(),2,${q(rubric)});
+    insert into private.course_assignment_attempts(id,assignment_id,assignment_version,user_id,attempt_no,file_name)
+      values (${q(attempt)},${q(assignment)},1,${q(learner)},1,'evidence.txt');
+    insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+      values (${q(attempt)},1,'draft','[8]','','Private draft');
+  `);
+  const assignmentEvidence = {
+    assignment_id: assignment,
+    attempt_id: attempt,
+    review_version: 2,
+  };
+  assert.deepEqual((await read(teacher, run, learner)).assignment_options, []);
+  await assert.rejects(
+    action(
+      otherTeacher,
+      "assess",
+      { ...assessment, assignment_evidence: assignmentEvidence },
+      1,
+    ),
+    /PT409/,
+  );
+  await sql(`insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+    values (${q(attempt)},2,'released','[8]','','Private note')`);
+  const supportedAssessment = {
+    ...assignmentEvidence,
+    title: "Fictional lab write-up",
+    score: 80,
+  };
+  assert.deepEqual((await read(teacher, run, learner)).assignment_options, [
+    supportedAssessment,
+  ]);
+  assert.deepEqual((await read(learner)).assignment_options, []);
+  await assert.rejects(
+    action(
+      otherTeacher,
+      "assess",
+      {
+        ...assessment,
+        assignment_evidence: {
+          ...assignmentEvidence,
+          attempt_id: randomUUID(),
+        },
+      },
+      1,
+    ),
+    /PT409/,
+  );
   await assert.rejects(
     action(otherTeacher, "assess", { ...assessment, level_id: experienced }, 0),
     /PT409/,
@@ -186,6 +245,7 @@ await withTestDatabase("course_competencies", async ({ sql, actor }) => {
           ...assessment,
           level_id: experienced,
           evidence_note: "Navigated independently after practice",
+          assignment_evidence: assignmentEvidence,
         },
         1,
       )
@@ -196,6 +256,11 @@ await withTestDatabase("course_competencies", async ({ sql, actor }) => {
   assert.equal(learnerView.decisions[0].level_title, "Independent");
   assert.equal(learnerView.decisions[0].quiz_evidence.id, learnerAttempt.id);
   assert.equal(learnerView.decisions[0].quiz_evidence.score, 100);
+  assert.deepEqual(
+    learnerView.decisions[0].assignment_evidence,
+    supportedAssessment,
+  );
+  assert.equal(learnerView.decisions[1].assignment_evidence, null);
   assert.equal(learnerView.decisions[1].level_title, "Guided");
   assert.equal(learnerView.current_revisions[competencyId], 2);
   assert.deepEqual(
@@ -203,6 +268,13 @@ await withTestDatabase("course_competencies", async ({ sql, actor }) => {
     learnerView.decisions,
   );
   assert.deepEqual((await read(teacher)).decisions, []);
+  await sql(`insert into private.course_assignment_reviews(attempt_id,version,state,scores,feedback,private_note)
+    values (${q(attempt)},3,'released','[10]','','Private correction')`);
+  assert.deepEqual((await read(learner)).decisions, learnerView.decisions);
+  assert.equal(
+    (await read(teacher, run, learner)).assignment_options[0].score,
+    100,
+  );
   await assert.rejects(
     actor(learner, "select * from private.lms_competency_decisions"),
     /42501/,

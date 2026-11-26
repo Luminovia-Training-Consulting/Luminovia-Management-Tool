@@ -4532,7 +4532,7 @@ const nativePaths = {
     "readCourseCompetencies",
     "Premium LMS",
     "Read a pinned competency framework and scoped decision history",
-    "Staff can select one current learner. Learners receive only their released decisions. Managers can read organisation framework definitions and revisions.",
+    "Staff can select one current learner and see released assignment evidence available for a decision. Learners receive their own released decisions. Managers can read organisation framework definitions and revisions.",
     competencyRead.properties ?? {},
     competencyReadResult,
     ["p_user_id", "p_offset"],
@@ -4544,7 +4544,7 @@ const nativePaths = {
       summary:
         "Save a framework revision, pin it to a course or release a decision",
       description:
-        "Managers can revise and pin organisation definitions. Current staff can release decisions for enrolled learners. Send the last-read version for the corresponding action.",
+        "Managers can revise and pin organisation definitions. Current staff can release decisions for enrolled learners. For optional assignment evidence, send the exact assignment, attempt and review revision available in the learner's staff projection. Send the last-read version for the corresponding action.",
       requestBody: { required: true, content: json(competencyAction) },
       responses: {
         "200": {
