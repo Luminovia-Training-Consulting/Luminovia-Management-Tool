@@ -239,7 +239,16 @@ export function TableImport<T>({
         );
       }
     } finally {
-      await refresh().catch(() => undefined);
+      try {
+        await refresh();
+      } catch {
+        setStatus((current) => {
+          const note = de
+            ? "Die Ansicht konnte nicht aktualisiert werden."
+            : "The view could not be refreshed.";
+          return current ? `${current} ${note}` : note;
+        });
+      }
       setBusy(false);
     }
   }

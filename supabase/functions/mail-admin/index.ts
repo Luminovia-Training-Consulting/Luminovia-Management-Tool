@@ -63,7 +63,10 @@ const handler = createMailAdminHandler({
             body: JSON.stringify({test_id: testId, ...(recipient && {recipient})}),
             signal: AbortSignal.timeout(20_000),
         });
-        if (!result.ok) throw new Error("relay_test_failed");
+        if (!result.ok) {
+            await result.body?.cancel().catch(() => undefined);
+            throw new Error("relay_test_failed");
+        }
         return await result.json();
     },
 });

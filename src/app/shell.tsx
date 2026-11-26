@@ -2,7 +2,7 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   matchPath,
@@ -127,6 +127,7 @@ export function Shell() {
     }
   });
   const [uiSaveFailed, setUiSaveFailed] = useState(false);
+  const sidebarSaveSeq = useRef(0);
   // Hydrate for the active account once, independent of the translated render.
   // A new language must never trigger a read of the value still being saved.
   useEffect(() => {
@@ -190,10 +191,11 @@ export function Shell() {
     } catch {
       // Keep the current shell usable when browser storage is unavailable.
     }
+    const seq = ++sidebarSaveSeq.current;
     setUiSaveFailed(false);
-    void saveUiPreferences({ sidebar_collapsed: collapsedNext }).catch(() =>
-      setUiSaveFailed(true),
-    );
+    void saveUiPreferences({ sidebar_collapsed: collapsedNext }).catch(() => {
+      if (sidebarSaveSeq.current === seq) setUiSaveFailed(true);
+    });
   }
 
   const profileDenied =
@@ -202,7 +204,7 @@ export function Shell() {
     !limitedAccount &&
     !online &&
     !profileDenied &&
-    (profile.isPending || profile.isError);
+    (profile.isPending || profile.isError || (roles.isPending && !roles.data));
   // A known inactive/missing profile never falls back to an old snapshot. This
   // clears only the opt-in schedule; native Auth/session semantics stay intact.
   useEffect(() => {
@@ -477,7 +479,9 @@ export function Shell() {
           ) : !profile.data?.active ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : limitedAccount ? (
-            <Outlet />
+            <Suspense fallback={<Loading />}>
+              <Outlet />
+            </Suspense>
           ) : (
             <>
               <AnnouncementBanners actor={session!.user.id} />

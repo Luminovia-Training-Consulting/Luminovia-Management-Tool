@@ -56,7 +56,9 @@ export async function uploadAcademyPwaIcon(
   const authorization = (error: { code: string }) =>
     error.code === "PT409"
       ? json(409, { error: "icon_changed" })
-      : json(403, { error: "access_denied" });
+      : error.code === "42501"
+        ? json(403, { error: "access_denied" })
+        : json(503, { error: "upload_failed" });
   const before = await dependencies.check(version);
   if (before.error) return authorization(before.error);
 

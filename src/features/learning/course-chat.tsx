@@ -416,6 +416,7 @@ function CourseChatThread({
                 <Button
                   type="button"
                   variant="secondary"
+                  disabled={upload.isPending}
                   onClick={() => {
                     if (uploadRetry.current)
                       upload.mutate(uploadRetry.current.file);

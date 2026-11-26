@@ -87,6 +87,7 @@ export function CompanyWebhooks({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || !online) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     setPending(true);

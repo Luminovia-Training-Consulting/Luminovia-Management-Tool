@@ -248,6 +248,7 @@ function Preview({ file }: { file: PortalDocument }) {
       .then((blob) => {
         if (!alive) return;
         object = URL.createObjectURL(blob);
+        setFailed(false);
         setUrl(object);
       })
       .catch(() => {
@@ -280,6 +281,7 @@ function Versions({ file }: { file: PortalDocument }) {
   const { t, i18n } = useTranslation("files");
   const online = useOnline();
   const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
   const versions = useQuery({
     queryKey: ["document-versions", file.id],
     queryFn: async () => {
@@ -319,12 +321,16 @@ function Versions({ file }: { file: PortalDocument }) {
               variant="ghost"
               size="icon"
               aria-label={`${t("download")} ${t("version", { number: v.version })}`}
-              disabled={!online || v.status !== "clean"}
+              disabled={!online || busy || v.status !== "clean"}
               onClick={async () => {
+                setFailed(false);
+                setBusy(true);
                 try {
                   await saveDownload(file.id, v.original_name, v.id);
                 } catch {
                   setFailed(true);
+                } finally {
+                  setBusy(false);
                 }
               }}
             >

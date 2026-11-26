@@ -75,6 +75,7 @@ export function PushSettings({ actor }: { actor: string }) {
   const capability = pushCapability();
   const query = useQuery(pushDevicesQuery(actor));
   const [token, setToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState(false);
   const liveActor = useRef<string | null>(actor);
   useEffect(() => {
     liveActor.current = actor;
@@ -84,12 +85,18 @@ export function PushSettings({ actor }: { actor: string }) {
   }, [actor]);
   useEffect(() => {
     let active = true;
-    if (pushSupported())
+    if (pushSupported()) {
       void currentPushToken(actor)
         .then((value) => {
-          if (active) setToken(value);
+          if (active) {
+            setTokenError(false);
+            setToken(value);
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (active) setTokenError(true);
+        });
+    }
     return () => {
       active = false;
     };
@@ -195,7 +202,7 @@ export function PushSettings({ actor }: { actor: string }) {
           )}
         </>
       )}
-      {(enable.isError || remove.isError) && (
+      {(enable.isError || remove.isError || tokenError) && (
         <Notice kind="error">{t("error")}</Notice>
       )}
       {(enable.isSuccess || remove.isSuccess) && <Notice>{t("saved")}</Notice>}

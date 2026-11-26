@@ -115,6 +115,7 @@ export function RetainedCourseAttendancePanel({
             <Button
               type="button"
               variant="secondary"
+              disabled={!online || inspection.isPending}
               onClick={() => inspection.mutate(page.next_cursor)}
             >
               {t("retainedAttendanceNext")}

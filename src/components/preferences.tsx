@@ -1,5 +1,5 @@
 /** Shared visual preferences stay synchronized across header, settings and browser tabs. */
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   readPreference,
@@ -30,10 +30,14 @@ export function Preferences({
   const id = useId();
   const [theme, setTheme] = useState(readTheme);
   const [saveFailed, setSaveFailed] = useState(false);
+  const saveSeq = useRef(0);
   const save = (patch: UiPreferencesPatch) => {
     if (!onSave) return;
+    const seq = ++saveSeq.current;
     setSaveFailed(false);
-    void onSave(patch).catch(() => setSaveFailed(true));
+    void onSave(patch).catch(() => {
+      if (saveSeq.current === seq) setSaveFailed(true);
+    });
   };
   useEffect(() => {
     const changed = (event: Event) => {

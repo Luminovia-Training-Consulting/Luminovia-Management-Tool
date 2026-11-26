@@ -1489,7 +1489,7 @@ describe("documented Premium course and spending operations", () => {
       'const attendance = kind === "attendance" || kind === "attendance_session";',
     );
     expect(source("supabase/functions/files/index.ts")).toContain(
-      "request.headers.get('content-type')?.startsWith('multipart/form-data')",
+      "request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data'",
     );
     expect(requestSchema("/functions/v1/course-documents").oneOf).toMatchObject(
       [

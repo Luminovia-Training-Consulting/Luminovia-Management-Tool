@@ -327,6 +327,7 @@ function EvidenceTopic({
         <Button
           type="button"
           variant="secondary"
+          disabled={record.isFetching}
           onClick={async () => {
             const result = await record.refetch();
             if (!result.error) setDenied(false);
@@ -479,14 +480,17 @@ function EvidenceTopic({
         <Button
           type="button"
           variant="secondary"
+          disabled={record.isFetching}
           onClick={async () => {
             const fresh = await record.refetch();
-            if (fresh.data && !fresh.error)
+            if (fresh.data && !fresh.error) {
               setDraft({
                 version: fresh.data.version,
                 evidenceId: fresh.data.evidence?.id ?? null,
                 validUntil: fresh.data.valid_until,
               });
+              change.reset();
+            }
           }}
         >
           {t("reload")}
