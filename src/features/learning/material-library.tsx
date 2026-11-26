@@ -544,7 +544,10 @@ async function copyCourseMaterial({
   );
   if (bytes.size === 0 || bytes.size > 10 * 1024 * 1024)
     throw new Error("file_size");
-  const file = new File([bytes], material.name, { type: bytes.type });
+  // The download response may include a charset while multipart uploads
+  // declare the media type independently of its HTTP response parameters.
+  const mediaType = bytes.type.split(";", 1)[0].trim();
+  const file = new File([bytes], material.name, { type: mediaType });
   const document = academy
     ? await uploadAcademyCourseMaterial(
         file,
