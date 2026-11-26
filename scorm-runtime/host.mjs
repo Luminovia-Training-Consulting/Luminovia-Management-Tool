@@ -11,6 +11,10 @@ const labelPattern = /^[a-f0-9]{32}$/;
 const modules = new Map([
   ["/runner.mjs", await readFile(new URL("./runner.mjs", import.meta.url))],
   ["/api.mjs", await readFile(new URL("./api.mjs", import.meta.url))],
+  [
+    "/virtual-files.js",
+    await readFile(new URL("./virtual-files.js", import.meta.url)),
+  ],
 ]);
 
 export function createScormHost({ portalOrigin, domain, localHost = null }) {
@@ -33,25 +37,29 @@ export function createScormHost({ portalOrigin, domain, localHost = null }) {
       "The SCORM launcher requires a separate approved runtime domain and portal origin.",
     );
   }
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="portal-origin" content="${portalOrigin}"><title>SCORM 1.2</title><style>body{margin:0} iframe{width:100%;height:100vh;border:0;display:block}</style></head><body><script type="module" src="/runner.mjs"></script></body></html>`;
+  const contentPolicy = [
+    "default-src 'none'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "media-src 'self'",
+    "frame-src 'self' about:",
+    "connect-src 'none'",
+    "worker-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'self' " + portalOrigin,
+    "sandbox allow-same-origin allow-scripts",
+  ].join("; ");
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="portal-origin" content="${portalOrigin}"><meta name="content-policy" content="${contentPolicy}"><title>SCORM 1.2</title><style>body{margin:0} iframe{width:100%;height:100vh;border:0;display:block}</style></head><body><script type="module" src="/runner.mjs"></script></body></html>`;
   const headers = {
     "Cache-Control": "no-store",
-    "Content-Security-Policy": [
-      "default-src 'none'",
-      "script-src 'self' blob: 'unsafe-inline'",
-      "style-src blob: 'unsafe-inline'",
-      "img-src data: blob:",
-      "font-src data: blob:",
-      "media-src blob:",
-      "frame-src blob:",
-      "connect-src 'none'",
+    "Content-Security-Policy": contentPolicy.replace(
       "worker-src 'none'",
-      "object-src 'none'",
-      "base-uri 'none'",
-      "form-action 'none'",
-      "frame-ancestors " + portalOrigin,
-      "sandbox allow-same-origin allow-scripts",
-    ].join("; "),
+      "worker-src 'self'",
+    ),
     "Permissions-Policy":
       "camera=(), microphone=(), geolocation=(), clipboard-read=(), clipboard-write=(), payment=(), usb=()",
     "Referrer-Policy": "no-referrer",

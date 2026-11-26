@@ -362,7 +362,7 @@ export async function reviewScormPackage(
       const retain =
         runtimeFiles &&
         (isLaunch ||
-          /\.(?:html?|js|css|png|gif|jpe?g|webp|mp3|mp4|ogg|wav|woff2?)$/i.test(
+          /\.(?:html?|m?js|css|png|gif|jpe?g|webp|mp3|mp4|ogg|wav|woff2?|vtt)$/i.test(
             name,
           ));
       if (retain || (inspectLaunch && isLaunch)) {

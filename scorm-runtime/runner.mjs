@@ -1,14 +1,19 @@
-/* global window, document, location, DOMParser, TextDecoder, URL, Blob */
-/** Origin-isolated launcher. Only this origin sees the SCO DOM and runs package scripts. */
+/* global window, document, location, navigator */
+/** Run exact reviewed SCORM files on the dedicated, cookie-free launch origin. */
 import { createScormApi } from "./api.mjs";
 
 const portalOrigin = document.querySelector(
   'meta[name="portal-origin"]',
 )?.content;
+const contentPolicy = document.querySelector(
+  'meta[name="content-policy"]',
+)?.content;
 const launch = location.hash.slice(1);
 const root = window.parent;
+
 if (
   portalOrigin &&
+  contentPolicy &&
   root !== window &&
   portalOrigin !== location.origin &&
   /^[a-f0-9-]{36}$/.test(launch)
@@ -29,213 +34,110 @@ if (
     }
     if (payload.type !== "scorm:launch") return;
     window.removeEventListener("message", activate);
-    try {
-      openLesson(payload, send);
-    } catch {
-      send("scorm:error");
-    }
+    void openLesson(payload, send).catch(() => send("scorm:error"));
   };
   window.addEventListener("message", activate);
   send("scorm:ready");
 }
 
-function openLesson(payload, send) {
-  const files = new Map(payload.files);
-  if (!files.has(payload.path) || files.size > 512)
-    throw new Error("Missing launch file");
-  const shell = new DOMParser().parseFromString(
-    "<!doctype html><html></html>",
-    "text/html",
-  );
-  const text = new TextDecoder("utf-8", { fatal: true });
-  const assetUrls = new Map();
-  const mime = new Map([
-    ["js", "text/javascript"],
-    ["css", "text/css"],
-    ["png", "image/png"],
-    ["gif", "image/gif"],
-    ["jpg", "image/jpeg"],
-    ["jpeg", "image/jpeg"],
-    ["webp", "image/webp"],
-    ["mp3", "audio/mpeg"],
-    ["mp4", "video/mp4"],
-    ["ogg", "audio/ogg"],
-    ["wav", "audio/wav"],
-    ["woff", "font/woff"],
-    ["woff2", "font/woff2"],
-  ]);
-  const identify = (value, relativeTo) => {
-    if (!value || value.startsWith("//") || /[\\:]/.test(value)) return null;
-    const source =
-      "https://assets.invalid/" +
-      relativeTo.split("/").map(encodeURIComponent).join("/");
-    const url = new URL(value, source);
-    try {
-      const path = url.pathname
-        .split("/")
-        .slice(1)
-        .map(decodeURIComponent)
-        .join("/");
-      if (url.origin !== "https://assets.invalid" || !files.has(path))
-        return null;
-      return path;
-    } catch {
-      return null;
-    }
-  };
-  const urlFor = (value, relativeTo, expectedMime = "") => {
-    const path = identify(value, relativeTo);
-    if (!path) return null;
-    const extension = path.split(".").pop()?.toLowerCase();
-    const mediaType = mime.get(extension);
-    if (!mediaType || (expectedMime && !mediaType.startsWith(expectedMime)))
-      return null;
-    const existing = assetUrls.get(path);
-    if (existing) return existing;
-    let bytes = files.get(path);
-    if (extension === "css") {
-      const css = text.decode(bytes);
-      if (/@import\b/i.test(css))
-        throw new Error("Nested SCORM style sheets are unsupported");
-      bytes = css.replace(
-        /url\(\s*(["']?)([^\r\n"'()]+)\1\s*\)/gi,
-        (_, quote, url) => {
-          const type = mime.get(
-            identify(url.trim(), path)?.split(".").pop()?.toLowerCase(),
-          );
-          const mapped =
-            type && type !== "text/css" && type !== "text/javascript"
-              ? urlFor(url.trim(), path)
-              : null;
-          return mapped ? `url("${mapped}")` : 'url("about:blank")';
-        },
-      );
-    }
-    const address = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
-    assetUrls.set(path, address);
-    return address;
-  };
+const mime = new Map([
+  ["html", "text/html;charset=utf-8"],
+  ["htm", "text/html;charset=utf-8"],
+  ["js", "text/javascript"],
+  ["mjs", "text/javascript"],
+  ["css", "text/css"],
+  ["png", "image/png"],
+  ["gif", "image/gif"],
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["webp", "image/webp"],
+  ["mp3", "audio/mpeg"],
+  ["mp4", "video/mp4"],
+  ["ogg", "audio/ogg"],
+  ["wav", "audio/wav"],
+  ["woff", "font/woff"],
+  ["woff2", "font/woff2"],
+  ["vtt", "text/vtt"],
+]);
 
-  const contentUrls = new Map();
-  function render(path) {
-    const previous = contentUrls.get(path);
-    if (previous) return previous;
-    // Inert parsing avoids resource reads until the isolated browser loads
-    // the reviewed markup and its mapped local assets.
-    const template = shell.createElement("template");
-    template.innerHTML = text.decode(files.get(path));
+function assetFor(files, address) {
+  try {
+    const parts = address.split("/").map(decodeURIComponent);
     if (
-      template.content.querySelector(
-        "frame,frameset,iframe,object,embed,base,form",
+      parts.some(
+        (segment) =>
+          !segment ||
+          segment === "." ||
+          segment === ".." ||
+          /[/\\]/.test(segment),
       )
-    ) {
-      throw new Error("Unsupported SCORM launch layout");
-    }
-    for (const element of template.content.querySelectorAll("*")) {
-      if (element.localName === "meta") {
-        element.remove();
-        continue;
-      }
-      if (element.namespaceURI !== "http://www.w3.org/1999/xhtml") {
-        element.remove();
-        continue;
-      }
-      for (const attribute of [...element.attributes]) {
-        if (
-          /^(action|srcset|target|ping|formaction|srcdoc|background|manifest|data|data-scorm-href|xlink:href|attributionsrc)$/i.test(
-            attribute.name,
-          )
-        ) {
-          element.removeAttribute(attribute.name);
-        }
-      }
-      for (const attribute of ["href", "src", "poster"]) {
-        const value = element.getAttribute(attribute);
-        if (!value) continue;
-        if (attribute === "href" && element.localName === "a") {
-          if (value.startsWith("#")) continue;
-          const destination = identify(value, path);
-          if (
-            destination &&
-            /\.html?$/i.test(destination) &&
-            !value.split("#", 1)[0].includes("?")
-          ) {
-            element.setAttribute("href", "#");
-            element.setAttribute("data-scorm-href", value);
-          } else {
-            element.removeAttribute(attribute);
-          }
-          continue;
-        }
-        const expected =
-          element.localName === "script" && attribute === "src"
-            ? "text/javascript"
-            : element.localName === "link" &&
-                attribute === "href" &&
-                element.getAttribute("rel")?.toLowerCase() === "stylesheet"
-              ? "text/css"
-              : ["img", "video", "source", "audio", "track"].includes(
-                    element.localName,
-                  )
-                ? ""
-                : null;
-        const mapped = expected === null ? null : urlFor(value, path, expected);
-        if (mapped) element.setAttribute(attribute, mapped);
-        else if (element.localName === "script" || element.localName === "link")
-          throw new Error("Unsupported linked resource");
-        else element.removeAttribute(attribute);
-      }
-    }
+    )
+      return null;
+    const path = parts.join("/");
+    const bytes = files.get(path);
+    const type = mime.get(path.split(".").pop().toLowerCase());
+    return bytes && type ? { bytes, type, policy: contentPolicy } : null;
+  } catch {
+    return null;
+  }
+}
 
-    const markup =
-      "<!doctype html><html><head><meta charset=utf-8></head><body>" +
-      template.innerHTML +
-      "</body></html>";
-    const address = URL.createObjectURL(
-      new Blob([markup], { type: "text/html;charset=utf-8" }),
-    );
-    contentUrls.set(path, address);
-    return address;
+async function openLesson(payload, send) {
+  const files = new Map(payload.files);
+  if (
+    !files.has(payload.path) ||
+    files.size > 512 ||
+    !/\.html?$/i.test(payload.path)
+  )
+    throw new Error("Missing reviewed launch file");
+  const service = navigator.serviceWorker;
+  const registration = await service.register("/virtual-files.js", {
+    scope: "/",
+  });
+
+  const dispose = () => {
+    service.removeEventListener("message", onFile);
+    void registration.unregister();
+  };
+  const onFile = (event) => {
+    if (event.source !== service.controller || event.ports.length !== 1) return;
+    const port = event.ports[0];
+    port.postMessage(assetFor(files, event.data.path));
+    port.close();
+  };
+  service.addEventListener("message", onFile);
+  try {
+    await waitForWorkerControl(service);
+  } catch (error) {
+    dispose();
+    throw error;
   }
 
   window.API = createScormApi(payload.cmi, {
     ...payload.adapter,
     commit: (cmi) => send("scorm:commit", { cmi }),
   });
-  const iframe = document.createElement("iframe");
-  iframe.title = payload.title;
-  iframe.referrerPolicy = "no-referrer";
-  let currentPath = payload.path;
-  iframe.addEventListener("load", () => {
-    iframe.contentDocument?.addEventListener(
-      "click",
-      (event) => {
-        const target = event.target?.closest?.("a[data-scorm-href]");
-        if (!target) return;
-        event.preventDefault();
-        const href = target.getAttribute("data-scorm-href");
-        const path = identify(href, currentPath);
-        if (!path || !/\.html?$/i.test(path)) return;
-        try {
-          const documentUrl = render(path);
-          const hash = href.includes("#") ? href.slice(href.indexOf("#")) : "";
-          currentPath = path;
-          iframe.src = documentUrl + hash;
-        } catch {
-          send("scorm:error");
-        }
-      },
-      true,
-    );
+  const frame = document.createElement("iframe");
+  frame.title = payload.title;
+  frame.referrerPolicy = "no-referrer";
+  frame.src =
+    "/scorm/session/" +
+    payload.path.split("/").map(encodeURIComponent).join("/");
+  document.body.replaceChildren(frame);
+  window.addEventListener("pagehide", dispose, { once: true });
+}
+
+function waitForWorkerControl(service) {
+  if (service.controller) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      service.removeEventListener("controllerchange", ready);
+      reject(new Error("SCORM asset worker did not become ready"));
+    }, 5000);
+    function ready() {
+      clearTimeout(timeout);
+      resolve();
+    }
+    service.addEventListener("controllerchange", ready, { once: true });
   });
-  iframe.src = render(currentPath);
-  document.body.replaceChildren(iframe);
-  window.addEventListener(
-    "pagehide",
-    () => {
-      for (const url of contentUrls.values()) URL.revokeObjectURL(url);
-      for (const url of assetUrls.values()) URL.revokeObjectURL(url);
-    },
-    { once: true },
-  );
 }
