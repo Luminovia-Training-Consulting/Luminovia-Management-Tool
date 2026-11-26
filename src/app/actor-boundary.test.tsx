@@ -331,7 +331,7 @@ it.each([
   expect(await screen.findByRole("heading", { name: heading })).toBeVisible();
 });
 
-it.each(["/learning", "/learning?view=materials", "/learning?view=results"])(
+it.each(["/learning", "/learning?view=results"])(
   "does not open the participant view %s for course managers",
   async (path) => {
     state.roles = ["management"];
@@ -345,6 +345,30 @@ it.each(["/learning", "/learning?view=materials", "/learning?view=results"])(
     expect(screen.queryByText("Fictional learner workspace")).toBeNull();
   },
 );
+
+it("allows materials for course managers only while their permission remains active", async () => {
+  state.roles = ["management"];
+  state.permissions = ["courses.manage"];
+  const client = setup("/learning?view=materials");
+  expect(
+    await screen.findByRole("heading", { name: "Fictional learner workspace" }),
+  ).toBeVisible();
+  act(() => client.setQueryData(["permissions", "actor-a"], []));
+  expect(
+    await screen.findByRole("heading", {
+      name: /Diese Seite wurde nicht gefunden|This page could not be found/,
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText("Fictional learner workspace")).toBeNull();
+});
+
+it("allows assigned staff to reach the materials view without a participant role", async () => {
+  state.roles = ["lecturer"];
+  setup("/learning?view=materials");
+  expect(
+    await screen.findByRole("heading", { name: "Fictional learner workspace" }),
+  ).toBeVisible();
+});
 
 it("unmounts the programme view when a course manager loses permission", async () => {
   state.roles = ["management"];

@@ -144,37 +144,39 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
 
   return (
     <div className="course-learning-hub">
-      <nav className="course-learning-nav" aria-label={t("hub")}>
-        <Button asChild variant={dashboard ? "default" : "secondary"}>
-          <Link to="/learning" aria-current={dashboard ? "page" : undefined}>
-            {t("hub")}
-          </Link>
-        </Button>
-        <Button asChild variant={materials ? "default" : "secondary"}>
-          <Link
-            to="/learning?view=materials"
-            aria-current={materials ? "page" : undefined}
-          >
-            {t("materialLibrary")}
-          </Link>
-        </Button>
-        <Button asChild variant={programmes ? "default" : "secondary"}>
-          <Link
-            to="/learning?view=programmes"
-            aria-current={programmes ? "page" : undefined}
-          >
-            {t("title", { ns: "learningPrograms" })}
-          </Link>
-        </Button>
-        <Button asChild variant={results ? "default" : "secondary"}>
-          <Link
-            to="/learning?view=results"
-            aria-current={results ? "page" : undefined}
-          >
-            {t("results", { ns: "timedExam" })}
-          </Link>
-        </Button>
-      </nav>
+      {(academy || roles.data?.includes("participant") || !materials) && (
+        <nav className="course-learning-nav" aria-label={t("hub")}>
+          <Button asChild variant={dashboard ? "default" : "secondary"}>
+            <Link to="/learning" aria-current={dashboard ? "page" : undefined}>
+              {t("hub")}
+            </Link>
+          </Button>
+          <Button asChild variant={materials ? "default" : "secondary"}>
+            <Link
+              to="/learning?view=materials"
+              aria-current={materials ? "page" : undefined}
+            >
+              {t("materialLibrary")}
+            </Link>
+          </Button>
+          <Button asChild variant={programmes ? "default" : "secondary"}>
+            <Link
+              to="/learning?view=programmes"
+              aria-current={programmes ? "page" : undefined}
+            >
+              {t("title", { ns: "learningPrograms" })}
+            </Link>
+          </Button>
+          <Button asChild variant={results ? "default" : "secondary"}>
+            <Link
+              to="/learning?view=results"
+              aria-current={results ? "page" : undefined}
+            >
+              {t("results", { ns: "timedExam" })}
+            </Link>
+          </Button>
+        </nav>
+      )}
       {dashboard && academy === "active" && (
         <AcademyCourseDraft actor={actor} />
       )}

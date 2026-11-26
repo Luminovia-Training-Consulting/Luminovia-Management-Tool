@@ -52,6 +52,7 @@ const writePaths = [
   "/rest/v1/rpc/set_course_submissions",
   "/rest/v1/rpc/withdraw_course_submission",
   "/rest/v1/rpc/import_table_row",
+  "/rest/v1/rpc/set_course_material_metadata",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -707,6 +708,34 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
       expect(Object.keys(report.responses["200"].content)).toEqual(
         expect.arrayContaining(["application/pdf", "text/csv"]),
       );
+    });
+
+    it("documents grace-readable material metadata and versioned active-only edits", () => {
+      const read = spec.paths["/rest/v1/rpc/search_course_materials"].post;
+      const write =
+        spec.paths["/rest/v1/rpc/set_course_material_metadata"].post;
+      expect(read["x-portal-licence"]).toBe("active-or-grace");
+      expect(
+        read.responses["200"].content["application/json"].schema,
+      ).toMatchObject({
+        items: {
+          required: expect.arrayContaining([
+            "metadata",
+            "metadata_revision",
+            "can_edit_metadata",
+          ]),
+        },
+      });
+      expect(write["x-portal-licence"]).toBe("active");
+      expect(write.responses).toHaveProperty("409");
+      expect(
+        write.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: ["p_resource_id", "p_expected_revision", "p_metadata"],
+      });
+      expect(
+        write.responses["200"].content["application/json"].schema,
+      ).toMatchObject({ type: "integer", minimum: 1 });
     });
 
     it("describes the scoped multipart upload and exact publication without scanner APIs", () => {

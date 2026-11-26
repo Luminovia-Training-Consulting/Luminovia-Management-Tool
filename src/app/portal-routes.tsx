@@ -306,10 +306,12 @@ function PortalAudience({
   const [params] = useSearchParams();
   const programmeView =
     area === "learning" && params.get("view") === "programmes";
+  const materialView =
+    area === "learning" && params.get("view") === "materials";
   const roles = useQuery(userRolesQuery(actor));
   const permissions = useQuery({
     ...permissionsQuery(actor),
-    enabled: area === "enquiries" || programmeView,
+    enabled: area === "enquiries" || programmeView || materialView,
   });
   if (isDatabasePermissionDenied(roles.error)) return <PageNotFound />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
@@ -326,7 +328,11 @@ function PortalAudience({
     );
   if (area === "learning") {
     if (roles.data.includes("participant")) return <Outlet />;
-    if (!programmeView || isDatabasePermissionDenied(permissions.error))
+    if (materialView && roles.data.includes("lecturer")) return <Outlet />;
+    if (
+      (!programmeView && !materialView) ||
+      isDatabasePermissionDenied(permissions.error)
+    )
       return <PageNotFound />;
     if (permissions.isError)
       return <ErrorState retry={() => void permissions.refetch()} />;
