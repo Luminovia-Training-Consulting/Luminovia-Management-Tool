@@ -3,6 +3,7 @@ import { useDeferredValue, useId, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -15,11 +16,13 @@ import {
   Notice,
 } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import { requireOnline, useOnline } from "../../lib/online";
 import { canRetryNextPage, throwPagedReadError } from "../../lib/paged-read";
 import { db } from "../../lib/supabase";
 import {
   courseMaterialLibraryKey,
+  courseWorkspaceKey,
   type CourseOverview,
   type CourseResource,
 } from "./api";
@@ -40,6 +43,7 @@ type Material = Pick<CourseResource, "id" | "name" | "version" | "category"> & {
   can_upload: boolean;
   can_edit_metadata: boolean;
   can_read_metadata_history?: boolean;
+  can_reuse?: boolean;
   metadata: MaterialMetadata | null;
   metadata_revision: number;
 };
@@ -386,6 +390,182 @@ function MaterialMetadataDetails({ metadata }: { metadata: MaterialMetadata }) {
   );
 }
 
+type ReuseTarget = { id: string; title: string; shared: boolean };
+const reuseTargetLimit = 50;
+
+/** Reuse the exact existing share in another scoped course with independent metadata. */
+function MaterialReuse({
+  actor,
+  material,
+  onClose,
+}: {
+  actor: string;
+  material: Material;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const cache = useQueryClient();
+  const fieldId = useId();
+  const [search, setSearch] = useState("");
+  const pendingSearch = useDeferredValue(search.trim());
+  const [choice, setChoice] = useState("");
+  const [copyMetadata, setCopyMetadata] = useState(false);
+  const targets = useQuery({
+    queryKey: [
+      ...courseMaterialLibraryKey(actor),
+      "reuse",
+      material.id,
+      pendingSearch,
+    ],
+    enabled: online,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("course_material_reuse_targets", {
+          p_resource_id: material.id,
+          p_search: pendingSearch,
+        })
+        .abortSignal(signal);
+      if (error) throw error;
+      return data as ReuseTarget[];
+    },
+    retry: false,
+  });
+  const rows = targets.data ?? [];
+  const selected = rows
+    .slice(0, reuseTargetLimit)
+    .find(({ id }) => id === choice);
+  const share = useMutation({
+    mutationFn: async (target: string) => {
+      requireOnline();
+      const { data, error } = await db().rpc("reuse_course_material", {
+        p_resource_id: material.id,
+        p_target_run_id: target,
+        p_copy_metadata: copyMetadata,
+      });
+      if (error || typeof data !== "string")
+        throw error ?? new Error("Missing share receipt");
+      return data;
+    },
+    onSuccess: (_, target) =>
+      Promise.all([
+        cache.invalidateQueries({ queryKey: courseMaterialLibraryKey(actor) }),
+        cache.invalidateQueries({
+          queryKey: courseWorkspaceKey(actor, target),
+        }),
+      ]),
+  });
+  return (
+    <Dialog
+      open
+      title={t("materialReuse")}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      description={t("materialReuseHelp", { name: material.name })}
+      closeDisabled={share.isPending}
+    >
+      {share.isSuccess ? (
+        <>
+          <Notice>{t("materialReuseSuccess")}</Notice>
+          <Link to={`/courses/${share.variables}/workspace#course-materials`}>
+            {t("workspaceMaterials")}
+          </Link>
+        </>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (
+              selected &&
+              !selected.shared &&
+              online &&
+              pendingSearch === search.trim() &&
+              !share.isPending
+            )
+              share.mutate(selected.id);
+          }}
+        >
+          {!online ? (
+            <p role="status">{t("materialMetadataOffline")}</p>
+          ) : (
+            <fieldset disabled={share.isPending}>
+              <legend>{t("materialReuseTarget")}</legend>
+              <Field id={`${fieldId}-search`} label={t("materialReuseSearch")}>
+                <input
+                  type="search"
+                  maxLength={150}
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setChoice("");
+                  }}
+                />
+              </Field>
+              {targets.isError ? (
+                <ErrorState retry={() => void targets.refetch()} />
+              ) : targets.isPending || pendingSearch !== search.trim() ? (
+                <Loading />
+              ) : (
+                <>
+                  {rows.length === 0 ? (
+                    <p>{t("materialReuseNoTargets")}</p>
+                  ) : (
+                    <Field
+                      id={`${fieldId}-target`}
+                      label={t("materialReuseTarget")}
+                    >
+                      <select
+                        value={choice}
+                        onChange={(event) => setChoice(event.target.value)}
+                      >
+                        <option value="">{t("materialReuseChoose")}</option>
+                        {rows
+                          .slice(0, reuseTargetLimit)
+                          .map(({ id, title, shared }) => (
+                            <option key={id} value={id} disabled={shared}>
+                              {shared
+                                ? t("materialReuseAlreadyShared", { title })
+                                : title}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                  )}
+                  {rows.length > reuseTargetLimit && (
+                    <p>{t("materialReuseRefine")}</p>
+                  )}
+                </>
+              )}
+              {material.metadata && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={copyMetadata}
+                    onChange={(event) => setCopyMetadata(event.target.checked)}
+                  />
+                  {t("materialReuseCopyMetadata")}
+                </label>
+              )}
+            </fieldset>
+          )}
+          {share.isError && (
+            <Notice kind="error">{t("materialReuseError")}</Notice>
+          )}
+          <Button
+            type="submit"
+            disabled={
+              !online || !selected || selected.shared || share.isPending
+            }
+          >
+            {t("materialReuseConfirm")}
+          </Button>
+        </form>
+      )}
+    </Dialog>
+  );
+}
+
 /** Presentation and editing share the same row; downloads always use the original resource ID. */
 function MaterialItem({
   actor,
@@ -399,6 +579,7 @@ function MaterialItem({
   const { t } = useTranslation("learning");
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [reuseOpen, setReuseOpen] = useState(false);
   const edit = useRef<HTMLButtonElement>(null);
   const metadata = material.metadata;
   return (
@@ -423,6 +604,15 @@ function MaterialItem({
           name={material.name}
           label={t("materialDownload", { name: material.name })}
         />
+        {!readOnly && material.can_reuse && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setReuseOpen(true)}
+          >
+            {t("materialReuse")}
+          </Button>
+        )}
         {!readOnly && material.can_edit_metadata && (
           <Button
             ref={edit}
@@ -438,6 +628,13 @@ function MaterialItem({
           </Button>
         )}
       </div>
+      {reuseOpen && !readOnly && material.can_reuse && (
+        <MaterialReuse
+          actor={actor}
+          material={material}
+          onClose={() => setReuseOpen(false)}
+        />
+      )}
       {saved && <Notice>{t("materialMetadataSaved")}</Notice>}
       {!readOnly && material.can_edit_metadata && editing && (
         <MaterialMetadataEditor

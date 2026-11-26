@@ -167,7 +167,18 @@ begin
           private.has_permission('courses.manage') or
           private.client_has_organisation(run.organisation_id) or
           (private.lecturer_actor() and private.course_has_current_teacher(run.id))
-        ) as can_upload
+        ) as can_upload,
+        (not dedicated or licence = 'active') and resource.category = 'material'
+          and resource.created_by = auth.uid() and document.scope = 'personal'
+          and document.owner_id = auth.uid() and document.uploaded_by = auth.uid()
+          and file_version.uploaded_by = auth.uid() and document.kind = 'material'
+          and coalesce(file_version.sha256 ~ '^[0-9a-f]{64}$', false)
+          and (not dedicated or nullif(btrim(file_version.scanner_version), '') is not null)
+          and not private.deletion_document_fenced(document.id)
+          and not private.course_document_is_dedicated(document.id)
+          and (private.has_permission('courses.manage') or
+            (private.lecturer_actor() and private.course_has_current_teacher(run.id)))
+          as can_reuse
       from private.course_resources resource
       join public.course_runs run on run.id = resource.run_id
       join public.course_templates template on template.id = run.template_id

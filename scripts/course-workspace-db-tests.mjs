@@ -256,7 +256,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.deepEqual((await materialSearch(learner)).map(({id}) => id), [resource]);
             assert.deepEqual(await materialSearch(learner), [{
                 ...match, course_title: "Fictional practical Linux", organisation_name: "Fictional course customer", can_upload: false,
-                can_edit_metadata: false, can_read_metadata_history: false, metadata: null, metadata_revision: 0,
+                can_edit_metadata: false, can_read_metadata_history: false, can_reuse: false, metadata: null, metadata_revision: 0,
             }]);
             assert.equal((await materialSearch(admin, run))[0].can_upload, true);
             assert.equal((await materialSearch(teacher, run))[0].can_upload, true);
@@ -309,6 +309,27 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(await revise(admin, 4, { ...metadata, review_on: "", learning_objectives: "" }), 5);
             assert.equal((await history(admin))[0].content.review_on, undefined);
             assert.equal((await history(admin))[0].content.learning_objectives, undefined);
+            const targets = (who) => rpc(who, "course_material_reuse_targets", [q(resource), q("")]);
+            const reuse = (who, destination) => rpc(who, "reuse_course_material", [q(resource), q(destination), "true"]);
+            const foreignRun = randomUUID();
+            await sql(`insert into public.course_runs(id, template_id, organisation_id)
+              values (${q(foreignRun)},${q(template)},${q(otherorg)});`);
+            assert.equal((await materialSearch(admin, run))[0].can_reuse, true);
+            await assert.rejects(targets(teacher), /42501/);
+            await assert.rejects(reuse(learner, current), /42501/);
+            await assert.rejects(reuse(admin, foreignRun), /42501/);
+            assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, false]]);
+            const [reused, retried] = await Promise.all([reuse(admin, current), reuse(admin, current)]);
+            assert.equal(reused, retried);
+            assert.notEqual(reused, resource);
+            assert.equal((await workspace(learner, current)).resources[0].version_id, versionId);
+            assert.equal((await materialSearch(admin, current))[0].metadata.description, metadata.description);
+            assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, true]]);
+            await revise(admin, 1, { ...metadata, title: "Destination-only title" }, reused);
+            assert.equal((await materialSearch(admin, run))[0].metadata.title, "Fictional workbook");
+            assert.equal(await reuse(admin, current), reused);
+            assert.equal((await materialSearch(admin, current))[0].metadata.title, "Destination-only title");
+            await action(admin, "resource_remove", { id: reused }, 0, current);
             await actor(learner, `set local request.path='/rpc/search_course_materials';
               set local request.method='POST';select public.require_portal_access()`);
             assert.equal((await workspace(client)).resources.length, 0);

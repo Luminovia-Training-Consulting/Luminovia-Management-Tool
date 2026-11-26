@@ -79,7 +79,7 @@ const groups = {
       "Kursdateien und Teilnehmerabgaben",
       "Course files and participant submissions",
     ],
-    "searchAcademyCourseMaterials uploadAcademyCourseMaterial publishAcademyCourseMaterial setAcademyCourseMaterialMetadata downloadAcademyCourseDocument readAcademyCourseSubmissions setAcademyCourseSubmissions withdrawAcademyCourseSubmission",
+    "searchAcademyCourseMaterials uploadAcademyCourseMaterial publishAcademyCourseMaterial setAcademyCourseMaterialMetadata readAcademyCourseMaterialMetadataHistory listAcademyCourseMaterialReuseTargets reuseAcademyCourseMaterial downloadAcademyCourseDocument readAcademyCourseSubmissions setAcademyCourseSubmissions withdrawAcademyCourseSubmission",
   ],
   attendance: [
     [

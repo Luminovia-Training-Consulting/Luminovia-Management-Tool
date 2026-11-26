@@ -303,6 +303,8 @@ In **Kursinhalte / Course content**, edit modules and lessons and compare the op
 
 In a lesson, choose a scanned, learner-visible course material and attach it. The lesson references the exact shared version. A withdrawn share disappears from the learner's lesson and the download gateway checks current access again. In **Materialbibliothek / Materials library**, authorised staff can edit learning objectives and a review date. Use **Metadatenverlauf / Metadata history** to inspect earlier snapshots while you have course staff access to that share.
 
+Use **In weiterem Kurs verwenden / Use in another course** on your own scanned material to share that exact version with the same audience in another course in the same organisation. Only courses you currently teach or manage are offered. You can copy the current metadata when creating the new share. Later metadata edits and withdrawals are specific to each share.
+
 ### Quiz grades and release history
 
 In the course workspace, open **Quiz-Notenbuch / Quiz gradebook**. Save a percentage scale or name two to ten grading bands with distinct thresholds, starting at zero. Staff review the best attempt on the current published quiz revision. Choose **Note freigeben / Publish grade** for the selected learner. A saved change to the grading scale or quiz leaves previously released grades in place.

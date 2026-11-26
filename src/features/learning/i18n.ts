@@ -785,6 +785,42 @@ const pairs: Record<string, [string, string]> = {
   materialReviewOn: ["Prüfdatum", "Review date"],
   materialHistory: ["Metadatenverlauf", "Metadata history"],
   materialMoreRevisions: ["Ältere Fassungen anzeigen", "Show older revisions"],
+  materialReuse: ["In weiterem Kurs verwenden", "Use in another course"],
+  materialReuseHelp: [
+    "Die geprüfte Fassung von {{name}} wird im Zielkurs für dieselbe Zielgruppe freigegeben.",
+    "Release the scanned version of {{name}} to the same audience in the destination course.",
+  ],
+  materialReuseSearch: ["Zielkurs suchen", "Search destination courses"],
+  materialReuseTarget: ["Zielkurs", "Destination course"],
+  materialReuseChoose: ["Kurs auswählen", "Choose a course"],
+  materialReuseNoTargets: [
+    "Keine passenden Kurse dieser Organisation gefunden.",
+    "No matching courses in this organisation.",
+  ],
+  materialReuseAlreadyShared: [
+    "{{title}} · bereits freigegeben",
+    "{{title}} · already shared",
+  ],
+  materialReuseRefine: [
+    "Grenze die Suche ein, um weitere Kurse zu finden.",
+    "Narrow the search to find more courses.",
+  ],
+  materialReuseCopyMetadata: [
+    "Aktuelle Metadaten für den Zielkurs kopieren",
+    "Copy current metadata to the destination",
+  ],
+  materialReuseConfirm: [
+    "Im Zielkurs freigeben",
+    "Share in destination course",
+  ],
+  materialReuseSuccess: [
+    "Material im Zielkurs freigegeben.",
+    "Material shared in the destination course.",
+  ],
+  materialReuseError: [
+    "Die Freigabe konnte nicht gespeichert werden. Prüfe die Kursberechtigungen und die bestehende Freigabe.",
+    "The share could not be saved. Check course access and the existing share.",
+  ],
   materialOnlyThisCourse: ["Nur diesen Kurs anzeigen", "Show this course only"],
   materialDownload: ["{{name}} herunterladen", "Download {{name}}"],
   owner_staff: ["Verwaltung", "Staff"],

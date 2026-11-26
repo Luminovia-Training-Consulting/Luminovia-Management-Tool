@@ -33,6 +33,12 @@ async function fixture() {
     await checked(service.from("course_templates").insert({id: template, title}));
     await checked(service.from("course_runs").insert({id: run, template_id: template,
         organisation_id: organisation, time_zone: "Europe/Berlin"}));
+    const stageForReuse = randomUUID();
+    const reuseTemplate = randomUUID();
+    const reuseTitle = `Fictional reuse course ${suffix}`;
+    await checked(service.from("course_templates").insert({id: reuseTemplate, title: reuseTitle}));
+    await checked(service.from("course_runs").insert({id: stageForReuse, template_id: reuseTemplate,
+        organisation_id: organisation, time_zone: "Europe/Berlin"}));
     await checked(service.from("course_sessions").insert({course_run_id: run,
         starts_at: new Date(Date.now() + 86400000).toISOString(),
         ends_at: new Date(Date.now() + 90000000).toISOString()}));
@@ -61,7 +67,7 @@ async function fixture() {
             p_expected_version: invite.version, p_request_id: randomUUID()}));
     }
     await checked(admin.rpc("manage_course_enrolment", {p_course_run_id: run, p_user_id: learner.id, p_status: "enrolled"}));
-    return {service, admin, manager, teacher, learner, otherLearner, otherTeacher, company, run, title, suffix};
+    return {service, admin, manager, teacher, learner, otherLearner, otherTeacher, company, run, title, suffix, stageForReuse, reuseTitle};
 }
 
 const courseFiles = (page: Page) => page.getByRole("region", {name: "Kursdateien", exact: true});
@@ -174,6 +180,20 @@ test("the assigned lecturer can scan, share, describe and withdraw their own cou
         const history = editableMaterial.locator("details");
         await expect(history.getByText(objectives, {exact: false})).toBeVisible();
         await expect(history.locator('time[datetime="2028-02-29"]')).toBeVisible();
+        // Reuse the manager-owned staff share without giving learners access in either course.
+        await adminPage.goto(materialsPath);
+        await materialLibrary(adminPage).getByRole("searchbox").fill(staffName);
+        await libraryFile(adminPage, staffName).getByRole("button", {name: "In weiterem Kurs verwenden"}).click();
+        const reuse = adminPage.getByRole("dialog", {name: "In weiterem Kurs verwenden"});
+        await reuse.getByLabel("Zielkurs", {exact: true}).selectOption(f.stageForReuse);
+        await reuse.getByLabel("Aktuelle Metadaten für den Zielkurs kopieren").check();
+        await reuse.getByRole("button", {name: "Im Zielkurs freigeben"}).click();
+        await expect(reuse.getByText("Material im Zielkurs freigegeben.")).toBeVisible();
+        const target = await checked(f.admin.rpc("course_workspace",
+            {p_run_id: f.stageForReuse}), {requireData: true});
+        expect(target.resources[0]).toMatchObject({
+            version_id: staffResource.version_id, audience: "staff", category: "material",
+        });
         await page.goto(path);
 
         const learnerPage = await openAs(f.learner.email, /\/learning$/);

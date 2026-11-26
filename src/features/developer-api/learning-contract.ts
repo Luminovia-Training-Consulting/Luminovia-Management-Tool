@@ -85,12 +85,28 @@ export const materialSearchResult = {
       can_upload: boolean,
       can_edit_metadata: boolean,
       can_read_metadata_history: boolean,
+      can_reuse: boolean,
       metadata_revision: integer,
       metadata: nullable(materialMetadata),
     }),
   ),
   maxItems: 25,
 };
+export const materialReuseTargetsParameters = {
+  p_resource_id: uuid,
+  p_search: nullable({ ...text, maxLength: 150 }),
+};
+export const materialReuseTargetsResult = {
+  ...itemList(record({ id: uuid, title: text, shared: boolean })),
+  maxItems: 51,
+};
+export const materialReuseParameters = {
+  p_resource_id: uuid,
+  p_target_run_id: uuid,
+  p_copy_metadata: boolean,
+};
+export const materialReuseResult = uuid;
+
 export const importRowParameters = {
   p_row_key: uuid,
   p_kind: {
