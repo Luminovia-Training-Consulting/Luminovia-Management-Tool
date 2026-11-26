@@ -14,6 +14,8 @@ vi.mock("../../lib/online", () => ({
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
 
 const reassessment = {
+  round_number: 1,
+  rounds: [{ number: 1, prompt: "Review a lesson plan", stage: "reviewing" }],
   prompt: "Review a lesson plan",
   stage: "reviewing",
   can_write: true,

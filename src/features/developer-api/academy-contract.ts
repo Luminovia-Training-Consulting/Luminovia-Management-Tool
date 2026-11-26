@@ -4,7 +4,11 @@ import {
   competencyRead,
   competencyReadResult,
 } from "./competency-contract.ts";
-import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
+import {
+  peerActionRequest,
+  peerReadResult,
+  peerReadRound,
+} from "./peer-feedback-contract.ts";
 import {
   curriculumCatalogueParameters,
   curriculumCatalogueResult,
@@ -1230,16 +1234,16 @@ const coursePaths = {
   ),
   "/rest/v1/rpc/course_peer_feedback": courseOperation(
     "readAcademyPeerFeedback",
-    "Read a current moderated peer feedback round",
-    "Current staff see the moderation queue. Enrolled participants see their own entry, their anonymous assigned entry, and released feedback addressed to them.",
+    "Read a moderated peer feedback round",
+    "Current staff see the moderation queue. Enrolled participants see their own entry, their anonymous assigned entry, and released feedback addressed to them. Select a numbered round or omit the number to read the latest round.",
     "active-or-grace",
-    record(run),
+    record({ ...run, p_round_number: peerReadRound }, ["p_run_id"]),
     peerReadResult,
   ),
   "/rest/v1/rpc/course_peer_feedback_action": courseOperation(
     "saveAcademyPeerFeedback",
     "Join, moderate or respond to the peer feedback round",
-    "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Feedback remains qualitative.",
+    "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Feedback remains qualitative. Supply the target round number for commands after round one.",
     "active",
     { ...peerActionRequest, required: ["p_run_id", "p_action", "p_payload"] },
     { const: true },

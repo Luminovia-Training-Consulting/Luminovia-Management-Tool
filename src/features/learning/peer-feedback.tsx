@@ -1,6 +1,11 @@
 /** Staff-moderated peer exchange with private learner text, explicit opt-in and dispute handling. */
 import { useId, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
@@ -54,30 +59,45 @@ export function CoursePeerFeedback(props: Props) {
 function OpenPeerFeedback({ actor, course, staff }: Props) {
   const { t } = useTranslation("learning");
   const cache = useQueryClient();
+  const selectorId = useId();
+  const [round, setRound] = useState<number | null>(null);
   const key = ["course-peer-feedback", actor, course];
   const query = useQuery({
-    queryKey: key,
+    queryKey: [...key, round],
     retry: false,
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const { data, error } = await db()
-        .rpc("course_peer_feedback", { p_run_id: course })
+        .rpc("course_peer_feedback", {
+          p_run_id: course,
+          ...(round === null ? {} : { p_round_number: round }),
+        })
         .abortSignal(signal);
       if (error) throw error;
       return data as PeerFeedbackState;
     },
   });
   const write = useMutation({
-    mutationFn: async ({ action, payload = {} }: Command) => {
+    mutationFn: async ({ action, payload }: Command) => {
       requireOnline();
       const { data, error } = await db().rpc("course_peer_feedback_action", {
         p_run_id: course,
         p_action: action,
-        p_payload: payload,
+        p_payload: {
+          ...payload,
+          round:
+            action === "open"
+              ? (query.data?.rounds[0]?.number ?? 0) + 1
+              : query.data?.round_number,
+        },
       });
       if (error) throw error;
       if (data !== true) throw new Error("Unconfirmed peer feedback command");
     },
-    onSuccess: () => cache.invalidateQueries({ queryKey: key }),
+    onSuccess: (_, { action }) => {
+      if (action === "open") setRound(null);
+      return cache.invalidateQueries({ queryKey: key });
+    },
   });
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
@@ -95,13 +115,60 @@ function OpenPeerFeedback({ actor, course, staff }: Props) {
   return (
     <>
       <p>{t("peerPrivacy")}</p>
-      {query.data.prompt && (
-        <p className="preserve-text">{query.data.prompt}</p>
+      {query.data.rounds.length > 1 && (
+        <Field id={selectorId} label={t("peerSelectRound")}>
+          <select
+            id={selectorId}
+            value={round ?? ""}
+            disabled={write.isPending}
+            onChange={(event) => {
+              write.reset();
+              setRound(event.target.value ? Number(event.target.value) : null);
+            }}
+          >
+            {query.data.rounds.map(({ number, prompt, stage }, index) => (
+              <option key={number} value={index ? number : ""}>
+                {t("peerRoundOption", {
+                  number,
+                  prompt,
+                  stage: t(`peerRound_${stage}`),
+                })}
+              </option>
+            ))}
+          </select>
+        </Field>
       )}
-      {staff ? (
-        <PeerModeration {...controls} />
+      {query.isPlaceholderData ? (
+        <Loading />
       ) : (
-        <LearnerExchange {...controls} />
+        <>
+          {query.data.prompt && (
+            <p className="preserve-text">{query.data.prompt}</p>
+          )}
+          {staff ? (
+            <PeerModeration key={query.data.round_number ?? 0} {...controls} />
+          ) : (
+            <LearnerExchange key={query.data.round_number ?? 0} {...controls} />
+          )}
+          {staff &&
+            query.data.can_moderate &&
+            query.data.stage === "released" &&
+            query.data.round_number === query.data.rounds[0]?.number && (
+              <details>
+                <summary>{t("peerOpenNext")}</summary>
+                <PeerTextForm
+                  key={(query.data.round_number ?? 0) + 1}
+                  label={t("peerPrompt")}
+                  submitLabel={t("peerOpen")}
+                  max={1000}
+                  pending={write.isPending}
+                  onSubmit={(body) =>
+                    controls.run({ action: "open", payload: { body } })
+                  }
+                />
+              </details>
+            )}
+        </>
       )}
       {write.isSuccess && <Notice>{t("saved")}</Notice>}
       {write.isError && (

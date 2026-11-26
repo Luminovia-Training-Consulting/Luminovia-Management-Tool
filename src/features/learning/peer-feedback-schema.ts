@@ -2,14 +2,20 @@
 import { z } from "zod";
 
 const body = z.string();
+const stage = z.enum(["collecting", "reviewing", "released"]);
+export const peerRoundNumber = z.number().int().min(1).max(999_999_999);
 const entry = z.strictObject({
   body,
   revision: z.number().int().positive(),
   approved: z.boolean(),
 });
 export const peerFeedbackState = z.strictObject({
+  round_number: peerRoundNumber.nullable(),
+  rounds: z.array(
+    z.strictObject({ number: peerRoundNumber, prompt: body, stage }),
+  ),
   prompt: body.nullable(),
-  stage: z.enum(["collecting", "reviewing", "released"]).nullable(),
+  stage: stage.nullable(),
   can_write: z.boolean(),
   can_moderate: z.boolean(),
   own_entry: entry.nullable(),

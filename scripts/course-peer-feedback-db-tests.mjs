@@ -49,7 +49,8 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     );
   for (const org of [organisation, foreignOrg])
     await rpc(admin, "set_company_premium", q(org), "true", 0, q(randomUUID()));
-  const read = (who, run = course) => rpc(who, "course_peer_feedback", q(run));
+  const read = (who, run = course, round) =>
+    rpc(who, "course_peer_feedback", q(run), ...(round ? [round] : []));
   const command = (who, action, payload = {}) =>
     rpc(
       who,
@@ -70,6 +71,10 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
       body: "Explain the problem you investigated",
     }),
     true,
+  );
+  await assert.rejects(
+    command(admin, "open", { round: 2, body: "Round one is still open" }),
+    /PT409/,
   );
   assert.equal((await read(first)).own_entry, null);
   for (const [index, learner] of learners.entries())
@@ -153,8 +158,65 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     command(first, "dispute", { body: "This is not my review" }),
     /42501/,
   );
+  const newRound = { round: 2, body: "Review a solution to another problem" };
+  const concurrentOpens = await Promise.allSettled([
+    command(admin, "open", newRound),
+    command(admin, "open", newRound),
+  ]);
+  assert.equal(
+    concurrentOpens.filter(({ status }) => status === "fulfilled").length,
+    1,
+  );
+  assert.match(
+    String(concurrentOpens.find(({ status }) => status === "rejected").reason),
+    /PT409/,
+  );
+  const secondRound = await read(first);
+  assert.equal(secondRound.round_number, 2);
+  assert.deepEqual(
+    secondRound.rounds.map(({ number, stage }) => [number, stage]),
+    [
+      [2, "collecting"],
+      [1, "released"],
+    ],
+  );
+  assert.equal(secondRound.assignment, null);
+  assert.equal(secondRound.own_entry, null);
+  assert.equal(
+    (await read(recipient, course, 1)).received.feedback,
+    "Review 0",
+  );
+  await assert.rejects(read(first, foreignCourse, 1), /42501/);
+  await assert.rejects(read(first, course, 3), /22023/);
+  await assert.rejects(
+    command(first, "entry", {
+      revision: 0,
+      body: "Cannot overwrite a released entry",
+    }),
+    /PT409/,
+  );
+  await assert.rejects(
+    command(admin, "approve_entry", { round: 2, id: original.id, revision: 2 }),
+    /PT409/,
+  );
+  assert.equal(
+    await command(first, "entry", {
+      round: 2,
+      revision: 0,
+      body: "An independent second entry",
+    }),
+    true,
+  );
+  assert.equal(
+    (await read(first)).own_entry.body,
+    "An independent second entry",
+  );
+  assert.equal(
+    (await read(first, course, 1)).own_entry.body,
+    "Updated entry 0",
+  );
   await command(recipient, "dispute", { body: "Please review the tone" });
-  const withheld = await read(recipient);
+  const withheld = await read(recipient, course, 1);
   assert.equal(withheld.received.feedback, null);
   assert.equal(withheld.received.dispute, "Please review the tone");
   await command(admin, "resolve", {
@@ -163,10 +225,10 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     body: "Feedback was withdrawn",
   });
   assert.equal(
-    (await read(recipient)).received.resolution,
+    (await read(recipient, course, 1)).received.resolution,
     "Feedback was withdrawn",
   );
-  assert.equal((await read(recipient)).received.feedback, null);
+  assert.equal((await read(recipient, course, 1)).received.feedback, null);
   await assert.rejects(
     actor(first, "select feedback from private.lms_peer_matches"),
     /42501/,
@@ -176,7 +238,7 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     `update public.course_enrolments set status='removed' where course_run_id=${q(course)} and user_id=${q(first)}`,
   );
   await assert.rejects(read(first), /42501/);
-  assert.equal((await read(recipient)).received, null);
+  assert.equal((await read(recipient, course, 1)).received, null);
   await sql(
     `delete from private.lms_peer_entries where run_id=${q(course)} and user_id=${q(first)}`,
   );
@@ -193,6 +255,6 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     "0",
   );
   console.log(
-    "PASS anonymous no-self rotation, opt-in, scoped moderation, dispute resolution and subject cleanup",
+    "PASS isolated round history, concurrent open, anonymous matching, dispute resolution and linked subject cleanup",
   );
 });

@@ -9,6 +9,15 @@ const labels = {
   ],
   peerPrompt: ["Aufgabenstellung für den Austausch", "Prompt for the exchange"],
   peerOpen: ["Runde öffnen", "Open round"],
+  peerOpenNext: ["Neue Feedbackrunde", "New feedback round"],
+  peerSelectRound: ["Feedbackrunde", "Feedback round"],
+  peerRoundOption: [
+    "Runde {{number}} · {{stage}} · {{prompt}}",
+    "Round {{number}} · {{stage}} · {{prompt}}",
+  ],
+  peerRound_collecting: ["Beiträge", "Collecting entries"],
+  peerRound_reviewing: ["Rückmeldungen", "Reviewing"],
+  peerRound_released: ["Veröffentlicht", "Released"],
   peerNoRound: [
     "Für diesen Kurs ist keine Feedbackrunde geöffnet.",
     "This course has no open feedback round.",

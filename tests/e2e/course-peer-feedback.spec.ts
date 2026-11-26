@@ -1,6 +1,7 @@
 /** A real scoped peer round exchanges anonymous text and releases moderated feedback. */
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { actor, api, checked, login } from "./helpers/accounts-support";
 
 test.skip(
@@ -54,14 +55,12 @@ test("approved anonymous peer feedback reaches only its assigned recipient", asy
       .insert({ id: template, title: `Fictional peer exercise ${suffix}` }),
   );
   await checked(
-    service
-      .from("course_runs")
-      .insert({
-        id: run,
-        template_id: template,
-        organisation_id: organisation,
-        published: true,
-      }),
+    service.from("course_runs").insert({
+      id: run,
+      template_id: template,
+      organisation_id: organisation,
+      published: true,
+    }),
   );
   await checked(
     admin.client.rpc("set_company_premium", {
@@ -211,6 +210,35 @@ test("approved anonymous peer feedback reaches only its assigned recipient", asy
       )
       .toBe(feedback);
     expect((await state(learners[0])).received).toBeNull();
+    await staffPanel.getByText("Neue Feedbackrunde", { exact: true }).click();
+    const secondPrompt = "Review a second example with independent entries";
+    await staffPanel
+      .getByLabel("Aufgabenstellung für den Austausch")
+      .fill(secondPrompt);
+    await staffPanel
+      .getByRole("button", { name: "Runde öffnen", exact: true })
+      .click();
+    await expect.poll(async () => (await state(admin)).round_number).toBe(2);
+
+    await learnerPage.reload();
+    await learnerPanel.getByText("Peerfeedback", { exact: true }).click();
+    const round = learnerPanel.getByLabel("Feedbackrunde", { exact: true });
+    await expect(
+      learnerPanel.getByText(secondPrompt, { exact: true }),
+    ).toBeVisible();
+    await expect(learnerPanel.getByLabel("Dein Beitrag")).toHaveValue("");
+    await round.press("End");
+    await expect(
+      learnerPanel.getByRole("heading", { name: "Erhaltene Rückmeldung" }),
+    ).toBeVisible();
+    await expect(round).toBeFocused();
+    const axe = await new AxeBuilder({ page: learnerPage })
+      .include("main")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await round.press("Home");
+    await expect(learnerPanel.getByLabel("Dein Beitrag")).toHaveValue("");
   } finally {
     await learnerContext.close();
   }
