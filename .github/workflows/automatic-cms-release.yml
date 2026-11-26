@@ -1,71 +1,66 @@
-# Publish a complete immutable application package for each current main push.
-# The VPS decides whether the package is safe to apply using its independent
-# archive, migration, backup, health and rollback checks; application CI is
-# intentionally not an update gate.
+# Publish the immutable development package after both exact-main push suites.
+# The VPS independently checks migration, backup, health and rollback safety.
 name: Automatic CMS release
 on:
-  push:
+  workflow_run:
+    workflows: [Portal checks, Security analysis]
     branches: [main]
+    types: [completed]
 permissions:
   contents: read
-concurrency:
-  group: automatic-main-cms-release
-  cancel-in-progress: false
 jobs:
   publish:
-    if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Never execute a PR workflow's checkout, artifacts or scripts. The event's
+    # head must equal the trusted default-branch revision for this invocation.
+    if: >-
+      github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' &&
+      github.event_name == 'workflow_run' && github.ref == 'refs/heads/main' &&
+      github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_sha == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
       group: cms-release-${{ github.sha }}
       cancel-in-progress: false
     permissions:
+      actions: read
       contents: write
+      pull-requests: read
+    env:
+      TARGET_SHA: ${{ github.sha }}
     steps:
-      - name: Verify current main before checkout or build
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require current main, merged PR and successful push suites
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
-          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
-          CURRENT_SHA="$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')"
-          if test "$TARGET_SHA" != "$CURRENT_SHA"; then
-            echo 'A newer main exists; do not publish this revision.'
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          if bash scripts/verify-cms-release.sh; then
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          else
+            status=$?
+            # The first suite may finish while the other is still running. Its
+            # successful completion triggers a fresh assessment of both suites.
+            test "$status" = 3 || exit "$status"
             echo 'publish=false' >> "$GITHUB_OUTPUT"
-            exit 0
           fi
-          echo 'publish=true' >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.gate.outputs.publish == 'true'
-        with:
-          ref: refs/heads/main
-          persist-credentials: false
-      - name: Verify the trusted checkout before running repository code
-        id: source
-        if: steps.gate.outputs.publish == 'true'
-        env:
-          TARGET_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if test "$(git rev-parse HEAD)" != "$TARGET_SHA"; then
-            echo 'Main advanced before checkout. The newer revision has its own release build.'
-            exit 0
-          fi
-          echo 'verified=true' >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: steps.source.outputs.verified == 'true'
+        if: steps.gate.outputs.publish == 'true'
         with:
           node-version-file: .node-version
           cache: npm
-      - if: steps.source.outputs.verified == 'true'
+      - if: steps.gate.outputs.publish == 'true'
         run: npm ci
       - name: Typecheck and build the current main release
-        if: steps.source.outputs.verified == 'true'
+        if: steps.gate.outputs.publish == 'true'
         env:
-          TARGET_SHA: ${{ github.sha }}
           VITE_SUPABASE_URL: ${{ vars.CMS_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.CMS_SUPABASE_PUBLISHABLE_KEY }}
         run: |
@@ -76,14 +71,13 @@ jobs:
           npm run build
           node deploy/hostinger/updates/package.mjs --commit "$TARGET_SHA" --output "$RUNNER_TEMP/cms-release"
       - name: Publish immutable release for still-current main
-        if: steps.source.outputs.verified == 'true'
+        if: steps.gate.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
-          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          test "$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')" = "$TARGET_SHA"
+          bash scripts/verify-cms-release.sh
           RELEASE_TAG="cms-dev-$TARGET_SHA"
           if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/cms-existing-release.json" 2>/dev/null; then
             if test "$(jq -r .isDraft "$RUNNER_TEMP/cms-existing-release.json")" = false; then
@@ -93,7 +87,8 @@ jobs:
             echo 'An existing draft requires operator inspection; it will not be overwritten.' >&2
             exit 1
           else
-            gh release create "$RELEASE_TAG" --target "$TARGET_SHA" --draft --prerelease --title "CMS development $TARGET_SHA" --notes 'Automatically published from the exact current main revision. The VPS validates the immutable package and migration safety before applying it.'
+            gh release create "$RELEASE_TAG" --target "$TARGET_SHA" --draft --prerelease --title "CMS development $TARGET_SHA" --notes 'Published after successful application and security checks for the exact current main revision. The VPS independently checks migration safety.'
           fi
           gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json"
+          bash scripts/verify-cms-release.sh
           gh release edit "$RELEASE_TAG" --draft=false

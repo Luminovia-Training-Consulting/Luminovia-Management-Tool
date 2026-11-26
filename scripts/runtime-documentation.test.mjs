@@ -144,6 +144,7 @@ test("public guidance and current catalogue contain no historical customer ident
         "docs/FEATURES.md",
         "docs/design-qa.md",
         "docs/GUIDE.md",
+        "docs/PRODUCTION-READINESS.md",
         "API_REFERENCE.md",
     ];
 
@@ -182,6 +183,7 @@ test("documentation retains the approved project records and published materials
         "PRODUCT.md",
         "GUIDE.md",
         "FEATURES.md",
+        "PRODUCTION-READINESS.md",
         "design-qa.md",
         "customer-handoff",
         "sales",

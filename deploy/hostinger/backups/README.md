@@ -76,7 +76,7 @@ The desktop needs age, Docker and the exact recorded reviewed PostgreSQL image. 
 itself is retained during the isolated drill because preloaded workers connect to it; schema/data are restored transactionally, and captured database ACL/grantor/settings are replayed only into that owned isolated cluster.
 
 Filesystem contents are actually extracted to private 0700/0600 desktop scratch storage and hash-checked. Original archive owners/groups/modes/links/ACL/xattrs are captured and verified; privileged host ownership/ACLs and absolute symlinks are intentionally not applied on the desktop. No Auth/HTTP services are started against the restored copy. Original runtime secret files and signing/Vault/TLS key bytes are verified without printing them. Owned extraction/container/volume resources are removed
-after the drill; a private `desktop-restore-result.json` records the result. An extraction must create its scratch directory exclusively. If another run has already claimed the same path, its files are preserved. This is not an automatic live disaster restore or an approval to overwrite the VPS.
+after the drill; a private `desktop-restore-result.json` is atomically replaced only after the native baseline passes. The report records its verification start/end and elapsed milliseconds for decrypt, extraction, PostgreSQL/extension/role and file verification. It also records a conservative backup age measured from the encrypted catalog's `startedAt` (the beginning of capture) through successful verification; this is a freshness observation, not a measured RPO guarantee. Older catalogs without a valid start time remain restorable but report no backup-age evidence (`null`). Report creation, optional migration callback, cleanup, service startup and live traffic are outside the native verification duration. An extraction must create its scratch directory exclusively. If another run has already claimed the same path, its files are preserved. This is not an automatic live disaster restore or an approval to overwrite the VPS.
 
 The recovered private environment's database password is checked against all five runtime roles' actual restored SCRAM hashes. When the generated notification environment is present, its service-role key, internal relay username/password and loopback port are compared with the recovered server environment; no credential is printed. A trusted desktop caller may pass the ignored saved fictional-account ledger to verify the three existing Auth bcrypt passwords as well. An imported `inspectRestored`
 callback can run a reviewed migration rehearsal only after the independent native baseline passes and its result is saved. There is deliberately no CLI arbitrary SQL/apply mode; callback results do not replace baseline recovery evidence.
@@ -108,11 +108,28 @@ future 100 GB document capacity and production retention/off-site recovery plan 
 
 A local VPS recovery set is not off-site retention. A manually downloaded desktop set is an off-server copy at that point; this module does not promise recurring desktop uploads while the desktop is offline. Configure provider/off-site retention only through the separately authorised service.
 
+### Read-only check of a copied replica
+
+An authorised reader can check a fully copied encrypted set without a decryption key or any write operation:
+
+```bash
+python3 deploy/hostinger/backups/complete_backup.py \
+  --verify-replica /srv/authorised-reader/complete-backups/SET_ID \
+  --manifest-sha256 TRUSTED_SOURCE_MANIFEST_SHA256 \
+  --max-age-hours 26
+```
+
+Obtain the SHA-256 of the source `manifest.json` through a separately authenticated channel before relying on the copy; never calculate the trust pin from the replica itself. The verifier first pins the exact manifest bytes, then validates every declared encrypted file's name, private permissions, age header, byte length and SHA-256. It requires zoned `startedAt`/`completedAt` evidence in order, rejects future timestamps and exits unsuccessfully if the completion is older than the requested limit (1–48 hours). Success emits `replica_ciphertext_verified`, the pin and observed age, and explicitly reports `decryptionPerformed: false`; no age identity, database, or plaintext is needed.
+
+This proves only that the observed directory matches the trusted manifest and passes ciphertext/freshness checks at that time. It does not establish that the reader is physically or administratively independent, that a scheduled transfer/monitor/alert exists, or that the replica can be decrypted or restored. A successful command must not be reported as a restore or production RPO/RTO test.
+
 ## Executed implementation checks
 
-The implementation passed 25 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, future-image proof/source binding, preserving existing maintenance and resuming only previously running services. Three additional desktop witness tests exercise unchanged-prefix acceptance and rejection of altered/incomplete/mismatched proofs, current files,
+All 31 Python backup tests passed, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, future-image proof/source binding, preserving existing maintenance, resuming only previously running services, and replica pin/freshness rejection. Three additional desktop witness tests exercise unchanged-prefix acceptance and rejection of altered/incomplete/mismatched proofs, current files,
 restored ledger, container identities, tags and major versions. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. It also uses genuine legacy extension installers/settings, checks the saved fixture SCRAM password and rejects a wrong password. The fixture contains fictional data and does not replace the actual VPS
 backup/restore drill.
+
+The latest native fixture also copied its complete encrypted set into a separate reader directory and passed `--verify-replica` using the source manifest's exact SHA-256 pin obtained before the copy. The fixture's complete decrypt/restore then passed for 3 databases and 8 files (native verification 5,693 ms; catalog-based age 10 seconds). These synthetic results validate the implementation paths only, not recurring replication, physical independence, off-site freshness or production RPO/RTO.
 
 Actual VPS acceptance on 15 November 2026: the self-contained encrypted set completed at **18:41:10 UTC** (20,979,948 ciphertext bytes, 45.8 seconds for the service). Its isolated desktop restore passed at **18:42:32 UTC**, covering three databases, 1,817 physical files/38,090,950 bytes, exact source globals/permissions/settings/extension versions, the embedded original installers, all five runtime database credentials and all three saved fictional Auth passwords. The separate earlier first set
 also passed recovery after the legacy-extension gap was identified and fixed. No live database was restored.
@@ -129,6 +146,8 @@ node --test deploy/hostinger/backups/*.test.mjs
 node deploy/hostinger/backups/test_complete_restore.mjs
 ```
 
-Native crypto cases require `age`/`age-keygen`; environment variables `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` can point to independently verified local executables. A skipped crypto test is not acceptance.
+The full GitHub `verify-selfhost` profile installs the official `age` package and executes the complete fictional encrypted restore before the retained-data/selfhost compatibility run. Its step summary reports the measured native-verification duration and conservative backup age. The fixture checks an incorrect key both before evidence exists and after a successful report: a failed decrypt must neither create nor alter `desktop-restore-result.json`. It also checks that the report is mode 0600 and contains the returned measurement.
+
+Native crypto cases require `age`/`age-keygen`; environment variables `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` can point to independently verified local executables. A skipped crypto test is not acceptance. The fixture uses a synthetic catalog and fictional accounts in owned networkless containers; it does not prove the current off-site copy, a recurring restore timer, restoration of Auth/HTTP services, or production RTO/RPO.
 
 Official references: [age](https://github.com/FiloSottile/age), [PostgreSQL logical dumps](https://www.postgresql.org/docs/17/app-pgdump.html), [cluster globals](https://www.postgresql.org/docs/17/app-pg-dumpall.html), [pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html).

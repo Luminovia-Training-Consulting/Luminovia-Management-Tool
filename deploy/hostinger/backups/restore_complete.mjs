@@ -3,8 +3,10 @@
  */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {mkdir, readFile, rm, writeFile} from "node:fs/promises";
+import {constants} from "node:fs";
+import {lstat, mkdir, open, readFile, rename, rm} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
+import {performance} from "node:perf_hooks";
 import {fileURLToPath, pathToFileURL} from "node:url";
 import {isDeepStrictEqual} from "node:util";
 import {createIsolatedDatabase} from "../restore-check.mjs";
@@ -33,6 +35,56 @@ const normalize = (text, operator) =>
         )
         .sort();
 
+// Return a conservative age from the encrypted catalog's earliest capture time; legacy or future-dated timestamps are not age evidence.
+export function backupAgeSeconds(startedAt, measuredAt = Date.now()) {
+    if (typeof startedAt !== "string" || !Number.isFinite(measuredAt)) return null;
+    const started = Date.parse(startedAt);
+    if (!Number.isFinite(started) || started > measuredAt) return null;
+    return Math.floor((measuredAt - started) / 1000);
+}
+
+// Replace only a private, caller-owned report after every byte has been durably written.
+async function writePrivateJsonAtomic(path, value) {
+    const parent = dirname(path);
+    const directory = await lstat(parent);
+    assert(directory.isDirectory() && !directory.isSymbolicLink());
+    assert.equal(directory.uid, process.getuid());
+    assert.equal(directory.mode & 0o077, 0);
+
+    try {
+        const existing = await lstat(path);
+        assert(existing.isFile() && !existing.isSymbolicLink());
+        assert.equal(existing.uid, process.getuid());
+        assert.equal(existing.mode & 0o077, 0);
+    } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+    }
+
+    const temporary = path + "." + randomUUID() + ".tmp";
+    let file;
+    try {
+        file = await open(
+            temporary,
+            constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+            0o600,
+        );
+        await file.writeFile(JSON.stringify(value, null, 2) + "\n", "utf8");
+        await file.sync();
+        await file.close();
+        file = undefined;
+        await rename(temporary, path);
+        const parentHandle = await open(parent, constants.O_RDONLY | constants.O_DIRECTORY);
+        try {
+            await parentHandle.sync();
+        } finally {
+            await parentHandle.close();
+        }
+    } finally {
+        if (file) await file.close();
+        await rm(temporary, {force: true});
+    }
+}
+
 // Decrypt into owned private scratch storage, restore databases/extensions/roles, and verify bytes and credentials before cleanup.
 export async function restoreComplete({
                                           backup,
@@ -42,6 +94,8 @@ export async function restoreComplete({
                                           credentialLedger,
                                           inspectRestored,
                                       }) {
+    const nativeVerificationStartedAt = new Date().toISOString();
+    const nativeVerificationStart = performance.now();
     const privateRoot = resolve(here, "../../../.local/hostinger");
     await mkdir(privateRoot, {recursive: true, mode: 0o700});
     const temporary = resolve(privateRoot, "complete-restore-" + randomUUID());
@@ -282,9 +336,28 @@ export async function restoreComplete({
             catalog,
             credentialLedger,
         );
+        const nativeVerificationCompleted = new Date();
+        const backupAgeAtNativeVerificationSeconds = backupAgeSeconds(
+            catalog.startedAt,
+            nativeVerificationCompleted.getTime(),
+        );
         const result = {
             status: "passed",
-            checkedAt: new Date().toISOString(),
+            checkedAt: nativeVerificationCompleted.toISOString(),
+            nativeVerificationStartedAt,
+            nativeVerificationCompletedAt: nativeVerificationCompleted.toISOString(),
+            nativeVerificationDurationMs: Math.round(
+                performance.now() - nativeVerificationStart,
+            ),
+            backupStartedAt:
+                backupAgeAtNativeVerificationSeconds === null
+                    ? null
+                    : catalog.startedAt,
+            backupAgeAtNativeVerificationSeconds,
+            backupAgeEvidence:
+                backupAgeAtNativeVerificationSeconds === null
+                    ? "unavailable"
+                    : "encrypted-catalog-startedAt",
             image: expectedImage,
             extensionRecovery,
             extensionRecoveryEmbedded: Boolean(catalog.extensionRecovery),
@@ -304,10 +377,9 @@ export async function restoreComplete({
                 "OS binaries, pinned image layers and reconstructible caches require reinstall/pull/signature refresh from the recorded inventories.",
             ],
         };
-        await writeFile(
+        await writePrivateJsonAtomic(
             resolve(backup, "desktop-restore-result.json"),
-            JSON.stringify(result, null, 2) + "\n",
-            {mode: 0o600},
+            result,
         );
         // An imported trusted operator can inspect/rehearse against this already
         // verified native baseline. There is intentionally no CLI arbitrary SQL
