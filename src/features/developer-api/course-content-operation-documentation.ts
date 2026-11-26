@@ -88,6 +88,28 @@ const courseContentStudio = {
     draft_version: revision,
     draft_base_version: revision,
     draft_content: { anyOf: [courseContent, { type: "null" }] },
+    review: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["state", "publish_at"],
+          properties: {
+            state: {
+              enum: [
+                "requested",
+                "approved",
+                "returned",
+                "scheduled",
+                "blocked",
+              ],
+            },
+            publish_at: { type: ["string", "null"], format: "date-time" },
+          },
+        },
+        { type: "null" },
+      ],
+    },
     versions: {
       type: "array",
       items: {
@@ -112,7 +134,7 @@ const expectedVersionFields = {
 const actionPayload = {
   type: "object",
   description:
-    "Use the payload shape that matches p_action: save_draft carries content and both expected versions; publish carries both expected versions; restore adds source_version; migrate carries user_id and target_version.",
+    "Use the payload shape that matches p_action: save_draft carries content and both expected versions; publish and review transitions carry both expected versions; schedule_publish adds a future publish_at instant; restore adds source_version; migrate carries user_id and target_version.",
   oneOf: [
     {
       type: "object",
@@ -128,6 +150,15 @@ const actionPayload = {
       additionalProperties: false,
       required: ["published_version", "draft_version"],
       properties: expectedVersionFields,
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["publish_at", "published_version", "draft_version"],
+      properties: {
+        publish_at: { type: "string", format: "date-time" },
+        ...expectedVersionFields,
+      },
     },
     {
       type: "object",
@@ -152,14 +183,24 @@ const actionPayload = {
 
 export const courseContentOperationDocumentation = {
   course_content_action: {
-    summary: "Save, publish, restore or migrate a course content revision",
+    summary: "Manage drafts, reviews and published course content revisions",
     description:
-      "Requires current assigned course teaching authority and an enabled LMS. Draft writes use both the latest published version and current draft version as conflict checks. Publishing creates a new immutable revision and pins only active enrolments without a prior content version; completed participants and existing pinned history are not silently migrated. Restore creates a new draft. Only course managers may explicitly migrate one active participant to an existing revision. Academy writes require an active entitlement.",
+      "Requires current assigned course teaching authority and an enabled LMS. Draft writes use both the latest published version and current draft version as conflict checks. Publishing creates a new immutable revision and pins only active enrolments without a prior content version; completed participants and existing pinned history are not silently migrated. A saved draft can enter optional review. Course managers can return, approve or schedule the same approved draft. The worker rechecks authority before publishing. Restore creates a new draft. Only course managers may explicitly migrate one active participant to an existing revision. Academy writes require an active entitlement.",
     parameters: {
       p_run_id: uuid,
       p_action: {
         type: "string",
-        enum: ["save_draft", "publish", "restore", "migrate"],
+        enum: [
+          "save_draft",
+          "publish",
+          "restore",
+          "migrate",
+          "request_review",
+          "approve_review",
+          "return_review",
+          "cancel_review",
+          "schedule_publish",
+        ],
       },
       p_payload: actionPayload,
     },

@@ -157,6 +157,39 @@ const pairs: Record<string, [string, string]> = {
   curriculumChangeMoved: ["Position geändert", "Position changed"],
   curriculumChangeArchived: ["Archiviert", "Archived"],
   curriculumChangeRestored: ["Wiederhergestellt", "Restored"],
+  curriculumReview: ["Fachliche Freigabe", "Curriculum approval"],
+  curriculumRequestReview: ["Freigabe anfragen", "Request approval"],
+  curriculumApproveReview: ["Entwurf freigeben", "Approve draft"],
+  curriculumReturnReview: [
+    "Zur Überarbeitung zurückgeben",
+    "Return for revision",
+  ],
+  curriculumCancelReview: ["Freigabevorgang abbrechen", "Cancel review"],
+  curriculumPublishAt: [
+    "Veröffentlichen am ({{zone}})",
+    "Publish on ({{zone}})",
+  ],
+  curriculumSchedulePublish: [
+    "Veröffentlichung planen",
+    "Schedule publication",
+  ],
+  "curriculumReviewState.requested": [
+    "Freigabe angefragt",
+    "Awaiting approval",
+  ],
+  "curriculumReviewState.approved": ["Entwurf freigegeben", "Draft approved"],
+  "curriculumReviewState.returned": [
+    "Zur Überarbeitung zurückgegeben",
+    "Returned for revision",
+  ],
+  "curriculumReviewState.scheduled": [
+    "Veröffentlichung geplant",
+    "Publication scheduled",
+  ],
+  "curriculumReviewState.blocked": [
+    "Geplante Veröffentlichung blockiert. Prüfe die Berechtigungen.",
+    "Scheduled publication blocked. Check course access.",
+  ],
   curriculumArchiveModule: ["Modul archivieren", "Archive module"],
   curriculumRestoreModule: ["Modul wiederherstellen", "Restore module"],
   curriculumArchiveLesson: ["Lektion archivieren", "Archive lesson"],

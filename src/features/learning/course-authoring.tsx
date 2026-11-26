@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Dialog } from "../../components/ui/dialog";
+import { dateTime, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { DownloadButton } from "./resources";
 import { KnowledgeEditor } from "../knowledge/editor";
@@ -13,6 +14,7 @@ import {
   courseContentAction,
   courseContentStudioKey,
   courseContentStudioQuery,
+  type CourseContentAction,
   type CourseContentStudio,
   type CourseWorkspace,
 } from "./api";
@@ -292,6 +294,105 @@ function LessonMaterials({
   );
 }
 
+type ReviewCommand = Extract<
+  CourseContentAction,
+  | "request_review"
+  | "approve_review"
+  | "return_review"
+  | "cancel_review"
+  | "schedule_publish"
+>;
+
+/** Review a saved draft without changing what learners can currently read. */
+function CurriculumReview({
+  review,
+  manager,
+  zone,
+  disabled,
+  apply,
+}: {
+  review: CourseContentStudio["review"];
+  manager: boolean;
+  zone: string;
+  disabled: boolean;
+  apply: (action: ReviewCommand, fields?: object) => void;
+}) {
+  const { t, i18n } = useTranslation("learning");
+  const [scheduled, setScheduled] = useState("");
+  const state = review?.state;
+  const actions: { action: ReviewCommand; label: string }[] = [];
+  if (!state || state === "returned" || state === "blocked")
+    actions.push({
+      action: "request_review",
+      label: "curriculumRequestReview",
+    });
+  if (state === "requested" && manager) {
+    actions.push({
+      action: "approve_review",
+      label: "curriculumApproveReview",
+    });
+    actions.push({ action: "return_review", label: "curriculumReturnReview" });
+  }
+  if (state && (manager || (state !== "approved" && state !== "scheduled")))
+    actions.push({ action: "cancel_review", label: "curriculumCancelReview" });
+  const instant = scheduled && zonedInstant(scheduled, zone);
+  return (
+    <section className="space-y-2" aria-labelledby="curriculum-review-title">
+      <h3 id="curriculum-review-title">{t("curriculumReview")}</h3>
+      {state && (
+        <p role="status">
+          {t(`curriculumReviewState.${state}`)}
+          {state === "scheduled" &&
+            review.publish_at &&
+            ` · ${dateTime(review.publish_at, i18n.language, zone)} (${zone})`}
+        </p>
+      )}
+      <div className="form-actions">
+        {actions.map(({ action, label }) => (
+          <Button
+            key={action}
+            type="button"
+            variant="secondary"
+            disabled={disabled}
+            onClick={() => apply(action)}
+          >
+            {t(label)}
+          </Button>
+        ))}
+      </div>
+      {manager && state === "approved" && (
+        <form
+          className="form-actions"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (instant && !disabled)
+              apply("schedule_publish", { publish_at: instant });
+          }}
+        >
+          <Field
+            id="curriculum-publish-at"
+            label={t("curriculumPublishAt", { zone })}
+          >
+            <input
+              type="datetime-local"
+              value={scheduled}
+              onChange={(event) => setScheduled(event.target.value)}
+              required
+            />
+          </Field>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={disabled || !instant}
+          >
+            {t("curriculumSchedulePublish")}
+          </Button>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export function CourseAuthoring({
   actor,
   courseId,
@@ -299,6 +400,7 @@ export function CourseAuthoring({
   manager,
   roster,
   resources = [],
+  zone = "UTC",
 }: {
   actor: string;
   courseId: string;
@@ -306,6 +408,7 @@ export function CourseAuthoring({
   manager: boolean;
   roster: CourseWorkspace["roster"];
   resources?: CourseWorkspace["resources"];
+  zone?: string;
 }) {
   const { t } = useTranslation("learning");
   const location = useLocation();
@@ -356,7 +459,7 @@ export function CourseAuthoring({
       action,
       payload,
     }: {
-      action: "save_draft" | "publish" | "restore" | "migrate";
+      action: CourseContentAction;
       payload: Record<string, unknown>;
     }) => {
       requireOnline();
@@ -444,6 +547,13 @@ export function CourseAuthoring({
   if (!query.data) return null;
 
   const state = query.data;
+  const reviewState = state.review?.state;
+  const draftLocked =
+    reviewState === "requested" ||
+    reviewState === "approved" ||
+    reviewState === "scheduled";
+  const publicationBlocked =
+    reviewState !== undefined && reviewState !== "approved";
   const materials = resources.filter(
     ({ category, audience, sha256 }) =>
       category === "material" &&
@@ -605,6 +715,7 @@ export function CourseAuthoring({
               !online ||
               dirty ||
               state.draft_version === 0 ||
+              publicationBlocked ||
               mutation.isPending
             }
             onClick={publishDraft}
@@ -613,6 +724,24 @@ export function CourseAuthoring({
           </Button>
         </div>
       </header>
+      {state.draft_version > 0 && !dirty && (
+        <CurriculumReview
+          review={state.review}
+          manager={manager}
+          zone={zone}
+          disabled={!online || conflict || isPending}
+          apply={(action, fields) =>
+            mutate({
+              action,
+              payload: {
+                published_version: state.published_version,
+                draft_version: state.draft_version,
+                ...fields,
+              },
+            })
+          }
+        />
+      )}
       {dirty && !conflict && (
         <Notice>
           {t(draftPayload ? "curriculumUnsaved" : "curriculumInvalid")}
@@ -679,7 +808,10 @@ export function CourseAuthoring({
           </div>
         </div>
       ) : (
-        <fieldset className="course-authoring-layout" disabled={isPending}>
+        <fieldset
+          className="course-authoring-layout"
+          disabled={isPending || draftLocked}
+        >
           <aside aria-label={t("curriculumStructure")}>
             <div className="course-authoring-list-header">
               <h3>{t("courseModules")}</h3>
@@ -1064,7 +1196,9 @@ export function CourseAuthoring({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={!online || dirty || mutation.isPending}
+                  disabled={
+                    !online || dirty || mutation.isPending || draftLocked
+                  }
                   onClick={() =>
                     mutation.mutate({
                       action: "restore",

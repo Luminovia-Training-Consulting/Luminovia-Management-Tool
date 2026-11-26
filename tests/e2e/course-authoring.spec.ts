@@ -129,6 +129,17 @@ test("course author publishes a versioned module and learner sees only the assig
   );
   expect(beforePublish.published_content.modules).toEqual([]);
   expect(beforePublish.draft_content).toBeNull();
+  await page.getByRole("button", { name: "Freigabe anfragen" }).click();
+  await expect(
+    page.getByText("Freigabe angefragt", { exact: true }),
+  ).toBeVisible();
+  await expect(publish).toBeDisabled();
+  await page.getByRole("button", { name: "Entwurf freigeben" }).click();
+  await expect(
+    page.getByText("Entwurf freigegeben", { exact: true }),
+  ).toBeVisible();
+  await expect(publish).toBeEnabled();
+
   await publish.click();
   await expect(page.getByText(/Veröffentlicht · Fassung 1/)).toBeVisible();
 

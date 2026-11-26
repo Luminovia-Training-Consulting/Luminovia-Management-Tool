@@ -1438,6 +1438,7 @@ function CourseWorkspaceLayout({
                 manager={course.access.manager}
                 roster={course.roster}
                 resources={course.resources}
+                zone={course.time_zone}
               />
             </div>
           )}

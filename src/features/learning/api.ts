@@ -168,6 +168,10 @@ export interface CourseContentStudio {
   draft_version: number;
   draft_base_version: number;
   draft_content: CourseCurriculum | null;
+  review?: {
+    state: "requested" | "approved" | "returned" | "scheduled" | "blocked";
+    publish_at: string | null;
+  } | null;
   versions: { version: number; published_at: string; module_count: number }[];
 }
 
@@ -349,13 +353,26 @@ export const courseContentStudioQuery = (actor: string, run: string) =>
       return data as CourseContentStudio;
     },
     staleTime: 10000,
+    refetchInterval: ({ state }) =>
+      state.data?.review?.state === "scheduled" ? 15000 : false,
     retry: false,
   });
+
+export type CourseContentAction =
+  | "save_draft"
+  | "publish"
+  | "restore"
+  | "migrate"
+  | "request_review"
+  | "approve_review"
+  | "return_review"
+  | "cancel_review"
+  | "schedule_publish";
 
 /** Draft and publication writes are server-validated and return the newly authoritative studio state. */
 export async function courseContentAction(
   run: string,
-  action: "save_draft" | "publish" | "restore" | "migrate",
+  action: CourseContentAction,
   payload: Record<string, unknown>,
 ) {
   requireOnline();

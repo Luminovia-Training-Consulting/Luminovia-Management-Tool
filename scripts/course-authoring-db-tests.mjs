@@ -373,6 +373,91 @@ await withTestDatabase("course_authoring_studio", async ({ sql, actor }) => {
     }),
     /Invalid course curriculum/i,
   );
+  const expected = { published_version: 3, draft_version: 1 };
+  assert.equal(
+    (await action(admin, "request_review", expected)).review.state,
+    "requested",
+  );
+  assert.equal((await read(learner)).review, undefined);
+  await assert.rejects(action(learner, "approve_review", expected), /42501/);
+  await assert.rejects(action(admin, "publish", expected), /PT409/);
+  await assert.rejects(
+    action(admin, "save_draft", { ...expected, content: linkedContent }),
+    /PT409/,
+  );
+  assert.equal(
+    (await action(admin, "return_review", expected)).review.state,
+    "returned",
+  );
+  assert.equal(
+    (await action(admin, "request_review", expected)).review.state,
+    "requested",
+  );
+  assert.equal(
+    (await action(admin, "approve_review", expected)).review.state,
+    "approved",
+  );
+  await assert.rejects(
+    action(admin, "schedule_publish", {
+      ...expected,
+      publish_at: "2022-01-01T00:00:00Z",
+    }),
+    /22023/,
+  );
+  const publishAt = new Date(Date.now() + 60000).toISOString();
+  assert.equal(
+    (
+      await action(admin, "schedule_publish", {
+        ...expected,
+        publish_at: publishAt,
+      })
+    ).review.state,
+    "scheduled",
+  );
+  assert.equal(
+    await sql("select private.run_scheduled_course_publications()"),
+    "0",
+  );
+  await assert.rejects(
+    actor(admin, "select private.run_scheduled_course_publications()"),
+    /42501/,
+  );
+  await sql(`update private.course_curriculum_reviews set publish_at=clock_timestamp() - interval '1 second'
+    where run_id=${q(run)} and state='scheduled'`);
+  assert.equal(
+    await sql("select private.run_scheduled_course_publications()"),
+    "1",
+  );
+  assert.equal(
+    await sql("select private.run_scheduled_course_publications()"),
+    "0",
+  );
+  assert.equal((await read(admin)).published_version, 4);
+  assert.equal((await read(learner)).published_version, 3);
+
+  await action(admin, "save_draft", {
+    published_version: 4,
+    draft_version: 0,
+    content: content("revoked scheduler"),
+  });
+  const newDraft = { published_version: 4, draft_version: 1 };
+  await action(admin, "request_review", newDraft);
+  await action(admin, "approve_review", newDraft);
+  await action(admin, "schedule_publish", {
+    ...newDraft,
+    publish_at: new Date(Date.now() + 60000).toISOString(),
+  });
+  await sql(`update public.profiles set active=false where id=${q(admin)};
+    update private.course_curriculum_reviews set publish_at=clock_timestamp() - interval '1 second'
+    where run_id=${q(run)} and state='scheduled'`);
+  assert.equal(
+    await sql("select private.run_scheduled_course_publications()"),
+    "0",
+  );
+  await sql(`update public.profiles set active=true where id=${q(admin)}`);
+  assert.equal((await read(admin)).review.state, "blocked");
+  assert.equal((await read(admin)).published_version, 4);
+
   await sql(`update public.course_enrolments set status='removed'
     where course_run_id=${q(run)} and user_id=${q(learner)};`);
   await assert.rejects(read(learner), /unavailable|access denied|curriculum/i);

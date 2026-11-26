@@ -301,6 +301,8 @@ Editors can publish a numbered welcome revision with the course description, lea
 
 In **Kursinhalte / Course content**, edit modules and lessons and compare the open draft with its latest published revision. Archive or restore a module or lesson inside the draft, then save and publish. Learners pinned to the new revision see its active sections. Learners already pinned to older revisions keep them until a course manager explicitly migrates an active enrolment.
 
+Use **Freigabe anfragen / Request approval** to lock the exact saved draft for optional curriculum review. A course manager can approve it or return it for revision. An approved draft can be published manually or scheduled using the course time zone on installations with the PostgreSQL publication job. Cancelling the review unlocks the draft. The scheduled job rechecks the saved revision, course entitlement and manager's current authority before publishing.
+
 In a lesson, choose a scanned, learner-visible course material and attach it. The lesson references the exact shared version. A withdrawn share disappears from the learner's lesson and the download gateway checks current access again. In **Materialbibliothek / Materials library**, authorised staff can edit learning objectives and a review date. Use **Metadatenverlauf / Metadata history** to inspect earlier snapshots while you have course staff access to that share.
 
 Use **In weiterem Kurs verwenden / Use in another course** on your own scanned material to share that exact version with the same audience in another course in the same organisation. Only courses you currently teach or manage are offered. You can copy the current metadata when creating the new share. Later metadata edits and withdrawals are specific to each share.
