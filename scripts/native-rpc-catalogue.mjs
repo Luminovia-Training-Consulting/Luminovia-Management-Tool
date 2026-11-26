@@ -144,6 +144,9 @@ export async function buildNativeRpcCatalogue(sql, references = scanFrontendRpcR
         if (allByName.has(name) && !browserCalls.has(name))
             browserCalls.set(name, "jobs");
     }
+    // The paged CRM board no longer calls the documented bounded list operation.
+    if (allByName.has("list_crm_opportunities") && !browserCalls.has("list_crm_opportunities"))
+        browserCalls.set("list_crm_opportunities", "crm");
     const names = [...browserCalls.keys()];
     const access = await probeRestGates(sql, names);
     return Object.fromEntries([...browserCalls].sort(([a], [b]) => a.localeCompare(b, "en")).map(([name, feature]) => {

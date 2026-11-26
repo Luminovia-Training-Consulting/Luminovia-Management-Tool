@@ -59,6 +59,14 @@ class DeliveryUncertain(Exception):
     """Mark the post-DATA network boundary where the provider may have accepted bytes."""
 
 
+class ProviderRejected(RelayFailure):
+    """Keep only whether an explicit provider rejection is temporary or permanent."""
+
+    def __init__(self, status_code: int, code: str = "protocol_failed"):
+        self.retryable = 400 <= status_code < 500
+        super().__init__(code)
+
+
 class AcademyScopeRejected(Exception):
     """A worker lease or its current recipient did not authorize delivery."""
 
@@ -346,15 +354,29 @@ class MailRelay:
                 )
             else:
                 connection = PinnedSMTP(host, port, timeout=self.config.connect_timeout)
-                if connection.ehlo()[0] != 250 or not connection.has_extn("starttls"):
+                ehlo_code, _safe_response = connection.ehlo()
+                if 400 <= ehlo_code < 600:
+                    raise ProviderRejected(ehlo_code)
+                if ehlo_code != 250 or not connection.has_extn("starttls"):
                     raise RelayFailure("protocol_failed")
                 connection.starttls(context=context)
-            if (security == "starttls" or verify_implicit_greeting) and connection.ehlo()[0] != 250:
-                raise RelayFailure("protocol_failed")
+            if security == "starttls" or verify_implicit_greeting:
+                ehlo_code, _safe_response = connection.ehlo()
+                if 400 <= ehlo_code < 600:
+                    raise ProviderRejected(ehlo_code)
+                if ehlo_code != 250:
+                    raise RelayFailure("protocol_failed")
             connection.login(settings["username"], settings["password"])
             yield connection
-        except smtplib.SMTPAuthenticationError:
-            raise RelayFailure("authentication_failed") from None
+        except smtplib.SMTPResponseException as error:
+            code = (
+                "authentication_failed"
+                if isinstance(error, smtplib.SMTPAuthenticationError)
+                else "connect_failed"
+            )
+            if 400 <= error.smtp_code < 600:
+                raise ProviderRejected(error.smtp_code, code) from None
+            raise RelayFailure(code) from None
         except ssl.SSLError:
             raise RelayFailure("tls_failed") from None
         except (TimeoutError, socket.timeout):
@@ -365,7 +387,11 @@ class MailRelay:
             raise RelayFailure("connect_failed") from None
         finally:
             if connection is not None:
-                connection.close()
+                try:
+                    connection.close()
+                except (smtplib.SMTPException, OSError):
+                    # Cleanup must not replace an already-known delivery result.
+                    pass
 
     def check_smtp(self, settings: dict[str, Any]) -> None:
         """Verify TLS and credentials without issuing MAIL/RCPT/DATA."""
@@ -473,16 +499,29 @@ class MailRelay:
                 "p_transport_version": settings.get("version"),
             }) is not True:
                 raise AcademyScopeRejected()
-            if connection.mail(sender)[0] not in (250, 251):
+            mail_code, _safe_response = connection.mail(sender)
+            if 400 <= mail_code < 600:
+                raise ProviderRejected(mail_code)
+            if mail_code not in (250, 251):
                 raise RelayFailure("protocol_failed")
-            if connection.rcpt(recipient)[0] not in (250, 251):
+            recipient_code, _safe_response = connection.rcpt(recipient)
+            if 400 <= recipient_code < 600:
+                raise ProviderRejected(recipient_code)
+            if recipient_code not in (250, 251):
                 raise RelayFailure("protocol_failed")
             try:
                 code, _safe_response = connection.data(outgoing)
-            except (smtplib.SMTPServerDisconnected, TimeoutError, socket.timeout):
+            except smtplib.SMTPResponseException as error:
+                if 400 <= error.smtp_code < 600:
+                    raise ProviderRejected(error.smtp_code) from None
                 raise DeliveryUncertain() from None
+            except (smtplib.SMTPException, OSError):
+                raise DeliveryUncertain() from None
+            if 400 <= code < 600:
+                raise ProviderRejected(code)
             if code != 250:
-                raise RelayFailure("protocol_failed")
+                # Any nonstandard final response after DATA is not a safe retry signal.
+                raise DeliveryUncertain()
 
     async def handle_smtp(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, *, auth_listener=False) -> None:
         """Run a small SMTP subset; never log commands, credentials, headers or message bodies."""
@@ -639,6 +678,9 @@ class MailRelay:
                     try:
                         while True:
                             content_line = await line()
+                            if not content_line.endswith(b"\n"):
+                                # EOF or a partial final line is not a complete message.
+                                return
                             if content_line in (b".\r\n", b".\n"):
                                 break
                             if content_line.startswith(b".."):
@@ -662,6 +704,17 @@ class MailRelay:
                         writer.close()
                         await report_auth_mail("uncertain")
                         return
+                    except ProviderRejected as rejection:
+                        try:
+                            if rejection.retryable:
+                                await reply("451 4.3.0 Mail transport temporarily unavailable")
+                            else:
+                                await reply("550 5.7.1 Message rejected by configured mail transport")
+                        finally:
+                            await report_auth_mail("failed")
+                        sender_accepted = False
+                        recipient = None
+                        continue
                     except AcademyScopeRejected:
                         await reply("550 5.7.1 Notification no longer authorized")
                         sender_accepted = False
