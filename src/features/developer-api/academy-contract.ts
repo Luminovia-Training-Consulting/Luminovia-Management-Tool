@@ -81,7 +81,11 @@ import {
 } from "../learning/course-participation-report-schema.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
-import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
+import {
+  courseXapiArchiveSchema,
+  courseXapiDeliveryReport,
+  courseXapiDeliveryStatus,
+} from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import { academyCompanyLecturerBlockPaths } from "./company-lecturer-block-contract.ts";
 import {
@@ -1288,6 +1292,23 @@ const coursePaths = {
     "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Feedback remains qualitative. Supply the target round number for commands after round one.",
     "active",
     { ...peerActionRequest, required: ["p_run_id", "p_action", "p_payload"] },
+    { const: true },
+    true,
+  ),
+  "/rest/v1/rpc/course_xapi_delivery_monitor": courseOperation(
+    "readAcademyXapiDeliveryMonitor",
+    "Read the scheduled xAPI delivery status",
+    "Current course managers can read the last recorded checkpoint and outcome without learner or LRS details.",
+    "active-or-grace",
+    record(run),
+    z.toJSONSchema(courseXapiDeliveryStatus),
+  ),
+  "/rest/v1/rpc/report_course_xapi_delivery": courseOperation(
+    "reportAcademyXapiDelivery",
+    "Record an xAPI delivery checkpoint",
+    "Current course managers or their authenticated dispatch account can record their latest scoped delivery status.",
+    "active",
+    z.toJSONSchema(courseXapiDeliveryReport),
     { const: true },
     true,
   ),

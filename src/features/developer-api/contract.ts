@@ -64,7 +64,11 @@ import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
-import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
+import {
+  courseXapiArchiveSchema,
+  courseXapiDeliveryReport,
+  courseXapiDeliveryStatus,
+} from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import {
   calendarExpectedRevision,
@@ -4652,6 +4656,36 @@ const nativePaths = {
         "401": error,
         "403": error,
         "409": error,
+      },
+    },
+  },
+  "/rest/v1/rpc/course_xapi_delivery_monitor": rpc(
+    "readCourseXapiDeliveryMonitor",
+    "Premium LMS",
+    "Read the scheduled xAPI delivery status",
+    "Current course managers can read the last reported checkpoint and outcome without learner or LRS details.",
+    course,
+    z.toJSONSchema(courseXapiDeliveryStatus),
+  ),
+  "/rest/v1/rpc/report_course_xapi_delivery": {
+    post: {
+      operationId: "reportCourseXapiDelivery",
+      tags: ["Premium LMS"],
+      summary: "Record an xAPI delivery checkpoint",
+      description:
+        "Current course managers or their authenticated dispatch account can record the latest scoped delivery status.",
+      requestBody: {
+        required: true,
+        content: json(z.toJSONSchema(courseXapiDeliveryReport)),
+      },
+      responses: {
+        "200": {
+          description: "Confirmed status",
+          content: json({ const: true }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
       },
     },
   },

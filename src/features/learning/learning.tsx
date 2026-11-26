@@ -1858,6 +1858,7 @@ function CourseWorkspaceLayout({
                   <Suspense fallback={<Loading />}>
                     <CourseXapiExport
                       key={`xapi-export:${course.id}`}
+                      actor={actor}
                       runId={course.id}
                       zone={course.time_zone}
                     />

@@ -98,3 +98,30 @@ export const courseXapiArchiveSchema = z.strictObject({
       "Statement IDs must be unique",
     ),
 });
+
+const deliveryTimestamp = z.iso.datetime({ offset: true });
+const deliveryCount = z.number().int().min(0).max(2_147_483_647);
+const deliveryFailure = z
+  .enum([
+    "delivery",
+    "window_budget",
+    "window_too_dense",
+    "export_or_checkpoint",
+  ])
+  .nullable();
+export const courseXapiDeliveryStatus = z
+  .strictObject({
+    through: deliveryTimestamp,
+    reported_at: deliveryTimestamp,
+    submitted: deliveryCount,
+    retries: deliveryCount,
+    failure: deliveryFailure,
+  })
+  .nullable();
+export const courseXapiDeliveryReport = z.strictObject({
+  p_run_id: z.uuid(),
+  p_through: deliveryTimestamp,
+  p_submitted: deliveryCount,
+  p_retries: deliveryCount,
+  p_failure: deliveryFailure,
+});
