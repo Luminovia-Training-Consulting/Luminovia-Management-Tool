@@ -4,7 +4,7 @@ import {
   consumePackageEntry,
   coursePackageDigest,
   PackageEntryOverflowError,
-} from "./course-package-archive";
+} from "./course-package-archive.ts";
 
 export const scormPackageMaxBytes = 10 * 1024 * 1024;
 const maxExpandedBytes = 64 * 1024 * 1024;
@@ -32,8 +32,11 @@ type ReviewError =
   | "unsupported_playback";
 
 export class ScormReviewError extends Error {
-  constructor(readonly code: ReviewError) {
+  readonly code: ReviewError;
+
+  constructor(code: ReviewError) {
     super(code);
+    this.code = code;
   }
 }
 

@@ -183,6 +183,32 @@ for (const edition of [
     );
     assert.deepEqual(projection.packages[0].completed, ["first"]);
     assert.equal(projection.packages[0].playback, "runtime");
+    const exportCompletion = async (who) =>
+      JSON.parse(
+        await actor(
+          who,
+          gate("course_xapi_statements", "GET") +
+            `select public.course_xapi_statements(${q(run)}, now()-interval '1 hour', now()+interval '1 hour')`,
+        ),
+      );
+    await assert.rejects(exportCompletion(learner), /42501/);
+    const completion = (await exportCompletion(admin)).statements.filter(
+      (entry) => entry.object.id.includes("/scorm/"),
+    );
+    assert.equal(completion.length, 1);
+    assert.equal(
+      completion[0].verb.id,
+      "http://adlnet.gov/expapi/verbs/completed",
+    );
+    assert.deepEqual(completion[0].result, { completion: true });
+    assert.equal(JSON.stringify(completion).includes(learner), false);
+    assert.equal(JSON.stringify(completion).includes(version), false);
+    assert.deepEqual(
+      (await exportCompletion(admin)).statements.find(
+        (entry) => entry.id === completion[0].id,
+      ),
+      completion[0],
+    );
     if (edition !== "internal") {
       await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
         where installation_id=${q(installation)}`);

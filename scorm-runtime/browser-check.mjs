@@ -4,8 +4,41 @@ import console from "node:console";
 import { setTimeout } from "node:timers";
 import { createServer } from "node:http";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
+import process from "node:process";
+import { Buffer } from "node:buffer";
+import { JSDOM } from "jsdom";
+import { reviewScormPackage } from "../src/features/learning/scorm-package.ts";
 import { chromium } from "playwright";
 import { createScormHost } from "./host.mjs";
+
+const referencePath = process.env.SCORM_REFERENCE_SAMPLE;
+const reference = referencePath ? await loadReference(referencePath) : null;
+
+async function loadReference(path) {
+  const dom = new JSDOM();
+  globalThis.DOMParser = dom.window.DOMParser;
+  try {
+    const file = await readFile(path);
+    const assets = new Map();
+    const report = await reviewScormPackage(
+      new Uint8Array(file).buffer,
+      undefined,
+      undefined,
+      assets,
+    );
+    return {
+      path: report.launches[0].path,
+      entries: [...assets].map(([key, value]) => [
+        key,
+        Buffer.from(value).toString("base64"),
+      ]),
+    };
+  } finally {
+    delete globalThis.DOMParser;
+    dom.window.close();
+  }
+}
 
 const portal = createServer();
 portal.listen(0, "127.0.0.1");
@@ -51,6 +84,7 @@ portal.on("request", (request, response) => {
     response.writeHead(404).end();
     return;
   }
+  const sample = request.url === "/reference" ? reference : null;
   const script = `
     window.addEventListener("message", (event) => {
       const runner = document.querySelector("iframe");
@@ -58,14 +92,19 @@ portal.on("request", (request, response) => {
       if (event.data.type === "scorm:ready") {
         const encode = (value) => new TextEncoder().encode(value);
         runner.contentWindow.postMessage({
-          type: "scorm:launch", launch: ${JSON.stringify(launch)}, title: "Fictional active lesson", path: "course/lesson.html",
-          files: [
+          type: "scorm:launch", launch: ${JSON.stringify(launch)}, title: "Active lesson", path: ${JSON.stringify(sample?.path ?? "course/lesson.html")},
+          files: ${
+            sample
+              ? JSON.stringify(sample.entries) +
+                ".map(([name, encoded]) => [name, Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))])"
+              : `[
             ["course/lesson.html", encode('<!doctype html><html><head><link rel="stylesheet" href="lesson.css"></head><body><output></output><a href="pages/notes.html#remark">Notes</a><iframe title="Nested lesson"></iframe><script>document.querySelector("iframe").src = "pages/intro.html";<' + '/script><button type="button">Complete lesson</button><script src="lesson.js"><' + '/script></body></html>')],
             ["course/pages/notes.html", encode('<!doctype html><html><body><h2 id="remark">Reviewed notes</h2><a href="../lesson.html">Return to lesson</a><img src="${portalOrigin}/remote.png" alt="Remote image"><iframe title="Remote page" src="${portalOrigin}/remote-frame"></iframe></body></html>')],
             ["course/pages/intro.html", encode('<!doctype html><html><body><h2>Nested introduction</h2></body></html>')],
             ["course/lesson.js", encode(${JSON.stringify(sci)})],
             ["course/lesson.css", encode("output{color:rgb(0, 80, 0)}")],
-          ],
+          ]`
+          },
           cmi: ${JSON.stringify(committed ?? {})},
           adapter: { studentId: "pseudonym", studentName: "Learner", totalTime: "0000:00:00.00", launchData: "", masteryScore: null },
         }, ${JSON.stringify(runnerOrigin)});
@@ -144,6 +183,27 @@ try {
   console.log(
     "PASS isolated Chromium SCORM scripts, local navigation, commit and bookmark resume.",
   );
+  if (reference) {
+    committed = undefined;
+    const samplePage = await browser.newPage();
+    try {
+      await samplePage.goto(portalOrigin + "/reference");
+      const sampleLesson = samplePage
+        .frameLocator("iframe")
+        .frameLocator("iframe");
+      const content = sampleLesson.frameLocator("#contentFrame");
+      await content
+        .getByRole("heading", { name: "Play of the game" })
+        .waitFor();
+      await sampleLesson.getByRole("button", { name: /Next/ }).click();
+      await content.getByRole("heading", { name: /par/i }).first().waitFor();
+      console.log(
+        "PASS SCORM 1.2 Basic Run-Time reference package preflight, launch and two content pages.",
+      );
+    } finally {
+      await samplePage.close();
+    }
+  }
 } finally {
   await browser.close();
   runtime.close();

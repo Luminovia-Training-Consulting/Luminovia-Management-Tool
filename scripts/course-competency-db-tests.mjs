@@ -306,6 +306,76 @@ await withTestDatabase("course_competencies", async ({ sql, actor }) => {
   assert.equal(remapped.decisions[0].level_title, "Independent");
   assert.deepEqual(remapped.current_revisions, {});
   await assert.rejects(action(teacher, "assess", assessment, 2), /PT409/);
+  const archive = { id, archived: true };
+  await assert.rejects(
+    action(teacher, "archive_framework", archive, 2),
+    /42501/,
+  );
+  assert.equal(
+    (await action(admin, "archive_framework", archive, 2)).revision,
+    3,
+  );
+  assert.equal(
+    (await action(admin, "archive_framework", archive, 2)).revision,
+    3,
+  );
+  await assert.rejects(
+    action(admin, "save_framework", updatedFramework, 3),
+    /42501/,
+  );
+  await assert.rejects(
+    action(admin, "pin", { ...pin, framework_revision: 3 }, 2),
+    /42501/,
+  );
+  assert.equal((await read(admin)).frameworks[0].archived, true);
+  assert.equal((await read(learner)).pinned_framework.revision, 2);
+  assert.equal(
+    (await action(admin, "archive_framework", { id, archived: false }, 3))
+      .revision,
+    4,
+  );
+  assert.equal((await read(admin)).frameworks[0].archived, false);
+
+  const examQuestions = [{ prompt: "Explain the route.", max_points: 10 }];
+  await sql(`insert into private.course_text_exam_versions (run_id,revision,title,opens_at,closes_at,questions,pass_percent,published_at)
+      values (${q(run)},1,'Fictional text evidence',now()-interval '2 hours',now()-interval '1 hour',
+        ${q(JSON.stringify(examQuestions))},50,now()-interval '2 hours');
+    insert into private.course_text_exam_attempts (run_id,exam_revision,learner_id,revision,answers,submitted_at)
+      values (${q(run)},1,${q(learner)},1,'["Private exam answer"]',now()-interval '1 hour');
+    insert into private.course_text_exam_reviews (run_id,exam_revision,learner_id,revision,points,feedback,released_at)
+      values (${q(run)},1,${q(learner)},1,'[7]','Private review feedback',null);`);
+  const assessExam = (revision, expected) =>
+    action(
+      teacher,
+      "assess",
+      {
+        ...assessment,
+        include_quiz: false,
+        pin_revision: 2,
+        text_exam_evidence: { exam_revision: 1, review_revision: revision },
+      },
+      expected,
+    );
+  assert.equal((await read(teacher, run, learner)).text_exam_option, null);
+  await assert.rejects(assessExam(1, 0), /PT409/);
+  await sql(`update private.course_text_exam_reviews set released_at=now()
+    where run_id=${q(run)} and learner_id=${q(learner)} and revision=1`);
+  const examEvidence = (await read(teacher, run, learner)).text_exam_option;
+  assert.deepEqual(examEvidence, {
+    exam_revision: 1,
+    review_revision: 1,
+    title: "Fictional text evidence",
+    score: 7,
+    max_points: 10,
+  });
+  assert.equal((await assessExam(1, 0)).revision, 1);
+  const learnerEvidence = await read(learner);
+  assert.equal(learnerEvidence.text_exam_option, null);
+  assert.deepEqual(
+    learnerEvidence.decisions[0].text_exam_evidence,
+    examEvidence,
+  );
+  assert.ok(!JSON.stringify(learnerEvidence).includes("Private review"));
   const secondPage = await rpc(
     learner,
     "course_competencies",

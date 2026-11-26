@@ -1106,7 +1106,9 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             rpc(who, "learning_portfolio", [course ? q(course) : "null", entry ? q(entry) : "null", full]);
         const edit = (who, name, payload, version) =>
             rpc(who, "learning_portfolio_command", [q(id), q(name), q(JSON.stringify(payload)), version]);
-        const first = {title: "Fictional learning reflection", body: "Revision one notes"};
+        const first = {title: "Fictional learning reflection", body: "Revision one notes",
+            reflection: {goal: "Read a routing table", outcome: "Find the default route"}};
+        await assert.rejects(edit(learner, "save", {...first, reflection: {goal: ["invalid"]}}, 0), /22023/);
         assert.equal((await edit(learner, "save", first, 0)).revision, 1);
         assert.equal((await edit(learner, "save", first, 0)).revision, 1);
         assert.equal((await read(learner)).entries[0].history, null);
@@ -1122,7 +1124,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         const recipient = {course_id: run, teacher_id: teacher};
         const receipt = (await edit(learner, "share", recipient, 1)).share_id;
         assert.equal((await edit(learner, "share", recipient, 1)).share_id, receipt);
-        const secondRevision = {title: "New private title", body: "Revision two remains private"};
+        const secondRevision = {title: "New private title", body: "Revision two remains private",
+            reflection: {next_step: "Check the next network"}};
         assert.equal((await edit(learner, "save", secondRevision, 1)).revision, 2);
         await assert.rejects(edit(learner, "save", first, 1), /PT409/);
         await assert.rejects(edit(learner, "share", recipient, 1), /PT409/);
@@ -1132,8 +1135,10 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         assert.equal(shared[0].revision, 1);
         assert.equal(shared[0].body, first.body);
         assert.equal(shared[0].title, first.title);
+        assert.deepEqual(shared[0].reflection, first.reflection);
         const exportEntry = (await read(learner, null, null, true)).entries[0];
         assert.deepEqual(exportEntry.history.map(({body}) => body), [secondRevision.body, first.body]);
+        assert.deepEqual(exportEntry.history.map(({reflection}) => reflection), [secondRevision.reflection, first.reflection]);
         await assert.rejects(edit(admin, "revoke", {share_id: receipt}, 0), /42501/);
         await edit(learner, "revoke", {share_id: receipt}, 0);
         assert.deepEqual((await read(teacher, run)).shares, []);

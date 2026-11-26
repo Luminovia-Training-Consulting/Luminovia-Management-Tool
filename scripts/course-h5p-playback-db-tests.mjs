@@ -167,6 +167,32 @@ for (const edition of [
       score: 0.8,
     });
     assert.equal((await read(admin)).packages[0].progress, null);
+    const exportCompletion = async (who) =>
+      JSON.parse(
+        await actor(
+          who,
+          gate("course_xapi_statements", "GET") +
+            `select public.course_xapi_statements(${q(run)}, now()-interval '1 hour', now()+interval '1 hour')`,
+        ),
+      );
+    await assert.rejects(exportCompletion(learner), /42501/);
+    const completion = (await exportCompletion(admin)).statements.filter(
+      (entry) => entry.object.id.includes("/h5p/"),
+    );
+    assert.equal(completion.length, 1);
+    assert.equal(
+      completion[0].verb.id,
+      "http://adlnet.gov/expapi/verbs/completed",
+    );
+    assert.deepEqual(completion[0].result, { completion: true });
+    assert.equal(JSON.stringify(completion).includes(learner), false);
+    assert.equal(JSON.stringify(completion).includes(version), false);
+    assert.deepEqual(
+      (await exportCompletion(admin)).statements.find(
+        (entry) => entry.id === completion[0].id,
+      ),
+      completion[0],
+    );
 
     if (edition !== "internal") {
       await sql(
