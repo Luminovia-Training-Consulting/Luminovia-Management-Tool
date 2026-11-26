@@ -23,6 +23,173 @@ const withdrawalReason = {
 };
 
 export const operationsRpcDocumentation = {
+  list_crm_opportunities: {
+    summary: "List sales opportunities for one organisation",
+    description:
+      "Requires organisations.manage on every request; company membership alone is not sufficient. Lists no more than 200 opportunities for the specified existing organisation, including read-only history for archived organisations. Values are estimates in their recorded currency and are not converted or invoiced.",
+    parameters: {
+      p_organisation_id: id,
+      p_limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
+    },
+    required: ["p_organisation_id"],
+    result: {
+      type: "array",
+      items: {
+        type: "object",
+        required: [
+          "id",
+          "organisation_id",
+          "title",
+          "stage",
+          "estimated_value",
+          "currency",
+          "version",
+          "created_at",
+          "updated_at",
+        ],
+        properties: {
+          id,
+          organisation_id: id,
+          title: { type: "string" },
+          stage: {
+            type: "string",
+            enum: [
+              "identified",
+              "outreach_qualified",
+              "contacted",
+              "response_received",
+              "qualified_opportunity",
+              "meeting_scheduled",
+              "negotiation",
+              "proposal_submitted",
+              "contract_pending",
+              "contract_signed",
+              "active_customer",
+              "lost",
+              "dormant",
+            ],
+          },
+          estimated_value: { type: ["number", "null"] },
+          currency: {
+            type: "string",
+            enum: ["EUR", "AUD", "CHF", "GBP", "USD"],
+          },
+          version: { type: "integer", minimum: 1 },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
+        },
+      },
+    },
+    errors: {
+      "403":
+        "The caller does not have current organisations.manage permission.",
+      "404": "The specified organisation does not exist.",
+    },
+  },
+  list_crm_opportunity_events: {
+    summary: "List the stage history for one opportunity",
+    description:
+      "Requires organisations.manage on every request. The organisation ID must match the opportunity. Returns at most the latest 100 immutable events in ascending version order; archived organisations remain readable.",
+    parameters: {
+      p_organisation_id: id,
+      p_opportunity_id: id,
+      p_limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+    },
+    required: ["p_organisation_id", "p_opportunity_id"],
+    result: {
+      type: "array",
+      items: {
+        type: "object",
+        required: [
+          "id",
+          "opportunity_id",
+          "organisation_id",
+          "version",
+          "event_type",
+          "from_stage",
+          "to_stage",
+          "actor_id",
+          "request_id",
+          "occurred_at",
+        ],
+        properties: {
+          id,
+          opportunity_id: id,
+          organisation_id: id,
+          version: { type: "integer", minimum: 1 },
+          event_type: { type: "string", enum: ["created", "stage_changed"] },
+          from_stage: { type: ["string", "null"] },
+          to_stage: { type: "string" },
+          actor_id: id,
+          request_id: id,
+          occurred_at: { type: "string", format: "date-time" },
+        },
+      },
+    },
+    errors: {
+      "403":
+        "The caller does not have current organisations.manage permission.",
+      "404": "The opportunity is unavailable under the specified organisation.",
+    },
+  },
+  create_crm_opportunity: {
+    summary: "Create an organisation sales opportunity",
+    description:
+      "Requires organisations.manage and an active organisation. New opportunities enter Identified. Keep p_request_id for an identical retry; reusing it with different input returns an error. Estimated values are not committed prices and are never converted automatically.",
+    parameters: {
+      p_organisation_id: id,
+      p_title: { type: "string", minLength: 1, maxLength: 200 },
+      p_estimated_value: { type: ["number", "null"], minimum: 0 },
+      p_currency: { type: "string", enum: ["EUR", "AUD", "CHF", "GBP", "USD"] },
+      p_request_id: requestId,
+    },
+    result: id,
+    errors: {
+      "400":
+        "The input is invalid or the request ID was reused with different content.",
+      "403":
+        "The caller lacks organisations.manage permission or the organisation is archived.",
+      "404": "The active organisation does not exist.",
+    },
+  },
+  move_crm_opportunity: {
+    summary: "Move an opportunity to another sales stage",
+    description:
+      "Requires organisations.manage and an active organisation. Submit the version returned by the latest list call; stale transitions fail without overwriting another change. An identical request ID safely retries the same transition. Stage history is immutable.",
+    parameters: {
+      p_organisation_id: id,
+      p_opportunity_id: id,
+      p_stage: {
+        type: "string",
+        enum: [
+          "identified",
+          "outreach_qualified",
+          "contacted",
+          "response_received",
+          "qualified_opportunity",
+          "meeting_scheduled",
+          "negotiation",
+          "proposal_submitted",
+          "contract_pending",
+          "contract_signed",
+          "active_customer",
+          "lost",
+          "dormant",
+        ],
+      },
+      p_expected_version: { type: "integer", minimum: 1 },
+      p_request_id: requestId,
+    },
+    errors: {
+      "400":
+        "The stage is invalid or the request ID was reused with different input.",
+      "403":
+        "The caller lacks organisations.manage permission or the organisation is archived.",
+      "404": "The opportunity is unavailable under the specified organisation.",
+      "409":
+        "The opportunity version changed; reload before retrying the stage change.",
+    },
+  },
   organisation_contracts: {
     summary: "List scanned private PDFs filed for one company",
     description:
