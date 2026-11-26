@@ -35,12 +35,19 @@ function runtimeHost() {
   const host = String(
     import.meta.env.VITE_H5P_CONTENT_HOST ?? "",
   ).toLowerCase();
-  if (!/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+){2,}$/.test(host)) return null;
+  if (!/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+){2,}(?::[1-9]\d{0,4})?$/.test(host))
+    return null;
+  let origin: URL;
+  try {
+    origin = new URL("https://" + host);
+  } catch {
+    return null;
+  }
   const site = location.hostname.toLowerCase();
   const siteSuffix = site.split(".").slice(-2).join(".");
-  const contentSuffix = host.split(".").slice(-2).join(".");
+  const contentSuffix = origin.hostname.split(".").slice(-2).join(".");
   if (siteSuffix === contentSuffix) return null;
-  return host;
+  return origin.host;
 }
 
 async function courseH5pAction(

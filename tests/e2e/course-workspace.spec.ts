@@ -1,4 +1,4 @@
-import {expect, type Page, test} from "@playwright/test";
+import {chromium, expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createHash, randomUUID} from "node:crypto";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
@@ -1665,6 +1665,78 @@ test("published SCORM lessons open in a sandbox and retain learner completion", 
     } finally {
         await learnerContext.close();
     }
+});
+
+test.describe("separate HTTPS H5P player", () => {
+    const runtime = process.env.E2E_H5P_CONTENT_HOST;
+    const sample = process.env.E2E_H5P_SAMPLE;
+    test.skip(!runtime || !sample, "Supply the dedicated test origin and the pinned H5P TrueFalse sample.");
+    test("native workspace publishes, plays and withdraws a scanned H5P activity", async ({baseURL}, info) => {
+        test.setTimeout(120_000);
+        const browser = await chromium.launch({args: [
+            "--no-proxy-server", "--ignore-certificate-errors",
+            "--host-resolver-rules=MAP *." + runtime!.split(":")[0] + " 127.0.0.1",
+        ]});
+        const session = {
+            baseURL, viewport: info.project.use.viewport,
+            isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+            ignoreHTTPSErrors: true,
+        };
+        try {
+            const context = await browser.newContext(session);
+            const page = await context.newPage();
+            const f = await fixture();
+            await linkWorkspaceLearner(f);
+            await checked(f.adminClient.rpc("manage_course_enrolment", {
+                p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+            }));
+            const workspace = `/courses/${f.run}/workspace#course-materials`;
+            const player = (target: Page) =>
+                target.getByRole("region", {name: "Interaktive H5P-Aktivitäten"});
+            await adminLogin(page, f.manager);
+            await page.goto(workspace);
+            const staff = player(page);
+            await staff.getByText("H5P-Aktivität veröffentlichen", {exact: true}).press("Enter");
+            await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample!);
+            const publish = staff.getByRole("button", {name: "H5P-Aktivität veröffentlichen"});
+            await expect(publish).toBeEnabled();
+            await publish.press("Enter");
+            await expect(staff.getByRole("button", {name: "Aktivität öffnen"})).toBeVisible({timeout: 45_000});
+            const scope = await checked(f.adminClient.rpc("course_h5p_packages", {p_run_id: f.run}, {get: true}));
+            expect(scope.packages).toHaveLength(1);
+            const version = scope.packages[0].id;
+            const scan = await checked(f.service.from("document_versions").select("scanner_version,status").eq("id", version).single());
+            expect(scan).toMatchObject({status: "clean", scanner_version: expect.stringMatching(/^ClamAV /)});
+
+            const learnerContext = await browser.newContext(session);
+            const participant = await learnerContext.newPage();
+            await login(participant, f.learner.email, /\/learning$/);
+            await participant.goto(workspace);
+            const activity = player(participant);
+            await activity.getByRole("button", {name: "Aktivität öffnen"}).press("Enter");
+            const iframe = activity.locator('iframe[title="True/False Question"]');
+            await expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
+            expect(new URL((await iframe.getAttribute("src"))!).origin).not.toBe(baseURL);
+            const frame = iframe.contentFrame();
+            await expect(frame.getByText("Oslo is the capital of Norway.", {exact: true})).toBeVisible();
+            await expect(frame.getByRole("img", {name: "The Oslo Opera House"})).toBeVisible();
+            await frame.getByText("Yes", {exact: true}).click();
+            await frame.getByRole("button", {name: "Check"}).click();
+            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+            await participant.reload();
+            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+            await expect(staff.getByText("Abgeschlossen")).toHaveCount(0);
+
+            await staff.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+            const dialog = page.getByRole("dialog", {name: "H5P-Freigabe zurückziehen"});
+            await dialog.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+            await expect(staff.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+            await participant.reload();
+            await expect(activity.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+        } finally {
+            await browser.close();
+        }
+    });
 });
 
 /** Follow one fictional enrolment from curriculum publication to its released evidence and reports. */

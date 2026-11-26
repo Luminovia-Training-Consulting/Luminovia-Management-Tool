@@ -8,9 +8,12 @@ const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.LUMINOVIA_H5P_PORT ?? "6212");
 const portal = new URL(process.env.LUMINOVIA_H5P_PORTAL_ORIGIN ?? "");
 const suffix = process.env.LUMINOVIA_H5P_CONTENT_HOST_SUFFIX ?? "";
+const localTestPortal =
+  process.env.PORTAL_TEST_MODE === "1" &&
+  /^http:\/\/127\.0\.0\.1:[0-9]+$/.test(portal.origin);
 if (
   portal.origin !== portal.href.slice(0, -1) ||
-  portal.protocol !== "https:" ||
+  (portal.protocol !== "https:" && !localTestPortal) ||
   portal.username ||
   portal.password ||
   !/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+){2,}$/.test(suffix) ||
