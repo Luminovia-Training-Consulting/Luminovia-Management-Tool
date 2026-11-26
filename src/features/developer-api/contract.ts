@@ -17,6 +17,7 @@ import {
 } from "./competency-contract.ts";
 import {
   peerActionRequest,
+  peerAttachmentResult,
   peerReadResult,
   peerReadRound,
 } from "./peer-feedback-contract.ts";
@@ -4677,13 +4678,21 @@ const nativePaths = {
     peerReadResult,
     ["p_round_number"],
   ),
+  "/rest/v1/rpc/course_peer_feedback_attachment": rpc(
+    "authorizeCoursePeerFeedbackAttachment",
+    "Premium LMS",
+    "Authorize an exact peer entry attachment",
+    "Current staff, the author and a reviewer assigned during the review stage can authorize the clean version. Returns a neutral filename and checksum. The protected file gateway rechecks access before returning bytes.",
+    { ...course, p_round_number: peerReadRound, p_version_id: course.p_run_id },
+    peerAttachmentResult,
+  ),
   "/rest/v1/rpc/course_peer_feedback_action": {
     post: {
       operationId: "saveCoursePeerFeedback",
       tags: ["Premium LMS"],
       summary: "Join, moderate or respond to the peer feedback round",
       description:
-        "Current learners opt in and can report a released reply. Current course staff approve entries before assignment and reviews before release. Feedback remains qualitative. Supply the target round number for commands after round one.",
+        "Current learners opt in and can report a released reply. Current course staff approve entries before assignment and reviews before release. Scored rounds pin the selected assignment criteria and release points with approved feedback. Supply the target round number for commands after round one.",
       requestBody: { required: true, content: json(peerActionRequest) },
       responses: {
         "200": {

@@ -17,6 +17,7 @@ import {
 } from "./competency-contract.ts";
 import {
   peerActionRequest,
+  peerAttachmentResult,
   peerReadResult,
   peerReadRound,
 } from "./peer-feedback-contract.ts";
@@ -1316,10 +1317,22 @@ const coursePaths = {
     record({ ...run, p_round_number: peerReadRound }, ["p_run_id"]),
     peerReadResult,
   ),
+  "/rest/v1/rpc/course_peer_feedback_attachment": courseOperation(
+    "authorizeAcademyPeerFeedbackAttachment",
+    "Authorize an exact peer entry attachment",
+    "Current staff, the author and a reviewer assigned during the review stage can authorize the clean version. Returns a neutral filename and checksum. The protected file gateway rechecks access before returning bytes.",
+    "active-or-grace",
+    record({
+      ...run,
+      p_round_number: peerReadRound,
+      p_version_id: run.p_run_id,
+    }),
+    peerAttachmentResult,
+  ),
   "/rest/v1/rpc/course_peer_feedback_action": courseOperation(
     "saveAcademyPeerFeedback",
     "Join, moderate or respond to the peer feedback round",
-    "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Feedback remains qualitative. Supply the target round number for commands after round one.",
+    "Current learners opt in, submit assigned feedback and can report a released reply. Current staff approve submissions before matching and reviews before release. Scored rounds pin the selected assignment criteria and release points with approved feedback. Supply the target round number for commands after round one.",
     "active",
     { ...peerActionRequest, required: ["p_run_id", "p_action", "p_payload"] },
     { const: true },

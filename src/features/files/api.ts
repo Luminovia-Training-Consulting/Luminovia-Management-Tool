@@ -97,7 +97,7 @@ export function uploadOrganisationContract(
   return transferUpload(form, endpoint());
 }
 
-const learningSubmissionMaxBytes = 10 * 1024 * 1024;
+export const learningSubmissionMaxBytes = 10 * 1024 * 1024;
 
 /** Reserve and scan a private file for the caller's own enrolment. */
 export function uploadCourseSubmission(
@@ -343,6 +343,22 @@ async function downloadFile(
   if (error || data.session?.user.id !== session.user.id)
     throw new Error("account_changed");
   return blob;
+}
+
+/** Save the exact moderated attachment under a neutral filename. */
+export async function saveCoursePeerAttachment(
+  run: string,
+  round: number,
+  version: string,
+  name: string,
+) {
+  const blob = await downloadFile({
+    action: "course_peer_feedback_download",
+    run_id: run,
+    round,
+    version_id: version,
+  });
+  saveBlob(blob, name);
 }
 
 /** Fetch the same scanned bytes after a live learner or staff grant. */

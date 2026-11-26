@@ -546,6 +546,33 @@ Deno.serve(async (request: Request) => {
                 'Content-Security-Policy': "default-src 'none'; sandbox",
             }});
         }
+        if (data.action === 'course_peer_feedback_download') {
+            const run = data.run_id, round = data.round, id = data.version_id;
+            if (!uuid(run) || !uuid(id) || typeof round !== 'number' || !Number.isInteger(round) ||
+                round < 1 || round > 999999999 || Object.keys(data).length !== 4)
+                return json(400, {error: 'invalid_request'});
+            const authorize = () => user.rpc('course_peer_feedback_attachment', {
+                p_run_id: run, p_round_number: round, p_version_id: id,
+            }, {get: true});
+            const before = await authorize();
+            const grant = before.data;
+            if (before.error || grant?.version_id !== id || !/^[a-f0-9]{64}$/.test(grant.sha256) ||
+                !['application/pdf', 'text/plain'].includes(grant.mime_type) ||
+                !Number.isSafeInteger(grant.size_bytes) || grant.size_bytes < 1 ||
+                grant.size_bytes > academyMaterialMaxBytes) throw new Error('access_denied');
+            const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
+            if (version.error || !version.data?.object_path) throw new Error('access_denied');
+            const file = await service.storage.from('portal-clean').download(version.data.object_path);
+            if (file.error || !file.data) throw new Error('access_denied');
+            const bytes = await readExpectedBytes(file.data, grant.size_bytes);
+            if (await sha256FileHex(bytes) !== grant.sha256) throw new Error('access_denied');
+            const after = await authorize();
+            if (after.error || after.data?.version_id !== id || after.data.sha256 !== grant.sha256)
+                throw new Error('access_denied');
+            const name = grant.mime_type === 'application/pdf' ? 'peer-attachment.pdf' : 'peer-attachment.txt';
+            return new Response(webFileBytes(bytes), {headers: {...headers, 'Content-Type': grant.mime_type,
+                'Content-Disposition': downloadDisposition(name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
+        }
         if (data.action === 'course_scorm_download' || data.action === 'course_h5p_download') {
             const run = data.run_id, id = data.version_id;
             if (!uuid(run) || !uuid(id) || Object.keys(data).length !== 3) return json(400, {error: 'invalid_request'});

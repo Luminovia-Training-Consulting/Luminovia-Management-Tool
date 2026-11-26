@@ -1,4 +1,4 @@
-/** Staff-moderated peer exchange with private learner text, explicit opt-in and dispute handling. */
+/** Staff-moderated anonymous peer rounds with optional rubric scores and attachments. */
 import { useId, useState } from "react";
 import {
   keepPreviousData,
@@ -11,6 +11,11 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import {
+  learningSubmissionMaxBytes,
+  saveCoursePeerAttachment,
+  uploadPortfolioEvidence,
+} from "../files/api";
 import type { PeerFeedbackState } from "./peer-feedback-schema";
 import "./peer-feedback-i18n";
 
@@ -28,8 +33,10 @@ type Command = {
     | "dispute"
     | "resolve";
   payload?: Record<string, unknown>;
+  upload?: { file: File; request: string };
 };
 type Controls = {
+  course: string;
   state: PeerFeedbackState;
   pending: boolean;
   run: (command: Command) => void;
@@ -78,17 +85,22 @@ function OpenPeerFeedback({ actor, course, staff }: Props) {
     },
   });
   const write = useMutation({
-    mutationFn: async ({ action, payload }: Command) => {
+    mutationFn: async ({ action, payload, upload }: Command) => {
       requireOnline();
+      const round =
+        action === "open"
+          ? (query.data?.rounds[0]?.number ?? 0) + 1
+          : query.data?.round_number;
+      const attachment = upload
+        ? await uploadPortfolioEvidence(upload.file, upload.request)
+        : undefined;
       const { data, error } = await db().rpc("course_peer_feedback_action", {
         p_run_id: course,
         p_action: action,
         p_payload: {
           ...payload,
-          round:
-            action === "open"
-              ? (query.data?.rounds[0]?.number ?? 0) + 1
-              : query.data?.round_number,
+          round,
+          ...(attachment ? { attachment_version: attachment } : {}),
         },
       });
       if (error) throw error;
@@ -107,6 +119,7 @@ function OpenPeerFeedback({ actor, course, staff }: Props) {
     "code" in write.error &&
     write.error.code === "PT409";
   const controls: Controls = {
+    course,
     state: query.data,
     pending: write.isPending,
     run: write.mutate,
@@ -201,6 +214,7 @@ function PeerTextForm({
   pending,
   initial = "",
   max = 2000,
+  invalid = false,
   onSubmit,
   children,
 }: {
@@ -209,6 +223,7 @@ function PeerTextForm({
   pending: boolean;
   initial?: string;
   max?: number;
+  invalid?: boolean;
   onSubmit: (body: string) => void;
   children?: React.ReactNode;
 }) {
@@ -219,11 +234,12 @@ function PeerTextForm({
       className="space-y-2"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!pending && body.trim().length >= 3) onSubmit(body);
+        if (!pending && !invalid && body.trim().length >= 3) onSubmit(body);
       }}
     >
       <Field id={id} label={label}>
         <textarea
+          id={id}
           required
           minLength={3}
           maxLength={max}
@@ -234,7 +250,10 @@ function PeerTextForm({
         />
       </Field>
       {children}
-      <Button type="submit" disabled={pending || body.trim().length < 3}>
+      <Button
+        type="submit"
+        disabled={pending || invalid || body.trim().length < 3}
+      >
         {submitLabel}
       </Button>
     </form>
@@ -245,6 +264,7 @@ function StartPeerRound({ state, pending, run }: Controls) {
   const { t } = useTranslation("learning");
   const id = useId();
   const [assignment, setAssignment] = useState<string>("");
+  const [scored, setScored] = useState(false);
   const selected = state.available_assignments.find(
     ({ id, version }) => `${id}:${version}` === assignment,
   );
@@ -264,6 +284,7 @@ function StartPeerRound({ state, pending, run }: Controls) {
               ? {
                   assignment_id: selected.id,
                   assignment_version: selected.version,
+                  ...(scored ? { scored: true } : {}),
                 }
               : {}),
           },
@@ -276,7 +297,10 @@ function StartPeerRound({ state, pending, run }: Controls) {
             id={id}
             value={assignment}
             disabled={pending}
-            onChange={(event) => setAssignment(event.currentTarget.value)}
+            onChange={(event) => {
+              setAssignment(event.currentTarget.value);
+              setScored(false);
+            }}
           >
             <option value="">{t("peerCriteriaNone")}</option>
             {stale && (
@@ -292,16 +316,32 @@ function StartPeerRound({ state, pending, run }: Controls) {
           </select>
         </Field>
       )}
+      {selected && (
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            disabled={pending}
+            checked={scored}
+            onChange={(event) => setScored(event.currentTarget.checked)}
+          />
+          {t("peerScoredRound")}
+        </label>
+      )}
     </PeerTextForm>
   );
 }
 
-function PeerModeration({ state, pending, run }: Controls) {
+function PeerModeration({ course, state, pending, run }: Controls) {
   const { t } = useTranslation("learning");
   const blocked = pending || !state.can_moderate;
   if (!state.stage)
     return state.can_moderate ? (
-      <StartPeerRound state={state} pending={blocked} run={run} />
+      <StartPeerRound
+        course={course}
+        state={state}
+        pending={blocked}
+        run={run}
+      />
     ) : (
       <p>{t("peerNoRound")}</p>
     );
@@ -313,6 +353,13 @@ function PeerModeration({ state, pending, run }: Controls) {
           {state.entries.map((entry) => (
             <li key={entry.id} className="space-y-2">
               <p className="preserve-text">{entry.body}</p>
+              {entry.attachment && state.round_number && (
+                <PeerAttachment
+                  course={course}
+                  round={state.round_number}
+                  attachment={entry.attachment}
+                />
+              )}
               {entry.approved ? (
                 <p>{t("peerApprovedEntry")}</p>
               ) : (
@@ -353,6 +400,10 @@ function PeerModeration({ state, pending, run }: Controls) {
         {state.reviews.map((review) => (
           <li key={review.id} className="space-y-2">
             <p className="preserve-text">{review.feedback}</p>
+            <PublishedScores
+              rubric={state.scoring_rubric}
+              scores={review.scores}
+            />
             {state.stage === "reviewing" && !review.approved && (
               <Button
                 type="button"
@@ -432,31 +483,235 @@ function ResolutionForm({
   );
 }
 
-function LearnerExchange({ state, pending, run }: Controls) {
+function PeerEntryForm({ state, pending, run }: Controls) {
+  const { t } = useTranslation("learning");
+  const id = useId();
+  const [upload, setUpload] = useState<Command["upload"]>();
+  const [remove, setRemove] = useState(false);
+  const attachment = state.own_entry?.attachment;
+  const invalid = Boolean(
+    upload &&
+    (upload.file.size < 1 ||
+      upload.file.size > learningSubmissionMaxBytes ||
+      !/\.(pdf|txt)$/i.test(upload.file.name)),
+  );
+  return (
+    <PeerTextForm
+      label={t("peerEntry")}
+      submitLabel={t(
+        pending && upload ? "peerCheckingAttachment" : "peerSaveEntry",
+      )}
+      pending={pending}
+      invalid={invalid}
+      initial={state.own_entry?.body}
+      onSubmit={(body) =>
+        run({
+          action: "entry",
+          payload: {
+            body,
+            revision: state.own_entry?.revision ?? 0,
+            ...(remove && !upload ? { attachment_version: null } : {}),
+          },
+          upload,
+        })
+      }
+    >
+      <Field
+        id={id}
+        label={t("peerAttachment")}
+        hint={t("peerAttachmentHelp")}
+        error={invalid}
+      >
+        <input
+          id={id}
+          type="file"
+          accept=".pdf,.txt,application/pdf,text/plain"
+          disabled={pending}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            setUpload(
+              file ? { file, request: crypto.randomUUID() } : undefined,
+            );
+          }}
+        />
+      </Field>
+      {invalid && <Notice kind="error">{t("peerInvalidAttachment")}</Notice>}
+      {attachment && !upload && (
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            disabled={pending}
+            checked={remove}
+            onChange={(event) => setRemove(event.currentTarget.checked)}
+          />
+          {t("peerRemoveAttachment")}
+        </label>
+      )}
+    </PeerTextForm>
+  );
+}
+
+function PeerAttachment({
+  attachment,
+  course,
+  round,
+}: {
+  attachment: NonNullable<
+    NonNullable<PeerFeedbackState["own_entry"]>["attachment"]
+  >;
+  course: string;
+  round: number;
+}) {
+  const { t } = useTranslation("learning");
+  const download = useMutation({
+    mutationFn: () =>
+      saveCoursePeerAttachment(
+        course,
+        round,
+        attachment.version_id,
+        attachment.name,
+      ),
+  });
+  return (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={download.isPending}
+        onClick={() => download.mutate()}
+      >
+        {t(
+          attachment.name.endsWith(".pdf")
+            ? "peerDownloadPdf"
+            : "peerDownloadText",
+        )}
+      </Button>
+      {download.isError && <Notice kind="error">{t("downloadError")}</Notice>}
+    </>
+  );
+}
+
+function PeerReviewForm({
+  rubric,
+  pending,
+  run,
+}: {
+  rubric: PeerFeedbackState["scoring_rubric"];
+  pending: boolean;
+  run: Controls["run"];
+}) {
+  const { t } = useTranslation("learning");
+  const fieldId = useId();
+  const [scores, setScores] = useState<Record<number, number>>({});
+  return (
+    <PeerTextForm
+      label={t("peerWriteFeedback")}
+      submitLabel={t("peerSubmitFeedback")}
+      pending={pending}
+      invalid={Boolean(rubric?.some((_, index) => scores[index] === undefined))}
+      onSubmit={(body) =>
+        run({
+          action: "feedback",
+          payload: {
+            body,
+            ...(rubric
+              ? { scores: rubric.map((_, index) => scores[index]) }
+              : {}),
+          },
+        })
+      }
+    >
+      {rubric && (
+        <fieldset className="space-y-2">
+          <legend>{t("peerScores")}</legend>
+          {rubric.map(({ label, levels }, index) => (
+            <Field key={label} id={fieldId + index} label={label}>
+              <select
+                id={fieldId + index}
+                value={scores[index] ?? ""}
+                required
+                disabled={pending}
+                onChange={(event) => {
+                  const value = Number(event.currentTarget.value);
+                  setScores((current) => ({ ...current, [index]: value }));
+                }}
+              >
+                <option value="" disabled>
+                  {t("peerSelectLevel")}
+                </option>
+                {levels.map(({ label: level, points }) => (
+                  <option key={points} value={points}>
+                    {t("peerLevelWithPoints", { level, points })}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ))}
+        </fieldset>
+      )}
+    </PeerTextForm>
+  );
+}
+
+function PublishedScores({
+  rubric,
+  scores,
+}: {
+  rubric: PeerFeedbackState["scoring_rubric"];
+  scores: NonNullable<PeerFeedbackState["assignment"]>["scores"];
+}) {
+  const { t } = useTranslation("learning");
+  if (!rubric || !scores) return null;
+  const earned = scores.reduce((sum, score) => sum + score, 0);
+  const maximum = rubric.reduce(
+    (sum, { levels }) => sum + (levels.at(-1)?.points ?? 0),
+    0,
+  );
+  return (
+    <section aria-label={t("peerScores")}>
+      <p>{t("peerTotalPoints", { earned, maximum })}</p>
+      <ul>
+        {rubric.map(({ label, levels }, index) => (
+          <li key={label}>
+            {t("peerCriterionScore", {
+              criterion: label,
+              level: levels.find(({ points }) => points === scores[index])
+                ?.label,
+              points: scores[index],
+            })}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function LearnerExchange({ course, state, pending, run }: Controls) {
   const { t } = useTranslation("learning");
   if (!state.stage) return <p>{t("peerNoRound")}</p>;
   if (state.stage === "collecting")
     return (
       <>
         {state.can_write && (
-          <PeerTextForm
+          <PeerEntryForm
             key={state.own_entry?.revision ?? 0}
-            label={t("peerEntry")}
-            submitLabel={t("peerSaveEntry")}
+            course={course}
+            state={state}
             pending={pending}
-            initial={state.own_entry?.body}
-            onSubmit={(body) =>
-              run({
-                action: "entry",
-                payload: { body, revision: state.own_entry?.revision ?? 0 },
-              })
-            }
+            run={run}
           />
         )}
         {state.own_entry && (
           <>
             {!state.can_write && (
               <p className="preserve-text">{state.own_entry.body}</p>
+            )}
+            {state.own_entry.attachment && state.round_number && (
+              <PeerAttachment
+                course={course}
+                round={state.round_number}
+                attachment={state.own_entry.attachment}
+              />
             )}
             <p>
               {t(
@@ -489,17 +744,27 @@ function LearnerExchange({ state, pending, run }: Controls) {
       <>
         <h3>{t("peerAssignment")}</h3>
         <p className="preserve-text">{state.assignment.body}</p>
+        {state.assignment.attachment && state.round_number && (
+          <PeerAttachment
+            course={course}
+            round={state.round_number}
+            attachment={state.assignment.attachment}
+          />
+        )}
         {state.assignment.feedback ? (
-          <p className="preserve-text">{state.assignment.feedback}</p>
+          <>
+            <p className="preserve-text">{state.assignment.feedback}</p>
+            <PublishedScores
+              rubric={state.scoring_rubric}
+              scores={state.assignment.scores}
+            />
+          </>
         ) : (
           state.can_write && (
-            <PeerTextForm
-              label={t("peerWriteFeedback")}
-              submitLabel={t("peerSubmitFeedback")}
+            <PeerReviewForm
+              rubric={state.scoring_rubric}
               pending={pending}
-              onSubmit={(body) =>
-                run({ action: "feedback", payload: { body } })
-              }
+              run={run}
             />
           )
         )}
@@ -512,7 +777,13 @@ function LearnerExchange({ state, pending, run }: Controls) {
     <>
       <h3>{t("peerReceived")}</h3>
       {state.received?.feedback ? (
-        <p className="preserve-text">{state.received.feedback}</p>
+        <>
+          <p className="preserve-text">{state.received.feedback}</p>
+          <PublishedScores
+            rubric={state.scoring_rubric}
+            scores={state.received.scores}
+          />
+        </>
       ) : (
         !state.received?.dispute && <p>{t("peerNoFeedback")}</p>
       )}

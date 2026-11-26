@@ -37,9 +37,43 @@ const labels = {
     "This course has no open feedback round.",
   ],
   peerPrivacy: [
-    "Die Teilnahme ist freiwillig. Schreibe ohne Namen und andere persönliche Angaben. Das Lehrteam prüft die Texte vor der Weitergabe. Die Rückmeldungen fließen nicht in die Note ein.",
-    "Participation is optional. Omit names and other identifying details. Course staff review text before sharing. Feedback does not affect grades.",
+    "Die Teilnahme ist freiwillig. Schreibe ohne Namen und andere persönliche Angaben. Das Lehrteam prüft die Beiträge und Rückmeldungen vor der Weitergabe. Peer-Punkte dienen der Rückmeldung.",
+    "Participation is optional. Omit names and other identifying details. Course staff review entries and feedback before sharing. Peer points are for feedback.",
   ],
+  peerScoredRound: [
+    "Bewertungsstufen mit Punkten verwenden",
+    "Use point-based rating levels",
+  ],
+  peerScores: ["Bewertung anhand der Kriterien", "Criteria scores"],
+  peerSelectLevel: ["Bewertungsstufe auswählen", "Select a rating level"],
+  peerLevelWithPoints: [
+    "{{level}} · {{points}} Punkte",
+    "{{level}} · {{points}} points",
+  ],
+  peerCriterionScore: [
+    "{{criterion}} · {{level}} ({{points}} Punkte)",
+    "{{criterion}} · {{level}} ({{points}} points)",
+  ],
+  peerTotalPoints: [
+    "{{earned}} von {{maximum}} Punkten",
+    "{{earned}} of {{maximum}} points",
+  ],
+  peerAttachment: ["Anhang (optional)", "Attachment (optional)"],
+  peerAttachmentHelp: [
+    "PDF oder Textdatei bis 10 MB. Entferne vor dem Hochladen Namen und andere persönliche Angaben, auch in den PDF-Dokumenteigenschaften.",
+    "PDF or text up to 10 MB. Before uploading, remove names and other identifying details, including from PDF document properties.",
+  ],
+  peerInvalidAttachment: [
+    "Wähle eine PDF- oder Textdatei bis 10 MB.",
+    "Choose a PDF or text file up to 10 MB.",
+  ],
+  peerCheckingAttachment: ["Anhang wird geprüft …", "Checking attachment…"],
+  peerRemoveAttachment: [
+    "Anhang beim Speichern entfernen",
+    "Remove attachment when saving",
+  ],
+  peerDownloadPdf: ["PDF herunterladen", "Download PDF"],
+  peerDownloadText: ["Textdatei herunterladen", "Download text file"],
   peerEntry: ["Dein Beitrag", "Your submission"],
   peerSaveEntry: [
     "Beitrag speichern und teilnehmen",
