@@ -11,6 +11,10 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { DownloadButton } from "./resources";
 import { KnowledgeEditor } from "../knowledge/editor";
 import {
+  CourseLessonBlockEditor,
+  CourseLessonBlockContent,
+} from "./course-lesson-blocks";
+import {
   courseContentAction,
   courseContentStudioKey,
   courseContentStudioQuery,
@@ -84,6 +88,9 @@ function CourseContents({
                   label={lesson.title}
                   readOnly
                 />
+                {lesson.blocks?.map((block) => (
+                  <CourseLessonBlockContent key={block.id} block={block} />
+                ))}
                 {lesson.material_ids?.map((id) => {
                   const material = byId.get(id);
                   return (
@@ -1030,6 +1037,13 @@ export function CourseAuthoring({
                   onChange={(body) => reviseLesson({ body })}
                   label={t("lessonContent")}
                   disabled={isPending}
+                />
+                <CourseLessonBlockEditor
+                  key={activeLesson.id + ":blocks"}
+                  blocks={activeLesson.blocks ?? []}
+                  onChange={(blocks) => reviseLesson({ blocks })}
+                  pending={isPending}
+                  move={moveItem}
                 />
                 <div className="form-actions">
                   <Button

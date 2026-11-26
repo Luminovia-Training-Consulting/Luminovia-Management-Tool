@@ -8,7 +8,7 @@ const courseContent = {
   additionalProperties: false,
   required: ["modules"],
   description:
-    "Validated, size-bounded Tiptap JSON. Only the documented safe editor node and link types are accepted; executable HTML and unsupported nodes are rejected.",
+    "Bounded versioned lessons support safe Tiptap nodes, scanned material references and plain-text note, practice and checklist blocks.",
   properties: {
     modules: {
       type: "array",
@@ -46,6 +46,30 @@ const courseContent = {
                 },
                 body: { type: "object" },
                 archived: { type: "boolean" },
+                blocks: {
+                  type: "array",
+                  maxItems: 12,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["id", "kind", "title", "text"],
+                    properties: {
+                      id: {
+                        ...uuid,
+                        pattern:
+                          "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                      },
+                      kind: { enum: ["note", "practice", "checklist"] },
+                      title: { type: "string", maxLength: 120 },
+                      text: { type: "string", maxLength: 4000 },
+                      answer: { type: "string", maxLength: 4000 },
+                    },
+                    if: {
+                      properties: { kind: { enum: ["note", "checklist"] } },
+                    },
+                    then: { not: { required: ["answer"] } },
+                  },
+                },
                 material_ids: {
                   type: "array",
                   items: {

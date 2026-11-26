@@ -1,5 +1,6 @@
 /** Shared curriculum codec for immutable saved revisions and the authoring editor. */
 import type { JSONContent } from "@tiptap/react";
+import { z } from "zod";
 import {
   contentIsValid,
   emptyDocument,
@@ -14,6 +15,7 @@ export type CourseLesson = {
   body: JSONContent;
   archived?: boolean;
   material_ids?: string[];
+  blocks?: CourseLessonBlock[];
 };
 
 export type CourseModule = {
@@ -30,6 +32,28 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const maxCourseModules = 40;
 export const maxModuleLessons = 100;
 export const maxLessonMaterials = 12;
+
+export const maxLessonBlocks = 12;
+export const lessonBlockKinds = ["note", "practice", "checklist"] as const;
+export const lessonBlock = z
+  .strictObject({
+    id: z
+      .string()
+      .regex(uuid)
+      .refine((id) => id === id.toLowerCase()),
+    kind: z.enum(lessonBlockKinds),
+    title: z.string().max(120),
+    text: z.string().max(4000),
+    answer: z.string().max(4000).optional(),
+  })
+  .refine(({ kind, answer }) => kind === "practice" || answer === undefined);
+export type CourseLessonBlock = z.infer<typeof lessonBlock>;
+const lessonBlocks = z
+  .array(lessonBlock)
+  .max(maxLessonBlocks)
+  .refine(
+    (blocks) => new Set(blocks.map(({ id }) => id)).size === blocks.length,
+  );
 
 export const emptyCurriculum: CourseCurriculum = { modules: [] };
 
@@ -73,6 +97,7 @@ export function normalizeCourseLesson(lessonCandidate: unknown): CourseLesson {
       new Set(materials).size !== materials.length)
   )
     throw new Error("Invalid lesson material references");
+  const blocks = lessonBlocks.optional().parse(lesson.blocks);
   const body = normalizedDocument(lesson.body as JSONContent);
   if (!contentIsValid(body, true)) throw new Error("Invalid lesson content");
   return {
@@ -83,6 +108,7 @@ export function normalizeCourseLesson(lessonCandidate: unknown): CourseLesson {
     body,
     ...(lesson.archived && { archived: true }),
     ...(materials?.length && { material_ids: [...materials] }),
+    ...(blocks?.length && { blocks }),
   };
 }
 
@@ -162,6 +188,12 @@ export function copyCourseLesson(lesson: CourseLesson): CourseLesson {
     id: newCourseContentId(),
     body: structuredClone(lesson.body),
     ...(lesson.material_ids && { material_ids: [...lesson.material_ids] }),
+    ...(lesson.blocks && {
+      blocks: lesson.blocks.map((block) => ({
+        ...block,
+        id: newCourseContentId(),
+      })),
+    }),
   };
 }
 
@@ -230,6 +262,7 @@ function indexCurriculum(curriculum: CourseCurriculum) {
           lesson.duration_minutes,
           lesson.body,
           lesson.material_ids ?? [],
+          lesson.blocks ?? [],
         ]),
       });
     });
