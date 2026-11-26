@@ -628,31 +628,36 @@ try {
             /* scanner may not have started */
         }
     }
-    for (const name of [
-        ...(phase.browser ? ["playwright-report", "test-results"] : []),
-        ...(phase.system ? ["coverage"] : []),
-    ])
-        if (existsSync(join(scratch, name)))
-            cpSync(join(scratch, name), join(artifacts, name), {recursive: true});
-    if (phase.browser && existsSync(join(scratch, ".local/browser")))
-        cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
-            recursive: true,
-        });
-    if (phase.browser && existsSync(join(scratch, ".local/screenshots")))
-        cpSync(
-            join(scratch, ".local/screenshots"),
-            join(artifacts, "screenshots"),
-            {
+    try {
+        for (const name of [
+            ...(phase.browser ? ["playwright-report", "test-results"] : []),
+            ...(phase.system ? ["coverage"] : []),
+        ])
+            if (existsSync(join(scratch, name)))
+                cpSync(join(scratch, name), join(artifacts, name), {recursive: true});
+        if (phase.browser && existsSync(join(scratch, ".local/browser")))
+            cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
                 recursive: true,
-            },
-        );
-    if (existsSync(join(scratch, ".local/runtime.log")))
-        cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
-    rmSync(runDirectory, {recursive: true, force: true});
-    rmSync(lock, {recursive: true, force: true});
-    releaseSharedLock();
-    process.removeListener("SIGINT", cancel);
-    process.removeListener("SIGTERM", cancel);
+            });
+        if (phase.browser && existsSync(join(scratch, ".local/screenshots")))
+            cpSync(
+                join(scratch, ".local/screenshots"),
+                join(artifacts, "screenshots"),
+                {
+                    recursive: true,
+                },
+            );
+        if (existsSync(join(scratch, ".local/runtime.log")))
+            cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
+    } catch (copyError) {
+        failure ??= copyError;
+    } finally {
+        rmSync(runDirectory, {recursive: true, force: true});
+        rmSync(lock, {recursive: true, force: true});
+        releaseSharedLock();
+        process.removeListener("SIGINT", cancel);
+        process.removeListener("SIGTERM", cancel);
+    }
 }
 // A cancellation during bounded cleanup must not turn a partial run into PASS.
 if (cancellation.signal.aborted)

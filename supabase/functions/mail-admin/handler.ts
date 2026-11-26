@@ -88,7 +88,7 @@ export function createMailAdminHandler(deps: MailAdminDependencies) {
             }
         }
         if (
-            request.headers.get("content-type")?.split(";", 1)[0].trim() !==
+            request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !==
             "application/json"
         )
             return response(400, {error: "invalid_request"}, origin);

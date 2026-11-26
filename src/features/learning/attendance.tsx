@@ -404,6 +404,7 @@ function AttendanceEvidence({
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [downloadError, setDownloadError] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const stage = useRef<{ clientId: string; version?: string } | null>(null);
   const upload = useMutation({
     mutationFn: async () => {
@@ -486,21 +487,28 @@ function AttendanceEvidence({
               <Button
                 type="button"
                 variant="secondary"
-                disabled={!online}
-                onClick={() => {
+                disabled={!online || downloadingId !== null}
+                onClick={async () => {
                   setDownloadError(false);
-                  const download =
-                    item.resource_id === null
-                      ? downloadPortalDocument(
-                          { kind: "attendance_evidence", id: item.id },
-                          item.name,
-                        )
-                      : downloadCourseDocument(
-                          "resource",
-                          item.resource_id,
-                          item.name,
-                        );
-                  void download.catch(() => setDownloadError(true));
+                  setDownloadingId(item.id);
+                  try {
+                    if (item.resource_id === null) {
+                      await downloadPortalDocument(
+                        { kind: "attendance_evidence", id: item.id },
+                        item.name,
+                      );
+                    } else {
+                      await downloadCourseDocument(
+                        "resource",
+                        item.resource_id,
+                        item.name,
+                      );
+                    }
+                  } catch {
+                    setDownloadError(true);
+                  } finally {
+                    setDownloadingId(null);
+                  }
                 }}
               >
                 {t("download")}

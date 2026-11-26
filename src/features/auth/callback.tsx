@@ -78,14 +78,12 @@ export function AuthCallback() {
             name: portalInternalEdition ? "Luminovia" : brand.name,
           })}
         </p>
-        {invite ? (
+        {invite && (
           <Button onClick={() => void accept()} disabled={busy || !online}>
             {t(busy ? "loading" : action)}
           </Button>
-        ) : (
-          <Notice kind="error">{t("inviteInvalid")}</Notice>
         )}
-        {(failed || error) && (
+        {(!invite || failed || error) && (
           <Notice kind="error">{t("inviteInvalid")}</Notice>
         )}
       </section>

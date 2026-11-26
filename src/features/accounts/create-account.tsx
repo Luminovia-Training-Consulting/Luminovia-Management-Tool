@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
-import { Field, Notice } from "../../components/common";
+import { ErrorState, Field, Notice } from "../../components/common";
 import { ParticipantPlacementFields } from "../operations/participant-placement-fields";
 import { emptyParticipantPlacement } from "../operations/company-participant-schema";
 import {
@@ -208,6 +208,9 @@ export function CreateAccountForm({
               </option>
             ))}
           </select>
+          {organisations.isError && (
+            <ErrorState retry={() => void organisations.refetch()} />
+          )}
         </Field>
       )}
       {role === "participant" && (

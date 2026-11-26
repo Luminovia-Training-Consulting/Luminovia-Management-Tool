@@ -38,7 +38,7 @@ export function createHumanLoginHandler(
     }
     const json = (status: number, body: unknown) =>
       new Response(JSON.stringify(body), { status, headers });
-    if (origin && !allowedOrigins.includes(origin)) return json(403, failure);
+    if (origin !== null && !allowedOrigins.includes(origin)) return json(403, failure);
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers });
     if (request.method !== "POST") return json(405, { error: "method_not_allowed" });

@@ -75,6 +75,7 @@ export function CompanyIntegrations({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || !online || !keys.isSuccess) return;
     const form = event.currentTarget;
     const payload = new FormData(form);
     setCredential("");

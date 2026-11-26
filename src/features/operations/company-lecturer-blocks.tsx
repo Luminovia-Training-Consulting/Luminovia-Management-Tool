@@ -296,6 +296,9 @@ export function AcademyCompanyLecturerBlocks({ actor }: { actor: string }) {
       return lecturerBlockOrganisation.array().parse(data);
     },
   });
+  if (directory.isPending) return <Loading />;
+  if (directory.isError)
+    return <ErrorState retry={() => void directory.refetch()} />;
   if (!directory.isSuccess || !directory.isFetchedAfterMount) return null;
   return <CompanyLecturerBlocks actor={actor} organisations={directory.data} />;
 }

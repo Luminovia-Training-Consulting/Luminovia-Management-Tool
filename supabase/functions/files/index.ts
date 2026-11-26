@@ -103,11 +103,13 @@ Deno.serve(async (request: Request) => {
         if (requestUrl.searchParams.get('mode') === 'academy-logo') {
             const version = academyLogoVersion(requestUrl.searchParams);
             if (version === null) return json(400, {error: 'invalid_request'});
-            if (request.headers.get('content-type') !== 'image/png') return json(415, {error: 'unsupported_type'});
+            if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'image/png') return json(415, {error: 'unsupported_type'});
             const check = () => user.rpc('check_academy_logo_write', {p_expected_version: version});
             const authorization = (error: {code: string}) => error.code === 'PT409'
                 ? json(409, {error: 'logo_changed'})
-                : json(403, {error: 'access_denied'});
+                : error.code === '42501'
+                    ? json(403, {error: 'access_denied'})
+                    : json(503, {error: 'upload_failed'});
             const before = await check();
             if (before.error) return authorization(before.error);
             const bytes = await boundedBytes(request, logoMaxBytes);
@@ -137,7 +139,7 @@ Deno.serve(async (request: Request) => {
         const examSubmission = query === '?mode=exam-submission';
         const submissionIntake = query === courseSubmissionQuery || examSubmission;
         const scopedIntake = academyIntake || submissionIntake;
-        const multipart = request.headers.get('content-type')?.startsWith('multipart/form-data');
+        const multipart = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data';
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (scopedIntake) {
             const access = await user.rpc('portal_access');
@@ -322,9 +324,10 @@ Deno.serve(async (request: Request) => {
                 if (!verdict.clean) {
                     if (protectedUpload) await protectedScan('rejected', lease, digest, verdict.version);
                     else {
-                        await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
-                        await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
-                        await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_rejected', resource_id: doc.id});
+                        const rejectedVersion = await service.from('document_versions').update({status: 'rejected', sha256: digest, scanner_version: verdict.version}).eq('id', reservation.version_id);
+                        const rejectedDocument = await service.from('documents').update({status: 'rejected'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
+                        const rejectedAudit = await service.from('audit_events').insert({actor_id: actor, action: 'document.scan_rejected', resource_id: doc.id});
+                        if (rejectedVersion.error || rejectedDocument.error || rejectedAudit.error) return json(503, {error: 'upload_failed', document_id: doc.id});
                     }
                     return json(422, {error: 'scan_rejected', document_id: doc.id});
                 }
@@ -477,7 +480,8 @@ Deno.serve(async (request: Request) => {
                     return r.error || !r.data ? null : new Uint8Array(await r.data.arrayBuffer());
                 }
             });
-            await service.from('audit_events').insert({actor_id: actor, action: 'qualification.evidence_downloaded', resource_id: data.evidence_id});
+            const audit = await service.from('audit_events').insert({actor_id: actor, action: 'qualification.evidence_downloaded', resource_id: data.evidence_id});
+            if (audit.error) return json(503, {error: 'download_unavailable'});
             return new Response(webFileBytes(selected.bytes), {headers: {...headers, 'Content-Type': selected.mime_type, 'Content-Disposition': downloadDisposition(selected.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         }
         // This branch never extends generic file discovery or gives out a Storage URL.
@@ -519,7 +523,8 @@ Deno.serve(async (request: Request) => {
             const receipt = await service.rpc('record_admin_file_download', {p_actor_id: actor, p_resource_id: doc.id});
             if (receipt.error) return json(503, {error: 'download_unavailable'});
         } else {
-            await service.from('audit_events').insert({actor_id: actor, action: 'document.downloaded', resource_id: doc.id});
+            const audit = await service.from('audit_events').insert({actor_id: actor, action: 'document.downloaded', resource_id: doc.id});
+            if (audit.error) return json(503, {error: 'download_unavailable'});
         }
         return new Response(file.data, {headers: {...headers, 'Content-Type': version.data.mime_type, 'Content-Disposition': downloadDisposition(version.data.original_name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         // Return only allowed stable error codes, not Storage paths, tokens or internal provider responses.

@@ -29,6 +29,15 @@ export function FinancialSummaryCards() {
   const spend = useQuery({ ...clientSpendQuery(actor), enabled: client });
   const earnings = useQuery({ ...earningsQuery(actor, false), enabled: own });
   if (access.isPending || commercial.isPending) return null;
+  if (access.isError || commercial.isError)
+    return (
+      <ErrorState
+        retry={() => {
+          void access.refetch();
+          void commercial.refetch();
+        }}
+      />
+    );
   if (gross) {
     if (report.isPending) return <Loading />;
     if (report.isError)

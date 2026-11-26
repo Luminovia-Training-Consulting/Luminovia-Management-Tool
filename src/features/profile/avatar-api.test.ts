@@ -81,13 +81,15 @@ describe("version-bound avatar transport", () => {
 
   it("sends the selected version and verifies the server confirmation before reading bytes", async () => {
     auth.getSession.mockResolvedValue(session);
-    const response = new Response(new Blob(["fictional image"]), {
+    const response = new Response("fictional image", {
       headers: {
         "Content-Type": "image/png",
         "X-Avatar-Version": "selected-version",
       },
     });
-    const readBody = vi.spyOn(response, "blob");
+    const readBody = vi
+      .spyOn(response, "blob")
+      .mockResolvedValue(new Blob(["fictional image"], { type: "image/png" }));
     const fetch = vi.fn().mockResolvedValue(response);
     vi.stubGlobal("fetch", fetch);
 
@@ -108,13 +110,15 @@ describe("version-bound avatar transport", () => {
 
   it("rejects a mismatched server version before reading the response body", async () => {
     auth.getSession.mockResolvedValue(session);
-    const response = new Response(new Blob(["wrong image"]), {
+    const response = new Response("wrong image", {
       headers: {
         "Content-Type": "image/png",
         "X-Avatar-Version": "newer-version",
       },
     });
-    const readBody = vi.spyOn(response, "blob");
+    const readBody = vi
+      .spyOn(response, "blob")
+      .mockResolvedValue(new Blob(["fictional image"], { type: "image/png" }));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
 
     await expect(

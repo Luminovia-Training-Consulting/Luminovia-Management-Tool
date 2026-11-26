@@ -1,8 +1,8 @@
 /** Reads a single-sheet XLSX attendance template locally, without evaluating workbook features. */
 import {
-  BlobWriter,
   TextReader,
   Uint8ArrayReader,
+  Uint8ArrayWriter,
   ZipReader,
   ZipWriter,
   type FileEntry,
@@ -340,10 +340,11 @@ export async function spreadsheetXlsxTemplate(
     "xl/_rels/workbook.xml.rels": `<Relationships xmlns="${packageRelationships}"><Relationship Id="rId1" Type="${relationships}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
     "xl/worksheets/sheet1.xml": `<worksheet xmlns="${namespace}"><sheetData>${sheetRows}</sheetData></worksheet>`,
   };
-  const writer = new ZipWriter(new BlobWriter(workbookMime), {
+  const writer = new ZipWriter(new Uint8ArrayWriter(), {
     useWebWorkers: false,
   });
   for (const [path, contents] of Object.entries(parts))
     await writer.add(path, new TextReader(contents));
-  return writer.close();
+  const bytes = await writer.close();
+  return new Blob([bytes as BlobPart], { type: workbookMime });
 }

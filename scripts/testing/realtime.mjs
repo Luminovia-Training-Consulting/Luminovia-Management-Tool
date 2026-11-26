@@ -15,17 +15,25 @@ export async function subscribeToRoom(client, room, table, eventTypes, events) {
     );
   }
   await new Promise((resolve, reject) => {
+    const fail = (reason) => {
+      clearTimeout(timeout);
+      void client.removeChannel(channel);
+      reject(reason);
+    };
     const timeout = setTimeout(
-      () => reject(new Error(`Realtime subscription timeout: ${table}`)),
+      () => fail(new Error(`Realtime subscription timeout: ${table}`)),
       25_000,
     );
     channel.subscribe((status, error) => {
       if (status === "SUBSCRIBED") {
         clearTimeout(timeout);
         resolve();
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        clearTimeout(timeout);
-        reject(error ?? new Error(status));
+      } else if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT" ||
+        status === "CLOSED"
+      ) {
+        fail(error ?? new Error(status));
       }
     });
   });

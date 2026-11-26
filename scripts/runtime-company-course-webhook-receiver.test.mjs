@@ -328,7 +328,7 @@ test(
     assert.deepEqual(await stopped, [0, null]);
     const { stdout, stderr } = await promisify(execFile)(
       process.execPath,
-      [command, "receipts"],
+      ["--no-warnings=ExperimentalWarning", command, "receipts"],
       { env: { ...env, LUMINOVIA_WEBHOOK_RECEIVER_SECRET: "" } },
     );
     assert.deepEqual(JSON.parse(stdout).event, payload);

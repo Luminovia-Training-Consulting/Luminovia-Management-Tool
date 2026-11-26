@@ -238,6 +238,8 @@ export function CompanyParticipantsPanel({
           className="participant-link-form"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!online || requestLink.isPending || userId.trim().length < 1)
+              return;
             setNotice(null);
             requestLink.mutate(userId);
           }}
@@ -252,6 +254,7 @@ export function CompanyParticipantsPanel({
               value={userId}
               maxLength={32}
               autoComplete="off"
+              disabled={!online || requestLink.isPending}
               onChange={(event) => setUserId(event.currentTarget.value)}
             />
           </Field>
@@ -269,6 +272,7 @@ export function CompanyParticipantsPanel({
           className="participant-invite-form"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!online || invite.isPending) return;
             setNotice(null);
             invite.mutate();
           }}
@@ -283,6 +287,7 @@ export function CompanyParticipantsPanel({
               value={displayName}
               maxLength={120}
               autoComplete="off"
+              disabled={!online || invite.isPending}
               onChange={(event) => setDisplayName(event.currentTarget.value)}
               required
             />
@@ -297,6 +302,7 @@ export function CompanyParticipantsPanel({
               value={email}
               maxLength={254}
               autoComplete="off"
+              disabled={!online || invite.isPending}
               onChange={(event) => setEmail(event.currentTarget.value)}
               required
             />
@@ -343,6 +349,7 @@ export function CompanyParticipantsPanel({
           <Button
             type="button"
             variant="secondary"
+            disabled={remove.isPending}
             onClick={() => setRemoveTarget(null)}
           >
             {t("cancel")}

@@ -236,7 +236,10 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 } else if (typeof first.data.object_path === "string") {
                     objectPath = first.data.object_path;
                 }
-                if (kind === "course_chat_attachment" && first.data.version_id !== body.version_id) {
+                if (
+                    kind === "course_chat_attachment" &&
+                    first.data.version_id !== String(body.version_id).toLowerCase()
+                ) {
                     return json(403, "document_unavailable");
                 }
                 if (!objectPath || typeof first.data.sha256 !== "string")

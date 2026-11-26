@@ -178,7 +178,11 @@ Deno.serve(
                 },
                 body: JSON.stringify({email}),
             });
-            if (!result.ok) throw new Error("access_mail_unavailable");
+            try {
+                if (!result.ok) throw new Error("access_mail_unavailable");
+            } finally {
+                await result.body?.cancel().catch(() => undefined);
+            }
         },
         completeAccount: async (id, userId, success) => {
             const result = await service.rpc("complete_account_creation", {

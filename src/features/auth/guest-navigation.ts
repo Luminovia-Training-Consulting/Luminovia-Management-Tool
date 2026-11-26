@@ -5,9 +5,14 @@ export function isGuestOnly(roles: readonly string[] | undefined): boolean {
 
 /** Guests keep only own settings/profile and the public help container. */
 export function guestRouteAllowed(pathname: string): boolean {
-  return ["/profile", "/settings", "/wiki", "/help", "/assistance"].includes(
-    pathname.replace(/\/$/, "") || "/",
-  );
+  return [
+    "/profile",
+    "/settings",
+    "/wiki",
+    "/help",
+    "/assistance",
+    "/auth/password",
+  ].includes(pathname.replace(/\/$/, "") || "/");
 }
 
 /** Participant-only identities use the protected learning, profile and inbox routes. */

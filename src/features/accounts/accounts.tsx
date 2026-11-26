@@ -633,7 +633,9 @@ function AccountsDirectory({
       </Dialog>
       <Dialog
         open={confirm && selected !== null}
-        onOpenChange={setConfirm}
+        onOpenChange={(open) => {
+          if (!open && !change.isPending) setConfirm(false);
+        }}
         title={t("confirm", {
           name: selected?.display_name || selected?.email,
         })}
