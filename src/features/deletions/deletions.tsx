@@ -248,8 +248,15 @@ function resourceLabel(
     client_course_requests: "companyCourseRequests",
     job_commission_offers: "jobPricingRecords",
     job_dispatch: "jobDispatchRecords",
+    course_offer_mail_publications: "jobPublicationEmailRecords",
     claim_revenue_ledger: "assignmentPricingRecords",
     company_lecturer_decisions: "companyLecturerDecisions",
+    emergency_assignment_days: "emergencyAssignmentDays",
+    assignment_withdrawals: "assignmentWithdrawals",
+    assignment_withdrawal_commands: "assignmentWithdrawalCommands",
+    job_substitutions: "jobSubstitutions",
+    replacement_offers: "replacementOffers",
+    replacement_requests: "replacementOfferRequests",
     course_run_job_requests: "courseJobRecords",
     organisation_private_details: "organisationDetails",
     course_template_topics: "courseTopicAssignments",
@@ -303,6 +310,7 @@ function resourceLabel(
     global_events: "global_event",
     contracts: "contract",
     invoices: "invoice",
+    invoice_items: "invoiceItems",
     payment_records: "payment",
     personal_events: "personal_event",
     lecturer_availability: "availability",
@@ -474,7 +482,7 @@ function DeletionDialog({
       onOpenChange={(value) => {
         if (!value && !change.isPending) close();
       }}
-      title={t("title")}
+      title={t(target.kind === "job" ? "jobTitle" : "title")}
       description={t("irreversible")}
     >
       <div className="permanent-deletion-dialog">
@@ -627,7 +635,7 @@ function DeletionDialog({
                     disabled={change.isPending}
                     onChange={(event) => setChecked(event.target.checked)}
                   />
-                  {t("acknowledge")}
+                  {t(target.kind === "job" ? "acknowledgeJob" : "acknowledge")}
                 </label>
                 <Field
                   id="permanent-deletion-confirmation"

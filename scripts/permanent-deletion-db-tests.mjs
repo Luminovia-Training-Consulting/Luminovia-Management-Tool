@@ -304,6 +304,193 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
         },
     );
     await check(
+        "A standalone job cascade removes its accepted work, discussion and files while keeping the course",
+        async () => {
+            const [
+                company,
+                template,
+                run,
+                courseDate,
+                job,
+                sibling,
+                claim,
+                allocation,
+                room,
+                participantRoom,
+                message,
+                comment,
+                request,
+                jobFile,
+                roomFile,
+                jobVersion,
+                roomVersion,
+                withdrawal,
+                substitution,
+                replacement,
+                replacementRequest,
+            ] = Array.from({ length: 21 }, randomUUID);
+            const paths = [`fictional/job/${jobVersion}`, `fictional/room/${roomVersion}`];
+            const notices = [
+                ["claim_confirmed", claim],
+                ["chat_message", message],
+                ["session_reminder", allocation],
+                ["course_offer_published", job],
+                ["assignment_withdrawal_requested", withdrawal],
+                ["substitution_proposed", substitution],
+                ["replacement_available", replacement],
+            ].map(([kind, resource]) => [randomUUID(), kind, resource]);
+            const noticeIds = notices.map(([id]) => q(id)).join(",");
+            await sql(`insert into public.organisations(id,name) values(${q(company)},'Fictional standalone job customer');
+              insert into public.course_templates(id,title) values(${q(template)},'Fictional standalone job template');
+              insert into public.course_runs(id,template_id,organisation_id,published) values(${q(run)},${q(template)},${q(company)},true);
+              insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+                values(${q(courseDate)},${q(run)},'2045-02-05 09:00+00','2045-02-05 10:00+00');
+              insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+                values(${q(job)},${q(run)},'Fictional accepted job','Fictional company','online','filled',50,50,'EUR','fixed_total','Fictional terms'),
+                  (${q(sibling)},${q(run)},'Fictional sibling job','Fictional company','online','draft',50,50,'EUR','fixed_total','Fictional terms');
+              insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at) values
+                (${q(job)},${q(courseDate)},'2045-02-05 09:00+00','2045-02-05 10:00+00'),
+                (${q(sibling)},${q(courseDate)},'2045-02-05 09:00+00','2045-02-05 10:00+00');
+              insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
+                values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},50,50,'EUR','fixed_total','Fictional accepted terms',1);
+              insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at)
+                values(${q(allocation)},${q(claim)},${q(owner)},'2045-02-05 09:00+00','2045-02-05 10:00+00');
+              insert into public.claim_events(claim_id,actor_id,event_type) values(${q(claim)},${q(owner)},'confirmed');
+              insert into private.claim_revenue_ledger(claim_id,job_id,organisation_id,lecturer_id,gross_amount,gross_total_amount,platform_percent,platform_total_amount,lecturer_net_amount,lecturer_net_total_amount,currency)
+                values(${q(claim)},${q(job)},${q(company)},${q(owner)},100,100,50,50,50,50,'EUR');
+              insert into public.chat_rooms(id,job_id,kind,course_run_id,owner_id) values
+                (${q(room)},${q(job)},'lecturer_course',${q(run)},${q(owner)}),(${q(participantRoom)},null,'participant_course',${q(run)},null);
+              insert into public.chat_members(room_id,user_id) values(${q(room)},${q(owner)});
+              insert into public.messages(id,room_id,sender_id,client_id,request_hash,body)
+                values(${q(message)},${q(room)},${q(owner)},${q(randomUUID())},'fictional-hash','Fictional lecturer message');
+              insert into private.resource_comments(id,job_id,author_id,request_id,body)
+                values(${q(comment)},${q(job)},${q(owner)},${q(randomUUID())},'Fictional job discussion');
+              insert into private.resource_comment_revisions(comment_id,version,actor_id,previous_body,action)
+                values(${q(comment)},1,${q(owner)},'Fictional previous comment','edit');
+              insert into private.client_course_requests(id,organisation_id,requested_by,client_id,payload,job_id,status)
+                values(${q(request)},${q(company)},${q(owner)},${q(randomUUID())},'{}',${q(job)},'published');
+              insert into private.client_request_briefs(request_id,content) values(${q(request)},'{"description":"Fictional job brief"}');
+              insert into private.course_offer_mail_publications(job_id) values(${q(job)});
+              insert into private.assignment_withdrawals(id,claim_id,lecturer_id,status,reason)
+                values(${q(withdrawal)},${q(claim)},${q(owner)},'pending','Fictional withdrawal');
+              insert into private.assignment_withdrawal_commands(actor_id,request_id,payload,withdrawal_id)
+                values(${q(owner)},${q(randomUUID())},'{}',${q(withdrawal)});
+              insert into private.job_substitutions(id,original_claim_id,job_id,target_user_id,proposed_by,request_id,reason,quote,quote_hash,expires_at)
+                values(${q(substitution)},${q(claim)},${q(job)},${q(other)},${q(owner)},${q(randomUUID())},'Fictional substitution','{}','fictional-hash',now()+interval '1 day');
+              insert into private.replacement_offers(id,original_claim_id,requested_by,reason,mode,job_version)
+                values(${q(replacement)},${q(claim)},${q(owner)},'Fictional replacement','open',1);
+              insert into private.replacement_requests(actor_id,request_id,payload,result)
+                values(${q(owner)},${q(replacementRequest)},jsonb_build_object('offer',${q(replacement)}::uuid),'{}');
+              insert into public.documents(id,owner_id,uploaded_by,scope,kind,job_id,room_id,original_name,mime_type,size_bytes,status,client_id) values
+                (${q(jobFile)},${q(owner)},${q(owner)},'job_before','material',${q(job)},null,'Fictional job material.txt','text/plain',100,'clean',${q(randomUUID())}),
+                (${q(roomFile)},${q(owner)},${q(owner)},'room','chat',null,${q(room)},'Fictional room file.txt','text/plain',100,'clean',${q(randomUUID())});
+              insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status) values
+                (${q(jobVersion)},${q(jobFile)},${q(owner)},${q(randomUUID())},1,${q(paths[0])},'Fictional job material.txt','text/plain',100,'clean'),
+                (${q(roomVersion)},${q(roomFile)},${q(owner)},${q(randomUUID())},1,${q(paths[1])},'Fictional room file.txt','text/plain',100,'clean');
+              update public.documents set current_version_id=${q(jobVersion)} where id=${q(jobFile)};
+              update public.documents set current_version_id=${q(roomVersion)} where id=${q(roomFile)};`);
+
+            const beforeNotice = await plan("job", job);
+            assert.equal(beforeNotice.can_confirm, true, JSON.stringify(beforeNotice.blockers));
+            await sql(`insert into public.notifications(id,user_id,kind,resource_id) values ${notices.map(([id, kind, resource]) => `(${q(id)},${q(owner)},${q(kind)},${q(resource)})`).join(",")};
+              insert into private.notification_email_outbox(notification_id,occurrence_at)
+                select id,created_at from public.notifications where id in (${noticeIds})
+                on conflict do nothing;`);
+            await expectCode(confirm(beforeNotice), "40001");
+            await expectCode(plan("job", job, owner), "42501");
+            const preview = await plan("job", job);
+            assert.equal(preview.can_confirm, true, JSON.stringify(preview.blockers));
+            const ownedRows = [
+                ["public.jobs", `id=${q(job)}`],
+                ["public.job_sessions", `job_id=${q(job)}`],
+                ["public.job_claims", `id=${q(claim)}`],
+                ["public.assignment_sessions", `id=${q(allocation)}`],
+                ["public.claim_events", `claim_id=${q(claim)}`],
+                ["private.claim_revenue_ledger", `claim_id=${q(claim)}`],
+                ["public.chat_rooms", `id=${q(room)}`],
+                ["public.chat_members", `room_id=${q(room)}`],
+                ["public.messages", `id=${q(message)}`],
+                ["private.resource_comments", `id=${q(comment)}`],
+                ["private.resource_comment_revisions", `comment_id=${q(comment)}`],
+                ["private.client_course_requests", `id=${q(request)}`],
+                ["private.client_request_briefs", `request_id=${q(request)}`],
+                ["private.course_offer_mail_publications", `job_id=${q(job)}`],
+                ["private.assignment_withdrawals", `id=${q(withdrawal)}`],
+                ["private.assignment_withdrawal_commands", `withdrawal_id=${q(withdrawal)}`],
+                ["private.job_substitutions", `id=${q(substitution)}`],
+                ["private.replacement_offers", `id=${q(replacement)}`],
+                ["private.replacement_requests", `request_id=${q(replacementRequest)}`],
+            ];
+            for (const [relation] of ownedRows) assert.equal(preview.counts[relation], 1, relation);
+            assert.equal(preview.counts["public.notifications"], notices.length);
+            assert.equal(preview.counts["private.notification_email_outbox"], notices.length);
+            assert.equal(preview.counts["public.documents"], 2);
+            assert.equal(preview.counts["public.document_versions"], 2);
+            assert.ok(preview.counts["private.client_request_revisions"] >= 2);
+            assert.equal(preview.counts["public.course_runs"] ?? 0, 0);
+
+            const op = await confirm(preview),
+                execution = await permit(op);
+            const work = await worker("work", key(op, execution));
+            assert.equal(work.objects.length, 4);
+            assert.deepEqual(new Set(work.objects.map(({ path }) => path)), new Set(paths));
+            await expectCode(
+                sql(`update private.resource_comments set body='Late edit' where id=${q(comment)}`),
+                "55000",
+            );
+            await worker("apply", key(op, execution));
+            assert.equal((await worker("complete", `${key(op, execution)},true,true`)).status, "completed");
+
+            for (const [relation, selector] of [
+                ...ownedRows,
+                ["private.client_request_revisions", `request_id=${q(request)}`],
+                ["public.documents", `id in (${q(jobFile)},${q(roomFile)})`],
+                ["public.document_versions", `id in (${q(jobVersion)},${q(roomVersion)})`],
+                ["public.notifications", `id in (${noticeIds})`],
+                ["private.notification_email_outbox", `notification_id in (${noticeIds})`],
+            ])
+                assert.equal(await sql(`select count(*) from ${relation} where ${selector}`), "0", relation);
+            for (const [relation, selector] of [
+                ["public.organisations", `id=${q(company)}`],
+                ["public.course_templates", `id=${q(template)}`],
+                ["public.course_runs", `id=${q(run)}`],
+                ["public.course_sessions", `id=${q(courseDate)}`],
+                ["public.jobs", `id=${q(sibling)}`],
+                ["public.job_sessions", `job_id=${q(sibling)} and course_session_id=${q(courseDate)}`],
+                ["public.chat_rooms", `id=${q(participantRoom)}`],
+            ])
+                assert.equal(await sql(`select count(*) from ${relation} where ${selector}`), "1", relation);
+        },
+    );
+    await check("A standalone job purge cannot remove the source of an approved invoice", async () => {
+        const [job, claim, invoice, file, version] = Array.from({ length: 5 }, randomUUID);
+        await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+          values(${q(job)},'Fictional invoiced job','Fictional company','online','filled',50,50,'EUR','fixed_total','Fictional terms');
+          insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
+            values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},50,50,'EUR','fixed_total','Fictional invoiced terms',1);
+          insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+            values(${q(file)},${q(owner)},${q(owner)},'personal','invoice','Fictional approved invoice.pdf','application/pdf',100,'clean',${q(randomUUID())});
+          insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+            values(${q(version)},${q(file)},${q(owner)},${q(randomUUID())},1,${q(`fictional/invoice/${version}`)},'Fictional approved invoice.pdf','application/pdf',100,'clean',repeat('a',64));
+          update public.documents set current_version_id=${q(version)} where id=${q(file)};
+          insert into public.invoices(id,user_id,number,issued_on,due_on,currency,total_amount,document_version_id,client_id,status)
+            values(${q(invoice)},${q(owner)},'FICTIONAL-PURGE-BLOCKER','2001-01-01','2001-02-01','EUR',50,${q(version)},${q(randomUUID())},'approved');
+          insert into public.invoice_items(invoice_id,claim_id) values(${q(invoice)},${q(claim)});`);
+        const preview = await plan("job", job);
+        assert.equal(preview.can_confirm, false);
+        assert.equal(preview.counts["public.job_claims"], 1);
+        assert.ok(preview.blockers.some(({ kind }) => kind === "public.invoice_items"));
+        await expectCode(confirm(preview), "23503");
+        assert.equal(await sql(`select status from public.jobs where id=${q(job)}`), "filled");
+        assert.equal(await sql(`select status from public.invoices where id=${q(invoice)}`), "approved");
+        assert.equal(
+            await sql(
+                `select count(*) from public.invoice_items where invoice_id=${q(invoice)} and claim_id=${q(claim)}`,
+            ),
+            "1",
+        );
+    });
+    await check(
         "Private registry and service work stay inaccessible; live permissions and exact ownership are authoritative",
         async () => {
             assert.ok(

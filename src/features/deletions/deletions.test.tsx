@@ -604,19 +604,68 @@ describe("permanent deletion confirmation", () => {
       "job",
     );
   });
-  it("renders English confirmation and errors through the same contract", async () => {
-    await i18n.changeLanguage("en");
-    setup();
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: "Delete permanently: Fictional workshop",
-      }),
-    );
-    expect(await screen.findByText("Deletion impact")).toBeVisible();
-    expect(
-      screen.getByText(
+  it.each([
+    {
+      language: "de",
+      action: "Endgültig löschen",
+      title: "Auftrag endgültig löschen",
+      impact: "Umfang der Löschung",
+      records: "E-Mail-Vorgänge zur Auftragsveröffentlichung",
+      acknowledgement:
+        "Ich habe den Umfang geprüft und möchte diesen Auftrag samt den aufgeführten Daten endgültig löschen.",
+      irreversible:
+        "Diese Löschung ist unwiderruflich. Es gibt keinen Papierkorb und keine Wiederherstellung.",
+    },
+    {
+      language: "en",
+      action: "Delete permanently",
+      title: "Permanently delete job",
+      impact: "Deletion impact",
+      records: "Job publication email records",
+      acknowledgement:
+        "I reviewed the impact and want to permanently delete this job and the listed records.",
+      irreversible:
         "This deletion is irreversible. There is no trash or restore.",
-      ),
-    ).toBeVisible();
-  });
+    },
+  ])(
+    "names the job and its confirmed deletion scope in $language",
+    async ({
+      language,
+      action,
+      title,
+      impact,
+      records,
+      acknowledgement,
+      irreversible,
+    }) => {
+      await i18n.changeLanguage(language);
+      const initial = state.request.getMockImplementation()!;
+      state.request.mockImplementation((...args) =>
+        args[0] === "deletions/preview"
+          ? Promise.resolve({
+              ...preview,
+              counts: {
+                ...preview.counts,
+                "private.course_offer_mail_publications": 1,
+              },
+            })
+          : initial(...args),
+      );
+      setup();
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: `${action}: Fictional workshop`,
+        }),
+      );
+      const dialog = within(await screen.findByRole("dialog", { name: title }));
+      expect(await dialog.findByText(impact)).toBeVisible();
+      expect(dialog.getByText(records).nextElementSibling).toHaveTextContent(
+        "1",
+      );
+      expect(
+        dialog.getByRole("checkbox", { name: acknowledgement }),
+      ).toBeVisible();
+      expect(dialog.getByText(irreversible)).toBeVisible();
+    },
+  );
 });

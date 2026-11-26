@@ -136,6 +136,8 @@ Open **Meine Rollen / My roles** on your own account card as an internal adminis
 
 Open **Endgültig löschen / Delete permanently** from the permitted account, job, course or organisation detail with current required permissions. Archiving remains a separate action. A company account's own-job list contains only jobs linked consistently to its current organisations; names, old lecturer assignments or former membership do not grant access.
 
+From a job's detail, an Owner or administrator can review and confirm **Auftrag endgültig löschen / Permanently delete job**. The preview includes the job's dates, assignments, dedicated lecturer chat, attachments and other records that belong to the job. This action is scoped to the job and its listed records. Linked finance records and dependencies shared with other jobs or the course can block the action. Company members use the existing own-job action with a narrower scope.
+
 For an unpublished internal course draft with unused dates and no linked assignment or teaching records, the preview includes the dates. Review the total scope, then confirm to remove the draft and dates together. Open **Zu den Kursterminen / Go to course sessions** when the dates block deletion. If an assignment owns the schedule, follow its link in the preview. A blocked template also links to the visible runs using it.
 
 The preview for an otherwise deletable course includes its unused weighted grading policies. A recorded exemption, grading review or release protects the course's grading history and blocks permanent deletion.
