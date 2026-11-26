@@ -298,5 +298,5 @@ await withTestDatabase(
         );
         console.log("PASS calendar subscription forward upgrade preserves the existing token and grants and removes teaching entries after role revocation");
     },
-    {migrationsThrough: "20261126124500"},
+    {migrationsThrough: "20261126125500"},
 );
