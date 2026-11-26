@@ -38,7 +38,6 @@ import {
   type CourseLesson,
   type CourseModule,
 } from "./course-authoring-schema";
-import { mergeCourseCurriculum } from "./curriculum-merge";
 import "../knowledge/knowledge.css";
 import "./i18n";
 
@@ -621,7 +620,11 @@ export function CourseAuthoring({
       latest.review?.state === "scheduled";
     const merged =
       latest.can_edit && !locked
-        ? mergeCourseCurriculum(localDraft.base, draftPayload.content, remote)
+        ? (await import("./curriculum-merge")).mergeCourseCurriculum(
+            localDraft.base,
+            draftPayload.content,
+            remote,
+          )
         : null;
     setMergeBlocked(merged === null);
     if (merged) {

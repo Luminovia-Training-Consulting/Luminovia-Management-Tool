@@ -1,6 +1,6 @@
 /** Shared client and OpenAPI contract for metadata on a single course file share. */
 import { z } from "zod";
-import { competencyDefinition } from "./competency-schema";
+import { competencyDefinition } from "./competency-schema.ts";
 
 export const materialCompetency = competencyDefinition.extend({
   framework_id: z.uuid(),

@@ -1657,7 +1657,8 @@ function CourseWorkspaceLayout({
             {currentSection === "course-materials" &&
               course.lms_enabled &&
               course.access.staff &&
-              canEdit && (
+              canEdit &&
+              online && (
                 <Suspense fallback={<Loading />}>
                   <ScormPackageReview
                     key={actor + ":" + course.id}
@@ -1668,7 +1669,8 @@ function CourseWorkspaceLayout({
               )}
             {currentSection === "course-materials" &&
               course.lms_enabled &&
-              (course.access.staff || learner) && (
+              (course.access.staff || learner) &&
+              (online ? (
                 <Suspense fallback={<Loading />}>
                   <CourseScormPlayer
                     key={`${actor}:${course.id}:scorm`}
@@ -1681,7 +1683,9 @@ function CourseWorkspaceLayout({
                     course={course.id}
                   />
                 </Suspense>
-              )}
+              ) : (
+                <Notice>{t("submissionOnline")}</Notice>
+              ))}
           </div>
           {hasSubmissions && (
             <div
