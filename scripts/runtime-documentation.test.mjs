@@ -50,9 +50,10 @@ test("repository documentation links and heading fragments resolve", async () =>
     async function walk(directory) {
         for (const item of await readdir(directory, {withFileTypes: true})) {
             const path = `${directory}/${item.name}`;
-            // The pinned Supabase upstream snapshot retains links to files in the
-            // original vendor repository. Validate maintained project guidance here.
-            if (path === "deploy/hostinger/supabase/upstream") continue;
+            // Installed package docs and the Supabase snapshot refer to files in
+            // their upstream repositories. Check the maintained guidance here.
+            if (item.name === "node_modules" || path === "deploy/hostinger/supabase/upstream")
+                continue;
             if (item.isDirectory()) await walk(path);
             else if (item.name.endsWith(".md")) files.push(path);
         }
@@ -178,6 +179,8 @@ test("public guidance and current catalogue contain no historical customer ident
 // The programme's governing AGENTS instructions require these durable source
 // records. Keep the consolidated product docs and retain an
 // explicit inventory of project records and published materials under docs/.
+// The retired sales material was removed from the current delivery inventory.
+// The exact list still catches new or missing records.
 test("documentation retains the approved project records and published materials", async () => {
     const requiredRecords = new Set([
         "PRODUCT.md",
@@ -187,7 +190,6 @@ test("documentation retains the approved project records and published materials
         "PRODUCTION-READINESS.md",
         "design-qa.md",
         "customer-handoff",
-        "sales",
     ]);
     const deliveredRecords = (await readdir("docs")).sort();
     assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
@@ -196,12 +198,6 @@ test("documentation retains the approved project records and published materials
         "CUSTOMER-LICENCE.de.md",
         "OPERATIONS-AND-SUPPORT.de.md",
         "README.md",
-    ]);
-    assert.deepEqual((await readdir("docs/sales")).sort(), [
-        "luminovia-flyer-de.pdf",
-        "luminovia-flyer-en.pdf",
-        "luminovia-sales-deck-de.pptx",
-        "luminovia-sales-deck-en.pptx",
     ]);
     const generator = await readFile(
         "scripts/generate-api-reference.mjs",

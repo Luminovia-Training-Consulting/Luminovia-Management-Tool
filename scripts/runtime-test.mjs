@@ -12,6 +12,7 @@ import {runtimeSnapshotSource} from "./runtime-snapshot.mjs";
 import {runtimeTestArguments, runtimeTestPhasePlan,} from "./runtime-test-phase.mjs";
 import {acquireTestLock, allocateTestServicePorts, assertTestPortsAvailable,} from "./runtime-test-lock.mjs";
 import {runBounded} from "./testing/run-bounded.mjs";
+import {prepareH5pBrowserRuntime} from "./testing/h5p-browser-runtime.mjs";
 import {assertLocalDocker, cleanEnvironment, command, privateDirectory, privateWrite, root, runtimeDir,} from "./runtime-lib.mjs";
 
 // Parse before acquiring a lock, copying source or reaching a Docker engine.
@@ -68,6 +69,7 @@ const env = cleanEnvironment({
 });
 let failure;
 let localDockerReady = false;
+let h5p;
 const cancellation = new AbortController();
 const evidence = {
     version: 1,
@@ -447,6 +449,12 @@ try {
                 ]);
         }
     }
+    if (phase.browser) {
+        h5p = await prepareH5pBrowserRuntime(join(runDirectory, "h5p"));
+        // Vite reloads this private snapshot configuration after the real
+        // persistence check restarts the portal. The built PWA stays separate.
+        privateWrite(join(scratch, ".env.development.local"), `VITE_H5P_CONTENT_HOST=${h5p.host}\n`);
+    }
     await step("Start complete isolated services", process.execPath, [
         "scripts/runtime-cli.mjs",
         "start",
@@ -535,13 +543,25 @@ try {
             "chromium",
             ...(includeWebKit ? ["webkit"] : []),
         ]);
+        const player = "deploy/lms-content/h5p";
+        await step("Install pinned H5P player dependencies", "npm", [
+            "--prefix", player, "ci", "--ignore-scripts",
+        ]);
+        await step("Build isolated H5P player and verified browser sample", process.execPath, [
+            `${player}/build.mjs`,
+        ], {LUMINOVIA_H5P_BUILD_TEST_SAMPLE: h5p.sample});
+        await h5p.start(join(scratch, player, "dist", "serve.mjs"), env.E2E_BASE_URL, cancellation.signal);
         // Projects run sequentially against one Auth service. Give each one
         // the same aggregate budget CI uses for a single browser project.
         await browserStage(
             "application",
             "Desktop and mobile browsers",
             ["--grep-invert", "built PWA"],
-            {},
+            {
+                E2E_H5P_CONTENT_HOST: h5p.host,
+                E2E_H5P_SAMPLE: h5p.sample,
+                E2E_H5P_CERTIFICATE_PIN: h5p.certificatePin,
+            },
             65 * 60 * 1000 * browserProjects.length,
         );
         // The required parallel Typecheck gate covers these exact source bytes.
@@ -575,6 +595,11 @@ try {
         `FAIL\nPhase: ${phase.phase}\n${error.message}\n`,
     );
 } finally {
+    try {
+        await h5p?.close();
+    } catch (error) {
+        failure ??= error;
+    }
     if (localDockerReady) {
         if (env.PORTAL_TEST_DB_TEMPLATE) {
             try {

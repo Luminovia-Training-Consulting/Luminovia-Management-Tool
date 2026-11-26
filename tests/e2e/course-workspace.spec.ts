@@ -1691,19 +1691,21 @@ test("published SCORM lessons open in a sandbox and retain learner completion", 
 });
 
 test.describe("separate HTTPS H5P player", () => {
-    const runtime = process.env.E2E_H5P_CONTENT_HOST;
-    const sample = process.env.E2E_H5P_SAMPLE;
-    test.skip(!runtime || !sample, "Supply the dedicated test origin and the pinned H5P TrueFalse sample.");
     test("native workspace publishes, plays and withdraws a scanned H5P activity", async ({baseURL}, info) => {
         test.setTimeout(120_000);
+        const runtime = process.env.E2E_H5P_CONTENT_HOST;
+        const sample = process.env.E2E_H5P_SAMPLE;
+        const certificatePin = process.env.E2E_H5P_CERTIFICATE_PIN;
+        if (!runtime || !sample) throw new Error("The native H5P journey requires the isolated test origin and verified TrueFalse sample.");
         const browser = await chromium.launch({args: [
-            "--no-proxy-server", "--ignore-certificate-errors",
-            "--host-resolver-rules=MAP *." + runtime!.split(":")[0] + " 127.0.0.1",
+            "--no-proxy-server",
+            certificatePin ? "--ignore-certificate-errors-spki-list=" + certificatePin : "--ignore-certificate-errors",
+            "--host-resolver-rules=MAP *." + new URL("https://" + runtime).hostname + " 127.0.0.1",
         ]});
         const session = {
             baseURL, viewport: info.project.use.viewport,
             isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
-            ignoreHTTPSErrors: true,
+            ignoreHTTPSErrors: !certificatePin,
         };
         try {
             const context = await browser.newContext(session);
@@ -1720,7 +1722,7 @@ test.describe("separate HTTPS H5P player", () => {
             await page.goto(workspace);
             const staff = player(page);
             await staff.getByText("H5P-Aktivität veröffentlichen", {exact: true}).press("Enter");
-            await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample!);
+            await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample);
             const publish = staff.getByRole("button", {name: "H5P-Aktivität veröffentlichen"});
             await expect(publish).toBeEnabled();
             await publish.press("Enter");

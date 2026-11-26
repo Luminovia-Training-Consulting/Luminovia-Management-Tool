@@ -86,7 +86,7 @@ for (const directory of ["player", "libraries"]) {
   await register(join(root, directory), directory);
 }
 
-createServer(async (request, response) => {
+const server = createServer(async (request, response) => {
   const host = request.headers.host ?? "";
   const label = host.endsWith("." + suffix)
     ? host.slice(0, -suffix.length - 1)
@@ -124,6 +124,7 @@ createServer(async (request, response) => {
   } catch {
     response.writeHead(400, staticHeaders).end();
   }
-}).listen(port, "127.0.0.1", () =>
-  console.log(`Isolated H5P runtime listening on loopback port ${port}`),
+});
+server.listen(port, "127.0.0.1", () =>
+  console.log(`Isolated H5P runtime listening on loopback port ${server.address().port}`),
 );

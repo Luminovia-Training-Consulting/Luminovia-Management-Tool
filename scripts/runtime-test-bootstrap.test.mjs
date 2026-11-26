@@ -120,6 +120,13 @@ async function runFixture({
         root: "/owned-qa/source",
         runtimeDir: "/owned-qa/reports",
         runtimeSnapshotSource: () => true,
+        prepareH5pBrowserRuntime: async (directory) => ({
+            host: "launch.h5p-content.test:40001",
+            sample: join(directory, "H5P.TrueFalse.h5p"),
+            certificatePin: "fixture-pin",
+            async start() {},
+            async close() {},
+        }),
         runtimeTestPhasePlan,
         runBounded,
         runtimeTestArguments,
