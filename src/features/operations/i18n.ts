@@ -57,6 +57,10 @@ const pairs: Record<string, [string, string]> = {
     "Keine Vertriebschancen entsprechen diesen Filtern.",
     "No opportunities match these filters.",
   ],
+  crmNoOpportunitiesOnPage: [
+    "Auf dieser Seite sind keine Vertriebschancen mehr vorhanden. Auf der vorherigen Seite können noch Ergebnisse stehen.",
+    "There are no opportunities on this page. Earlier pages may still contain results.",
+  ],
   crmUpdatingResults: [
     "Vertriebsergebnisse werden aktualisiert …",
     "Updating sales results …",

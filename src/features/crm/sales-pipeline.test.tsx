@@ -322,6 +322,37 @@ describe("CompanyOpportunityPipeline", () => {
     });
   });
 
+  it("distinguishes an empty later page from filters with no matching opportunities", async () => {
+    const user = userEvent.setup();
+    crmState.opportunities = {
+      items: [opportunity()],
+      hasNextPage: true,
+    };
+    const { client } = mount();
+
+    await screen.findByText("Fictional LMS renewal");
+    await user.click(
+      screen.getByRole("button", { name: /next page|nächste seite/i }),
+    );
+    expect(await screen.findByText(/page 2|seite 2/i)).toBeVisible();
+
+    crmState.opportunities = { items: [], hasNextPage: false };
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: ["crm", "opportunities", actor, organisationId],
+      });
+    });
+
+    expect(
+      await screen.findByText(
+        /there are no opportunities on this page|auf dieser seite sind keine vertriebschancen/i,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /previous page|vorherige seite/i }),
+    ).toBeEnabled();
+  });
+
   it("renders translated pipeline and stage labels in German and English", async () => {
     await act(() => i18n.changeLanguage("de"));
     const german = mount();

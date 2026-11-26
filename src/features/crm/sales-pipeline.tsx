@@ -374,9 +374,11 @@ export function CompanyOpportunityPipeline({
       )}
       {opportunities.data.items.length === 0 && (
         <Notice>
-          {page === 0 && search.trim() === "" && stageFilter === "all"
-            ? t("crmNoOpportunities")
-            : t("crmNoMatchingOpportunities")}
+          {page > 0
+            ? t("crmNoOpportunitiesOnPage")
+            : search.trim() === "" && stageFilter === "all"
+              ? t("crmNoOpportunities")
+              : t("crmNoMatchingOpportunities")}
         </Notice>
       )}
       <div
