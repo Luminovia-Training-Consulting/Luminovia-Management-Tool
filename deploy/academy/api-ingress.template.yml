@@ -81,6 +81,12 @@ static_resources:
                                 string_match: { exact: "POST" }
                           route: { cluster: academy-api-gateway, timeout: 15s }
                         - match:
+                            path: "/functions/v1/learning-lti/deep-link-return"
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "POST" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
                             safe_regex:
                               regex: /functions/v1/learning-lti/memberships/[0-9a-f-]+
                             headers:

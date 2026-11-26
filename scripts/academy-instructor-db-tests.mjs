@@ -46,6 +46,8 @@ const featureFixtureOperations = new Map([
       "course_lti_tools",
       "save_course_lti_tool",
       "configure_course_lti_advantage",
+      "configure_course_lti_deep_link",
+      "lti_deep_link_review",
       "course_xapi_statements",
     ],
   ],

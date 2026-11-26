@@ -1,6 +1,8 @@
 /** Bind LTI launch HTTP handling to the caller's live Supabase Auth session. */
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { createLtiAdvantage } from "./advantage.ts";
+import { createLtiDeepLink } from "./deep-link.ts";
+import type { ToolRegistration } from "./tool-jwt.ts";
 import { createLtiHandler, importSigningKey } from "./handler.ts";
 
 const endpoint = Deno.env.get("SUPABASE_URL") ?? "";
@@ -19,15 +21,19 @@ const service = signing && serviceUrl && serviceKey
     auth: { persistSession: false, autoRefreshToken: false },
   })
   : null;
+const registrationFor = async (
+  client: string,
+  deployment: string | null,
+): Promise<ToolRegistration | null> => {
+  const result = await service?.rpc("lti_service_registration", {
+    p_client_id: client,
+    p_deployment: deployment,
+  });
+  return result?.error ? null : result?.data ?? null;
+};
 const advantage = service && serviceUrl
   ? createLtiAdvantage(serviceUrl, {
-    registration: async (client, deployment) => {
-      const result = await service.rpc("lti_service_registration", {
-        p_client_id: client,
-        p_deployment: deployment,
-      });
-      return result.error ? null : result.data;
-    },
+    registration: registrationFor,
     issueToken: async (registration, assertionId, assertionExpiry, scopes) => {
       const result = await service.rpc("lti_issue_service_token", {
         p_deployment: registration.id,
@@ -38,13 +44,36 @@ const advantage = service && serviceUrl
       });
       return result.error ? null : result.data;
     },
-    memberships: async (deployment, token, role, after, limit) => {
-      const result = await service.rpc("lti_course_memberships", {
+    memberships: async (
+      deployment,
+      token,
+      role,
+      after,
+      limit,
+      resourceLink,
+    ) => {
+      const result = await service.rpc("lti_resource_memberships", {
         p_deployment: deployment,
         p_token: token,
         p_role: role,
         p_after: after,
         p_limit: limit,
+        p_link: resourceLink,
+      });
+      return result.error ? null : result.data ?? false;
+    },
+  })
+  : undefined;
+
+const deepLink = service && serviceUrl && signing
+  ? createLtiDeepLink(serviceUrl, signing.issuer, origins, {
+    registration: registrationFor,
+    receive: async (registration, data, item) => {
+      const result = await service.rpc("receive_lti_deep_link", {
+        p_deployment: registration.id,
+        p_version: registration.version,
+        p_data: data,
+        p_item: item,
       });
       return result.error ? null : result.data;
     },
@@ -55,6 +84,7 @@ Deno.serve(createLtiHandler({
   origins,
   signing,
   advantage,
+  deepLink,
   principal: async (authorization) => {
     const client = createClient(endpoint, anon, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -62,11 +92,15 @@ Deno.serve(createLtiHandler({
     });
     if ((await client.auth.getUser(authorization.slice(7))).error) return null;
     return {
-      prepare: async (id, proof) => {
-        const result = await client.rpc("prepare_lti_launch", {
-          p_registration_id: id,
-          p_browser_proof: proof,
-        });
+      prepare: async (id, proof, placement) => {
+        const args = { p_registration_id: id, p_browser_proof: proof };
+        const result = placement?.portalOrigin || placement?.resource
+          ? await client.rpc("prepare_lti_placement", {
+            ...args,
+            p_resource_link_id: placement.resource ?? null,
+            p_portal_origin: placement.portalOrigin ?? null,
+          })
+          : await client.rpc("prepare_lti_launch", args);
         return result.error ? null : result.data;
       },
       consume: async (request, proof) => {

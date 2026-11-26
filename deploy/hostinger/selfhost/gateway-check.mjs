@@ -128,6 +128,8 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/learning-lti/jwks/extra", 404],
             ["/functions/v1/learning-lti/token", 503, "portal-function-learning-lti-token", "POST"],
             ["/functions/v1/learning-lti/token", 404],
+            ["/functions/v1/learning-lti/deep-link-return", 503, "portal-function-learning-lti-deep-link-return", "POST"],
+            ["/functions/v1/learning-lti/deep-link-return", 404],
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240", 503, "portal-function-learning-lti-memberships"],
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240", 404, null, "POST"],
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240/extra", 404],

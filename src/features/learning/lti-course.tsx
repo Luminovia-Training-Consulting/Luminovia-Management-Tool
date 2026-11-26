@@ -1,5 +1,6 @@
 /** Course registration, learner launch and the same-tab LTI OIDC callback. */
 import { useId, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice } from "../../components/common";
@@ -20,6 +21,10 @@ type Tool = {
   target_uri?: string;
   nrps_enabled?: boolean;
   tool_public_key?: JsonWebKey | null;
+  deep_link_uri?: string | null;
+  can_select: boolean;
+  can_withdraw: boolean;
+  links: { id: string; title: string }[];
 };
 
 type ToolList = { can_manage: boolean; can_launch: boolean; tools: Tool[] };
@@ -50,13 +55,21 @@ async function toolsForCourse(run: string, signal: AbortSignal) {
 }
 
 /** Initiate only one same-tab flow and keep the second factor outside tool URLs. */
-async function beginLaunch(id: string) {
+async function beginLaunch({
+  registration,
+  resource,
+  mode,
+}: {
+  registration: string;
+  resource?: string;
+  mode?: "select";
+}) {
   requireOnline();
   const proof = crypto.randomUUID();
   const { data, error } = await db().functions.invoke<LaunchStart>(
     "learning-lti",
     {
-      body: { action: "prepare", registration: id, proof },
+      body: { action: "prepare", registration, proof, resource, mode },
     },
   );
   if (error || !data || new URL(data.redirect).protocol !== "https:")
@@ -151,6 +164,103 @@ export function LtiAuthorize() {
         <Notice kind="error">{t("ltiFailed")}</Notice>
       ) : (
         <Loading />
+      )}
+    </main>
+  );
+}
+
+type Selection = {
+  run_id: string;
+  title: string | null;
+  target_uri: string | null;
+  published: boolean;
+};
+
+async function reviewSelection(
+  id: string,
+  action: "read" | "publish" | "withdraw",
+) {
+  requireOnline();
+  const { data, error } = await db().rpc("lti_deep_link_review", {
+    p_id: id,
+    p_action: action,
+  });
+  if (error) throw error;
+  return data as Selection;
+}
+
+/** Preview a tool selection after returning to the original authenticated tab. */
+export function LtiDeepLinkReview() {
+  const { t } = useTranslation("learning");
+  const { loading, session } = useAuth();
+  const online = useOnline();
+  const [id] = useState(() => window.location.hash.slice(1));
+  const valid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
+  const sessionBoundary = sessionCacheBoundary(session?.access_token);
+  const preview = useQuery({
+    queryKey: ["lti-deep-link-review", id, session?.user.id, sessionBoundary],
+    enabled: Boolean(valid && online && session),
+    gcTime: 0,
+    retry: false,
+    queryFn: () => reviewSelection(id, "read"),
+  });
+  const publish = useMutation({
+    mutationFn: () => reviewSelection(id, "publish"),
+    onSuccess: () => void preview.refetch(),
+  });
+  useEffect(() => {
+    window.history.replaceState(
+      window.history.state,
+      "",
+      window.location.pathname,
+    );
+  }, []);
+  useEffect(() => {
+    publish.reset();
+    // A success notice belongs only to the original authentication session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionBoundary]);
+
+  const selection = preview.data;
+  return (
+    <main className="learning-panel">
+      <h1>{t("ltiReviewSelection")}</h1>
+      {!valid || (!loading && !session) ? (
+        <Notice kind="error">{t("ltiFailed")}</Notice>
+      ) : !online ? (
+        <p>{t("workspaceOffline")}</p>
+      ) : preview.isError ? (
+        <ErrorState retry={() => void preview.refetch()} />
+      ) : !selection ? (
+        <Loading />
+      ) : (
+        <>
+          {selection.title ? (
+            <>
+              <h2>{selection.title}</h2>
+              <p className="break-all">{selection.target_uri}</p>
+              {selection.published ? (
+                <Notice>{t("ltiLinkPublished")}</Notice>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={publish.isPending || publish.isSuccess}
+                  onClick={() => publish.mutate()}
+                >
+                  {t("ltiPublishLink")}
+                </Button>
+              )}
+            </>
+          ) : (
+            <p>{t("ltiNoSelection")}</p>
+          )}
+          {publish.isError && <Notice kind="error">{t("ltiFailed")}</Notice>}
+          <div className="form-actions mt-4">
+            <Link to={`/courses/${selection.run_id}/workspace#course-lti`}>
+              {t("ltiReturnToTools")}
+            </Link>
+          </div>
+        </>
       )}
     </main>
   );
@@ -313,6 +423,51 @@ function ToolAdvantageForm({ tool, saved }: { tool: Tool; saved: () => void }) {
   );
 }
 
+function ToolDeepLinkSetup({ tool, saved }: { tool: Tool; saved: () => void }) {
+  const { t } = useTranslation("learning");
+  const input = useId();
+  const save = useMutation({
+    mutationFn: async (value: string) => {
+      requireOnline();
+      const { error } = await db().rpc("configure_course_lti_deep_link", {
+        p_registration_id: tool.id,
+        p_expected_version: tool.version,
+        p_selector_uri: value.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: saved,
+  });
+  return (
+    <details>
+      <summary>{t("ltiConfigureSelector")}</summary>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!save.isPending)
+            save.mutate(
+              String(new FormData(event.currentTarget).get("selector") ?? ""),
+            );
+        }}
+      >
+        <fieldset disabled={save.isPending}>
+          <legend>{t("ltiConfigureSelector")}</legend>
+          <label htmlFor={input}>{t("ltiSelectorUri")}</label>
+          <input
+            id={input}
+            name="selector"
+            type="url"
+            defaultValue={tool.deep_link_uri ?? ""}
+          />
+          <p>{t("ltiSelectorUriHelp")}</p>
+          <Button type="submit">{t("ltiSave")}</Button>
+        </fieldset>
+        {save.isError && <Notice kind="error">{t("ltiAdvantageError")}</Notice>}
+      </form>
+    </details>
+  );
+}
+
 /** Current staff configure tool metadata; only current learners or instructors can launch. */
 export function CourseLtiTools({
   actor,
@@ -332,6 +487,10 @@ export function CourseLtiTools({
     retry: false,
   });
   const launch = useMutation({ mutationFn: beginLaunch });
+  const withdraw = useMutation({
+    mutationFn: (id: string) => reviewSelection(id, "withdraw"),
+    onSuccess: () => void tools.refetch(),
+  });
   return (
     <section
       className="panel learning-panel space-y-2"
@@ -372,14 +531,76 @@ export function CourseLtiTools({
             {tools.data.tools.map((tool) => (
               <li key={tool.id}>
                 <h3>{tool.title}</h3>
-                {tools.data?.can_launch && tool.active && (
-                  <Button
-                    type="button"
-                    disabled={launch.isPending}
-                    onClick={() => launch.mutate(tool.id)}
-                  >
-                    {t("ltiLaunch")}
-                  </Button>
+                {((tools.data?.can_launch && tool.active) ||
+                  tool.can_select) && (
+                  <div className="form-actions">
+                    {tools.data?.can_launch && tool.active && (
+                      <Button
+                        type="button"
+                        disabled={launch.isPending}
+                        onClick={() => launch.mutate({ registration: tool.id })}
+                      >
+                        {t("ltiLaunch")}
+                      </Button>
+                    )}
+                    {tool.can_select && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={launch.isPending}
+                        onClick={() =>
+                          launch.mutate({
+                            registration: tool.id,
+                            mode: "select",
+                          })
+                        }
+                      >
+                        {t("ltiSelectResource")}
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {tool.active && !!tool.links?.length && (
+                  <ul className="learning-resources">
+                    {tool.links.map((link) => (
+                      <li key={link.id}>
+                        <strong>{link.title}</strong>
+                        <div className="form-actions">
+                          {tools.data?.can_launch && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              aria-label={t("ltiLaunchResource", {
+                                title: link.title,
+                              })}
+                              disabled={launch.isPending}
+                              onClick={() =>
+                                launch.mutate({
+                                  registration: tool.id,
+                                  resource: link.id,
+                                })
+                              }
+                            >
+                              {t("ltiLaunch")}
+                            </Button>
+                          )}
+                          {tool.can_withdraw && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              aria-label={t("ltiWithdrawResource", {
+                                title: link.title,
+                              })}
+                              disabled={withdraw.isPending}
+                              onClick={() => withdraw.mutate(link.id)}
+                            >
+                              {t("ltiWithdrawLink")}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 {tools.data?.can_manage && (
                   <>
@@ -401,6 +622,13 @@ export function CourseLtiTools({
                       tool={tool}
                       saved={() => void tools.refetch()}
                     />
+                    {tool.tool_public_key && (
+                      <ToolDeepLinkSetup
+                        key={`selector-${tool.version}`}
+                        tool={tool}
+                        saved={() => void tools.refetch()}
+                      />
+                    )}
                   </>
                 )}
               </li>
@@ -408,7 +636,9 @@ export function CourseLtiTools({
           </ul>
         </>
       )}
-      {launch.isError && <Notice kind="error">{t("ltiFailed")}</Notice>}
+      {(launch.isError || withdraw.isError) && (
+        <Notice kind="error">{t("ltiFailed")}</Notice>
+      )}
     </section>
   );
 }

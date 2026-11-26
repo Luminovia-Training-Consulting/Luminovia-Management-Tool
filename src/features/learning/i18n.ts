@@ -785,6 +785,42 @@ const pairs: Record<string, [string, string]> = {
     "Die Einstellungen konnten nicht gespeichert werden. Prüfe den öffentlichen Schlüssel und lade die Registrierung neu.",
     "Settings could not be saved. Check the public key and reload the registration.",
   ],
+  ltiConfigureSelector: [
+    "Werkzeugauswahl einrichten",
+    "Configure the tool picker",
+  ],
+  ltiSelectorUri: [
+    "HTTPS-Adresse für die Materialauswahl",
+    "HTTPS content picker URL",
+  ],
+  ltiSelectorUriHelp: [
+    "Lass das Feld frei, um die Materialauswahl zu deaktivieren. Freigegebene Kurslinks bleiben verfügbar.",
+    "Clear the URL to disable the picker. Published course links stay available.",
+  ],
+  ltiSelectResource: [
+    "Material aus Werkzeug auswählen",
+    "Choose content from tool",
+  ],
+  ltiReviewSelection: [
+    "Gewähltes Lernmaterial prüfen",
+    "Review selected learning material",
+  ],
+  ltiNoSelection: [
+    "Das Werkzeug hat kein Lernmaterial zurückgegeben.",
+    "The tool did not return any learning material.",
+  ],
+  ltiPublishLink: [
+    "Material für den Kurs freigeben",
+    "Publish material to the course",
+  ],
+  ltiLinkPublished: [
+    "Das Lernmaterial ist im Kurs verfügbar.",
+    "The learning material is available in the course.",
+  ],
+  ltiReturnToTools: ["Zurück zu den Kurswerkzeugen", "Return to course tools"],
+  ltiLaunchResource: ["{{title}} öffnen", "Launch {{title}}"],
+  ltiWithdrawResource: ["{{title}} ausblenden", "Hide {{title}}"],
+  ltiWithdrawLink: ["Link ausblenden", "Hide link"],
   ltiDeploymentId: ["LTI-Deployment-ID", "LTI deployment ID"],
   ltiField_login_uri: ["Anmelde-URL des Werkzeugs", "Tool login URL"],
   ltiField_redirect_uri: [

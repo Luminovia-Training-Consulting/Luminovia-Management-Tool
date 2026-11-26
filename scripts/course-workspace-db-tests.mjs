@@ -1280,13 +1280,83 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             where token_hash=extensions.digest(${q(token)},'sha256')`);
         await assert.rejects(roster(token), /42501/);
         const beforeRevision = await issue("before-revision");
+        const picker = "https://lti-fixture.example.invalid/select";
+        const configurePicker = (who, session, version, uri) =>
+            invoke(who, session, "configure_course_lti_deep_link", [
+                q(deployment), version, uri ? q(uri) : "null",
+            ]);
+        const prepare = (who, session, resource, origin) =>
+            invoke(who, session, "prepare_lti_placement", [
+                q(deployment), q(proof), resource ? q(resource) : "null",
+                origin ? q(origin) : "null",
+            ]);
+        const applyLink = (who, session, id, action) =>
+            invoke(who, session, "lti_deep_link_review", [q(id), q(action)]);
+        const returnSelection = (choice, item) =>
+            toolRpc("receive_lti_deep_link", [q(deployment), 3, q(choice.deep_link_data),
+                item ? q(JSON.stringify(item)) : "null",
+            ]);
+        const portalOrigin = "https://fixture-portal.example.invalid";
+        await assert.rejects(configurePicker(learner, learnerSession, 2, picker), /42501/);
+        await assert.rejects(configurePicker(admin, managerSession, 2, "http://fixture.invalid/select"), /22023/);
+        assert.equal(await configurePicker(admin, managerSession, 2, picker), 3);
+        await assert.rejects(prepare(learner, learnerSession, null, portalOrigin), /42501/);
+        const selection = await prepare(teacher, teacherSession, null, portalOrigin);
+        assert.equal(selection.target_uri, picker);
+        const choice = await finish(teacher, teacherSession, selection, {nonce: "pick-content",state: "pick-content"});
+        assert.equal(choice.role, "Instructor");
+        assert.match(choice.deep_link_data, /^[a-f0-9]{64}$/);
+        assert.equal(choice.target_uri, picker);
+        const link = {
+            title: "Fictional selected activity",
+            url: "https://lti-fixture.example.invalid/activities/unit-2",
+            custom: {chapter:"2"},
+        };
+        await assert.rejects(returnSelection(choice,{...link,url:"https://foreign.example.invalid/activity"}), /22023/);
+        await assert.rejects(returnSelection(choice,{...link,custom:{invalid:42}}), /22023/);
+        const received = await returnSelection(choice,link);
+        assert.equal(received.origin, portalOrigin);
+        await assert.rejects(returnSelection(choice,link), /42501/);
+        await assert.rejects(applyLink(learner,learnerSession,received.id,"read"), /42501/);
+        await assert.rejects(applyLink(admin,managerSession,received.id,"publish"), /42501/);
+        await assert.rejects(prepare(learner,learnerSession,received.id,null), /42501/);
+        const draftLink = await applyLink(teacher,teacherSession,received.id,"read");
+        assert.equal(draftLink.title,link.title);
+        assert.equal(draftLink.published,false);
+        assert.equal((await applyLink(teacher,teacherSession,received.id,"publish")).published,true);
+        assert.equal((await applyLink(teacher,teacherSession,received.id,"publish")).published,true);
+        const available = await invoke(learner,learnerSession,"course_lti_tools",[q(run)]);
+        assert.deepEqual(available.tools[0].links,[{id:received.id,title:link.title}]);
+        assert.equal(available.tools[0].can_select,false);
+        const linkHint = await prepare(learner,learnerSession,received.id,null);
+        assert.equal(linkHint.target_uri,link.url);
+        const openedLink = await finish(learner,learnerSession,linkHint,{nonce:"use-link",state:"use-link"});
+        assert.equal(openedLink.target_uri,link.url);
+        assert.equal(openedLink.id,deployment);
+        assert.equal(openedLink.resource_link_id,received.id);
+        assert.equal(openedLink.subject,launched.subject);
+        assert.deepEqual(openedLink.resource_custom,link.custom);
+        const resourceToken = await toolRpc("lti_issue_service_token", [
+            q(deployment), 3, q("bound-resource"), "now()+interval '4 minutes'", `array[${q(rosterScope)}]`,
+        ]);
+        const linkRoster = (linkId) => toolRpc("lti_resource_memberships", [
+            q(deployment), q(resourceToken), "null", "null", 100, q(linkId),
+        ]);
+        assert.deepEqual((await linkRoster(received.id)).resource_custom,link.custom);
+        assert.equal(await linkRoster(randomUUID()),null);
+        const withdrawnLinkHint = await prepare(learner,learnerSession,received.id,null);
+        const withdrawn = await applyLink(teacher,teacherSession,received.id,"withdraw");
+        assert.equal(withdrawn.run_id,run);
+        assert.equal(await linkRoster(received.id),null);
+        await assert.rejects(finish(learner,learnerSession,withdrawnLinkHint,{nonce:"withdrawn",state:"withdrawn"}),/42501/);
+        await assert.rejects(prepare(learner,learnerSession,received.id,null),/42501/);
         const withheld = await start(learner, learnerSession);
-        assert.equal(await register(admin, managerSession, 2, login, false), 3);
+        assert.equal(await register(admin, managerSession, 3, login, false), 4);
         await assert.rejects(roster(beforeRevision), /42501/);
         await assert.rejects(finish(learner, learnerSession, withheld), /42501/);
         await assert.rejects(start(learner, learnerSession), /42501/);
         // Signup/session entitlement is rechecked, even while the profile stays active.
-        assert.equal(await register(admin, managerSession, 3), 4);
+        assert.equal(await register(admin, managerSession, 4), 5);
         await assert.rejects(roster(beforeRevision), /42501/);
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);

@@ -256,6 +256,11 @@ const LtiAuthorize = lazy(() =>
     default: module.LtiAuthorize,
   })),
 );
+const LtiDeepLinkReview = lazy(() =>
+  import("../features/learning/lti-course").then((module) => ({
+    default: module.LtiDeepLinkReview,
+  })),
+);
 const CourseWorkspacePage = lazy(() =>
   import("../features/learning/learning").then((module) => ({
     default: module.CourseWorkspacePage,
@@ -381,6 +386,7 @@ export default function PortalRoutes() {
         }
       />
       <Route path="/lti/authorize" element={<LtiAuthorize />} />
+      <Route path="/lti/selection" element={<LtiDeepLinkReview />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-status" element={<PlatformResetStatus />} />
       <Route element={<Protected />}>

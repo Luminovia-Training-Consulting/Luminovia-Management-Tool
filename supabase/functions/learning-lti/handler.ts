@@ -1,5 +1,6 @@
 /** OIDC resource-link message boundary for a locally registered LTI 1.3 tool. */
 import type { createLtiAdvantage } from "./advantage.ts";
+import type { createLtiDeepLink } from "./deep-link.ts";
 import { boundedJson, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 export interface LaunchHint {
   id: string;
@@ -19,6 +20,9 @@ export interface AuthorizedLaunch {
   redirect_uri: string;
   role: "Instructor" | "Learner";
   nrps_enabled?: boolean;
+  deep_link_data?: string;
+  resource_link_id?: string;
+  resource_custom?: Record<string, string>;
 }
 
 type ProtocolRequest = {
@@ -31,7 +35,11 @@ type ProtocolRequest = {
 };
 
 type Principal = {
-  prepare: (id: string, proof: string) => Promise<LaunchHint | null>;
+  prepare: (
+    id: string,
+    proof: string,
+    placement?: { resource?: string; portalOrigin?: string },
+  ) => Promise<LaunchHint | null>;
   consume: (
     request: ProtocolRequest,
     proof: string,
@@ -128,11 +136,19 @@ async function signLaunch(
     jti: crypto.randomUUID(),
     nonce,
     ...services,
-    [claim + "message_type"]: "LtiResourceLinkRequest",
+    [claim + "message_type"]: launch.deep_link_data
+      ? "LtiDeepLinkingRequest"
+      : "LtiResourceLinkRequest",
     [claim + "version"]: "1.3.0",
     [claim + "deployment_id"]: launch.id,
     [claim + "target_link_uri"]: launch.target_uri,
-    [claim + "resource_link"]: { id: launch.id },
+    ...(launch.deep_link_data ? {} : {
+      [claim + "resource_link"]: { id: launch.resource_link_id ?? launch.id },
+      ...(launch.resource_custom &&
+          Object.keys(launch.resource_custom).length > 0
+        ? { [claim + "custom"]: launch.resource_custom }
+        : {}),
+    }),
     [claim + "roles"]: [
       "http://purl.imsglobal.org/vocab/lis/v2/membership#" + launch.role,
     ],
@@ -186,6 +202,7 @@ export function createLtiHandler(options: {
   origins: string[];
   signing: SigningKey | null;
   advantage?: ReturnType<typeof createLtiAdvantage>;
+  deepLink?: ReturnType<typeof createLtiDeepLink>;
   principal: (bearer: string) => Promise<Principal | null>;
 }) {
   return async (request: Request) => {
@@ -216,6 +233,12 @@ export function createLtiHandler(options: {
       return options.signing
         ? json(200, { keys: [options.signing.publicKey] })
         : json(503, { error: "lti_unconfigured" });
+    }
+    if (
+      path === "/learning-lti/deep-link-return" && request.method === "POST" &&
+      options.deepLink
+    ) {
+      return await options.deepLink.receive(request);
     }
     const service = await options.advantage?.route(request, path);
     if (service) return service;
@@ -256,7 +279,29 @@ export function createLtiHandler(options: {
         body.action === "prepare" && typeof body.registration === "string" &&
         uuid.test(body.registration)
       ) {
-        const prepared = await principal.prepare(body.registration, body.proof);
+        if (body.mode !== undefined && body.mode !== "select") {
+          return json(400, { error: "lti_prepare" });
+        }
+        if (
+          body.mode === "select" &&
+          (!options.deepLink || body.resource !== undefined)
+        ) {
+          return json(403, { error: "lti_prepare" });
+        }
+        if (
+          body.resource !== undefined &&
+          (typeof body.resource !== "string" || !uuid.test(body.resource))
+        ) {
+          return json(400, { error: "lti_prepare" });
+        }
+        const prepared = await principal.prepare(
+          body.registration,
+          body.proof,
+          {
+            resource: body.resource,
+            portalOrigin: body.mode === "select" ? origin : undefined,
+          },
+        );
         if (!prepared) return json(403, { error: "lti_prepare" });
         const login = httpsUrl(prepared.login_uri);
         httpsUrl(prepared.target_uri);
@@ -288,6 +333,12 @@ export function createLtiHandler(options: {
         return json(403, { error: "lti_launch" });
       }
       httpsUrl(launch.target_uri);
+      if (launch.deep_link_data && !options.deepLink) {
+        return json(403, { error: "lti_launch" });
+      }
+      const claims = launch.deep_link_data
+        ? options.deepLink!.settings(launch.deep_link_data)
+        : options.advantage?.claims(launch) ?? {};
       return json(200, {
         redirect: launch.redirect_uri,
         state: protocol.state,
@@ -295,7 +346,7 @@ export function createLtiHandler(options: {
           options.signing,
           launch,
           protocol.nonce,
-          options.advantage?.claims(launch) ?? {},
+          claims,
         ),
       });
     } catch (error) {

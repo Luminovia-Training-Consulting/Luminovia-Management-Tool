@@ -90,10 +90,13 @@ function fixture() {
       assertions.add(assertion);
       return Promise.resolve(token);
     },
-    memberships: (id, credential, scopeRole, after, limit) => {
+    memberships: (id, credential, scopeRole, after, limit, resourceLink) => {
       assert.ok(scopeRole === null || scopeRole === "Learner");
       if (id !== deployment || credential !== token) {
         return Promise.resolve(null);
+      }
+      if (resourceLink !== null && resourceLink !== deployment) {
+        return Promise.resolve(false);
       }
       return Promise.resolve({
         context_id: context,

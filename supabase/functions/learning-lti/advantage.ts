@@ -1,34 +1,39 @@
 /** LTI Advantage tool authentication and Names and Role Provisioning Service. */
 import { boundedBytes, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
+import {
+  bounded,
+  ltiClaim,
+  toolJwt,
+  type ToolRegistration,
+  uuid,
+  uuidPattern,
+} from "./tool-jwt.ts";
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
-const bytes = new TextEncoder();
-const id = "[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}";
-const uuid = new RegExp(`^${id}$`, "i");
-const membershipsPath = new RegExp(`^/learning-lti/memberships/(${id})$`, "i");
+const membershipsPath = new RegExp(
+  `^/learning-lti/memberships/(${uuidPattern})$`,
+  "i",
+);
 const nrpsScope =
   "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
 const membershipType =
   "application/vnd.ims.lti-nrps.v2.membershipcontainer+json";
 const roles = ["Instructor", "Learner"];
 const rolePrefix = "http://purl.imsglobal.org/vocab/lis/v2/membership#";
-const ltiClaim = "https://purl.imsglobal.org/spec/lti/claim/";
-
-type Registration = {
-  id: string;
-  version: number;
-  key: JsonWebKey & { kid: string };
-};
 type Member = { user_id: string; status: "Active"; roles: string[] };
-type Memberships = { context_id: string; members: Member[] };
+type Memberships = {
+  context_id: string;
+  members: Member[];
+  resource_custom?: Record<string, string>;
+};
 
 export type AdvantageBackend = {
   registration: (
     client: string,
     deployment: string | null,
-  ) => Promise<Registration | null>;
+  ) => Promise<ToolRegistration | null>;
   issueToken: (
-    registration: Registration,
+    registration: ToolRegistration,
     assertionId: string,
     assertionExpiry: string,
     scopes: string[],
@@ -39,90 +44,9 @@ export type AdvantageBackend = {
     role: string | null,
     after: string | null,
     limit: number,
-  ) => Promise<Memberships | null>;
+    resourceLink: string | null,
+  ) => Promise<Memberships | null | false>;
 };
-
-const bounded = (value: unknown, limit: number): value is string =>
-  typeof value === "string" && value.length >= 1 && value.length <= limit &&
-  !/[\u0000-\u001f\u007f]/.test(value);
-
-function decode(base64url: string) {
-  if (!/^[A-Za-z0-9_-]+$/.test(base64url)) {
-    throw new Error("assertion_encoding");
-  }
-  return Uint8Array.from(
-    atob(base64url.replaceAll("-", "+").replaceAll("_", "/")),
-    (ch) => ch.charCodeAt(0),
-  );
-}
-
-function object(base64url: string) {
-  const input = JSON.parse(utf8.decode(decode(base64url)));
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    throw new Error("assertion_type");
-  }
-  return input as Record<string, unknown>;
-}
-
-function audienceIs(value: unknown, expected: string) {
-  return value === expected ||
-    (Array.isArray(value) && value.length === 1 && value[0] === expected);
-}
-
-async function verifyAssertion(
-  backend: AdvantageBackend,
-  assertion: string,
-  audience: string,
-) {
-  const parts = assertion.split(".");
-  if (parts.length !== 3) return null;
-  const [header, payload, signature] = parts;
-  const jose = object(header);
-  const claims = object(payload);
-  const { iss, sub, aud, iat, exp, jti } = claims;
-  const deployment = claims[ltiClaim + "deployment_id"];
-  const now = Math.floor(Date.now() / 1000);
-  if (
-    jose.alg !== "RS256" || !bounded(jose.kid, 80) ||
-    Object.keys(jose).some((name) => !["alg", "kid", "typ"].includes(name)) ||
-    (jose.typ !== undefined && jose.typ !== "JWT") ||
-    !bounded(iss, 255) || iss !== sub || !audienceIs(aud, audience) ||
-    typeof iat !== "number" || !Number.isSafeInteger(iat) ||
-    typeof exp !== "number" || !Number.isSafeInteger(exp) ||
-    exp <= now || iat > now + 30 || iat < now - 330 || exp <= iat ||
-    exp - iat > 300 ||
-    (claims.nbf !== undefined && (
-      typeof claims.nbf !== "number" || !Number.isSafeInteger(claims.nbf) ||
-      claims.nbf > now
-    )) ||
-    !bounded(jti, 255) ||
-    (deployment !== undefined &&
-      (typeof deployment !== "string" || !uuid.test(deployment)))
-  ) return null;
-
-  const registration = await backend.registration(iss, deployment ?? null);
-  if (!registration || registration.key.kid !== jose.kid) return null;
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    registration.key,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["verify"],
-  );
-  const algorithm = key.algorithm as RsaHashedKeyAlgorithm;
-  if (algorithm.modulusLength < 2048 || algorithm.modulusLength > 4096) {
-    return null;
-  }
-  const valid = await crypto.subtle.verify(
-    key.algorithm,
-    key,
-    decode(signature),
-    bytes.encode(`${header}.${payload}`),
-  );
-  return valid
-    ? { registration, jti, expiresAt: new Date(exp * 1000).toISOString() }
-    : null;
-}
 
 function response(status: number, body: object, additional?: HeadersInit) {
   const headers = new Headers(additional);
@@ -181,16 +105,20 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
     }
     const assertion = form.get("client_assertion");
     const verified = bounded(assertion, 8192)
-      ? await verifyAssertion(backend, assertion, tokenEndpoint).catch(() =>
-        null
+      ? await toolJwt(assertion, tokenEndpoint, backend.registration).catch(
+        () => null,
       )
       : null;
-    const accessToken = verified && await backend.issueToken(
-      verified.registration,
-      verified.jti,
-      verified.expiresAt,
-      scopes,
-    );
+    const claims = verified?.claims;
+    const accessToken =
+      verified && claims?.iss === claims?.sub && bounded(claims?.jti, 255)
+        ? await backend.issueToken(
+          verified.registration,
+          claims.jti,
+          verified.expiresAt,
+          scopes,
+        )
+        : null;
     return accessToken
       ? response(200, {
         access_token: accessToken,
@@ -226,11 +154,9 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
     if (
       (role !== null && !roles.includes(role)) ||
       (after !== null && !uuid.test(after)) ||
+      (rlid !== null && !uuid.test(rlid)) ||
       !/^(?:[1-9][0-9]?|1[0-9]{2}|200)$/.test(limit)
     ) return response(400, { error: "invalid_request" });
-    if (rlid !== null && rlid !== deployment) {
-      return response(403, { error: "invalid_resource_link" });
-    }
 
     const roster = await backend.memberships(
       deployment,
@@ -238,7 +164,11 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
       role,
       after,
       Number(limit),
+      rlid,
     );
+    if (roster === false) {
+      return response(403, { error: "invalid_resource_link" });
+    }
     if (!roster) {
       return response(401, { error: "invalid_token" }, {
         "WWW-Authenticate": "Bearer",
@@ -260,7 +190,13 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
       context: { id: roster.context_id },
       members: rlid === null ? page : page.map((member) => ({
         ...member,
-        message: [{ [ltiClaim + "message_type"]: "LtiResourceLinkRequest" }],
+        message: [{
+          [ltiClaim + "message_type"]: "LtiResourceLinkRequest",
+          ...(roster.resource_custom &&
+              Object.keys(roster.resource_custom).length > 0
+            ? { [ltiClaim + "custom"]: roster.resource_custom }
+            : {}),
+        }],
       })),
     }, headers);
   }

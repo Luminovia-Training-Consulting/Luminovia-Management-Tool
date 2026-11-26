@@ -66,8 +66,76 @@ export function ltiCoursePaths(academy: boolean) {
                     target_uri: configuration.target_uri.optional(),
                     nrps_enabled: z.boolean().optional(),
                     tool_public_key: toolPublicKey.nullable().optional(),
+                    deep_link_uri: url.nullable().optional(),
+                    can_select: z.boolean(),
+                    can_withdraw: z.boolean(),
+                    links: z.array(
+                      z.strictObject({ id: identifier, title: z.string() }),
+                    ),
                   }),
                 ),
+              }),
+            ),
+          },
+          ...errors,
+        },
+      },
+    },
+    "/rest/v1/rpc/configure_course_lti_deep_link": {
+      post: {
+        operationId: "configureCourseLtiDeepLink",
+        summary: "Configure a course tool's Deep Linking picker",
+        description:
+          "The course manager sets a tool selection URL on a deployment with a pinned verification key. Null disables new selections. Previously published links retain their placement and course scope.",
+        tags: ["LTI 1.3"],
+        security,
+        ...(academy ? { "x-portal-licence": "active" } : {}),
+        requestBody: {
+          required: true,
+          content: jsonContent(
+            z.strictObject({
+              p_registration_id: identifier,
+              p_expected_version: version,
+              p_selector_uri: url.nullable(),
+            }),
+          ),
+        },
+        responses: {
+          "200": {
+            description: "New registration revision.",
+            content: jsonContent(version),
+          },
+          ...errors,
+        },
+      },
+    },
+    "/rest/v1/rpc/lti_deep_link_review": {
+      post: {
+        operationId: "reviewCourseLtiDeepLink",
+        summary: "Review, publish or withdraw an LTI course link",
+        description:
+          "The current course author reviews a signed selection bound to the original session, then publishes it as an individual link. Course staff can withdraw an existing link.",
+        tags: ["LTI 1.3"],
+        security,
+        ...(academy ? { "x-portal-licence": "active" } : {}),
+        requestBody: {
+          required: true,
+          content: jsonContent(
+            z.strictObject({
+              p_id: identifier,
+              p_action: z.enum(["read", "publish", "withdraw"]),
+            }),
+          ),
+        },
+        responses: {
+          "200": {
+            description: "Selection preview or confirmation.",
+            content: jsonContent(
+              z.strictObject({
+                run_id: identifier,
+                title: z.string().nullable().optional(),
+                target_uri: url.nullable().optional(),
+                published: z.boolean().optional(),
               }),
             ),
           },

@@ -371,7 +371,7 @@ Deno.serve({onError}, async (req: Request) => {
         req.method === "GET";
     const publicLtiKeys = pathname === "/learning-lti/jwks" && req.method === "GET";
     const ltiToolService =
-        (pathname === "/learning-lti/token" && req.method === "POST") ||
+        ((pathname === "/learning-lti/token" || pathname === "/learning-lti/deep-link-return") && req.method === "POST") ||
         (req.method === "GET" &&
             /^\/learning-lti\/memberships\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(pathname));
     const fileMode = url.searchParams.get("mode");

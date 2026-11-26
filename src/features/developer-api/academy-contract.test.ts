@@ -88,6 +88,8 @@ const writePaths = [
   "/rest/v1/rpc/course_text_exam_action",
   "/rest/v1/rpc/save_course_lti_tool",
   "/rest/v1/rpc/configure_course_lti_advantage",
+  "/rest/v1/rpc/configure_course_lti_deep_link",
+  "/rest/v1/rpc/lti_deep_link_review",
   "/rest/v1/rpc/course_completion_policy_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
