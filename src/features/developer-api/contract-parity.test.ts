@@ -1588,6 +1588,14 @@ describe("documented Premium course and spending operations", () => {
           properties: { kind: { const: "participant_submission" } },
           required: ["kind", "id", "version_id"],
         },
+        {
+          properties: {
+            kind: { const: "portfolio_evidence" },
+            revision: { type: "integer", minimum: 1, maximum: 30 },
+            shared: { type: "boolean" },
+          },
+          required: ["kind", "id", "version_id", "revision", "shared"],
+        },
       ],
     );
     expect(

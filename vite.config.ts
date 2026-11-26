@@ -331,6 +331,7 @@ export default defineConfig(({ mode }) => {
             "**/course-assignment-teams-*.js",
             "**/course-assignments-*.js",
             "**/course-curriculum-catalogue-*.js",
+            "**/competencies-*.js",
             "**/lti-course-*.js",
             "**/course-weighted-gradebook-*.js",
             "**/programme-grade-report-*.js",

@@ -41,9 +41,9 @@ import {
   repeatCourse,
 } from "./api";
 import "./i18n";
+import "./competencies-i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
-import { CourseCompetencies } from "./competencies";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizPoolStart } from "./quiz-pool-start";
 import { quizPoolDrawCount } from "./quiz-pool-schema";
@@ -91,6 +91,11 @@ const CourseWeightedGradebook = lazy(() =>
 const CourseAssignments = lazy(() =>
   import("./course-assignments").then((module) => ({
     default: module.CourseAssignments,
+  })),
+);
+const CourseCompetencies = lazy(() =>
+  import("./competencies").then((module) => ({
+    default: module.CourseCompetencies,
   })),
 );
 const CourseTextExam = lazy(() =>
@@ -1654,23 +1659,22 @@ function CourseWorkspaceLayout({
               id="course-submissions"
             >
               {currentSection === "course-submissions" &&
-                (learner || course.access.staff) && (
-                  online ? (
-                    <Suspense fallback={<Loading />}>
-                      <CourseAssignments
-                        key={`${actor}:${course.id}:assignments`}
-                        actor={actor}
-                        course={course.id}
-                        zone={course.time_zone}
-                        staff={course.access.staff}
-                        participants={course.roster}
-                        readOnly={academy === "grace"}
-                      />
-                    </Suspense>
-                  ) : (
-                    <Notice>{t("submissionOnline")}</Notice>
-                  )
-                )}
+                (learner || course.access.staff) &&
+                (online ? (
+                  <Suspense fallback={<Loading />}>
+                    <CourseAssignments
+                      key={`${actor}:${course.id}:assignments`}
+                      actor={actor}
+                      course={course.id}
+                      zone={course.time_zone}
+                      staff={course.access.staff}
+                      participants={course.roster}
+                      readOnly={academy === "grace"}
+                    />
+                  </Suspense>
+                ) : (
+                  <Notice>{t("submissionOnline")}</Notice>
+                ))}
               <CourseSubmissions
                 key={`${actor}:${course.id}`}
                 actor={actor}
@@ -1794,13 +1798,19 @@ function CourseWorkspaceLayout({
               {(course.access.staff || (learner && course.quiz?.published)) && (
                 <Quiz course={course} actor={actor} academy={academy} />
               )}
-              {(course.access.staff || learner) && (
-                <CourseCompetencies
-                  course={course}
-                  actor={actor}
-                  editable={canEdit}
-                />
-              )}
+              {(course.access.staff || learner) &&
+                currentSection === "course-learning" &&
+                (online ? (
+                  <Suspense fallback={<Loading />}>
+                    <CourseCompetencies
+                      course={course}
+                      actor={actor}
+                      editable={canEdit}
+                    />
+                  </Suspense>
+                ) : (
+                  <Notice>{t("competencyOffline")}</Notice>
+                ))}
               {course.lms_enabled &&
                 (course.access.staff || learner) &&
                 currentSection === "course-learning" && (
