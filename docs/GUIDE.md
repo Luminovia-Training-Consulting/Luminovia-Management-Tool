@@ -559,7 +559,7 @@ Load more choices**, then choose the real run by title, organization, first date
 
 ## Files and qualification evidence
 
-At `/files`, search authorized documents with literal filename, owner/kind/job and own tag/folder filters. Archive and refresh controls sit beside the search. The server returns 40 per page; load further matches explicitly. **Persönlich organisieren / Organise for me** stores your own tags/virtual folder for that currently accessible file. Another account can organize a shared file differently; these fields do not move bytes, rename the shared file or grant access. A stale-edit conflict preserves your draft until you explicitly reload.
+At `/files`, search authorized documents by filename, personal tag or folder. Archive and refresh controls sit beside the search. The server returns 40 per page; load further matches explicitly. **Persönlich organisieren / Organise for me** stores your own tags/virtual folder for that currently accessible file. Another account can organize a shared file differently; these fields do not move bytes, rename the shared file or grant access. A stale-edit conflict preserves your draft until you explicitly reload.
 See [Files](GUIDE.md#section-files). Choose **Datei hochladen / Upload file**, select or drop one file, and wait until upload and scanning finish. The current allowlist is PDF, PNG/JPEG/WebP, plain text and modern Office documents (`.docx`, `.xlsx`, `.pptx`), up to 100 MiB per file, subject to the environment's configured owner/global quotas. Archives and large video uploads are not available. This file limit does not establish production capacity acceptance. Unsupported, infected or unscanned
 files are unavailable for download; a scanner outage leaves the upload unapproved.
 
@@ -592,7 +592,7 @@ in this slice; course participants do not automatically receive it. Article atta
 
 ## Contracts and receipt acknowledgements
 
-At `/contracts`, lecturers see their own registered agreements and addenda. Previously filed personal contract PDFs are available in **Dateien / Files** under the **Vertrag / Contract** filter. Contract file contents and versions are available to their lecturer owner. An authorized staff uploader can read only the exact personal-contract versions they uploaded on that lecturer's behalf while retaining `contracts.manage`.
+At `/contracts`, lecturers see their own registered agreements and addenda. To find a previously filed personal contract PDF, search for its filename in **Dateien / Files**. Contract file contents and versions are available to their lecturer owner. An authorized staff uploader can read only the exact personal-contract versions they uploaded on that lecturer's behalf while retaining `contracts.manage`.
 Other staff, unrelated account records and legacy owner-only documents remain private. Each real PDF record identifies its version, effective/expiry instants and SHA-256. Download the precise registered version before acknowledging receipt. An older metadata-only record has no download or acknowledgement action until a genuine checked PDF version is registered.
 
 Tick **Ich habe diese Vertragsfassung erhalten und zur Kenntnis genommen / I have received and read this contract version**, then choose **Empfang bestätigen / Acknowledge receipt**. The server stores receipt against the exact version/hash and timestamp. This action is **not an electronic signature** or a claim of legal signature sufficiency. Use an already executed agreement and the approved external signing/legal process when required.
