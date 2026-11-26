@@ -327,9 +327,11 @@ Under **Lernen & Bewertung → Kursnoten / Learning & assessment → Course grad
 
 Select the learner and review the calculated result before choosing **Vorschau als geprüft speichern / Save reviewed preview**. The reviewed result records its source revisions. A new result or policy may require a fresh review. If the policy requires a second instructor, another authorised staff member chooses **Geprüfte Kursnote freigeben / Publish reviewed course grade**. A notification links the learner to their released result and the course grade history.
 
+In the course materials library, authorised owners can mark a clean version as a **Materialvorlage / Master material** and find it in the master filter. To reuse it, choose an eligible course and either share the existing version or create an independent copy. A copy starts at its own first version after a new scan and keeps the source audience. Copying the descriptions and matching competency references is optional. **Archivierte Materialien / Archived materials** lets authorised staff restore a catalogue entry. The archive leaves existing links to the scanned version available under their original course permissions.
+
 ### Private learning portfolio
 
-Open **Mein Portfolio / My portfolio** from the learning area. Create a text entry and save. Later edits retain earlier versions in the entry's revision history. **Mein Portfolio exportieren / Export my portfolio** downloads your own versions and share receipts as JSON.
+Open **Mein Portfolio / My portfolio** from the learning area. Create a text entry and save. Expand **Lernreflexion ergänzen / Add learning reflection** to record a goal, outcome and next step. Each edit retains earlier versions, including their reflections and supporting-file links. **Mein Portfolio exportieren / Export my portfolio** downloads your own versions and share receipts as JSON.
 
 Choose **Fassung teilen / Share revision**, select the course and instructor, and confirm the numbered revision. Only that named instructor can read the chosen snapshot under **Geteilte Portfolios / Shared portfolios** in the course workspace, while both actors retain the required course access. Edits stay private until you share a new revision. **Freigabe widerrufen / Revoke share** removes subsequent access to the old snapshot. Academy grace permits reads and personal exports.
 
@@ -343,11 +345,13 @@ Before the first participant joins, open an existing **Lernprogramme / Learning 
 
 Participants can see which course completions are still required for a locked step. Current, unrevoked completion receipts determine access through the programme. The whole-programme completion document still requires a valid receipt for every course.
 
+Course managers can open **Ausnahmen für Kursvoraussetzungen / Course prerequisite exceptions** and record a reason for one active participant and locked programme step. The exception permits starting only that step. Managers can withdraw the exception, and certificate eligibility still depends on the required completion receipts.
+
 ### Released programme grades
 
 Open a learning programme and expand **Meine freigegebenen Programmnoten / My released programme grades**. Each accessible course with a released weighted grade shows its current percentage, course result and release revision. The displayed average gives equal weight to the grades shown and uses their released percentages. The average does not determine programme completion.
 
-Course managers can expand **Freigegebene Programmnoten / Released programme grades**, select an active learner from the programme roster and download their report as CSV. Use the existing roster search to find a learner. Only current course enrolments in the programme can appear, and the download checks current access again. An archived programme retains its grade report while the applicable course, enrolment and company access continue. Academy grace permits reports and downloads.
+Course managers can expand **Freigegebene Programmnoten / Released programme grades**, select an active learner from the programme roster and download their report as CSV. Use the existing roster search to find a learner. Only current course enrolments in the programme can appear, and the download checks current access again. An archived programme retains its grade report while the applicable course, enrolment and company access continue. Academy grace permits reports and downloads. **Kohortennoten / Cohort grades** shows the same released results for the current cohort, with search, pagination and CSV export of the selected page.
 
 ### External LTI learning tools
 
@@ -356,6 +360,10 @@ A course manager can enter the client ID, login URL, registered return URL and r
 The launch returns to the same tab and passes the tool a course role, pseudonymous identifiers and resource placement. The tool validates the short-lived signed launch and its OIDC state. The activation and end-point exchange for a real external tool require an authorised installation operator.
 
 Provision the worker's issuer and signing key through its private environment as `LTI_PLATFORM_ISSUER` and `LTI_PLATFORM_RSA_PRIVATE_JWK` with an explicit key ID. The worker publishes the public key at `/functions/v1/learning-lti/jwks`. Use the installation's public API base URL, which includes `/backend` on the supplied Selfhost and Academy ingress. Set `PORTAL_LTI_TOOL_ORIGINS` in the web environment to the space-separated, exact HTTPS origins of the authorised redirect endpoints. The form policy allows these origins only on `/lti/authorize`. Exchange the key-set URL, HTTPS issuer and portal `/lti/authorize` URL as one manual registration. The same tab receives the tool's GET authorization request and sends the ID token and state by form POST to the exact registered redirect. An installation without keys keeps the launch disabled. Real provider acceptance remains open. [LTI 1.3 Core](https://www.imsglobal.org/spec/lti/v1p3/) and [1EdTech Security Framework](https://www.imsglobal.org/spec/security/v1p0/).
+
+Under **Werkzeugberechtigungen / Tool permissions**, configure the provider’s public RSA signing key and explicitly enable the services the course needs. The roster service (NRPS) supplies only pseudonymous participant identifiers and roles. The grading service (AGS) supports deployment-scoped line items, score submissions and result reads. External scores appear in the external-grade view and preserve their separate source.
+
+Under **Inhalte auswählen / Select content**, open the registered Deep Linking picker. The selection must return to the active course and signed tool deployment. Review the proposed title, exact resource URL and optional grade column before publishing the link. Withdraw the published link to remove it from the course. For a provider that supports Dynamic Registration, a course manager can prepare a one-use registration for the reviewed issuer and signing-key endpoint and approve the proposed configuration before use.
 
 Run the synthetic native browser fixture with `node scripts/lti-browser-check.mjs`. It creates short-lived signing keys and uses a loopback tool that verifies the launch signature.
 
@@ -371,23 +379,32 @@ Course staff can confirm or withdraw a required verification for the selected en
 
 ### xAPI learning activity exports
 
-Course managers can open **Lernaktivitäten / Learning activities** and download an xAPI 1.0.3 archive for a bounded date range in the course time zone. The archive maps accepted quiz attempts, released text exams, released weighted course grades, and issued or revoked completion records to statements with stable IDs. Each learner uses an organisation-specific pseudonym. Accepted answers to imported H5P questions produce separate interaction records with positional choice IDs from the exact published quiz or persisted question draw. The 2,000-statement limit requires a narrower date range when exceeded.
+Course managers can open **Lernaktivitäten / Learning activities** and download an xAPI 1.0.3 archive for a bounded date range in the course time zone. The archive maps accepted quiz attempts, released text exams, released weighted course grades, and issued or revoked completion records to statements with stable IDs. Each learner uses an organisation-specific pseudonym. Completed SCORM lessons and H5P activities produce completion records without bookmarks or mutable scores. Accepted completion of a SCORM or H5P playback activity also creates a stable completion statement. Accepted answers to imported H5P questions produce separate interaction records with positional choice IDs from the exact published quiz or persisted question draw. The 2,000-statement limit requires a narrower date range when exceeded.
 
 An operator with an authorised xAPI 1.0.3 Learning Record Store can submit an exported file with `node scripts/xapi-lrs-delivery.mjs <archive.json>`. Configure `LMS_XAPI_LRS_ENDPOINT`, `LMS_XAPI_LRS_USERNAME` and `LMS_XAPI_LRS_PASSWORD` in the operator environment. The command uses HTTPS for remote services and reports confirmed writes, retries and pending statements. Repeating the same archive preserves statement IDs. This workflow uses the [ADL statement data model](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Data.md) and [statement transport](https://github.com/adlnet/xAPI-Spec/blob/1.0.3/xAPI-Communication.md).
 
 To schedule delivery, configure `LMS_XAPI_PORTAL_URL`, `LMS_XAPI_PORTAL_PUBLISHABLE_KEY`, `LMS_XAPI_PORTAL_EMAIL` and `LMS_XAPI_PORTAL_PASSWORD` in the operator's private service environment alongside the LRS credentials. Use a portal account with current management access to the selected courses. The portal URL is the installation's Supabase API base, including `/backend` on the supplied ingress. The private configuration lists each course ID and its earliest permitted export timestamp.
 
 ```json
-{"courses":[{"id":"0af5df12-b77d-4ad4-bdea-7d53193756ab","from":"2026-11-01T00:00:00Z"}]}
+{
+  "courses": [
+    {
+      "id": "0af5df12-b77d-4ad4-bdea-7d53193756ab",
+      "from": "2026-11-01T00:00:00Z"
+    }
+  ]
+}
 ```
 
-Run `node scripts/xapi-lrs-dispatch.mjs <courses.json> <checkpoint.json>` as a recurring job with one process per checkpoint. On Linux, the scheduler can use `flock -n` with a private lock file. The worker advances a course checkpoint after the LRS acknowledges its entire window, retries a partially delivered window with the original statement IDs, rechecks current management access and subdivides exports that exceed the statement limit. Each run reports confirmed writes, retries, the checkpoint and a failure code per course. The worker allows a short delay and a one-hour overlap for late commits. Older corrections may require an explicit bounded export. Keep the checkpoint on persistent storage accessible to the operator account.
+Run `node scripts/xapi-lrs-dispatch.mjs <courses.json> <checkpoint.json>` as a recurring job with one process per checkpoint. On Linux, the scheduler can use `flock -n` with a private lock file. The worker advances a course checkpoint after the LRS acknowledges its entire window, retries a partially delivered window with the original statement IDs, rechecks current management access and subdivides exports that exceed the statement limit. Each run reports confirmed writes, retries, the checkpoint and a failure code per course. The worker allows a short delay and a one-hour overlap for late commits. Older corrections may require an explicit bounded export. Keep the checkpoint on persistent storage accessible to the operator account. Set `LMS_XAPI_MONITOR=1` to show delivery state in the course manager’s xAPI view. The portal records the covered timestamp, submitted and retried counts, and a bounded failure code.
 
-### Review a SCORM 1.2 package
+### Publish and play a SCORM 1.2 package
 
 Course staff can open **Materialien → SCORM-1.2-Paketprüfung / Materials → SCORM 1.2 package review**. Choose the ZIP produced by the authoring tool and review its file checksums, default organisation and local HTML entry points. Copy the displayed SHA-256 to record the exact ZIP you reviewed.
 
-The preflight limits ZIPs to 10 MiB, 512 entries and 64 MiB declared unpacked size. It checks the root UTF-8 IMS/ADL manifest, local file references and resource dependencies. All checks run in the browser. The current workflow ends at preflight. Publishing a package for learners requires a separate isolated content origin and player. [ADL SCORM 1.2 package requirements](https://lms.technology/for/scorm/1.2/standards/SCORM_1.2_ConformanceReq.pdf) · [ADL cross-domain runtime guidance](https://adlnet.gov/assets/uploads/ADL_CrossDomainScripting_1_0.pdf)
+The preflight limits ZIPs to 10 MiB, 512 entries and 64 MiB declared unpacked size. It checks the root UTF-8 IMS/ADL manifest, local file references and resource dependencies. All checks run in the browser. Choose **SCORM-Paket veröffentlichen / Publish SCORM package** to upload the checked ZIP. The portal scans the file and binds publication to its exact SHA-256. Learners open a published lesson in the course materials and can resume their own saved progress. Course staff can withdraw the publication.
+
+The browser can display self-contained static lessons in a sandbox. Interactive SCOs require the isolated runtime under `scorm-runtime/`. Set `VITE_SCORM_RUNTIME_DOMAIN` when building the portal and match it with `PORTAL_SCORM_RUNTIME_DOMAIN` on the HTTPS ingress. The runtime has its own cookie-free wildcard HTTPS domain, a per-launch origin and the SCORM 1.2 API adapter. Its supported profile uses local HTML, scripts, styles and media. Learners can follow links to reviewed documents in the same archive. Script-driven navigation, framesets and remote assets require a different delivery profile. [ADL SCORM 1.2 package requirements](https://lms.technology/for/scorm/1.2/standards/SCORM_1.2_ConformanceReq.pdf) · [ADL cross-domain runtime guidance](https://adlnet.gov/assets/uploads/ADL_CrossDomainScripting_1_0.pdf)
 
 ### Course assignments and feedback
 
@@ -395,7 +412,9 @@ Open **Dateiabgaben / File submissions** in a course workspace, then **Kursaufga
 
 The participant chooses a published assignment and submits a file. The file is accepted after the scan and the server confirms the attempt. The recorded attempt keeps the rubric and the exact file version from submission. To allow another attempt within the applicable deadline and limit, choose **Überarbeitung anfordern / Request revision** in the review form. The participant can find the feedback and submit a new version in the same assignment. Choose **Freigeben / Release feedback** to share the final evaluation. The private note stays in the staff review, and each released revision appears in the learner's course notifications.
 
-For group work, open **Abgabeteams / Assignment teams** on the selected assignment. Add the team name and current enrolled members. Set a team deadline when it differs from the published deadline. A team can be edited or removed before the first accepted submission. Titles and deadlines remain editable later. Members share the attempt limit, exact accepted file and released feedback. One current team member can submit each attempt, and another can submit a requested revision. Completion rules and weighted grades count the released shared attempt for current members.
+For group work, open **Abgabeteams / Assignment teams** on the selected assignment. Add the team name and current enrolled members. Use **Teamregeln / Team settings** to set a separate deadline, attempt limit or rubric. The first accepted submission fixes the roster. Later rubric changes apply to subsequent submissions and every accepted attempt retains its own rubric. Members share the attempt history, exact accepted file and released feedback. One current team member can submit each attempt, and another can submit a requested revision. Completion rules and weighted grades count the released shared attempt for current members.
+
+In the assignment review, download the import template and fill the rubric points for the selected submissions. Upload a CSV or XLSX file, inspect the original and proposed points, and confirm any permitted replacements. The batch keeps the existing feedback and private notes. Review and release the resulting drafts through the ordinary assignment actions.
 
 ### Native text exams
 
@@ -403,7 +422,7 @@ Open **Freitextprüfung / Text exam** in the course's learning activities. Cours
 
 Candidates see the questions when their sitting opens. They can save a private draft and resume it after reloading. To finish, answer every question and select **Prüfung abgeben / Submit exam**. The server enforces the deadline. If the course has an individual exam time allowance, it extends that candidate's submission window.
 
-After all effective deadlines, current course staff can select a submitted attempt, award points, save a review draft and release it. The candidate receives a notification and sees their own points, outcome and released feedback. To correct a released review, save the correction as a new draft and release it. Previous sittings and released results remain available through the exam version menu. Dedicated Academy licences allow existing exam views during grace.
+After all effective deadlines, current course staff can select a submitted attempt, award points, save a review draft and release it. The candidate receives a notification and sees their own points, outcome and released feedback. To correct a released review, save the correction as a new draft and release it. Previous sittings and released results remain available through the exam version menu. For second review, enable a separate release reviewer in the exam draft. After a candidate submits, staff can import per-question marks from CSV or XLSX on the current roster page. Review the draft changes before saving them. Use the grade CSV export for the selected exam version to retrieve released results. Dedicated Academy licences allow existing exam views and exports during grace.
 
 ### Timed exams and results
 
@@ -463,14 +482,16 @@ In **Mini-Quiz**, open **Fragenbank / Question bank** to search prompts and topi
 
 In the question bank, choose **H5P importieren / Import H5P**. The importer supports text-only, single-answer H5P.MultiChoice 1.16, H5P.TrueFalse 1.8, H5P.SingleChoiceSet 1.11 and H5P.QuestionSet 1.20 or 1.21 containing the supported question formats. Choose an H5P file of up to 8 MiB and review the questions, correct answers and declared CC0 1.0 or CC BY 4.0 licence. You can save each supported collection of up to 20 questions in one action. Add the saved questions to a quiz, individually or as a collection. Learners complete the interactions in the normal course quiz and can open **Quelle und Lizenz / Source and licence** for the package and question-level credits. Quiz scoring and attempt limits follow the course settings. Committed answers are included as interactions in the course xAPI archive. [H5P package definitions](https://h5p.org/documentation/developers/json-file-definitions)
 
+For interactive playback, open **Interaktive H5P-Aktivitäten / Interactive H5P activities** in course materials. Select a supported package, review it and publish it after the scan. The supported player loads approved library versions from a separate HTTPS origin. Learners can open the activity, complete it and return to their saved course progress. See the [H5P runtime setup](../deploy/lms-content/h5p/README.md) for the supported library versions, wildcard host and test configuration.
+
 If a quiz contains at least two questions from the bank, staff can choose **Fragen pro Versuch ziehen / Draw questions for each attempt** and set a number smaller than the pool. Each candidate is pinned to its chosen bank revision. Learners select **Fragen ziehen und Versuch starten / Draw questions and start attempt**. The server randomly selects that number of distinct questions. Reloading, retrying the start or saving a draft keeps the same selection. A new permitted attempt draws again. The course start and attempt rules continue to apply.
 
 A published mini quiz shows current questions and your attempt allowance. Once the course starts, answers are saved as a private online draft. Wait for the saved confirmation before leaving or reloading. A submit consumes an attempt only after the server accepts it. Correct answers stay server-private. Submission and pass state require online confirmation. Completion requires a completed enrolment, ended sessions, verified attendance under the pinned completion policy and a passed current required published quiz. The standard attendance threshold is 80% per session. A published policy can change it and require additional evidence or staff verification. The server issues the protected completion PDF when all applicable requirements are met. Revocation retains history and constrains
 reissue; the PDF is not a new official qualification or legal signature.
 
-In **Lernaktivitäten → Kompetenzen / Learning activities → Competencies**, course managers can create a reusable framework with named levels and coded competencies, then assign a specific revision to the course. Instructors select a current participant, choose a competency and level, and release a visible reason. They can attach the learner's best attempt on the currently published quiz and a released individual or team assignment assessment. The decision records the selected assignment title, score and review revision. Publishing a correction adds to the learner's history, and later framework or assignment changes preserve earlier assessments.
+In **Lernaktivitäten → Kompetenzen / Learning activities → Competencies**, course managers can create a reusable framework with named levels and coded competencies, then assign a specific revision to the course. Instructors select a current participant, choose a competency and level, and release a visible reason. They can attach the learner's best attempt on the currently published quiz and a released individual or team assignment assessment. Staff can also attach a released text exam mark. The decision keeps the source title, score and exact review revision. Managers can archive a framework to prevent new assignments, then restore it when needed. Existing course assignments and assessment history keep their original framework revisions. A decision can also pin the released score from a text exam without including the exam answers or feedback. Publishing a correction adds to the learner's history. Existing courses and evidence retain their framework revision when a manager archives or revises the framework.
 
-In **Lernaktivitäten → Peerfeedback / Learning activities → Peer feedback**, a course instructor can open an optional text exchange. Participants submit contributions without identifying details and may withdraw before matching. The teaching team approves each contribution before matching a minimum of three entries. Participants receive one anonymous contribution to review. Staff approve replies before publishing them. Recipients can report released feedback. The teaching team can uphold or withhold the reply and publish a response. After releasing the current round, staff can open a new one. When opening a round, staff can choose the criteria of a published course assignment. The round displays those criteria from the selected assignment version throughout its lifecycle. The round selector gives staff and participants access to earlier rounds, including requests to review a released reply. Participants opt in by contributing their own text, and peer feedback remains qualitative.
+In **Lernaktivitäten → Peerfeedback / Learning activities → Peer feedback**, a course instructor can open an optional text exchange. Participants submit contributions without identifying details and may withdraw before matching. The teaching team approves each contribution before matching a minimum of three entries. Participants receive one anonymous contribution to review. Staff approve replies before publishing them. Recipients can report released feedback. The teaching team can uphold or withhold the reply and publish a response. After releasing the current round, staff can open a new one. When opening a round, staff can choose the criteria of a published course assignment. The round displays the pinned criteria and can optionally require scores from their defined levels. Staff approve replies before any points reach the recipient. Peer scores stay in the round. If the round allows attachments, a participant can attach a scanned PDF or TXT file. Use a neutral document that contains no identifying information. The uploader, matching reviewer and current authorised staff receive the exact file under a neutral download name where their current round and course rights permit. The round selector gives staff and participants access to earlier rounds and the released feedback dispute workflow.
 
 After a delivered course, an authorised customer can request it again with new future dates. The new request copies teaching time and requirements, with no automatic allocation. Files need new explicit sharing; learner attendance, feedback, notebooks, contracts and quiz attempts are not copied. See [Course workspace](GUIDE.md#section-course-learning-workspace).
 
@@ -832,7 +853,7 @@ The dashboard connects the existing job, calendar and earnings cards with person
 ## Content by account and permission
 
 | Area                               | Content and boundary                                                                                                                                                                                                                                                                                   |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Suggested jobs                     | Published jobs with a claim deadline that remains valid. Verified, unexpired expertise prioritises matching requirements. Authoritative eligibility, contract and conflict checks still occur on the server during the actual claim.                                                                   |
 | Calendar                           | The actor's own private events in the next 30 days and own confirmed assignment sessions, sorted together by start. The preview shows at most five entries. Administrative permissions do not extend this query to other people's private appointments.                                                |
 | Messages and notifications         | Unread messages from the actor's own permitted chat rooms, the unread notification count and at most three recent notices. Full contents and currently checked links remain in chat or the inbox.                                                                                                      |
@@ -998,7 +1019,7 @@ and saved-view operations. Existing `job_detail` and `job_dashboard` implementat
 [The marketplace candidate migration](../supabase/migrations/20261124164736_optimize_job_discovery_candidates.sql) applies the active-offer and filter conditions before checking visibility and pricing. It looks up the first session for the open or earliest-start view and calculates total teaching time only when the sort or filters require it. The public response, cursor format and existing visibility and pricing rules are preserved.
 
 | Public RPC                                                | Purpose                                                                                                     |
-|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `job_discovery(p_filters,p_cursor,p_limit)`               | Up to 100 authorised offers, `has_more`, next-page cursor and canonical filters in a bounded JSON response. |
 | `job_detail(p_job_id)`                                    | One permitted job with sessions, requirements and aggregate position counts.                                |
 | `job_dashboard()`                                         | Authorised counts, two suggestions and bounded own upcoming allocations.                                    |
@@ -1197,7 +1218,7 @@ have an empty search path and explicit execution grants. Authentication comes fr
 `auth.uid()` and database permissions, never a caller-supplied role/user ID.
 
 | RPC                                                                                           | Purpose                                                                                                                                           |
-|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `job_lifecycle(p_job_id)`                                                                     | Authorized version, actions, position counts and own/managed claim history. Other lecturers' identities are not exposed through aggregate counts. |
 | `manage_job_offer(p_job_id,p_action,p_expected_version,p_request_id,p_payload)`               | Versioned `draft`, `published`, `archived`, `edit`, `duplicate`, `reopen`; reopening requires `reason`.                                           |
 | `cancel_job_assignment(p_claim_id,p_reason,p_request_id)`                                     | Audited own/authorized whole-block cancellation.                                                                                                  |
@@ -1464,7 +1485,7 @@ are recorded in the audit trail. Existing ambiguous rows are never auto-classifi
 ## API and privacy
 
 | RPC                                                                             | Result and scope                                                                                                                                     |
-|---------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `resolve_participant_chat_origin(p_room,p_user,p_independent)`                  | A current authorized room manager explicitly records the basis of a participant-room membership.                                                     |
 | `assignment_withdrawals(p_job_id)`                                              | Current actor's confirmed claims and own applications, or current authorized management applications. Null job selects a bounded cross-job snapshot. |
 | `request_assignment_withdrawal(p_claim_id,p_reason,p_request_id)`               | Own confirmed future assignment only; returns application ID and current status.                                                                     |
@@ -1569,7 +1590,7 @@ All other supplied codes remain separate: BVMM1, CIS2–CIS5, COS1–COS2, DLO2,
 ## Data and authority
 
 | Owning entity                                                | Purpose                                                                                                                                      |
-|--------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data/course-building-blocks.json`                           | Reviewed import artifact with 22 source-derived curriculum definitions and 24 exact-byte source versions; no PDFs or absolute personal paths |
 | `building_blocks`                                            | Curated source curriculum, identity, stated duration, notes and default reusable template                                                    |
 | `building_block_sources`                                     | Immutable filename/hash/page/date versions; only the primary-selector flag can change                                                        |
@@ -1679,7 +1700,7 @@ All UI labels and explanatory notices are DE/EN; authored syllabus, questions, a
 Migration `20261116091015_course_learning_workspace.sql` adds private RLS tables for course settings, preparation, exact resource shares/receipts, attendance/corrections, Q&A, owner notebooks, protected feedback, quiz versions/attempts and immutable completion facts with auditable revocation. Direct browser table access is revoked. Public functions remain invoker wrappers around checked private implementations:
 
 | RPC                                                                       | Purpose                                                                                                |
-|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `my_course_workspaces()`                                                  | Bounded list of current authorised course runs                                                         |
 | `course_workspace(p_run_id)`                                              | Permission-scoped course projection, exact file versions and current action flags                      |
 | `course_workspace_action(p_run_id,p_action,p_payload,p_expected_version)` | Explicit checked preparation/contact/resource/notebook/Q&A/feedback/attendance/quiz/completion actions |
@@ -1769,7 +1790,7 @@ Queries refresh on focus/reconnect and every 30 seconds while the centre is open
 The additive `20261116121554_course_readiness.sql` migration creates five private RLS-enabled ledgers: settings, tasks, instruction receipts, request idempotency and preparation events. Historical migrations are unchanged. These public authenticated functions form the API:
 
 | RPC                                                                         | Purpose                                                                                                                                                                      |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `course_readiness(p_course_run_id?)`                                        | Authorised current snapshots; an explicit inaccessible ID fails closed. The overview bounds results to 250 nonarchived courses, excluding those ended more than 30 days ago. |
 | `save_readiness_settings(run, payload, expected_version, request_id)`       | Versioned applicability, instructions, meeting and deadline.                                                                                                                 |
 | `confirm_course_sessions(run, expected_version, request_id)`                | Confirm the current source schedule fingerprint.                                                                                                                             |
@@ -1842,7 +1863,7 @@ replacement revision.
 The additive `attendance_delivery` migration creates four RLS-enabled private tables with no browser table grants:
 
 | Record                         | Purpose                                                                                                      |
-|--------------------------------|--------------------------------------------------------------------------------------------------------------|
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `private.delivery_records`     | Session identity, current workflow state, CAS version and editable unsubmitted draft                         |
 | `private.delivery_submissions` | Immutable lecturer-authored numbered evidence, actual interval/zone and original scheduled interval snapshot |
 | `private.delivery_events`      | Immutable submission/review/customer events, actor and timestamp with appropriate explanations               |
@@ -1859,7 +1880,7 @@ triggers.
 ## SQL API
 
 | RPC                                                                                 | Behavior                                                                                                 |
-|-------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `delivery_sessions(p_scope, p_before_at, p_before_id, p_limit)`                     | Cursor-paged own, MFA management or organisation-scoped customer projection; explicit `has_more`         |
 | `delivery_session(p_session_id)`                                                    | Exact currently authorized detail, including older notification deep links                               |
 | `delivery_history(p_session_id)`                                                    | Revision and event history, redacted for customer representatives                                        |
@@ -2207,7 +2228,7 @@ Optional links accept only `https://` with ASCII DNS names or a complete IPv4 ad
 Additive migration created with the actually pinned Supabase CLI: `20261116080743_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
 
 | RPC                                                                                     | Purpose                                                                                                                                                    |
-|-----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `global_calendar_events(p_from,p_to,p_manage,p_search,p_before_at,p_before_id,p_limit)` | Authorised overlap within a bounded range; at most 100 records, `has_more` and a tuple cursor. `p_manage=true` requires current management permission/MFA. |
 | `manage_global_event(p_id,p_action,p_expected_version,p_request_id,p_payload)`          | Versioned/idempotent `save`, `publish`, `unpublish`, `archive`, `recover` actions. New drafts use `p_id=null`, version 0.                                  |
 
@@ -2402,7 +2423,7 @@ This module is an intentional internal staff directory with resource-scoped clie
 ## API contract
 
 | RPC                       | Parameters and result                                                                                                                                                                                                                                                    |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `people_directory`        | Optional `p_search` (100 chars), `p_label` (40 chars), `p_topic_id` UUID. Returns up to 200 safe profile summaries with authored biography, country/languages/labels/topics and permission-scoped average/count.                                                         |
 | `person_profile`          | `p_user_id`. Returns the intentional profile projection plus teaching experience and `can_moderate`. No email, phone, CV, rates or financial fields.                                                                                                                     |
 | `profile_courses`         | `p_user_id`. Returns confirmed taught course blocks grouped by actual assignment instants: `current`, `upcoming`, `past`, with course ID/title/timezone/topic IDs and `can_open` matching full-course read permission. No rates, terms or private customer contact data. |
@@ -2474,7 +2495,7 @@ Withdrawal, replacement, document archiving or removal of a topic ends the forme
 New CLI migration: `20261116080746_qualification_evidence_and_attestation_history.sql`. Existing migrations remain unchanged. Private tables `qualification_states`, `qualification_evidence`, `qualification_events` and `qualification_requests` have RLS and no browser table grants. Current topic selections remain in `lecturer_topics`; the new core does not alter underlying job claims, accepted terms or calendar allocations.
 
 | RPC                              | Contract                                                                                             |
-|----------------------------------|------------------------------------------------------------------------------------------------------|
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `own_qualification_certificates` | Only own clean personal certificate versions, literal search and a bounded cursor.                   |
 | `qualification_review`           | Current topic state, CAS version and only currently shared version metadata.                         |
 | `save_qualification_evidence`    | Own explicit binding; `p_version_id=null` withdraws access; CAS and request ID required.             |
@@ -2669,7 +2690,7 @@ Migration `20261116080730_chat_structured_mentions.sql` is additive. All earlier
 delivered migrations stay unchanged.
 
 | API                                                                                            | Contract                                                                                                                                            |
-|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `chat_mention_candidates(p_room_id)`                                                           | Current active, role-eligible room members, excluding the caller; unauthorized rooms are denied.                                                    |
 | `send_message_with_mentions(p_room_id,p_body,p_client_id,p_document_id,p_mention_ids)`         | Atomic message, whole selected recipient list, first-mention notices and idempotency record; returns confirmed message UUID.                        |
 | `edit_message_with_mentions(p_message_id,p_body,p_expected_version,p_client_id,p_mention_ids)` | Sender-only, current membership, existing 15 minute window, bounded rate, expected content version and exact retry binding; returns `{id,version}`. |
@@ -2835,7 +2856,7 @@ Records and earlier text versions are stored in unexposed private tables with RL
 ## API
 
 | RPC                                                                   | Behaviour                                                                                                                                     |
-|-----------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `comment_context(p_kind,p_id)`                                        | Current writing/moderation capabilities; no rows when access is denied.                                                                       |
 | `resource_comments(p_kind,p_id,p_before_at,p_before_id,p_limit)`      | Newest first, complete timestamp/UUID cursor, at most 100 rows. Hidden posts are visible only to their author and authorised moderators.      |
 | `add_resource_comment(p_kind,p_id,p_body,p_request_id)`               | 1–5000 characters, actual actor identity, durable resource-bound retry with the same UUID; at most 10 new posts/minute and 100/day per actor. |
@@ -2950,7 +2971,7 @@ list queries start from current publication pointers rather than loading revisio
 history. No public table grants expose drafts, audiences or operation parameters.
 
 | Public RPC                                                                     | Contract                                                                                                                                                                   |
-|--------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `manage_announcement(p_id,p_action,p_expected_version,p_request_id,p_payload)` | Current MFA management; `save`, `publish`, `archive`, `recover`; exact request binding and atomic side effects. New draft creation uses null ID and expected version zero. |
 | `admin_announcements(p_search,p_state,p_before_at,p_before_id,p_limit)`        | Bounded metadata pages; finite, complete tuple cursors and literal search.                                                                                                 |
 | `admin_announcement(p_id)`                                                     | Current authorized draft and published snapshots for the editor.                                                                                                           |
@@ -3259,7 +3280,7 @@ rotating the token also changes its sender-scoped retry/rate namespace.
 The JSON body contains:
 
 | Field                                            | Contract                                                                                     |
-|--------------------------------------------------|----------------------------------------------------------------------------------------------|
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `submission_id`                                  | Stable UUID reused for an uncertain retry.                                                   |
 | `company_name`, `contact_name`, `email`, `phone` | Bounded, validated contact input; optional phone is an empty string.                         |
 | `topic`, `message`                               | Authored training topic and requirements; literal text, no authored HTML execution.          |
@@ -3425,7 +3446,7 @@ Offline/optimistic confirmation remains prohibited.
 Three different states must remain distinct:
 
 | Value and source                                                                     | Meaning                                                                                                                                           | Required handling                                                                                                                  |
-|--------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Numeric `0` in the directly readable job columns for a role-dependent offer          | A storage sentinel; it is not the current actor's quote.                                                                                          | Read the authorised discovery/detail projection or supported `job_offers()` interface instead of calculating a fee from the table. |
 | `null` in an authorised prospective quote                                            | No applicable monetary quote is available to that actor, including nonlecturer management or an offer whose private policy is not yet configured. | Preserve `null`, show restricted compensation and disable an unpriced claim. Never coerce absence to zero.                         |
 | A numeric amount, including a genuine numeric zero, returned by the authorised quote | The actor's applicable prospective compensation under that offer's captured policy.                                                               | Display the returned value without treating all numeric zeros as missing. The server still decides whether a claim is eligible.    |
@@ -3444,16 +3465,16 @@ handles an absent field for compatibility with an older backend. None of these v
 
 This guide describes the current 36-migration main source, including the merged discovery and role-quote bridge. The relevant reading path is:
 
-| Source                                                                                                                       | Owning contract                                                                                                                                                                                 |
-|------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Private role-pricing migration](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql)            | Current policy/offer snapshots, `job_offers`, role-specific quote versions, claim checks/triggers and the role-aware lifecycle budget. Read its later definitions after the earlier migrations. |
-| [Discovery and saved-view migration](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql)                   | Introduces the public discovery/detail/dashboard and own saved-view interfaces. Later private definitions below govern their current quote projection.                                          |
-| [Role-aware discovery bridge](../supabase/migrations/20261116080748_role_aware_job_discovery.sql)                               | Owns the current private quote/context helpers and replacement candidate/item/page implementations, including price filters, sorting and cursor context.                                        |
-| [Discovery API and DTOs](../src/features/jobs/discovery-api.ts)                                                                 | Calls the bounded discovery, exact-detail and dashboard RPCs; validates nullable numeric quotes without coercion and includes observed role context in page keys.                               |
-| [Shared DTOs](../src/lib/types.ts)                                                                                              | Prospective `Job.amount` and `Job.total_amount` are nullable; accepted `Claim` amounts remain separate numeric snapshots.                                                                       |
+| Source                                                                                                                                | Owning contract                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Private role-pricing migration](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql)                  | Current policy/offer snapshots, `job_offers`, role-specific quote versions, claim checks/triggers and the role-aware lifecycle budget. Read its later definitions after the earlier migrations. |
+| [Discovery and saved-view migration](../supabase/migrations/20261116080735_job_discovery_and_saved_views.sql)                         | Introduces the public discovery/detail/dashboard and own saved-view interfaces. Later private definitions below govern their current quote projection.                                          |
+| [Role-aware discovery bridge](../supabase/migrations/20261116080748_role_aware_job_discovery.sql)                                     | Owns the current private quote/context helpers and replacement candidate/item/page implementations, including price filters, sorting and cursor context.                                        |
+| [Discovery API and DTOs](../src/features/jobs/discovery-api.ts)                                                                       | Calls the bounded discovery, exact-detail and dashboard RPCs; validates nullable numeric quotes without coercion and includes observed role context in page keys.                               |
+| [Shared DTOs](../src/lib/types.ts)                                                                                                    | Prospective `Job.amount` and `Job.total_amount` are nullable; accepted `Claim` amounts remain separate numeric snapshots.                                                                       |
 | [Marketplace](../src/features/jobs/discovery.tsx), [cards](../src/features/jobs/card.tsx) and [detail](../src/features/jobs/jobs.tsx) | Server filters, private saved views and explicit next pages; restricted-price rendering, the full displayed-consent fingerprint and the online claim request.                                   |
-| [Lifecycle API](../src/features/jobs/lifecycle-api.ts) and [lifecycle UI](../src/features/jobs/lifecycle.tsx)                      | Read the server budget, preserve an explicitly protected `null` and perform versioned lifecycle actions.                                                                                        |
-| [Commercial pricing UI](../src/features/commercial/pricing.tsx)                                                                 | Uses the permission-scoped financial APIs for the captured offer policy; the ordinary job projection does not disclose policy percentages.                                                      |
+| [Lifecycle API](../src/features/jobs/lifecycle-api.ts) and [lifecycle UI](../src/features/jobs/lifecycle.tsx)                         | Read the server budget, preserve an explicitly protected `null` and perform versioned lifecycle actions.                                                                                        |
+| [Commercial pricing UI](../src/features/commercial/pricing.tsx)                                                                       | Uses the permission-scoped financial APIs for the captured offer policy; the ordinary job projection does not disclose policy percentages.                                                      |
 
 The former unpaginated `jobsQuery` browser-list path is no longer the marketplace owner. The current server filters before its page boundary; the UI requests 50 results and the API permits 1–100 per page. Loading a page or selecting an own saved view is not an allocation or a replacement for final server checks. [Job discovery](GUIDE.md#section-job-discovery) describes the complete filter, saved-view and paging workflow.
 
@@ -3643,9 +3664,10 @@ The actor/job-scoped `job-briefing` query is refreshed after real claims and can
 Both new browser journeys passed on96c3c5c with fictional data. The complete run still requires correction/repetition for its separate existing mobile-board failure; see the relevant pull request checks.
 
 | Layout  | Management, German/light | Revoked contact, English/dark     |
-|---------|--------------------------|-----------------------------------|
+| ------- | ------------------------ | --------------------------------- |
 | Desktop | Saved optional details   | Contact hidden after cancellation |
 | Mobile  | Saved optional details   | Contact hidden after cancellation |
+
 ## Assignment change requests
 
 Open **Assignment changes** or follow the link from one of your confirmed jobs.
