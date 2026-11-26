@@ -162,6 +162,70 @@ it("shows only the enrolled participant's pinned publication", async () => {
   });
 });
 
+it("copies modules and lessons, moves a copy and saves it without editing the publication", async () => {
+  mount(true);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Published module" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Duplicate module" }));
+  fireEvent.change(screen.getByLabelText("Module title"), {
+    target: { value: "Module copy" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Published module" }));
+  const [original] = screen.getAllByRole("button", {
+    name: "Published lesson",
+  });
+  fireEvent.click(original);
+  fireEvent.click(screen.getByRole("button", { name: "Duplicate lesson" }));
+  fireEvent.change(screen.getByLabelText("Lesson title"), {
+    target: { value: "Moved lesson copy" },
+  });
+  const move = screen.getByRole("button", {
+    name: "Move to destination module",
+  });
+  expect(move).toBeDisabled();
+  const target = screen.getByRole("option", {
+    name: "2. Module copy",
+  }) as HTMLOptionElement;
+  fireEvent.change(screen.getByLabelText("Destination module"), {
+    target: { value: target.value },
+  });
+  fireEvent.click(move);
+  expect(screen.getByLabelText("Lesson title")).toHaveValue(
+    "Moved lesson copy",
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Participant preview" }));
+  const compact = screen.getByRole("button", { name: "Narrow view" });
+  fireEvent.click(compact);
+  expect(compact).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("heading", { name: "Moved lesson copy" }),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Wide view" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+  await screen.findByText("The draft was saved.");
+  expect(studio.published_content).toEqual(publishedContent);
+  const [source, destination] = studio.draft_content!.modules;
+  expect(source.lessons.map((lesson) => lesson.id)).toEqual([lessonId]);
+  expect(destination.id).not.toBe(source.id);
+  expect(destination.lessons.map((lesson) => lesson.title)).toEqual([
+    "Published lesson",
+    "Moved lesson copy",
+  ]);
+  expect(
+    new Set([lessonId, ...destination.lessons.map((lesson) => lesson.id)]).size,
+  ).toBe(3);
+  expect(destination.lessons.map((lesson) => lesson.body)).toEqual([
+    body,
+    body,
+  ]);
+});
+
 it("saves and publishes an edited module, then explicitly migrates one active learner", async () => {
   mount(true, true);
   await screen.findByRole("heading", { name: "Course content" });

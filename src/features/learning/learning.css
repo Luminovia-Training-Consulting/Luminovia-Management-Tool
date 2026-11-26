@@ -611,7 +611,8 @@
   justify-content: flex-start;
 }
 
-.course-authoring-modules li > button {
+.course-authoring-modules li > button,
+.course-authoring-modules > li > div > button {
   max-inline-size: 100%;
   overflow-wrap: anywhere;
 }
@@ -631,6 +632,23 @@
 
 .course-authoring-editor .knowledge-editor {
   min-width: 0;
+}
+
+.course-authoring-destination {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  justify-items: start;
+}
+
+.course-authoring-destination .field {
+  inline-size: min(24rem, 100%);
+  min-width: 0;
+}
+
+.course-authoring-compact {
+  max-inline-size: 24rem;
+  margin-inline: auto;
 }
 
 .course-authoring-preview {

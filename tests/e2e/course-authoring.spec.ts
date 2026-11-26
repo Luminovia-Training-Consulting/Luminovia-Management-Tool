@@ -95,9 +95,34 @@ test("course author publishes a versioned module and learner sees only the assig
   await page.getByLabel("Lektionstitel").fill(`Fictional lesson ${suffix}`);
   const lessonText = `Fictional lesson body ${suffix}`;
   await page.getByRole("textbox", { name: "Lektionsinhalt" }).fill(lessonText);
-  await page.getByRole("button", { name: "Entwurf speichern" }).click();
-  await expect(page.getByText(/Entwurf · Fassung 1/)).toBeVisible();
-  await page.getByRole("button", { name: "Veröffentlichen" }).click();
+  await page.getByRole("button", { name: "Modul hinzufügen" }).click();
+  const destination = `Fictional destination ${suffix}`;
+  await page.getByLabel("Modultitel").fill(destination);
+  await page
+    .getByRole("button", { name: `Fictional lesson ${suffix}`, exact: true })
+    .click();
+  await page.getByRole("button", { name: "Lektion duplizieren" }).click();
+  const copyTitle = `Fictional lesson copy ${suffix}`;
+  await page.getByLabel("Lektionstitel").fill(copyTitle);
+  await page
+    .getByLabel("Zielmodul")
+    .selectOption({ label: `2. ${destination}` });
+  await page.getByRole("button", { name: "In Zielmodul verschieben" }).click();
+  await page.getByRole("button", { name: "Teilnehmendenvorschau" }).click();
+  const narrow = page.getByRole("button", { name: "Schmale Ansicht" });
+  await narrow.click();
+  await expect(narrow).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { name: copyTitle })).toBeVisible();
+  await expect(page.getByText(/Entwurf · Fassung \d+/)).toBeVisible();
+  const publish = page.getByRole("button", { name: "Veröffentlichen" });
+  await expect(publish).toBeEnabled();
+  const beforePublish = await checked(
+    learnerClient.rpc("course_content_studio", { p_run_id: run }),
+    { requireData: true },
+  );
+  expect(beforePublish.published_content.modules).toEqual([]);
+  expect(beforePublish.draft_content).toBeNull();
+  await publish.click();
   await expect(page.getByText(/Veröffentlicht · Fassung 1/)).toBeVisible();
 
   const learnerState = await checked(
@@ -109,6 +134,17 @@ test("course author publishes a versioned module and learner sees only the assig
   );
   expect(learnerState.draft_content).toBeNull();
   expect(learnerState.versions).toEqual([]);
+  expect(learnerState.published_content.modules[1].title).toBe(destination);
+  const [originalModule, destinationModule] =
+    learnerState.published_content.modules;
+  expect(originalModule.lessons).toHaveLength(1);
+  expect(destinationModule.lessons).toHaveLength(1);
+  expect(destinationModule.lessons[0].id).not.toBe(
+    originalModule.lessons[0].id,
+  );
+  expect(destinationModule.lessons[0].body).toEqual(
+    originalModule.lessons[0].body,
+  );
 
   const context = await browser.newContext({
     baseURL: process.env.E2E_BASE_URL!,
@@ -128,6 +164,9 @@ test("course author publishes a versioned module and learner sees only the assig
     ).toBeVisible();
     await expect(
       learnerPage.getByText(lessonText, { exact: true }),
+    ).toHaveCount(2);
+    await expect(
+      learnerPage.getByRole("heading", { name: copyTitle }),
     ).toBeVisible();
     await expect(
       learnerPage.getByRole("button", { name: "Entwurf speichern" }),

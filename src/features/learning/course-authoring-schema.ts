@@ -23,6 +23,8 @@ export type CourseModule = {
 export type CourseCurriculum = { modules: CourseModule[] };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const maxCourseModules = 40;
+export const maxModuleLessons = 100;
 
 export const emptyCurriculum: CourseCurriculum = { modules: [] };
 
@@ -34,7 +36,7 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Invalid course curriculum");
   const modules = (value as { modules?: unknown }).modules;
-  if (!Array.isArray(modules) || modules.length > 40)
+  if (!Array.isArray(modules) || modules.length > maxCourseModules)
     throw new Error("Invalid course modules");
 
   const ids = new Set<string>();
@@ -52,7 +54,7 @@ export function normalizeCourseCurriculum(value: unknown): CourseCurriculum {
       typeof module.description !== "string" ||
       module.description.length > 1000 ||
       !Array.isArray(module.lessons) ||
-      module.lessons.length > 100
+      module.lessons.length > maxModuleLessons
     )
       throw new Error("Invalid course module");
     ids.add(module.id);
@@ -123,5 +125,48 @@ export function createCourseModule(): CourseModule {
     title: "",
     description: "",
     lessons: [],
+  };
+}
+
+export function copyCourseLesson(lesson: CourseLesson): CourseLesson {
+  return {
+    ...lesson,
+    id: newCourseContentId(),
+    body: structuredClone(lesson.body),
+  };
+}
+
+export function copyCourseModule(module: CourseModule): CourseModule {
+  return {
+    ...module,
+    id: newCourseContentId(),
+    lessons: module.lessons.map(copyCourseLesson),
+  };
+}
+
+export function moveCourseLesson(
+  curriculum: CourseCurriculum,
+  sourceId: string,
+  lessonId: string,
+  targetId: string,
+): CourseCurriculum {
+  if (sourceId === targetId) return curriculum;
+  const source = curriculum.modules.find((module) => module.id === sourceId);
+  const target = curriculum.modules.find((module) => module.id === targetId);
+  const lesson = source?.lessons.find((item) => item.id === lessonId);
+  if (!lesson || !target || target.lessons.length >= maxModuleLessons)
+    return curriculum;
+
+  return {
+    modules: curriculum.modules.map((module) => {
+      if (module.id === sourceId)
+        return {
+          ...module,
+          lessons: module.lessons.filter((item) => item.id !== lessonId),
+        };
+      if (module.id === targetId)
+        return { ...module, lessons: [...module.lessons, lesson] };
+      return module;
+    }),
   };
 }

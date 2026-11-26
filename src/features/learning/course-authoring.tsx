@@ -15,9 +15,14 @@ import {
   type CourseWorkspace,
 } from "./api";
 import {
+  copyCourseLesson,
+  copyCourseModule,
   createCourseLesson,
   createCourseModule,
   emptyCurriculum,
+  maxCourseModules,
+  maxModuleLessons,
+  moveCourseLesson,
   normalizeCourseCurriculum,
   type CourseCurriculum,
   type CourseLesson,
@@ -68,6 +73,74 @@ function moveItem<T>(items: T[], index: number, direction: -1 | 1) {
   return next;
 }
 
+function LessonDestination({
+  modules,
+  sourceId,
+  onMove,
+}: {
+  modules: CourseModule[];
+  sourceId: string;
+  onMove: (id: string) => void;
+}) {
+  const { t } = useTranslation("learning");
+  const [destination, setDestination] = useState("");
+  const available = modules.some(
+    (module) =>
+      module.id !== sourceId && module.lessons.length < maxModuleLessons,
+  );
+  const valid = modules.some(
+    (module) =>
+      module.id === destination &&
+      module.id !== sourceId &&
+      module.lessons.length < maxModuleLessons,
+  );
+
+  if (modules.length < 2) return null;
+  return (
+    <div className="course-authoring-destination">
+      <Field
+        id="course-lesson-destination"
+        label={t("curriculumLessonDestination")}
+      >
+        <select
+          disabled={!available}
+          value={valid ? destination : ""}
+          onChange={(event) => setDestination(event.target.value)}
+        >
+          <option value="">{t("curriculumChooseModule")}</option>
+          {modules.map(
+            (module, index) =>
+              module.id !== sourceId && (
+                <option
+                  key={module.id}
+                  value={module.id}
+                  disabled={module.lessons.length >= maxModuleLessons}
+                >
+                  {t("curriculumModuleOption", {
+                    position: index + 1,
+                    title: module.title || t("untitledCourseModule"),
+                  })}
+                </option>
+              ),
+          )}
+        </select>
+      </Field>
+      {!available && <p>{t("curriculumNoDestination")}</p>}
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!valid}
+        onClick={() => {
+          onMove(destination);
+          setDestination("");
+        }}
+      >
+        {t("curriculumMoveLessonToModule")}
+      </Button>
+    </div>
+  );
+}
+
 export function CourseAuthoring({
   actor,
   courseId,
@@ -94,6 +167,7 @@ export function CourseAuthoring({
     draft_version: number;
   } | null>(null);
   const [preview, setPreview] = useState(false);
+  const [compactPreview, setCompactPreview] = useState(false);
   const [moduleId, setModuleId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState("");
@@ -117,6 +191,9 @@ export function CourseAuthoring({
   const activeLessonIndex =
     activeModule?.lessons.findIndex((item) => item.id === lessonId) ?? -1;
   const activeLesson = activeModule?.lessons[activeLessonIndex] ?? null;
+  const canAddModule = curriculum.modules.length < maxCourseModules;
+  const canAddLesson =
+    !!activeModule && activeModule.lessons.length < maxModuleLessons;
   const activeParticipants = useMemo(
     () => roster.filter((item) => item.status === "enrolled"),
     [roster],
@@ -237,27 +314,49 @@ export function CourseAuthoring({
       },
     });
   };
-  const addModule = () => {
-    const next = createCourseModule();
-    next.title = t("newCourseModule");
-    updateCurriculum((value) => ({ modules: [...value.modules, next] }));
+  const insertModule = (next: CourseModule, index: number) => {
+    if (!canAddModule) return;
+    updateCurriculum((value) => ({
+      modules: [
+        ...value.modules.slice(0, index),
+        next,
+        ...value.modules.slice(index),
+      ],
+    }));
     setModuleId(next.id);
     setLessonId(null);
     setPreview(false);
   };
-  const addLesson = () => {
-    if (!activeModule) return;
-    const next = createCourseLesson();
-    next.title = t("newCourseLesson");
+  const addModule = () =>
+    insertModule(
+      { ...createCourseModule(), title: t("newCourseModule") },
+      curriculum.modules.length,
+    );
+  const insertLesson = (next: CourseLesson, index: number) => {
+    if (!activeModule || !canAddLesson) return;
     updateCurriculum((value) => ({
       modules: value.modules.map((item) =>
         item.id === activeModule.id
-          ? { ...item, lessons: [...item.lessons, next] }
+          ? {
+              ...item,
+              lessons: [
+                ...item.lessons.slice(0, index),
+                next,
+                ...item.lessons.slice(index),
+              ],
+            }
           : item,
       ),
     }));
     setLessonId(next.id);
     setPreview(false);
+  };
+  const addLesson = () => {
+    if (activeModule)
+      insertLesson(
+        { ...createCourseLesson(), title: t("newCourseLesson") },
+        activeModule.lessons.length,
+      );
   };
   const reviseModule = (patch: Partial<CourseModule>) =>
     activeModule &&
@@ -387,18 +486,54 @@ export function CourseAuthoring({
         )}
 
       {preview ? (
-        <CourseContents curriculum={curriculum} />
+        <div>
+          <div
+            className="form-actions"
+            role="group"
+            aria-label={t("curriculumPreviewWidth")}
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              aria-pressed={!compactPreview}
+              onClick={() => setCompactPreview(false)}
+            >
+              {t("curriculumPreviewWide")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              aria-pressed={compactPreview}
+              onClick={() => setCompactPreview(true)}
+            >
+              {t("curriculumPreviewCompact")}
+            </Button>
+          </div>
+          <div
+            className={compactPreview ? "course-authoring-compact" : undefined}
+          >
+            <CourseContents curriculum={curriculum} />
+          </div>
+        </div>
       ) : (
         <fieldset className="course-authoring-layout" disabled={isPending}>
           <aside aria-label={t("curriculumStructure")}>
             <div className="course-authoring-list-header">
               <h3>{t("courseModules")}</h3>
-              <Button type="button" variant="secondary" onClick={addModule}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canAddModule}
+                onClick={addModule}
+              >
                 {t("curriculumAddModule")}
               </Button>
             </div>
             {curriculum.modules.length === 0 && (
               <p>{t("curriculumAddFirstModule")}</p>
+            )}
+            {!canAddModule && (
+              <p>{t("curriculumModuleLimit", { count: maxCourseModules })}</p>
             )}
             <ol className="course-authoring-modules">
               {curriculum.modules.map((item, index) => (
@@ -473,13 +608,21 @@ export function CourseAuthoring({
           </aside>
 
           <div className="course-authoring-editor">
+            {activeModule && !canAddLesson && (
+              <p>{t("curriculumLessonLimit", { count: maxModuleLessons })}</p>
+            )}
             {!activeModule ? (
               <p>{t("curriculumSelectModule")}</p>
             ) : activeLesson ? (
               <>
                 <div className="course-authoring-list-header">
                   <h3>{t("courseLesson")}</h3>
-                  <Button type="button" variant="secondary" onClick={addLesson}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canAddLesson}
+                    onClick={addLesson}
+                  >
                     {t("curriculumAddLesson")}
                   </Button>
                 </div>
@@ -528,6 +671,19 @@ export function CourseAuthoring({
                   disabled={isPending}
                 />
                 <div className="form-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canAddLesson}
+                    onClick={() =>
+                      insertLesson(
+                        copyCourseLesson(activeLesson),
+                        activeLessonIndex + 1,
+                      )
+                    }
+                  >
+                    {t("curriculumCopyLesson")}
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"
@@ -598,12 +754,33 @@ export function CourseAuthoring({
                     {t("curriculumRemoveLesson")}
                   </Button>
                 </div>
+                <LessonDestination
+                  key={activeLesson.id}
+                  modules={curriculum.modules}
+                  sourceId={activeModule.id}
+                  onMove={(destination) => {
+                    updateCurriculum((value) =>
+                      moveCourseLesson(
+                        value,
+                        activeModule.id,
+                        activeLesson.id,
+                        destination,
+                      ),
+                    );
+                    setModuleId(destination);
+                  }}
+                />
               </>
             ) : (
               <>
                 <div className="course-authoring-list-header">
                   <h3>{t("courseModule")}</h3>
-                  <Button type="button" variant="secondary" onClick={addLesson}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canAddLesson}
+                    onClick={addLesson}
+                  >
                     {t("curriculumAddLesson")}
                   </Button>
                 </div>
@@ -631,20 +808,35 @@ export function CourseAuthoring({
                 {activeModule.lessons.length === 0 && (
                   <p>{t("curriculumAddFirstLesson")}</p>
                 )}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    updateCurriculum((value) => ({
-                      modules: value.modules.filter(
-                        (item) => item.id !== activeModule.id,
-                      ),
-                    }));
-                    setModuleId(null);
-                  }}
-                >
-                  {t("curriculumRemoveModule")}
-                </Button>
+                <div className="form-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!canAddModule}
+                    onClick={() =>
+                      insertModule(
+                        copyCourseModule(activeModule),
+                        activeModuleIndex + 1,
+                      )
+                    }
+                  >
+                    {t("curriculumCopyModule")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      updateCurriculum((value) => ({
+                        modules: value.modules.filter(
+                          (item) => item.id !== activeModule.id,
+                        ),
+                      }));
+                      setModuleId(null);
+                    }}
+                  >
+                    {t("curriculumRemoveModule")}
+                  </Button>
+                </div>
               </>
             )}
           </div>

@@ -131,6 +131,30 @@ const pairs: Record<string, [string, string]> = {
   ],
   curriculumRemoveModule: ["Modul entfernen", "Remove module"],
   curriculumRemoveLesson: ["Lektion entfernen", "Remove lesson"],
+  curriculumCopyModule: ["Modul duplizieren", "Duplicate module"],
+  curriculumCopyLesson: ["Lektion duplizieren", "Duplicate lesson"],
+  curriculumModuleLimit: [
+    "Dieser Kurs enthält bereits die maximalen {{count}} Module.",
+    "This course already has the maximum of {{count}} modules.",
+  ],
+  curriculumLessonLimit: [
+    "Dieses Modul enthält bereits die maximalen {{count}} Lektionen.",
+    "This module already has the maximum of {{count}} lessons.",
+  ],
+  curriculumLessonDestination: ["Zielmodul", "Destination module"],
+  curriculumChooseModule: ["Modul auswählen", "Choose a module"],
+  curriculumModuleOption: [
+    "{{position}}. {{title}}",
+    "{{position}}. {{title}}",
+  ],
+  curriculumNoDestination: [
+    "Alle anderen Module haben die maximale Anzahl an Lektionen erreicht.",
+    "All other modules have reached their lesson limit.",
+  ],
+  curriculumMoveLessonToModule: [
+    "In Zielmodul verschieben",
+    "Move to destination module",
+  ],
   curriculumMoveModuleUp: [
     "Modul {{title}} nach oben verschieben",
     "Move module {{title}} up",
@@ -149,6 +173,9 @@ const pairs: Record<string, [string, string]> = {
   newCourseModule: ["Neues Modul", "New module"],
   newCourseLesson: ["Neue Lektion", "New lesson"],
   curriculumPreview: ["Teilnehmendenvorschau", "Participant preview"],
+  curriculumPreviewWidth: ["Breite der Vorschau", "Preview width"],
+  curriculumPreviewWide: ["Breite Ansicht", "Wide view"],
+  curriculumPreviewCompact: ["Schmale Ansicht", "Narrow view"],
   curriculumEdit: ["Bearbeitung fortsetzen", "Continue editing"],
   curriculumSaveDraft: ["Entwurf speichern", "Save draft"],
   curriculumSaving: ["Entwurf wird gespeichert …", "Saving draft…"],
