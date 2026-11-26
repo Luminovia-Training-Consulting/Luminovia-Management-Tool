@@ -13,6 +13,9 @@ import {
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
+  programmePathExceptionRequest,
+  programmePathExceptionRevision,
+  type ProgrammePathExceptionRequest,
   type ProgrammePrerequisiteRequest,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
@@ -114,6 +117,19 @@ export async function setLearningProgramPrerequisite(
     programmePrerequisiteRequest.parse(input),
   );
   if (error) throw error;
+}
+
+/** Confirm the next version of one learner's exception against the reviewed state. */
+export async function setLearningProgramPathException(
+  input: ProgrammePathExceptionRequest,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc(
+    "set_learning_program_path_exception",
+    programmePathExceptionRequest.parse(input),
+  );
+  if (error) throw error;
+  return programmePathExceptionRevision.parse(data);
 }
 
 export async function enrolLearningProgram(input: EnrolLearningProgramRequest) {

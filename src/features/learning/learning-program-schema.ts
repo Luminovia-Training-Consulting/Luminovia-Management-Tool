@@ -25,6 +25,23 @@ export type ProgrammePrerequisiteRequest = z.infer<
   typeof programmePrerequisiteRequest
 >;
 
+export const programmePathExceptionRevision = z.number().int().positive();
+const programmePathException = z.strictObject({
+  active: z.boolean(),
+  revision: programmePathExceptionRevision,
+});
+export const programmePathExceptionRequest = z.strictObject({
+  p_program_id: learningProgramId,
+  p_participant_id: learningProgramId,
+  p_position: programmePosition.min(2),
+  p_active: z.boolean(),
+  p_reason: z.string().trim().min(3).max(500),
+  p_expected_revision: z.number().int().min(0).max(1_000_000_000),
+});
+export type ProgrammePathExceptionRequest = z.infer<
+  typeof programmePathExceptionRequest
+>;
+
 export const learningProgramStates = [
   "completed",
   "unavailable",
@@ -41,6 +58,7 @@ export const learningProgramProgress = z.strictObject({
       receipt_id: learningProgramId.nullable(),
       state: z.enum(learningProgramStates),
       can_open: z.boolean(),
+      prerequisite_exception: programmePathException.nullish(),
       prerequisites: z
         .strictObject({
           mode: prerequisiteMode,
@@ -83,6 +101,7 @@ const programDetail = program.extend({
   version: z.number().int().positive(),
   manage: z.boolean(),
   can_read_grades: z.boolean().optional(),
+  can_manage_path_exceptions: z.boolean().optional(),
   can_write: z.boolean(),
   can_edit: z.boolean(),
   steps: z.array(programCourse).nullable(),

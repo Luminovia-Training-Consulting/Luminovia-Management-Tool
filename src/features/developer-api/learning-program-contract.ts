@@ -10,6 +10,8 @@ import {
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
+  programmePathExceptionRequest,
+  programmePathExceptionRevision,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
 } from "../learning/learning-program-schema.ts";
@@ -216,6 +218,14 @@ export function learningProgramPaths(academy = false) {
       "Set explicit prerequisites for a programme step",
       "Managers can set an all or any completion rule targeting distinct earlier programme positions before any programme enrolment. Supply the reviewed version. An empty list restores the programme's existing sequential or unordered behaviour for that step.",
       programmePrerequisiteRequest,
+    ),
+    "/rest/v1/rpc/set_learning_program_path_exception": write(
+      "setLearningProgrammePathException",
+      "Grant or withdraw a prerequisite exception",
+      "Course management can grant or withdraw an exception for one current programme learner and one step. The request includes a private reason and the reviewed exception revision. The exception permits starting the step. Programme completion still requires each course completion receipt.",
+      programmePathExceptionRequest,
+      false,
+      programmePathExceptionRevision,
     ),
     "/rest/v1/rpc/enrol_learning_program": write(
       "enrolLearningProgramme",
