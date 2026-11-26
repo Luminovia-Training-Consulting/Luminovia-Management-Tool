@@ -1236,7 +1236,7 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
           begin; set local role service_role;
           set local request.path=${q("/rpc/" + name)}; set local request.method='POST';
           set local request.headers='{}'; select public.require_portal_access();
-          select to_jsonb(public.${name}(${args.join(",")})); commit;
+          select coalesce(to_jsonb(public.${name}(${args.join(",")})),'null'::jsonb); commit;
         `).then(JSON.parse);
         const issue = (assertion, scopes = rosterScope) =>
             toolRpc("lti_issue_service_token", [
