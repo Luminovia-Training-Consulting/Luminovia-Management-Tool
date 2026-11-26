@@ -10,10 +10,18 @@ export const portfolioEvidence = z.strictObject({
 });
 export type PortfolioEvidence = z.infer<typeof portfolioEvidence>;
 const evidenceList = z.array(portfolioEvidence).max(5).default([]);
+const reflectionSection = z.string().trim().max(1200).optional();
+export const portfolioReflection = z.strictObject({
+  goal: reflectionSection,
+  outcome: reflectionSection,
+  next_step: reflectionSection,
+});
+export type PortfolioReflection = z.infer<typeof portfolioReflection>;
 const revision = z.strictObject({
   revision: revisionNumber,
   title: z.string(),
   body: z.string(),
+  reflection: portfolioReflection.optional(),
   created_at: date,
   evidence: evidenceList,
 });
@@ -53,6 +61,7 @@ export const portfolioTeacher = z.strictObject({
       id: uuid,
       title: z.string(),
       body: z.string(),
+      reflection: portfolioReflection.optional(),
       revision: revisionNumber,
       shared_at: date,
       learner: z.string(),
@@ -80,6 +89,7 @@ export const portfolioCommand = z.discriminatedUnion("p_action", [
     p_payload: z.strictObject({
       title: z.string().trim().min(1).max(140),
       body: z.string().trim().min(1).max(4000),
+      reflection: portfolioReflection.optional(),
     }),
   }),
   z.strictObject({

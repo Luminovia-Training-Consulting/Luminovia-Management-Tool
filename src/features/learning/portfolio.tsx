@@ -17,6 +17,7 @@ import {
 import {
   portfolioCommand,
   type PortfolioEntry,
+  type PortfolioReflection,
   type PortfolioShareTarget,
 } from "./portfolio-schema";
 import {
@@ -48,6 +49,32 @@ function PortfolioMutationError({ error }: { error: unknown }) {
   );
 }
 
+const reflectionFields = [
+  ["goal", "portfolioReflectionGoal"],
+  ["outcome", "portfolioReflectionOutcome"],
+  ["next_step", "portfolioReflectionNextStep"],
+] as const;
+
+function ReflectionContent({ value }: { value?: PortfolioReflection }) {
+  const { t } = useTranslation("learning");
+  if (!value || !Object.values(value).some(Boolean)) return null;
+  return (
+    <dl className="space-y-2">
+      {reflectionFields.map(
+        ([key, label]) =>
+          value[key] && (
+            <div key={key}>
+              <dt>
+                <strong>{t(label)}</strong>
+              </dt>
+              <dd className="preserve-text">{value[key]}</dd>
+            </div>
+          ),
+      )}
+    </dl>
+  );
+}
+
 /** Bind an edit draft to the exact revision that was opened, including zero for creation. */
 function EntryEditor({
   actor,
@@ -67,11 +94,12 @@ function EntryEditor({
   }));
   const [title, setTitle] = useState(entry?.current.title ?? "");
   const [body, setBody] = useState(entry?.current.body ?? "");
+  const [reflection, setReflection] = useState(entry?.current.reflection ?? {});
   const save = usePortfolioCommand(actor);
   const command = portfolioCommand.safeParse({
     p_entry_id: initial.entry,
     p_action: "save",
-    p_payload: { title, body },
+    p_payload: { title, body, reflection },
     p_expected_revision: initial.revision,
   });
   return (
@@ -101,6 +129,25 @@ function EntryEditor({
           maxLength={4000}
           onChange={(event) => setBody(event.currentTarget.value)}
         />
+        <details>
+          <summary>{t("portfolioReflection")}</summary>
+          {reflectionFields.map(([key, label]) => (
+            <label key={key} htmlFor={bodyId + "-" + key}>
+              {t(label)}
+              <textarea
+                id={bodyId + "-" + key}
+                value={reflection[key] ?? ""}
+                maxLength={1200}
+                onChange={(event) =>
+                  setReflection({
+                    ...reflection,
+                    [key]: event.currentTarget.value,
+                  })
+                }
+              />
+            </label>
+          ))}
+        </details>
         <div className="form-actions">
           <Button type="submit" disabled={!command.success}>
             {t("portfolioSave")}
@@ -138,6 +185,7 @@ function EntryHistory({
             {revision.title}
           </strong>
           <p className="preserve-text">{revision.body}</p>
+          <ReflectionContent value={revision.reflection} />
           <PortfolioEvidenceFiles
             items={revision.evidence}
             id={entry}
@@ -241,6 +289,7 @@ function EntryRow({
     <li className="panel learning-panel space-y-2">
       <h3>{entry.current.title}</h3>
       <p className="preserve-text">{entry.current.body}</p>
+      <ReflectionContent value={entry.current.reflection} />
       <PortfolioEvidenceFiles
         items={entry.current.evidence}
         id={entry.id}
@@ -592,6 +641,7 @@ function CoursePortfolioPage({
               {share.learner} · {t("portfolioRevision", share)}
             </p>
             <p className="preserve-text">{share.body}</p>
+            <ReflectionContent value={share.reflection} />
             <PortfolioEvidenceFiles
               items={share.evidence}
               id={share.id}
