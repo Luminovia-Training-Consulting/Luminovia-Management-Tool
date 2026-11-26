@@ -1,5 +1,5 @@
 /** A course-scoped native exam with versioned papers, private answers and explicit grade release. */
-import { useEffect, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -28,6 +28,12 @@ type Review = NonNullable<TextExamState["review"]>;
 type WithoutRun<T> = T extends unknown ? Omit<T, "p_run_id"> : never;
 type Action = WithoutRun<TextExamCommand>;
 type Run = (command: Action) => Promise<unknown>;
+
+const TextExamGradeImport = lazy(() =>
+  import("./text-exam-grade-import-panel").then((module) => ({
+    default: module.TextExamGradeImport,
+  })),
+);
 
 export function CourseTextExam(props: Props) {
   const { t } = useTranslation("textExam");
@@ -74,7 +80,14 @@ function ExamWorkspace({ actor, course, zone }: Props) {
     },
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data?.exam && !data.exam.questions) return 10_000;
+      if (!data?.exam) return false;
+      if (!data.exam.questions) return 10_000;
+      if (data.staff && data.can_write && data.exam.published_at) {
+        const untilGrading =
+          Date.parse(data.exam.deadline) - Date.parse(data.now);
+        if (untilGrading > 0)
+          return Math.min(10_000, Math.max(1000, untilGrading));
+      }
       return false;
     },
   });
@@ -220,14 +233,33 @@ function ExamWorkspace({ actor, course, zone }: Props) {
       )}
       {state.staff && paper?.published_at && (
         <div className="space-y-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!online || grades.isPending}
-            onClick={() => grades.mutate(paper.revision)}
-          >
-            {t(grades.isPending ? "exporting" : "exportGrades")}
-          </Button>
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || grades.isPending}
+              onClick={() => grades.mutate(paper.revision)}
+            >
+              {t(grades.isPending ? "exporting" : "exportGrades")}
+            </Button>
+            {paper.questions &&
+              state.submissions.length > 0 &&
+              Date.parse(state.now) >= Date.parse(paper.deadline) && (
+                <Suspense fallback={null}>
+                  <TextExamGradeImport
+                    course={course}
+                    version={paper.revision}
+                    offset={offset}
+                    maxima={paper.questions.map(
+                      (question) => question.max_points,
+                    )}
+                    submissions={state.submissions}
+                    disabled={disabled}
+                    refresh={() => client.invalidateQueries({ queryKey: key })}
+                  />
+                </Suspense>
+              )}
+          </div>
           {grades.isError && <Notice kind="error">{t("exportFailed")}</Notice>}
         </div>
       )}

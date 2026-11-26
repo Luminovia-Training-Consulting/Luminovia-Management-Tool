@@ -37,11 +37,7 @@ export async function readExamGradeImport(
   version: number,
   roster: ExamGradeCandidate[],
 ): Promise<PreviewRow[]> {
-  const records = file.name.toLowerCase().endsWith(".xlsx")
-    ? await (
-        await import("./attendance-xlsx")
-      ).readSpreadsheetXlsx(file, examGradeImportHeaders)
-    : await readSpreadsheetCsv(file, examGradeImportHeaders);
+  const records = await readGradeSpreadsheet(file, examGradeImportHeaders);
   const candidates = new Map(
     roster.map((candidate) => [candidate.participant_id, candidate]),
   );
@@ -71,4 +67,14 @@ export async function readExamGradeImport(
       });
   }
   return preview;
+}
+
+/** Select the bounded literal-cell reader for the file's format. */
+export async function readGradeSpreadsheet(
+  file: File,
+  headers: readonly string[],
+) {
+  return file.name.toLowerCase().endsWith(".xlsx")
+    ? (await import("./attendance-xlsx")).readSpreadsheetXlsx(file, headers)
+    : readSpreadsheetCsv(file, headers);
 }

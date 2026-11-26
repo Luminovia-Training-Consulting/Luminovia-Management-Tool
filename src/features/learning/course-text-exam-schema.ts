@@ -23,15 +23,22 @@ const exam = textExamDraft.extend({
   published_at: timestamp.nullable(),
   questions: textExamDraft.shape.questions.nullable(),
 });
+const reviewPoints = z.array(z.number().int().min(0).max(999)).min(1).max(20);
 const candidate = z.strictObject({
   learner_id: z.uuid(),
   name: z.string().nullable(),
   submitted_at: timestamp,
   review_state: z.enum(["ungraded", "draft", "released"]),
+  import_draft: z
+    .strictObject({
+      revision: expected,
+      points: reviewPoints.nullable(),
+    })
+    .nullish(),
 });
 const review = z.strictObject({
   revision,
-  points: z.array(z.number().int().min(0).max(999)).min(1).max(20),
+  points: reviewPoints,
   feedback: z.string().max(4000),
   released_at: timestamp.nullable(),
   score: z.number().int().nonnegative(),
@@ -91,6 +98,11 @@ export const textExamExportPage = z.strictObject({
 const command = { p_run_id: z.uuid(), p_expected: expected };
 const target = z.strictObject({ learner_id: z.uuid() });
 const empty = z.strictObject({});
+export const textExamImportRow = target.extend({
+  expected_revision: expected,
+  points: reviewPoints,
+});
+export type TextExamImportRow = z.infer<typeof textExamImportRow>;
 export const textExamCommand = z.discriminatedUnion("p_action", [
   z.strictObject({
     ...command,
@@ -123,6 +135,15 @@ export const textExamCommand = z.discriminatedUnion("p_action", [
     p_payload: target.extend({
       points: review.shape.points,
       feedback: review.shape.feedback,
+    }),
+  }),
+  z.strictObject({
+    ...command,
+    p_expected: z.literal(0),
+    p_revision: revision,
+    p_action: z.literal("import_reviews"),
+    p_payload: z.strictObject({
+      rows: z.array(textExamImportRow).min(1).max(25),
     }),
   }),
   z.strictObject({

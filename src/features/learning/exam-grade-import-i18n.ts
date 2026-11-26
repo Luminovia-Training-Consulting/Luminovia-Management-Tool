@@ -4,6 +4,8 @@ import i18n from "../../lib/i18n";
 i18n.addResourceBundle("de", "examGradeImport", {
   title: "Prüfungsnoten importieren",
   hint: "Fülle die Spalte score mit ganzen Prozentwerten von 0 bis 100. Prüfe die Änderungen und speichere sie als Entwurf. Verwende danach die Freigabe im Prüfungsnotenbuch.",
+  pointsHint:
+    "Trage für jede Frage ganze Punkte in die Spalten points_1, points_2 usw. ein. Prüfe die Änderung je Frage und speichere sie als Entwurf. Bestehendes Feedback bleibt erhalten. Die Freigabe erfolgt im jeweiligen Prüfungsversuch.",
   csv: "CSV-Vorlage herunterladen",
   xlsx: "Excel-Vorlage herunterladen",
   templatePart: "Teilnehmende für die Vorlage",
@@ -33,6 +35,8 @@ i18n.addResourceBundle("de", "examGradeImport", {
 i18n.addResourceBundle("en", "examGradeImport", {
   title: "Import exam grades",
   hint: "Fill the score column with whole percentages from 0 to 100. Review the changes and save them as drafts. Use the exam gradebook to publish the results.",
+  pointsHint:
+    "Enter whole points for every question in the points_1, points_2 and subsequent columns. Review the change per question and save it as a draft. Existing feedback is kept. Release grades from each learner’s exam attempt.",
   csv: "Download CSV template",
   xlsx: "Download Excel template",
   templatePart: "Learners to include in the template",

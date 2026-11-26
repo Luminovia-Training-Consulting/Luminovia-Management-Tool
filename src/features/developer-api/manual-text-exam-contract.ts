@@ -98,14 +98,15 @@ export function manualTextExamPaths(academy: boolean) {
         operationId: "updateCourseTextExam",
         summary: "Save, submit, publish or assess a text exam",
         description:
-          "Managers save and publish versioned papers. Candidates save or submit their own answers during their effective window. Current staff draft or release a grade for submitted work after the assessment closes. Supply the current paper, answer or review revision as applicable to each command.",
+          "Managers save and publish versioned papers. Candidates save or submit their own answers during their effective window. Current staff draft or release a grade for submitted work after the assessment closes. The import_reviews command saves up to 25 submitted attempts as draft question marks in one batch, using each expected review revision. Supply the current paper, answer or review revision as applicable to each command.",
         tags: ["Text exams"],
         security,
         ...(academy ? { "x-portal-licence": "active" } : {}),
         requestBody: { required: true, content: jsonContent(textExamCommand) },
         responses: {
           "200": {
-            description: "Accepted paper, answer or review revision.",
+            description:
+              "Accepted paper, answer or review revision, or the number of imported review drafts.",
             content: jsonContent(z.number().int().positive()),
           },
           ...errors,
