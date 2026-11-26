@@ -128,6 +128,7 @@ export async function runXapiDispatchCli(
   configFile,
   stateFile,
   env = process.env,
+  now = Date.now(),
 ) {
   if (!configFile || !stateFile || resolve(configFile) === resolve(stateFile)) {
     throw new Error("Pass a course list and a different checkpoint filename");
@@ -172,6 +173,7 @@ export async function runXapiDispatchCli(
   return dispatchCourseArchives({
     courses,
     state,
+    now,
     exportWindow: async (id, from, until) => {
       const result = await supabase.rpc("course_xapi_statements", {
         p_run_id: id,

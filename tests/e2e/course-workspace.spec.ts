@@ -1,12 +1,16 @@
 import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createHash, randomUUID} from "node:crypto";
-import {readFile} from "node:fs/promises";
+import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import {createServer} from "node:http";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 import {DateTime} from "luxon";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
 import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
 import {scormFixtureZip} from "../../scripts/testing/scorm-fixture.ts";
+import {runXapiDispatchCli} from "../../scripts/xapi-lrs-dispatch.mjs";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",
@@ -14,6 +18,49 @@ test.skip(
 );
 
 type CompanyInvitation = {organisation_id: string; version: number};
+
+async function dispatchFixtureArchive(run: string, email: string) {
+    const directory = await mkdtemp(join(tmpdir(), "luminovia-test-xapi-dispatch-"));
+    const config = join(directory, "courses.json"), checkpoint = join(directory, "delivery.json");
+    const received: Array<{id: string}> = [];
+    const lrs = createServer(async (request, response) => {
+        const body = [];
+        for await (const chunk of request) body.push(chunk);
+        const statement = JSON.parse(Buffer.concat(body).toString("utf8"));
+        const target = new URL(request.url!, "http://127.0.0.1");
+        if (request.method !== "PUT" || target.pathname !== "/xapi/statements" ||
+            target.searchParams.get("statementId") !== statement.id ||
+            request.headers["x-experience-api-version"] !== "1.0.3") {
+            response.writeHead(400).end();
+            return;
+        }
+        received.push(statement);
+        response.writeHead(204).end();
+    });
+    try {
+        await new Promise<void>((resolve) => lrs.listen(0, "127.0.0.1", resolve));
+        const address = lrs.address();
+        if (!address || typeof address === "string") throw new Error("Missing fictional LRS address");
+        const now = Date.now();
+        await writeFile(config, JSON.stringify({courses: [{id: run, from: new Date(now - 3600000).toISOString()}]}));
+        const [report] = await runXapiDispatchCli(config, checkpoint, {
+            LMS_XAPI_PORTAL_URL: process.env.SUPABASE_URL,
+            LMS_XAPI_PORTAL_PUBLISHABLE_KEY: process.env.SUPABASE_ANON_KEY,
+            LMS_XAPI_PORTAL_EMAIL: email,
+            LMS_XAPI_PORTAL_PASSWORD: process.env.E2E_PASSWORD,
+            LMS_XAPI_LRS_ENDPOINT: `http://127.0.0.1:${address.port}/xapi`,
+            LMS_XAPI_LRS_USERNAME: "fixture-lrs",
+            LMS_XAPI_LRS_PASSWORD: "fixture-lrs-password",
+        }, now + 360000);
+        expect(report).toMatchObject({course: run, failure: null, submitted: received.length});
+        const saved = JSON.parse(await readFile(checkpoint, "utf8"));
+        expect(saved.courses[run]).toBe(report.through);
+        return received;
+    } finally {
+        await new Promise<void>((resolve) => lrs.close(() => resolve()));
+        await rm(directory, {recursive: true, force: true});
+    }
+}
 
 async function fixture({
     upcoming = false,
@@ -1736,6 +1783,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
             "http://adlnet.gov/expapi/verbs/completed",
         ]);
         expect(JSON.stringify(archive)).not.toContain(f.learner.id);
+        expect(await dispatchFixtureArchive(f.run, f.manager.email)).toEqual(archive.statements);
         await expect(learnerPage.getByRole("region", {name: "Lernaktivitäten exportieren"})).toHaveCount(0);
         await page.goto("/admin/finance/analytics/learning");
         await page.getByRole("searchbox", {name: "Kurs oder Klasse suchen"}).fill(f.title);
