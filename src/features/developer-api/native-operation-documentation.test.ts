@@ -61,9 +61,9 @@ const input = (name: string) =>
   );
 
 describe("internal operation documentation", () => {
-  it("covers the 67 documented operations and keeps deprecated operations download-only", () => {
-    expect(new Set(definitions.map(([name]) => name)).size).toBe(67);
-    expect(definitions).toHaveLength(67);
+  it("covers the 72 documented operations and keeps deprecated operations download-only", () => {
+    expect(new Set(definitions.map(([name]) => name)).size).toBe(72);
+    expect(definitions).toHaveLength(72);
     for (const includeNonInteractive of [true, false]) {
       const document = portalOpenApi(backend, includeNonInteractive);
       const generic = Object.entries(document.paths).filter(([, methods]) =>
@@ -116,6 +116,37 @@ describe("internal operation documentation", () => {
           expect(current.responses["200"]?.content, name).toBeDefined();
       }
     }
+  });
+
+  it("documents bounded CRM search and pagination constraints", () => {
+    const page = input("list_crm_opportunity_page");
+    expect(
+      page.safeParse({
+        p_organisation_id: id,
+        p_search: "campus",
+        p_stage: "contacted",
+        p_limit: 26,
+        p_offset: 25,
+      }).success,
+    ).toBe(true);
+    expect(
+      page.safeParse({
+        p_organisation_id: id,
+        p_search: "campus",
+        p_stage: "contacted",
+        p_limit: 52,
+        p_offset: 25,
+      }).success,
+    ).toBe(false);
+    expect(
+      page.safeParse({
+        p_organisation_id: id,
+        p_search: "campus",
+        p_stage: "contacted",
+        p_limit: 26,
+        p_offset: 10001,
+      }).success,
+    ).toBe(false);
   });
 
   it("documents scoped and legacy wiki template calls", () => {
