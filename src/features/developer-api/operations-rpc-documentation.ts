@@ -23,6 +23,21 @@ const withdrawalReason = {
 };
 
 export const operationsRpcDocumentation = {
+  list_crm_opportunities: {
+    summary: "List sales opportunities for one organisation",
+    description:
+      "Requires organisations.manage on every request; company membership alone is not sufficient. Returns up to 200 opportunities for the specified existing organisation, including read-only history for archived organisations. Estimated values and optional close forecasts retain their recorded currency and are not actual revenue, converted or invoiced.",
+    parameters: {
+      p_organisation_id: id,
+      p_limit: { type: "integer", minimum: 1, maximum: 200, default: 100 },
+    },
+    required: ["p_organisation_id"],
+    errors: {
+      "403":
+        "The caller does not have current organisations.manage permission.",
+      "404": "The specified organisation does not exist.",
+    },
+  },
   list_crm_opportunity_page: {
     summary: "Search and page through sales opportunities for one organisation",
     description:
