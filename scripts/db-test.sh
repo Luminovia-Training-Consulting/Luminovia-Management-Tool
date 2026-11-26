@@ -10,5 +10,7 @@ node scripts/course-authoring-db-tests.mjs
 node scripts/academy-course-authoring-db-tests.mjs
 node scripts/course-question-bank-db-tests.mjs
 node scripts/academy-question-bank-db-tests.mjs
+node scripts/course-competency-db-tests.mjs
+node scripts/academy-course-competency-db-tests.mjs
 npx --no-install supabase db lint --schema public,private --fail-on warning
 npx --no-install supabase db advisors --type all --level warn --fail-on warn

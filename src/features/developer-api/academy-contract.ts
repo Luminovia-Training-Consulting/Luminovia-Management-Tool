@@ -1,3 +1,9 @@
+import {
+  competencyAction,
+  competencyActionResult,
+  competencyRead,
+  competencyReadResult,
+} from "./competency-contract.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import type { InstallationBrand } from "../../lib/installation-brand.ts";
@@ -1106,6 +1112,26 @@ const coursePaths = {
     "active-or-grace",
     courseCompletionStatusParameters,
     courseCompletionStatusResult,
+  ),
+  "/rest/v1/rpc/course_competencies": courseOperation(
+    "readAcademyCourseCompetencies",
+    "Read a pinned competency framework and scoped decision history",
+    "Staff can select one current learner. Learners receive only their own released decisions. Managers can read organisation framework definitions and revisions.",
+    "active-or-grace",
+    competencyRead,
+    competencyReadResult,
+  ),
+  "/rest/v1/rpc/course_competency_action": courseOperation(
+    "saveAcademyCourseCompetency",
+    "Save a framework revision, pin it to a course or release a decision",
+    "Managers can revise and pin organisation definitions. Current staff can release evidence-bound learner decisions. Send the last-read framework, pin or decision revision with the corresponding action.",
+    "active",
+    {
+      ...competencyAction,
+      required: ["p_run_id", "p_action", "p_payload", "p_expected_revision"],
+    },
+    competencyActionResult,
+    true,
   ),
   "/rest/v1/rpc/course_gradebook": courseOperation(
     "readAcademyCourseGradebook",

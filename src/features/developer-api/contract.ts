@@ -1,3 +1,9 @@
+import {
+  competencyAction,
+  competencyActionResult,
+  competencyRead,
+  competencyReadResult,
+} from "./competency-contract.ts";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import {
@@ -4464,6 +4470,36 @@ const nativePaths = {
     courseCompletionStatusResult,
     ["p_user_id"],
   ),
+  "/rest/v1/rpc/course_competencies": rpc(
+    "readCourseCompetencies",
+    "Premium LMS",
+    "Read a pinned competency framework and scoped decision history",
+    "Staff can select one current learner. Learners receive only their released decisions. Managers can read organisation framework definitions and revisions.",
+    competencyRead.properties ?? {},
+    competencyReadResult,
+    ["p_user_id", "p_offset"],
+  ),
+  "/rest/v1/rpc/course_competency_action": {
+    post: {
+      operationId: "saveCourseCompetency",
+      tags: ["Premium LMS"],
+      summary:
+        "Save a framework revision, pin it to a course or release a decision",
+      description:
+        "Managers can revise and pin organisation definitions. Current staff can release decisions for enrolled learners. Send the last-read version for the corresponding action.",
+      requestBody: { required: true, content: json(competencyAction) },
+      responses: {
+        "200": {
+          description: "Confirmed revision",
+          content: json(competencyActionResult),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",

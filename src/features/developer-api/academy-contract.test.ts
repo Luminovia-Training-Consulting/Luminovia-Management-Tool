@@ -36,6 +36,7 @@ const readPaths = [
   "/rest/v1/rpc/course_question_bank",
   "/rest/v1/rpc/course_completion_status",
   "/rest/v1/rpc/course_assignments",
+  "/rest/v1/rpc/course_competencies",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -65,6 +66,7 @@ const writePaths = [
   "/rest/v1/rpc/course_question_bank_action",
   "/rest/v1/rpc/course_assignment_action",
   "/rest/v1/rpc/save_course_quiz_draft",
+  "/rest/v1/rpc/course_competency_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";

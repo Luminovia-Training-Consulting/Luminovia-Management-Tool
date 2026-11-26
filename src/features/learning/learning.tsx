@@ -43,6 +43,7 @@ import {
 import "./i18n";
 import "./learning.css";
 import { CourseDestinations } from "./destinations";
+import { CourseCompetencies } from "./competencies";
 import { CourseWelcomeContent } from "./welcome-content";
 import { QuizAttempt } from "./quiz-attempt";
 import { QuestionBank } from "./question-bank";
@@ -1614,6 +1615,13 @@ function CourseWorkspaceLayout({
               />
               {(course.access.staff || (learner && course.quiz?.published)) && (
                 <Quiz course={course} actor={actor} academy={academy} />
+              )}
+              {(course.access.staff || learner) && (
+                <CourseCompetencies
+                  course={course}
+                  actor={actor}
+                  editable={canEdit}
+                />
               )}
               {learner && (
                 <Completion
