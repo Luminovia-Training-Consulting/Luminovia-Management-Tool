@@ -50,7 +50,7 @@ function attribute(node, name) {
 }
 
 /**
- * Follows code/type and literal lazy imports from the frontend entry point.
+ * Follows code/type and literal lazy imports from the frontend and Vite entry points.
  * JSX routes, links and assets are checked only when their values are static;
  * this syntax graph does not evaluate routing or execute server/tool entry points.
  */
@@ -60,6 +60,10 @@ export function auditFrontend(root) {
     const files = filesUnder(source).filter(
         (file) => script.test(file) && !excluded.test(relative(source, file)),
     );
+    // Vite builds the public OpenAPI document from first-party source modules.
+    const buildEntry = join(root, "vite.config.ts");
+    const entries = [join(source, "main.tsx")];
+    if (existsSync(buildEntry)) entries.push(buildEntry);
     const modules = new Map();
     const unresolved = [];
     const links = [];
@@ -67,7 +71,7 @@ export function auditFrontend(root) {
     const rpcNames = new Set();
     const edges = [];
     const routes = new Set(["/"]);
-    for (const file of files) {
+    for (const file of existsSync(buildEntry) ? [...files, buildEntry] : files) {
         const ast = ts.createSourceFile(
             file,
             readFileSync(file, "utf8"),
@@ -167,7 +171,7 @@ export function auditFrontend(root) {
         for (const dependency of modules.get(file) ?? []) follow(dependency);
     }
 
-    follow(join(source, "main.tsx"));
+    for (const entry of entries) follow(entry);
     const routePatterns = [...routes].map((route) => {
         // React Router's terminal splat includes its base path and descendants.
         // Keep the separator inside the optional group: /preview/* must not match

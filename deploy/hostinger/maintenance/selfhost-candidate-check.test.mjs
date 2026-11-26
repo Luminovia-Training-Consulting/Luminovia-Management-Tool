@@ -553,13 +553,18 @@ test("every actual application migration can be atomically replayed with its exa
     }
 });
 
-test("the released job material migration is wrapped only with its exact source", () => {
-    const name = "20261123021230_job_material_archiving.sql";
-    const source = readFileSync(join("supabase/migrations", name), "utf8");
-    const replay = migrationWithHistory(name, source);
-    assert(replay.startsWith("BEGIN;\n" + source));
-    assert(replay.includes("ARRAY[$candidate_history_20261123021230$" + source));
-    assert.throws(() => migrationWithHistory(name, source + "\n-- modified"), /transaction envelope/);
+test("released migrations without envelopes are wrapped only with their exact source", () => {
+    for (const name of [
+        "20261123021230_job_material_archiving.sql",
+        "20261126205000_lms_portfolio_lifecycle.sql",
+    ]) {
+        const source = readFileSync(join("supabase/migrations", name), "utf8");
+        const replay = migrationWithHistory(name, source);
+        assert(replay.startsWith("BEGIN;\n" + source));
+        assert(replay.includes("ARRAY[$candidate_history_" + name.slice(0, 14) + "$" + source));
+        assert.throws(() => migrationWithHistory(name, source + "\n-- modified"), /transaction envelope/);
+        assert.throws(() => migrationWithHistory("20261126205001_unreviewed.sql", source), /transaction envelope/);
+    }
 });
 
 test("job briefing upgrade follows the accepted enquiry migration", () => {

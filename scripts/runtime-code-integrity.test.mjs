@@ -202,8 +202,23 @@ test("runtime class inheritance counts base values while erased inheritance and 
 });
 
 // Both lazy and type imports participate in this static connectivity graph.
-test("every delivered frontend module is reachable from the real entry point, including lazy/type imports", () => {
+test("delivered modules are reachable from the browser or the Vite build", () => {
     assert.deepEqual(report.unreachable, []);
+});
+
+test("a build-time contract is reachable through the Vite entry without making an unused peer reachable", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-build-graph-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(join(fixture, "src/main.tsx"), "export {};");
+        writeFileSync(join(fixture, "vite.config.ts"), "import './src/build-contract.ts';");
+        writeFileSync(join(fixture, "src/build-contract.ts"), "import './codec.ts';");
+        writeFileSync(join(fixture, "src/codec.ts"), "export {};");
+        writeFileSync(join(fixture, "src/unused.ts"), "export {};");
+        assert.deepEqual(auditFrontend(fixture).unreachable, ["src/unused.ts"]);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
 });
 
 // Synthetic TypeScript is analysed without executing a backend request. Renamed

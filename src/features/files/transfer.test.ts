@@ -14,6 +14,7 @@ import {
   uploadAcademyAttendancePdf,
   uploadAcademyCourseChatAttachment,
   uploadAcademyStudentExamPdf,
+  uploadCourseAssignmentSubmission,
   uploadCourseSubmission,
   uploadDocument,
   uploadOrganisationContract,
@@ -100,6 +101,38 @@ async function transfer(onProgress?: (percent: number) => void) {
 }
 
 describe("online, authenticated document transfers", () => {
+  it("scans an assignment submission through the exact course and assignment route", async () => {
+    const empty = new File([], "empty.txt");
+    expect(() =>
+      uploadCourseAssignmentSubmission(empty, "course", "assignment", "retry"),
+    ).toThrow("file_size");
+    expect(Request.requests).toHaveLength(0);
+
+    const bytes = new File(["Fictional exercise"], "exercise.txt", {
+      type: "text/plain",
+    });
+    const pending = uploadCourseAssignmentSubmission(
+      bytes,
+      "course",
+      "assignment",
+      "retry",
+    );
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect(request.open).toHaveBeenCalledWith(
+      "POST",
+      "https://fictional.example.invalid/backend/functions/v1/files?mode=assignment-submission",
+    );
+    expect([...request.form!]).toEqual([
+      ["file", bytes],
+      ["course_run_id", "course"],
+      ["assignment_id", "assignment"],
+      ["client_id", "retry"],
+    ]);
+    request.respond(200, { document: { status: "clean" } });
+    await expect(pending).resolves.toMatchObject({ status: "clean" });
+  });
+
   it("uploads company PDFs only to the dedicated company reservation", async () => {
     const bytes = file();
     const pending = uploadOrganisationContract(bytes, "company-id", "retry-id");

@@ -262,15 +262,20 @@ class ArchiveTests(unittest.TestCase):
 
 # Check exact historical source, SQL quoting and conservative automatic migration limits.
 class MigrationTests(unittest.TestCase):
-    def test_released_job_material_migration_keeps_exact_history(self):
-        path = Path(__file__).resolve().parents[3] / "supabase/migrations/20261123021230_job_material_archiving.sql"
-        source = path.read_bytes().decode("utf-8")
-        command = u.migration_sql(source, "20261123021230", "job_material_archiving")
-        self.assertTrue(command.startswith("BEGIN;\nSELECT pg_advisory"))
-        self.assertEqual(command.count(source), 2)
-        self.assertTrue(command.endswith("COMMIT;\n"))
-        with self.assertRaisesRegex(u.UpdateError, "migration_requires_single_transaction"):
-            u.migration_sql(source + "\n-- altered", "20261123021230", "job_material_archiving")
+    def test_released_unwrapped_migrations_keep_exact_history(self):
+        directory = Path(__file__).resolve().parents[3] / "supabase/migrations"
+        for version, name in (
+            ("20261123021230", "job_material_archiving"),
+            ("20261126205000", "lms_portfolio_lifecycle"),
+        ):
+            with self.subTest(name=name):
+                source = (directory / f"{version}_{name}.sql").read_bytes().decode("utf-8")
+                command = u.migration_sql(source, version, name)
+                self.assertTrue(command.startswith("BEGIN;\nSELECT pg_advisory"))
+                self.assertEqual(command.count(source), 2)
+                self.assertTrue(command.endswith("COMMIT;\n"))
+                with self.assertRaisesRegex(u.UpdateError, "migration_requires_single_transaction"):
+                    u.migration_sql(source + "\n-- altered", version, name)
 
     def test_sql_quoting_history_and_advisory_lock_preserve_exact_source(self):
         source = "-- begin; in a comment must not receive the lock\nBEGIN;\nCREATE FUNCTION public.example() RETURNS text LANGUAGE sql AS $$ SELECT 'regexp$' || 'delete from examples' $$;\nGRANT SELECT, UPDATE, DELETE ON public.example_table TO authenticated;\nCOMMIT;\n"

@@ -314,8 +314,11 @@ def visible_sql(source):
 
 
 def migration_execution_source(source):
-    """Keep the released archive migration byte-for-byte in history."""
-    if hashlib.sha256(source.encode()).hexdigest() == "6f818242ba0b1da6f4e001f1ca1b374940cc329c36be49564a6c0e9fe59fafd2":
+    """Add a transaction only to these exact released SQL sources."""
+    if hashlib.sha256(source.encode()).hexdigest() in {
+        "6f818242ba0b1da6f4e001f1ca1b374940cc329c36be49564a6c0e9fe59fafd2",
+        "51ea63a26ae826ca177ed5a5c300730d11339ba8df7facf1be86429a9f7d8da5",
+    }:
         return "BEGIN;\n" + source + "\nCOMMIT;\n"
     return source
 
