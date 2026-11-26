@@ -42,6 +42,7 @@ const readPaths = [
   "/rest/v1/rpc/learning_portfolio",
   "/rest/v1/rpc/course_weighted_gradebook",
   "/rest/v1/rpc/course_peer_feedback",
+  "/rest/v1/rpc/course_peer_feedback_attachment",
   "/rest/v1/rpc/course_scorm_packages",
   "/rest/v1/rpc/read_course_scorm_runtime",
   "/rest/v1/rpc/course_h5p_packages",

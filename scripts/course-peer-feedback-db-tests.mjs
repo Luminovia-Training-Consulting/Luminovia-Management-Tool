@@ -95,6 +95,7 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
   for (const row of (await read(admin)).entries) {
     assert.deepEqual(Object.keys(row).sort(), [
       "approved",
+      "attachment",
       "body",
       "id",
       "revision",
@@ -122,7 +123,12 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
   const active = [first, second, third];
   const views = await Promise.all(active.map((who) => read(who)));
   for (const view of views) {
-    assert.deepEqual(Object.keys(view.assignment).sort(), ["body", "feedback"]);
+    assert.deepEqual(Object.keys(view.assignment).sort(), [
+      "attachment",
+      "body",
+      "feedback",
+      "scores",
+    ]);
     assert.notEqual(view.own_entry.body, view.assignment.body);
     assert.equal(view.received, null);
   }
@@ -212,7 +218,16 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     body: "Review a solution to another problem",
     assignment_id: localAssignment,
     assignment_version: 1,
+    scored: true,
   };
+  await assert.rejects(
+    command(admin, "open", {
+      round: 2,
+      body: "Scored without a rubric",
+      scored: true,
+    }),
+    /22023/,
+  );
   await assert.rejects(
     command(admin, "open", { ...newRound, assignment_id: outOfScope }),
     /PT409/,
@@ -241,6 +256,11 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     criteria: ["Explain results"],
   });
   assert.equal((await read(first, course, 1)).assignment_rubric, null);
+  assert.equal((await read(first, course, 1)).scoring_rubric, null);
+  assert.deepEqual(
+    secondRound.scoring_rubric,
+    definition("", "Explain results").rubric,
+  );
   await assignment(
     course,
     localAssignment,
@@ -295,6 +315,128 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     (await read(first, course, 1)).own_entry.body,
     "Updated entry 0",
   );
+  const sha = "d".repeat(64);
+  const upload = await rpc(
+    first,
+    "reserve_learning_portfolio_evidence",
+    q("learner-name.txt"),
+    q("text/plain"),
+    33,
+    q(randomUUID()),
+    q(sha),
+  );
+  const attachment = (
+    who,
+    version = upload.version_id,
+    run = course,
+    round = 2,
+  ) => rpc(who, "course_peer_feedback_attachment", q(run), round, q(version));
+  const attach = (who, revision) =>
+    command(who, "entry", {
+      round: 2,
+      revision,
+      body: "An independent second entry",
+      attachment_version: upload.version_id,
+    });
+  await assert.rejects(attach(first, 1), /42501/);
+  await sql(`
+    update public.document_versions set status='clean', sha256=${q(sha)}, scanner_version='ClamAV fixture'
+      where id=${q(upload.version_id)};
+    update public.documents set status='clean', current_version_id=${q(upload.version_id)}
+      where id=${q(upload.document_id)};
+  `);
+  await assert.rejects(attach(second, 0), /42501/);
+  assert.equal(await attach(first, 1), true);
+  const clean = await attachment(first);
+  assert.deepEqual(clean, {
+    version_id: upload.version_id,
+    name: "peer-attachment.txt",
+    sha256: sha,
+    size_bytes: 33,
+    mime_type: "text/plain",
+  });
+  assert.deepEqual((await read(first)).own_entry.attachment, {
+    version_id: upload.version_id,
+    name: "peer-attachment.txt",
+  });
+  assert.deepEqual(await attachment(admin), clean);
+  await assert.rejects(attachment(second), /42501/);
+  await assert.rejects(
+    attachment(first, upload.version_id, foreignCourse),
+    /42501/,
+  );
+  await assert.rejects(
+    attachment(first, upload.version_id, course, 1),
+    /42501/,
+  );
+  for (const learner of [second, third]) {
+    await command(learner, "entry", {
+      round: 2,
+      revision: 0,
+      body: "Another second entry",
+    });
+  }
+  for (const row of (await read(admin)).entries) {
+    await command(admin, "approve_entry", {
+      round: 2,
+      id: row.id,
+      revision: row.revision,
+    });
+  }
+  await command(admin, "start", { round: 2 });
+  const match = await Promise.all([second, third].map((who) => read(who)));
+  const reviewerIndex = match.findIndex(
+    (view) => view.assignment?.attachment?.version_id === upload.version_id,
+  );
+  assert.notEqual(reviewerIndex, -1);
+  const reviewer = [second, third][reviewerIndex];
+  const other = [third, second][reviewerIndex];
+  assert.deepEqual(await attachment(reviewer), clean);
+  await assert.rejects(attachment(other), /42501/);
+  await assert.rejects(attachment(withdrawn), /42501/);
+  const reviewBody = { round: 2, body: "The revised result is reproducible" };
+  await assert.rejects(command(reviewer, "feedback", reviewBody), /22023/);
+  await assert.rejects(
+    command(reviewer, "feedback", { ...reviewBody, scores: [2] }),
+    /22023/,
+  );
+  await assert.rejects(
+    command(reviewer, "feedback", { ...reviewBody, scores: ["1"] }),
+    /22023/,
+  );
+  assert.equal(
+    await command(reviewer, "feedback", { ...reviewBody, scores: [1] }),
+    true,
+  );
+  assert.equal(
+    await command(reviewer, "feedback", { ...reviewBody, scores: [1] }),
+    true,
+  );
+  await assert.rejects(
+    command(reviewer, "feedback", { ...reviewBody, scores: [0] }),
+    /42501/,
+  );
+  assert.equal((await read(first)).received, null);
+  const scoredReview = (await read(admin)).reviews[0];
+  assert.deepEqual(scoredReview.scores, [1]);
+  await command(admin, "approve_feedback", { round: 2, id: scoredReview.id });
+  assert.equal((await read(first)).received, null);
+  await command(admin, "release", { round: 2 });
+  assert.deepEqual((await read(first)).received.scores, [1]);
+  await command(first, "dispute", {
+    round: 2,
+    body: "Please check the rating",
+  });
+  assert.equal((await read(first)).received.scores, null);
+  await command(admin, "resolve", {
+    round: 2,
+    id: scoredReview.id,
+    keep: false,
+    body: "The rating was withdrawn",
+  });
+  assert.equal((await read(first)).received.scores, null);
+  await assert.rejects(attachment(reviewer), /42501/);
+  assert.deepEqual(await attachment(first), clean);
   await command(recipient, "dispute", { body: "Please review the tone" });
   const withheld = await read(recipient, course, 1);
   assert.equal(withheld.received.feedback, null);
@@ -324,7 +466,7 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
   );
   assert.equal(
     await sql(
-      `select count(*) from private.lms_peer_matches where run_id=${q(course)}`,
+      `select count(*) from private.lms_peer_matches where run_id=${q(course)} and round_number=1`,
     ),
     "1",
   );
@@ -335,6 +477,6 @@ await withTestDatabase("course_peer_feedback", async ({ sql, actor }) => {
     "0",
   );
   console.log(
-    "PASS isolated round history, concurrent open, anonymous matching, dispute resolution and linked subject cleanup",
+    "PASS isolated round history, pinned scores, scanned attachments, anonymous matching, disputes and linked cleanup",
   );
 });

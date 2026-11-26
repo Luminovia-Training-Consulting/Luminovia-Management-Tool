@@ -106,8 +106,41 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       ).trim(),
       "t",
     );
+    const attachmentDigest = "b".repeat(64);
+    const attachment = JSON.parse(
+      await actor(
+        learner,
+        gate("reserve_learning_portfolio_evidence", "POST") +
+          `select public.reserve_learning_portfolio_evidence('private-filename.txt','text/plain',12,${q(randomUUID())},${q(attachmentDigest)})`,
+      ),
+    );
+    await sql(`
+      update public.document_versions set status='clean', sha256=${q(attachmentDigest)}, scanner_version='ClamAV fixture'
+        where id=${q(attachment.version_id)};
+      update public.documents set status='clean', current_version_id=${q(attachment.version_id)}
+        where id=${q(attachment.document_id)};
+    `);
+    assert.equal(
+      (
+        await write(learner, "entry", {
+          revision: 1,
+          body: "My fictional report",
+          attachment_version: attachment.version_id,
+        })
+      ).trim(),
+      "t",
+    );
+    const download = (who, withGate = true) =>
+      actor(
+        who,
+        (withGate ? gate("course_peer_feedback_attachment", "GET") : "") +
+          `select public.course_peer_feedback_attachment(${q(run)},1,${q(attachment.version_id)})`,
+      ).then(JSON.parse);
     const learnerEntry = (await read(learner)).own_entry;
     assert.equal(learnerEntry.body, "My fictional report");
+    assert.equal((await download(learner)).name, "peer-attachment.txt");
+    assert.equal((await download(admin)).sha256, attachmentDigest);
+    await assert.rejects(download(absentTeacher), /42501/);
     assert.equal((await read(admin)).entries.length, 1);
     assert.deepEqual((await read(learner)).entries, []);
     const sha = "a".repeat(64);
@@ -177,6 +210,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     ]);
     await assert.rejects(scormWrite(admin, "withdraw", {}), /42501/);
     assert.deepEqual((await read(learner)).own_entry, learnerEntry);
+    assert.equal((await download(learner)).version_id, attachment.version_id);
     await assert.rejects(write(learner, "withdraw", { revision: 1 }), /42501/);
     await assert.rejects(
       write(learner, "withdraw", { revision: 1 }, false),
@@ -185,10 +219,12 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     await assert.rejects(read(admin), /42501/);
+    await assert.rejects(download(learner), /42501/);
+    await assert.rejects(download(learner, false), /42501/);
     await assert.rejects(scormRead(learner), /42501/);
     await assert.rejects(read(learner, false), /42501/);
     console.log(
-      `PASS ${edition} peer moderation and own entry in active, grace and expired licence`,
+      `PASS ${edition} peer moderation and scoped attachment in active, grace and expired licence`,
     );
   });
 }
