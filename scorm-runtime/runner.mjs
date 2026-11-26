@@ -130,12 +130,12 @@ async function openLesson(payload, send) {
 function waitForWorkerControl(service) {
   if (service.controller) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    const timeout = window.setTimeout(() => {
       service.removeEventListener("controllerchange", ready);
       reject(new Error("SCORM asset worker did not become ready"));
     }, 5000);
     function ready() {
-      clearTimeout(timeout);
+      window.clearTimeout(timeout);
       resolve();
     }
     service.addEventListener("controllerchange", ready, { once: true });

@@ -25,9 +25,9 @@ self.addEventListener("fetch", (event) => {
 
       const transfer = new MessageChannel();
       const asset = await new Promise((resolve) => {
-        const timer = setTimeout(() => resolve(null), 2000);
+        const timer = self.setTimeout(() => resolve(null), 2000);
         transfer.port1.onmessage = ({ data }) => {
-          clearTimeout(timer);
+          self.clearTimeout(timer);
           resolve(data);
         };
         launcher.postMessage({ path: url.pathname.slice(prefix.length) }, [
