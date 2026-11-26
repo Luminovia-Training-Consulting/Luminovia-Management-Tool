@@ -7,6 +7,7 @@ import { ErrorState, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { LtiGrades } from "./lti-grades";
 import { useAuth } from "../auth/auth-context";
 import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 
@@ -20,6 +21,8 @@ type Tool = {
   redirect_uri?: string;
   target_uri?: string;
   nrps_enabled?: boolean;
+  ags_enabled?: boolean;
+  view_grades?: boolean;
   tool_public_key?: JsonWebKey | null;
   deep_link_uri?: string | null;
   can_select: boolean;
@@ -630,6 +633,21 @@ export function CourseLtiTools({
                       />
                     )}
                   </>
+                )}
+                {(tool.view_grades ||
+                  (tools.data?.can_manage && tool.tool_public_key)) && (
+                  <LtiGrades
+                    key={`ags-${tool.version}`}
+                    deployment={tool.id}
+                    version={tool.version}
+                    enabled={tool.ags_enabled === true}
+                    canConfigure={
+                      tools.data?.can_manage === true &&
+                      Boolean(tool.tool_public_key)
+                    }
+                    actor={actor}
+                    saved={() => void tools.refetch()}
+                  />
                 )}
               </li>
             ))}

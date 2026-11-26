@@ -65,6 +65,8 @@ export function ltiCoursePaths(academy: boolean) {
                     redirect_uri: configuration.redirect_uri.optional(),
                     target_uri: configuration.target_uri.optional(),
                     nrps_enabled: z.boolean().optional(),
+                    ags_enabled: z.boolean().optional(),
+                    view_grades: z.boolean().optional(),
                     tool_public_key: toolPublicKey.nullable().optional(),
                     deep_link_uri: url.nullable().optional(),
                     can_select: z.boolean(),
@@ -167,6 +169,90 @@ export function ltiCoursePaths(academy: boolean) {
           "200": {
             description: "New registration revision.",
             content: jsonContent(version),
+          },
+          ...errors,
+        },
+      },
+    },
+    "/rest/v1/rpc/configure_course_lti_ags": {
+      post: {
+        operationId: "configureCourseLtiAgs",
+        summary: "Enable or disable LTI grade services",
+        description:
+          "A current course manager can permit this deployment to manage external grade columns and scores after pinning its public signing key. The revision change withdraws existing service tokens.",
+        tags: ["LTI 1.3"],
+        security,
+        ...(academy ? { "x-portal-licence": "active" } : {}),
+        requestBody: {
+          required: true,
+          content: jsonContent(
+            z.strictObject({
+              p_registration_id: identifier,
+              p_expected_version: version,
+              p_ags: z.boolean(),
+            }),
+          ),
+        },
+        responses: {
+          "200": {
+            description: "New registration revision.",
+            content: jsonContent(version),
+          },
+          ...errors,
+        },
+      },
+    },
+    "/rest/v1/rpc/course_lti_ags_grades": {
+      post: {
+        operationId: "readCourseLtiAgsGrades",
+        summary: "Read the external grade ledger",
+        description:
+          "Current teaching staff read the external columns for a registered deployment, ordered by column ID. A page includes one extra row when more columns are available. Each column previews the first 100 current learner entries.",
+        tags: ["LTI 1.3"],
+        security,
+        ...(academy ? { "x-portal-licence": "active-or-grace" } : {}),
+        requestBody: {
+          required: true,
+          content: jsonContent(
+            z.strictObject({
+              p_registration_id: identifier,
+              p_after: identifier.nullable(),
+              p_limit: z.number().int().min(1).max(20),
+            }),
+          ),
+        },
+        responses: {
+          "200": {
+            description: "Paged external grade columns.",
+            content: jsonContent(
+              z
+                .array(
+                  z.strictObject({
+                    id: identifier,
+                    label: z.string(),
+                    maximum: z.number().positive(),
+                    graded: z.number().int().nonnegative(),
+                    results: z
+                      .array(
+                        z.strictObject({
+                          subject_id: identifier,
+                          name: z.string(),
+                          score: z.number().nonnegative().nullable(),
+                          grading_progress: z.enum([
+                            "FullyGraded",
+                            "Pending",
+                            "PendingManual",
+                            "Failed",
+                            "NotReady",
+                          ]),
+                          comment: z.string().nullable(),
+                        }),
+                      )
+                      .max(100),
+                  }),
+                )
+                .max(21),
+            ),
           },
           ...errors,
         },

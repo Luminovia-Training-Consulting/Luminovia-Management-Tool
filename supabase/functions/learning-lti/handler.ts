@@ -23,6 +23,8 @@ export interface AuthorizedLaunch {
   deep_link_data?: string;
   resource_link_id?: string;
   resource_custom?: Record<string, string>;
+  ags_enabled?: boolean;
+  ags_lineitem?: string;
 }
 
 type ProtocolRequest = {

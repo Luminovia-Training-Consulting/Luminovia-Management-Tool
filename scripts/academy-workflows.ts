@@ -101,7 +101,7 @@ const groups = {
   ],
   lti: [
     ["Externe LTI-Lernwerkzeuge", "External LTI learning tools"],
-    "readCourseLtiTools saveCourseLtiTool configureCourseLtiAdvantage configureCourseLtiDeepLink reviewCourseLtiDeepLink",
+    "readCourseLtiTools saveCourseLtiTool configureCourseLtiAdvantage configureCourseLtiDeepLink reviewCourseLtiDeepLink configureCourseLtiAgs readCourseLtiAgsGrades",
   ],
   chat: [
     ["Kurschat und Anhänge", "Course chat and attachments"],

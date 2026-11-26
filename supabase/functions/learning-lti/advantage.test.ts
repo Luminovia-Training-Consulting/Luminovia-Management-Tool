@@ -1,6 +1,7 @@
 /** Exercise the tool's real signed assertion and the worker's HTTP service boundary. */
 import assert from "node:assert/strict";
 import { createLtiAdvantage } from "./advantage.ts";
+import { agsScopes } from "./ags.ts";
 import { createLtiHandler } from "./handler.ts";
 
 const base =
@@ -72,9 +73,39 @@ async function sign(overrides: Record<string, unknown> = {}) {
   );
 }
 
-function fixture() {
+function fixture(grading = false) {
   const assertions = new Set<string>();
+  const item = "a7003bdc-8e36-4623-9acf-89ac92c5f83b";
   const advantage = createLtiAdvantage(base, {
+    ...(grading
+      ? {
+        ags: (id, credential, action, line, input) => {
+          if (id !== deployment || credential !== token) {
+            return Promise.resolve({ code: "42501", data: null });
+          }
+          if (action === "score" && line === item) {
+            assert.equal(input.userId, members[0].user_id);
+            return Promise.resolve({ data: true });
+          }
+          if (action === "results") {
+            return Promise.resolve({
+              data: members.map(({ user_id }) => ({
+                userId: user_id,
+                resultScore: 10,
+                resultMaximum: 12,
+              })),
+            });
+          }
+          return Promise.resolve({
+            data: {
+              id: item,
+              label: input.label,
+              scoreMaximum: input.scoreMaximum,
+            },
+          });
+        },
+      }
+      : {}),
     registration: (id, placement) =>
       Promise.resolve(
         id === client && placement === deployment
@@ -84,7 +115,10 @@ function fixture() {
     issueToken: ({ id, version }, assertion, expiry, scopes) => {
       assert.equal(id, deployment);
       assert.equal(version, 4);
-      assert.deepEqual(scopes, [nrpsScope]);
+      assert.deepEqual(
+        scopes,
+        grading ? [agsScopes[0], agsScopes[2], agsScopes[3]] : [nrpsScope],
+      );
       assert.ok(Date.parse(expiry) > Date.now());
       if (assertions.has(assertion)) return Promise.resolve(null);
       assertions.add(assertion);
@@ -107,6 +141,7 @@ function fixture() {
     },
   });
   return {
+    item,
     advantage,
     handler: createLtiHandler({
       signing: null,
@@ -223,4 +258,77 @@ Deno.test("wrong audience, undelegated scope, invalid assertion and other resour
     (await handler(new Request(url, { method: "POST" }))).status,
     403,
   );
+});
+
+Deno.test("signed AGS token yields canonical line item, scored submission and paged results", async () => {
+  const { advantage, handler, item } = fixture(true);
+  const grant = [agsScopes[0], agsScopes[2], agsScopes[3]].join(" ");
+  const issued = await handler(tokenRequest(await sign(), grant));
+  assert.equal(issued.status, 200);
+  assert.equal((await issued.json()).scope, grant);
+  const claim = advantage.claims({
+    id: deployment,
+    ags_enabled: true,
+    ags_lineitem: item,
+  })[
+    "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint"
+  ]!;
+  assert.equal(claim.lineitem, claim.lineitems + "/" + item);
+  assert.deepEqual(claim.scope, agsScopes);
+  const request = (
+    suffix: string,
+    method: string,
+    media?: string,
+    body?: object,
+  ) =>
+    handler(
+      new Request(claim.lineitems.replace("/backend/", "/") + suffix, {
+        method,
+        headers: {
+          authorization: "Bearer " + token,
+          ...(media ? { "Content-Type": media } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      }),
+    );
+  const lineitem = await request(
+    "",
+    "POST",
+    "application/vnd.ims.lis.v2.lineitem+json",
+    { label: "Fictional AGS column", scoreMaximum: 12 },
+  );
+  assert.equal(lineitem.status, 201);
+  assert.equal(lineitem.headers.get("Location"), claim.lineitem);
+  assert.equal((await lineitem.json()).id, claim.lineitem);
+  const scores = "/" + item + "/scores";
+  const accepted = await request(
+    scores,
+    "POST",
+    "application/vnd.ims.lis.v1.score+json",
+    {
+      userId: members[0].user_id,
+      timestamp: new Date().toISOString(),
+      scoreGiven: 10,
+      scoreMaximum: 12,
+      gradingProgress: "FullyGraded",
+      activityProgress: "Completed",
+    },
+  );
+  assert.equal(accepted.status, 204);
+  assert.equal((await request(scores, "GET")).status, 405);
+  assert.equal(
+    (await request(scores, "POST", "application/json", {})).status,
+    415,
+  );
+  const results = await request("/" + item + "/results?limit=1", "GET");
+  assert.equal(results.status, 200);
+  assert.equal(
+    results.headers.get("Content-Type"),
+    "application/vnd.ims.lis.v2.resultcontainer+json",
+  );
+  assert.match(results.headers.get("Link") ?? "", /; rel="next"$/);
+  const page = await results.json();
+  assert.equal(page[0].scoreOf, claim.lineitem);
+  assert.equal(page[0].id, claim.lineitem + "/results/" + members[0].user_id);
+  assert.equal(page[0].resultScore, 10);
 });

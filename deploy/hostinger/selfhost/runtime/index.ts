@@ -370,7 +370,16 @@ Deno.serve({onError}, async (req: Request) => {
         pathname === "/calendar-feed" &&
         req.method === "GET";
     const publicLtiKeys = pathname === "/learning-lti/jwks" && req.method === "GET";
+    const ltiAgs = /^\/learning-lti\/ags\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/lineitems(?:\/([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})(?:\/(scores|results))?)?$/i.exec(pathname);
+    const ltiAgsMethod = ltiAgs?.[2] === "scores"
+        ? req.method === "POST"
+        : ltiAgs?.[2] === "results"
+        ? req.method === "GET"
+        : ltiAgs?.[1]
+        ? ["GET", "PUT", "DELETE"].includes(req.method)
+        : ["GET", "POST"].includes(req.method);
     const ltiToolService =
+        (ltiAgs !== null && ltiAgsMethod) ||
         ((pathname === "/learning-lti/token" || pathname === "/learning-lti/deep-link-return") && req.method === "POST") ||
         (req.method === "GET" &&
             /^\/learning-lti\/memberships\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(pathname));

@@ -46,6 +46,7 @@ const readPaths = [
   "/rest/v1/rpc/course_text_exam",
   "/rest/v1/rpc/course_xapi_statements",
   "/rest/v1/rpc/course_lti_tools",
+  "/rest/v1/rpc/course_lti_ags_grades",
   "/rest/v1/rpc/course_completion_policy",
 ] as const;
 const writePaths = [
@@ -90,6 +91,7 @@ const writePaths = [
   "/rest/v1/rpc/configure_course_lti_advantage",
   "/rest/v1/rpc/configure_course_lti_deep_link",
   "/rest/v1/rpc/lti_deep_link_review",
+  "/rest/v1/rpc/configure_course_lti_ags",
   "/rest/v1/rpc/course_completion_policy_action",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";

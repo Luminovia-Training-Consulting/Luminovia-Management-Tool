@@ -781,6 +781,36 @@ const pairs: Record<string, [string, string]> = {
     "Das Werkzeug sieht pseudonyme Kennungen und aktuelle Kursrollen. Namen und E-Mail-Adressen werden nicht weitergegeben.",
     "The tool receives pseudonymous identifiers and current course roles. Names and email addresses stay in the portal.",
   ],
+  ltiGrades: ["Externe Bewertungen (AGS)", "External grades (AGS)"],
+  ltiGradesHelp: [
+    "Das Werkzeug kann Bewertungsspalten verwalten und Bewertungen an diesen Kurs senden. Externe Bewertungen haben eine eigene Ansicht.",
+    "The tool can manage grade columns and send grades for this course. External grades have their own view.",
+  ],
+  ltiGradesEnable: ["Notendienst freigeben", "Enable grade services"],
+  ltiGradesDisable: ["Notendienst deaktivieren", "Disable grade services"],
+  ltiGrade_FullyGraded: ["Bewertet", "Graded"],
+  ltiGrade_Pending: ["Bewertung ausstehend", "Grading pending"],
+  ltiGrade_PendingManual: [
+    "Manuelle Bewertung ausstehend",
+    "Manual grading pending",
+  ],
+  ltiGrade_Failed: ["Bewertung fehlgeschlagen", "Grading failed"],
+  ltiGrade_NotReady: ["Bewertung steht noch aus", "Grading not ready"],
+  ltiGradesEmpty: [
+    "Keine externen Bewertungen vorhanden.",
+    "No external grades are available.",
+  ],
+  ltiGradesMaximum: ["{{score}} von {{maximum}}", "{{score}} of {{maximum}}"],
+  ltiGradesMore: ["Weitere Spalten laden", "Load more columns"],
+  ltiGradesBack: ["Zur ersten Seite", "Back to first page"],
+  ltiGradesCount: [
+    "Verfügbare Bewertungen: {{count}}",
+    "Grades available: {{count}}",
+  ],
+  ltiGradesFirst: [
+    "Die ersten 100 Einträge werden angezeigt.",
+    "Showing the first 100 entries.",
+  ],
   ltiAdvantageError: [
     "Die Einstellungen konnten nicht gespeichert werden. Prüfe den öffentlichen Schlüssel und lade die Registrierung neu.",
     "Settings could not be saved. Check the public key and reload the registration.",

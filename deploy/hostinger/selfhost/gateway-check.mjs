@@ -133,6 +133,13 @@ export function checkGatewayRouting({directory, here, image, server}) {
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240", 503, "portal-function-learning-lti-memberships"],
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240", 404, null, "POST"],
             ["/functions/v1/learning-lti/memberships/4f252e76-30c0-4890-9b44-351c754ca240/extra", 404],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems", 503, "portal-function-learning-lti-ags-lineitems", "POST"],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b", 503, "portal-function-learning-lti-ags-lineitem", "PUT"],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b/scores", 503, "portal-function-learning-lti-ags-scores", "POST"],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b/results", 503, "portal-function-learning-lti-ags-results"],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b/scores", 404],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b/results", 404, null, "POST"],
+            ["/functions/v1/learning-lti/ags/4f252e76-30c0-4890-9b44-351c754ca240/lineitems/a7003bdc-8e36-4623-9acf-89ac92c5f83b/results/extra", 404],
             [
                 "/functions/v1/course-documents",
                 503,

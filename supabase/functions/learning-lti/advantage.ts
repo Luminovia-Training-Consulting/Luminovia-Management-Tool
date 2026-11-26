@@ -8,6 +8,12 @@ import {
   uuid,
   uuidPattern,
 } from "./tool-jwt.ts";
+import {
+  type AgsBackend,
+  agsClaims,
+  agsScopes,
+  createAgsRoute,
+} from "./ags.ts";
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 const membershipsPath = new RegExp(
@@ -28,6 +34,7 @@ type Memberships = {
 };
 
 export type AdvantageBackend = {
+  ags?: AgsBackend;
   registration: (
     client: string,
     deployment: string | null,
@@ -70,6 +77,8 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
   ) throw new Error("invalid_lti_service_url");
 
   const tokenEndpoint = `${endpoint.href}/token`;
+  const agsRoute = backend.ags && createAgsRoute(endpoint.href, backend.ags);
+  const offeredScopes = backend.ags ? [nrpsScope, ...agsScopes] : [nrpsScope];
 
   async function token(request: Request) {
     if (
@@ -100,7 +109,9 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
     const scopes = Array.from(
       new Set((form.get("scope") ?? "").trim().split(/ +/)),
     );
-    if (scopes.length !== 1 || scopes[0] !== nrpsScope) {
+    if (
+      !scopes.length || scopes.some((scope) => !offeredScopes.includes(scope))
+    ) {
       return response(400, { error: "invalid_scope" });
     }
     const assertion = form.get("client_assertion");
@@ -202,13 +213,26 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
   }
 
   return {
-    claims(launch: { id: string; nrps_enabled?: boolean }) {
-      if (!launch.nrps_enabled) return {};
+    claims(
+      launch: {
+        id: string;
+        nrps_enabled?: boolean;
+        ags_enabled?: boolean;
+        ags_lineitem?: string;
+      },
+    ) {
+      const roster = launch.nrps_enabled
+        ? {
+          "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice": {
+            context_memberships_url:
+              `${endpoint.href}/memberships/${launch.id}`,
+            service_versions: ["2.0"],
+          },
+        }
+        : {};
       return {
-        "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice": {
-          context_memberships_url: `${endpoint.href}/memberships/${launch.id}`,
-          service_versions: ["2.0"],
-        },
+        ...roster,
+        ...(backend.ags ? agsClaims(endpoint.href, launch) : {}),
       };
     },
     async route(request: Request, path: string) {
@@ -220,7 +244,7 @@ export function createLtiAdvantage(base: string, backend: AdvantageBackend) {
         if (deployment && request.method === "GET") {
           return await memberships(request, deployment);
         }
-        return null;
+        return await agsRoute?.(request, path) ?? null;
       } catch (error) {
         return response(error instanceof RequestBodyTooLarge ? 413 : 400, {
           error: "invalid_request",

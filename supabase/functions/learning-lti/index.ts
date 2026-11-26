@@ -33,6 +33,16 @@ const registrationFor = async (
 };
 const advantage = service && serviceUrl
   ? createLtiAdvantage(serviceUrl, {
+    ags: async (deployment, token, action, item, input) => {
+      const result = await service.rpc("lti_ags_service", {
+        p_deployment: deployment,
+        p_token: token,
+        p_action: action,
+        p_item: item,
+        p_input: input,
+      });
+      return { data: result.data, code: result.error?.code };
+    },
     registration: registrationFor,
     issueToken: async (registration, assertionId, assertionExpiry, scopes) => {
       const result = await service.rpc("lti_issue_service_token", {

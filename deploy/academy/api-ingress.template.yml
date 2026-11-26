@@ -95,6 +95,34 @@ static_resources:
                           route: { cluster: academy-api-gateway, timeout: 15s }
                         - match:
                             safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET|POST" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET|PUT|DELETE" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+/scores
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "POST" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+/results
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
                               regex: /functions/v1/portal-api/v1/[a-z][a-z0-9_]*
                             headers:
                               - name: ":method"

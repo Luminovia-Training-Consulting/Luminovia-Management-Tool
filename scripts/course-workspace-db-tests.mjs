@@ -1358,6 +1358,73 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         // Signup/session entitlement is rechecked, even while the profile stays active.
         assert.equal(await register(admin, managerSession, 4), 5);
         await assert.rejects(roster(beforeRevision), /42501/);
+        const enableGrades = (who, session, revision, enabled) =>
+            invoke(who, session, "configure_course_lti_ags", [q(deployment), revision, enabled]);
+        const gradeScope = (scope) => `https://purl.imsglobal.org/spec/lti-ags/scope/${scope}`;
+        const issueGrades = (scopes, revision) =>
+            toolRpc("lti_issue_service_token", [
+                q(deployment), revision, q(randomUUID()), "now()+interval '4 minutes'",
+                `array[${scopes.map((scope) => q(gradeScope(scope))).join(",")}]`,
+            ]);
+        const grades = (credential, command, item, input = {}, id = deployment) =>
+            toolRpc("lti_ags_service", [
+                q(id), q(credential), q(command), item ? q(item) : "null", q(JSON.stringify(input)),
+            ]);
+        const readLedger = (who, session) => invoke(who, session, "course_lti_ags_grades", [
+            q(deployment), "null", 10,
+        ]);
+        await assert.rejects(issueGrades(["lineitem"], 4), /42501/);
+        await assert.rejects(enableGrades(learner, learnerSession, 4, true), /42501/);
+        assert.equal(await enableGrades(admin, managerSession, 4, true), 5);
+        await assert.rejects(enableGrades(admin, managerSession, 4, false), /PT409/);
+        const gradeToken = await issueGrades(["lineitem", "result.readonly", "score"], 5);
+        const readToken = await issueGrades(["lineitem.readonly"], 5);
+        await assert.rejects(grades(readToken,"create",null,{label: "Denied", scoreMaximum: 5}),/42501/);
+        await assert.rejects(grades(gradeToken,"list",null,{},randomUUID()),/42501/);
+        await assert.rejects(grades(gradeToken,"create",null,{
+            label: "Foreign link", scoreMaximum: 10, resourceLinkId: randomUUID(),
+        }),/PT404/);
+        const item = await grades(gradeToken,"create",null,{
+            label: "Fictional skills check", scoreMaximum: 20, resourceLinkId: deployment, resourceId: "worksheet",
+            tag: "lab",
+        });
+        assert.equal((await grades(readToken,"read",item.id)).label,"Fictional skills check");
+        assert.deepEqual(await grades(readToken,"list",null,{resource_id: "worksheet", tag: "lab"}),[item]);
+        const withGrades = await start(learner, learnerSession);
+        const gradeLaunch = await finish(learner, learnerSession, withGrades,{
+            nonce: "ags-launch-nonce", state: "ags-launch-state",
+        });
+        assert.equal(gradeLaunch.ags_enabled,true);
+        assert.equal(gradeLaunch.ags_lineitem,item.id);
+        assert.equal((await invoke(teacher,teacherSession,"course_lti_tools",[q(run)])).tools[0].view_grades,true);
+        assert.equal((await invoke(learner,learnerSession,"course_lti_tools",[q(run)])).tools[0].view_grades,false);
+        const timestamp = Date.now() - 20_000;
+        const submission = (offset,extra = {}) => ({
+            timestamp: new Date(timestamp + offset).toISOString(), userId: launched.subject,
+            activityProgress: "Completed", gradingProgress: "FullyGraded", scoreGiven: 12, scoreMaximum: 10,
+            ...extra,
+        });
+        await assert.rejects(grades(readToken,"score",item.id,submission(1000)),/42501/);
+        await assert.rejects(grades(gradeToken,"score",item.id,submission(1000,{userId: randomUUID()})),/PT404/);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(1000)),true);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(500,{scoreGiven: 1})),true);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(2000,{gradingProgress: "PendingManual", scoreGiven: 1})),true);
+        assert.deepEqual(await grades(gradeToken,"results",item.id,{user_id:launched.subject}),[
+            {userId:launched.subject,resultScore:24,resultMaximum:20},
+        ]);
+        assert.equal((await grades(gradeToken,"update",item.id,{
+            label: "Fictional skills check",scoreMaximum: 25,resourceId: "worksheet",tag: "lab",
+        })).scoreMaximum,25);
+        assert.equal((await grades(gradeToken,"results",item.id))[0].resultScore,30);
+        assert.equal((await readLedger(teacher,teacherSession))[0].results[0].score,30);
+        await assert.rejects(readLedger(learner,learnerSession),/42501/);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(3000,{scoreGiven:null,scoreMaximum:null})),true);
+        assert.deepEqual(await grades(gradeToken,"results",item.id),[]);
+        assert.equal(await grades(gradeToken,"delete",item.id),true);
+        await assert.rejects(grades(gradeToken,"read",item.id),/PT404/);
+        assert.equal(await enableGrades(admin,managerSession,5,false),6);
+        await assert.rejects(grades(gradeToken,"list",null),/42501/);
+
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);
