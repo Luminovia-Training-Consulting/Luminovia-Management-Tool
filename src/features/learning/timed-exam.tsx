@@ -12,6 +12,7 @@ import { acceptedFiles, uploadCourseSubmission } from "../files/api";
 import { courseWorkspaceKey, downloadPortalDocument } from "./api";
 import { publishedExamResultsQuery, timedExamKey } from "./timed-exam-api";
 import { examExtraMinutes, type TimedExam } from "./timed-exam-schema";
+import { ExamTimeRemaining } from "./exam-time-remaining";
 import "./timed-exam-i18n";
 
 const ExamGradeImportPanel = lazy(() =>
@@ -364,6 +365,9 @@ export function LearnerExam({
         {dateTime(exam.starts_at, i18n.language, zone)} –{" "}
         {dateTime(deadline, i18n.language, zone)} ({zone})
       </p>
+      {available && !submitted && (
+        <ExamTimeRemaining deadline={deadline} now={now} />
+      )}
       {submitted ? (
         <Notice>
           {t("submitted", { date: dateTime(submitted, i18n.language, zone) })}

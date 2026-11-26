@@ -87,6 +87,10 @@ const labels = {
     "Gespeicherte Entwürfe gelten als offen, bis du sie verbindlich abgibst.",
     "Saved drafts remain open until you submit them.",
   ],
+  unsavedAnswers: [
+    "Du hast ungespeicherte Antworten. Speichere den Entwurf, bevor du die Seite verlässt.",
+    "You have unsaved answers. Save your draft before leaving the page.",
+  ],
   submit: ["Prüfung abgeben", "Submit exam"],
   submitPrompt: [
     "Möchtest du deine Antworten verbindlich abgeben? Danach kannst du sie nicht mehr ändern.",

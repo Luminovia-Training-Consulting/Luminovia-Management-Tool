@@ -77,6 +77,7 @@ it("fetches on disclosure, shows the course zone and keeps unopened questions pr
     await screen.findByText("Questions are available when the exam opens."),
   ).toBeVisible();
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  expect(screen.queryByRole("timer")).not.toBeInTheDocument();
   expect(screen.getByText(/3:00 PM/)).toBeVisible();
   expect(fake.rpc).toHaveBeenCalledWith("course_text_exam", {
     p_run_id: run,
@@ -136,6 +137,19 @@ it("gives every answer a distinct name and associates the correct prompt", async
   expect(screen.getByRole("status")).toHaveTextContent(
     "Saved drafts remain open until you submit them.",
   );
+  expect(screen.getByRole("timer")).toHaveTextContent("45 minutes remaining");
+
+  fireEvent.change(first, { target: { value: "My current answer" } });
+  expect(screen.getByText(/You have unsaved answers/)).toBeVisible();
+  const unsaved = new Event("beforeunload", { cancelable: true });
+  expect(window.dispatchEvent(unsaved)).toBe(false);
+
+  fireEvent.change(first, { target: { value: "" } });
+  expect(
+    screen.queryByText(/You have unsaved answers/),
+  ).not.toBeInTheDocument();
+  const reverted = new Event("beforeunload", { cancelable: true });
+  expect(window.dispatchEvent(reverted)).toBe(true);
 });
 
 it("accepts only the action-specific schema and exact revision input", () => {

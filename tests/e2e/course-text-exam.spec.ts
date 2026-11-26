@@ -128,6 +128,7 @@ test("a learner recovers private text, submits once and sees only the released g
     });
     await examDisclosure.press("Enter");
     await expect(candidate.getByText(prompt, { exact: true })).toBeVisible();
+    await expect(learnerExam.getByRole("timer")).toHaveText(/Noch \d+ Minuten/);
     const answer = "The router forwards traffic using the default route.";
     const answerField = candidate.getByRole("textbox", {
       name: "Antwort zu Aufgabe 1",
@@ -156,6 +157,9 @@ test("a learner recovers private text, submits once and sees only the released g
       exact: true,
     });
     await expect(englishAnswer).toHaveAccessibleDescription(prompt);
+    await expect(learnerExam.getByRole("timer")).toHaveText(
+      /\d+ minutes remaining/,
+    );
     const learnerScan = await new AxeBuilder({ page: candidate })
       .include("#course-learning")
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -168,12 +172,18 @@ test("a learner recovers private text, submits once and sees only the released g
     await candidate.getByLabel("Language", { exact: true }).selectOption("de");
     await candidate.setViewportSize(viewport);
     await answerField.fill(answer);
+    await expect(
+      learnerExam.getByText(/Du hast ungespeicherte Antworten/),
+    ).toBeVisible();
     await learnerExam
       .getByRole("button", { name: "Entwurf speichern", exact: true })
       .click();
     await expect(
       learnerExam.getByText("Gespeichert.", { exact: true }),
     ).toBeVisible();
+    await expect(
+      learnerExam.getByText(/Du hast ungespeicherte Antworten/),
+    ).toHaveCount(0);
     await candidate.reload();
     await candidate.getByText("Freitextprüfung", { exact: true }).click();
     await expect(answerField).toHaveValue(answer);

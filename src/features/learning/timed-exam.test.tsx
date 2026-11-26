@@ -151,6 +151,7 @@ it("keeps a scanned upload as a draft until the learner confirms within the indi
       />
     </QueryClientProvider>,
   );
+  expect(screen.getByRole("timer")).toHaveTextContent("1 minute remaining");
   const file = new File(["fictional"], "filled.pdf", {
     type: "application/pdf",
   });
@@ -169,6 +170,7 @@ it("keeps a scanned upload as a draft until the learner confirms within the indi
     p_version_id: version,
   });
   expect(await screen.findByText(/^Submitted on /)).toBeVisible();
+  expect(screen.queryByRole("timer")).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Completed exam")).not.toBeInTheDocument();
 });
 

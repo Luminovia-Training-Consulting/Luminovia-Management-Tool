@@ -33,6 +33,7 @@ const pairs: Record<string, [string, string]> = {
   requestCourses: ["Kurse beauftragen", "Commission courses"],
   myCourses: ["Meine Kurse", "My courses"],
   learningWorkspace: ["Lernbereich", "Learning workspace"],
+  examTimeRemaining: ["Noch {{duration}}", "{{duration}} remaining"],
   accounts: ["Konten", "Accounts"],
   staffDirectory: ["Dozierende", "Lecturers"],
   clientPortal: ["Unternehmensportal", "Company portal"],

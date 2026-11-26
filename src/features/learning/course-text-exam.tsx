@@ -19,6 +19,7 @@ import {
   type TextExamCommand,
   type TextExamState,
 } from "./course-text-exam-schema";
+import { ExamTimeRemaining } from "./exam-time-remaining";
 import "./course-text-exam-i18n";
 
 type Props = { actor: string; course: string; zone: string };
@@ -734,11 +735,27 @@ function LearnerPaper({
   const id = useId();
   const now = useExamClock(state.now, loadedAt);
   const [changed, setChanged] = useState<string[]>();
-  if (!paper.questions) return <p>{t("notOpen")}</p>;
-
   const attempt = state.attempt;
   const submitted = attempt?.submitted_at;
   const closed = now >= Date.parse(paper.deadline);
+  const dirty = Boolean(
+    !submitted &&
+    !closed &&
+    changed?.some(
+      (answer, index) => answer !== (attempt?.answers[index] ?? ""),
+    ),
+  );
+  // Keep private answers in memory. The browser's normal reload warning
+  // protects edits until PostgreSQL confirms a saved draft or submission.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  if (!paper.questions) return <p>{t("notOpen")}</p>;
+
   const answers = changed ?? attempt?.answers ?? paper.questions.map(() => "");
   const save = (command: "save_answers" | "submit") =>
     run({
@@ -754,6 +771,10 @@ function LearnerPaper({
           ? t("submitted", { date: day(submitted) })
           : t(closed ? "closed" : "notSubmitted")}
       </p>
+      {!submitted && !closed && (
+        <ExamTimeRemaining deadline={paper.deadline} now={now} />
+      )}
+      {dirty && <p>{t("unsavedAnswers")}</p>}
       {paper.questions.map((question, index) => {
         const questionId = `${id}-question-${index}`;
         return (
