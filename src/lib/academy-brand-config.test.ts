@@ -125,7 +125,7 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
   const paths = Object.keys(document.paths).filter(
     (path) => !path.startsWith("/functions/v1/portal-api/v1/"),
   );
-  expect(paths).toHaveLength(157);
+  expect(paths).toHaveLength(160);
   expect(paths).toContain("/rest/v1/rpc/course_text_exam");
   expect(paths).toContain("/rest/v1/rpc/course_text_exam_action");
   expect(paths).toContain("/rest/v1/rpc/course_h5p_question_import");

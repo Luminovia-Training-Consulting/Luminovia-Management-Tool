@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   downloadDocument,
+  downloadCourseScormPackage,
   maximumFileSize,
   saveOrganisationContract,
   saveDownload,
@@ -15,6 +16,7 @@ import {
   uploadAcademyCourseChatAttachment,
   uploadAcademyStudentExamPdf,
   uploadCourseAssignmentSubmission,
+  uploadCourseScormPackage,
   uploadCourseSubmission,
   uploadDocument,
   uploadOrganisationContract,
@@ -102,6 +104,70 @@ async function transfer(onProgress?: (percent: number) => void) {
 }
 
 describe("online, authenticated document transfers", () => {
+  it("uses the SCORM scan scope and returns the exact clean version", async () => {
+    await expect(
+      uploadCourseScormPackage(new File([], "short.zip"), "course", "retry"),
+    ).rejects.toThrow("file_size");
+    const large = new File([], "large.zip");
+    Object.defineProperty(large, "size", { value: 10 * 1024 * 1024 + 1 });
+    await expect(
+      uploadCourseScormPackage(large, "course", "retry"),
+    ).rejects.toThrow("file_size");
+    const sample = new File(["Fictional ZIP"], "sample.zip", {
+      type: "application/zip",
+    });
+    for (const [document, accepted] of [
+      [
+        {
+          status: "clean",
+          kind: "scorm_package",
+          current_version_id: "checked",
+        },
+        true,
+      ],
+      [
+        { status: "clean", kind: "material", current_version_id: "checked" },
+        false,
+      ],
+      [{ status: "clean", kind: "scorm_package" }, false],
+    ] as const) {
+      const pending = uploadCourseScormPackage(sample, "course", "retry");
+      await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+      const request = Request.requests.pop()!;
+      expect(request.open).toHaveBeenCalledWith(
+        "POST",
+        "https://fictional.example.invalid/backend/functions/v1/files?mode=scorm-package",
+      );
+      expect(request.form?.get("scorm_course_id")).toBe("course");
+      expect(request.form?.get("client_id")).toBe("retry");
+      request.respond(200, { document });
+      if (accepted) await expect(pending).resolves.toBe("checked");
+      else await expect(pending).rejects.toThrow("upload_failed");
+    }
+  });
+
+  it("downloads the published SCORM bytes using the course and version grant", async () => {
+    const signal = new AbortController().signal;
+    const bytes = new Blob(["Fictional scanned archive"]);
+    const fetch = vi.fn().mockResolvedValue(new Response(bytes));
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      downloadCourseScormPackage("course", "checked", signal),
+    ).resolves.toBeInstanceOf(Blob);
+    expect(fetch).toHaveBeenCalledWith(
+      "https://fictional.example.invalid/backend/functions/v1/files",
+      expect.objectContaining({
+        method: "POST",
+        signal,
+        body: JSON.stringify({
+          action: "course_scorm_download",
+          run_id: "course",
+          version_id: "checked",
+        }),
+      }),
+    );
+  });
+
   it("scans an assignment submission through the exact course and assignment route", async () => {
     const empty = new File([], "empty.txt");
     expect(() =>

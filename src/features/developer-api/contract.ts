@@ -1,3 +1,4 @@
+import { readScormPackages, scormCourseCommand } from "./scorm-contract.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -4578,6 +4579,34 @@ const nativePaths = {
         "200": {
           description: "Confirmed revision",
           content: json(competencyActionResult),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
+  "/rest/v1/rpc/course_scorm_packages": rpc(
+    "readCourseScormPackages",
+    "Premium LMS",
+    "List published SCORM packages",
+    "Current authorised learners and staff can list clean packages and their own lesson completion.",
+    course,
+    readScormPackages,
+  ),
+  "/rest/v1/rpc/course_scorm_action": {
+    post: {
+      operationId: "writeCourseScormPackage",
+      tags: ["Premium LMS"],
+      summary: "Publish, withdraw or complete a SCORM package lesson",
+      description:
+        "Current staff publish the exact scanned package version. Current learners record their own completion.",
+      requestBody: { required: true, content: json(scormCourseCommand) },
+      responses: {
+        "200": {
+          description: "Confirmed action",
+          content: json({ const: true }),
         },
         "400": error,
         "401": error,

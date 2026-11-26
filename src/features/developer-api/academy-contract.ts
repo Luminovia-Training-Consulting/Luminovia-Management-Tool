@@ -1,3 +1,4 @@
+import { readScormPackages, scormCourseCommand } from "./scorm-contract.ts";
 import {
   competencyAction,
   competencyActionResult,
@@ -1241,6 +1242,26 @@ const coursePaths = {
       required: ["p_run_id", "p_action", "p_payload", "p_expected_revision"],
     },
     competencyActionResult,
+    true,
+  ),
+  "/rest/v1/rpc/course_scorm_packages": courseOperation(
+    "readAcademyScormPackages",
+    "List published SCORM packages",
+    "Current authorised learners and staff can list clean packages and their own lesson completion.",
+    "active-or-grace",
+    record(run),
+    readScormPackages,
+  ),
+  "/rest/v1/rpc/course_scorm_action": courseOperation(
+    "writeAcademyScormPackage",
+    "Publish, withdraw or complete a SCORM package lesson",
+    "Current staff publish the exact scanned package version. Current learners record their own completion.",
+    "active",
+    {
+      ...scormCourseCommand,
+      required: ["p_run_id", "p_version_id", "p_action", "p_payload"],
+    },
+    { const: true },
     true,
   ),
   "/rest/v1/rpc/course_peer_feedback": courseOperation(

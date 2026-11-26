@@ -25,7 +25,7 @@ interface Dependencies {
 }
 
 /** Read no more than the already-authorized byte count from private Storage. */
-async function readExpectedBytes(object: Blob, expectedSize: number) {
+export async function readExpectedBytes(object: Blob, expectedSize: number) {
     const bytes = new Uint8Array(expectedSize);
     const reader = object.stream().getReader();
     let offset = 0;

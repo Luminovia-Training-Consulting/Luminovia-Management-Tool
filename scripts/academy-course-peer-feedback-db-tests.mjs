@@ -110,9 +110,72 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal(learnerEntry.body, "My fictional report");
     assert.equal((await read(admin)).entries.length, 1);
     assert.deepEqual((await read(learner)).entries, []);
+    const sha = "a".repeat(64);
+    const scormRead = (who) =>
+      actor(
+        who,
+        gate("course_scorm_packages", "GET") +
+          `select public.course_scorm_packages(${q(run)})`,
+      ).then(JSON.parse);
+    const reserve = () =>
+      actor(
+        admin,
+        gate("reserve_course_scorm_package", "POST") +
+          `select public.reserve_course_scorm_package(${q(run)},'example.zip',120,${q(randomUUID())},${q(sha)})`,
+      ).then(JSON.parse);
+    const reservation = await reserve();
+    const scormWrite = (who, action, payload) =>
+      actor(
+        who,
+        gate("course_scorm_action", "POST") +
+          `select public.course_scorm_action(${q(run)},${q(reservation.version_id)},${q(action)},${q(JSON.stringify(payload))})`,
+      );
+    const scormDownload = (who) =>
+      actor(
+        who,
+        gate("course_scorm_download", "POST") +
+          `select public.course_scorm_download(${q(run)},${q(reservation.version_id)})`,
+      ).then(JSON.parse);
+    const publish = {
+      title: "A fictional package",
+      sha256: sha,
+      lessons: [{ id: "first", title: "First lesson" }],
+    };
+    assert.equal((await scormRead(learner)).packages.length, 0);
+    await assert.rejects(scormWrite(admin, "publish", publish), /42501/);
+    // Seed the already-scanned fixture state here. Native Chromium exercises the scanner.
+    await sql(`
+      update public.document_versions set status='clean', sha256=${q(sha)}, scanner_version='ClamAV fixture'
+        where id=${q(reservation.version_id)};
+      update public.documents set status='clean', current_version_id=${q(reservation.version_id)}
+        where id=(select document_id from public.document_versions where id=${q(reservation.version_id)});
+    `);
+    assert.equal((await scormWrite(admin, "publish", publish)).trim(), "t");
+    await assert.rejects(scormRead(absentTeacher), /42501/);
+    assert.equal(
+      (await scormDownload(learner)).version_id,
+      reservation.version_id,
+    );
+    await assert.rejects(
+      scormWrite(learner, "complete", { item_id: "unknown" }),
+      /22023/,
+    );
+    assert.equal(
+      (await scormWrite(learner, "complete", { item_id: "first" })).trim(),
+      "t",
+    );
+    assert.deepEqual((await scormRead(learner)).packages[0].completed, [
+      "first",
+    ]);
+    assert.deepEqual((await scormRead(admin)).packages[0].completed, []);
     await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     assert.equal((await read(admin)).can_moderate, false);
+    assert.equal((await scormRead(admin)).can_publish, false);
+    assert.deepEqual((await scormRead(learner)).packages[0].completed, [
+      "first",
+    ]);
+    await assert.rejects(scormWrite(admin, "withdraw", {}), /42501/);
     assert.deepEqual((await read(learner)).own_entry, learnerEntry);
     await assert.rejects(write(learner, "withdraw", { revision: 1 }), /42501/);
     await assert.rejects(
@@ -122,6 +185,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     await assert.rejects(read(admin), /42501/);
+    await assert.rejects(scormRead(learner), /42501/);
     await assert.rejects(read(learner, false), /42501/);
     console.log(
       `PASS ${edition} peer moderation and own entry in active, grace and expired licence`,

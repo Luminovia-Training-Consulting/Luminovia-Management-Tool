@@ -171,6 +171,27 @@ export function uploadAcademyCourseChatAttachment(
   );
 }
 
+/** A SCORM ZIP uses its own scan scope and returns only the verified upload version. */
+export async function uploadCourseScormPackage(
+  file: File,
+  run: string,
+  clientId: string,
+) {
+  if (file.size < 4 || file.size > learningSubmissionMaxBytes)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set("scorm_course_id", run);
+  form.set("client_id", clientId);
+  const document = await transferUpload(
+    form,
+    endpoint() + "?mode=scorm-package",
+  );
+  if (document.kind !== "scorm_package" || !document.current_version_id)
+    throw new Error("upload_failed");
+  return document.current_version_id;
+}
+
 /** Upload protected attendance evidence for one exact academy session. */
 export function uploadAcademyAttendancePdf(
   file: File,
@@ -313,6 +334,18 @@ async function downloadFile(
   if (error || data.session?.user.id !== session.user.id)
     throw new Error("account_changed");
   return blob;
+}
+
+/** Fetch the same scanned bytes after a live learner or staff grant. */
+export function downloadCourseScormPackage(
+  run: string,
+  version: string,
+  signal: AbortSignal,
+) {
+  return downloadFile(
+    { action: "course_scorm_download", run_id: run, version_id: version },
+    signal,
+  );
 }
 
 /** Check the private source library without retrieving document bytes. */

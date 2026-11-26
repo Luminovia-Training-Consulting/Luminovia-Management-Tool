@@ -66,7 +66,12 @@ const featureFixtureOperations = new Map([
   ],
   [
     "academy-course-peer-feedback-db-tests.mjs",
-    ["course_peer_feedback", "course_peer_feedback_action"],
+    [
+      "course_peer_feedback",
+      "course_peer_feedback_action",
+      "course_scorm_packages",
+      "course_scorm_action",
+    ],
   ],
   [
     "course-assignments-db-tests.mjs",

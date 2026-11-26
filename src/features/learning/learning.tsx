@@ -121,6 +121,11 @@ const ScormPackageReview = lazy(() =>
     default: module.ScormPackageReview,
   })),
 );
+const CourseScormPlayer = lazy(() =>
+  import("./course-scorm-player").then((module) => ({
+    default: module.CourseScormPlayer,
+  })),
+);
 const CourseCompletionPolicyEditor = lazy(() =>
   import("./course-completion-policy").then((module) => ({
     default: module.CourseCompletionPolicyEditor,
@@ -1649,7 +1654,22 @@ function CourseWorkspaceLayout({
               course.access.staff &&
               canEdit && (
                 <Suspense fallback={<Loading />}>
-                  <ScormPackageReview key={actor + ":" + course.id} />
+                  <ScormPackageReview
+                    key={actor + ":" + course.id}
+                    actor={actor}
+                    course={course.id}
+                  />
+                </Suspense>
+              )}
+            {currentSection === "course-materials" &&
+              course.lms_enabled &&
+              (course.access.staff || learner) && (
+                <Suspense fallback={<Loading />}>
+                  <CourseScormPlayer
+                    key={`${actor}:${course.id}:scorm`}
+                    actor={actor}
+                    course={course.id}
+                  />
                 </Suspense>
               )}
           </div>

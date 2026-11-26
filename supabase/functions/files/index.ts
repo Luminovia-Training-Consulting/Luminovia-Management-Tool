@@ -7,7 +7,7 @@
 import {sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
 import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
-import {organisationContractBytes} from './organisation-contract-download.ts';
+import {organisationContractBytes, readExpectedBytes} from './organisation-contract-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
@@ -17,7 +17,7 @@ import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-log
 import {serveAcademyPwaAsset} from './academy-pwa-assets.ts';
 import {selectedAvatarBytes} from './avatar-download.ts';
 import {readJobSource} from './job-source.ts';
-import {assignmentSubmissionQuery, academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
+import {assignmentSubmissionQuery, academyAnswerKeyQuery, academyAttendanceQuery, academyAttendanceSession, academyChatRoom, academyCourseChatQuery, academyMaterialCourse, academyMaterialMaxBytes, academyMaterialQuery, academyStudentExamQuery, courseScormQuery, courseScormRun, courseSubmissionQuery, courseSubmissionRun} from './academy-material.ts';
 import {downloadDisposition, MAX_FILE_SIZE, safeName, validateFile} from './validation.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -139,8 +139,9 @@ Deno.serve(async (request: Request) => {
         const examSubmission = query === '?mode=exam-submission';
         const assignmentSubmission = query === assignmentSubmissionQuery;
         const portfolioUpload = query === '?mode=portfolio-evidence';
+        const scormUpload = query === courseScormQuery;
         const submissionIntake = query === courseSubmissionQuery || examSubmission || assignmentSubmission;
-        const scopedIntake = academyIntake || submissionIntake || portfolioUpload;
+        const scopedIntake = academyIntake || submissionIntake || portfolioUpload || scormUpload;
         const multipart = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data';
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (scopedIntake) {
@@ -173,6 +174,7 @@ Deno.serve(async (request: Request) => {
             const chatRoom = academyChatRoom(form, academyChat);
             const attendanceSession = academyAttendanceSession(form, academyAttendance);
             const submissionRun = courseSubmissionRun(form, submissionIntake, assignmentSubmission);
+            const scormRun = courseScormRun(form, scormUpload);
             const assignmentId = form.get('assignment_id');
             if (assignmentSubmission ? !uuid(assignmentId) : assignmentId !== null) return json(400, {error: 'invalid_request'});
             const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession || submissionRun);
@@ -180,9 +182,9 @@ Deno.serve(async (request: Request) => {
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
-            if (file.size > (protectedUpload || portfolioUpload ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
+            if (file.size > (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
             const bytes = new Uint8Array(await file.arrayBuffer());
-            const mime = await validateFile(bytes, name, file.type);
+            const mime = await validateFile(bytes, name, file.type, scormUpload);
             if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = await sha256FileHex(bytes);
             const clientId = form.get('client_id');
@@ -201,7 +203,11 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = portfolioUpload
+            const reserved = scormRun
+                ? await user.rpc('reserve_course_scorm_package', {
+                    p_run_id: scormRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
+                })
+                : portfolioUpload
                 ? await user.rpc('reserve_learning_portfolio_evidence', {
                     p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
                 })
@@ -230,7 +236,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            if ((protectedUpload || companyUpload || portfolioUpload) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+            if ((protectedUpload || companyUpload || portfolioUpload || scormRun) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
                 return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
@@ -249,7 +255,13 @@ Deno.serve(async (request: Request) => {
                 if (status.error || !status.data?.document) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             };
-            const scopedStatus = portfolioUpload ? async () => {
+            const scopedStatus = scormRun ? async () => {
+                const status = await user.rpc('course_scorm_upload_status', {
+                    p_run_id: scormRun, p_document_id: reservation.document_id, p_version_id: reservation.version_id,
+                });
+                if (status.error || status.data?.document?.kind !== 'scorm_package') throw new Error('access_denied');
+                return status.data as {document: Document; sha256: string | null};
+            } : portfolioUpload ? async () => {
                 const status = await user.rpc('learning_portfolio_evidence_upload_status', {
                     p_document_id: reservation.document_id,
                     p_version_id: reservation.version_id,
@@ -327,7 +339,7 @@ Deno.serve(async (request: Request) => {
                 const storedBytes = new Uint8Array(await stored.data.arrayBuffer());
                 const digest = await sha256FileHex(storedBytes);
                 if (digest !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
-                await validateFile(storedBytes, name, mime);
+                await validateFile(storedBytes, name, mime, scormUpload);
                 if (kind === 'avatar') await validateAvatar(storedBytes);
                 if (!protectedUpload) {
                     await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
@@ -533,6 +545,26 @@ Deno.serve(async (request: Request) => {
                 ...headers, 'Content-Type': 'application/pdf', 'Content-Disposition': downloadDisposition(selected.name),
                 'Content-Security-Policy': "default-src 'none'; sandbox",
             }});
+        }
+        if (data.action === 'course_scorm_download') {
+            const run = data.run_id, id = data.version_id;
+            if (!uuid(run) || !uuid(id) || Object.keys(data).length !== 3) return json(400, {error: 'invalid_request'});
+            const authorize = () => user.rpc('course_scorm_download', {p_run_id: run, p_version_id: id});
+            const before = await authorize();
+            if (before.error || before.data?.version_id !== id || !/^[a-f0-9]{64}$/.test(before.data.sha256) ||
+                !Number.isSafeInteger(before.data.size_bytes) || before.data.size_bytes < 4 ||
+                before.data.size_bytes > academyMaterialMaxBytes) throw new Error('access_denied');
+            const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
+            if (version.error || !version.data?.object_path) throw new Error('access_denied');
+            const file = await service.storage.from('portal-clean').download(version.data.object_path);
+            if (file.error || !file.data) throw new Error('access_denied');
+            const bytes = await readExpectedBytes(file.data, before.data.size_bytes);
+            if (await sha256FileHex(bytes) !== before.data.sha256) throw new Error('access_denied');
+            const after = await authorize();
+            if (after.error || after.data?.version_id !== id || after.data.sha256 !== before.data.sha256)
+                throw new Error('access_denied');
+            return new Response(webFileBytes(bytes), {headers: {...headers, 'Content-Type': 'application/zip',
+                'Content-Disposition': downloadDisposition(before.data.name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         }
         if (data.action !== 'download' || !uuid(data.id) || (data.version_id !== undefined && !uuid(data.version_id))) return json(400, {error: 'invalid_request'});
         const doc = await visible(data.id);

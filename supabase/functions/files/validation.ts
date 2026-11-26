@@ -43,9 +43,16 @@ export function safeName(name: string) {
 }
 
 // Compare magic bytes, extension and declared MIME; reject known VBA project markers.
-export async function validateFile(bytes: Uint8Array, name: string, declared: string): Promise<string> {
+export async function validateFile(bytes: Uint8Array, name: string, declared: string, scormPackage = false): Promise<string> {
     if (bytes.length < 1 || bytes.length > MAX_FILE_SIZE) throw new Error('file_size');
     const extension = name.split('.').pop()?.toLowerCase() ?? '';
+    if (scormPackage) {
+        if (bytes.length < 4 || extension !== 'zip' ||
+            !['', 'application/zip', 'application/x-zip-compressed', 'application/octet-stream'].includes(declared) ||
+            new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, true) !== 0x04034b50)
+            throw new Error('unsupported_type');
+        return 'application/zip';
+    }
     let actual: string | undefined;
     try {
         actual = (await fileTypeFromBuffer(bytes))?.mime;
