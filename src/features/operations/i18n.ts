@@ -446,8 +446,8 @@ const pairs: Record<string, [string, string]> = {
   clients: ["Unternehmen", "Companies"],
   companyContracts: ["Unternehmensverträge", "Company contracts"],
   companyContractsIntro: [
-    "Private Vertragsablage für dieses Unternehmen. Nur berechtigte Mitarbeitende können die geprüften PDFs abrufen.",
-    "Private contract storage for this company. Only authorised staff can access the scanned PDFs.",
+    "Private Vertragsablage. Geprüfte Uploads von Firmenmitgliedern sind für die eigene Firma und berechtigte Verwaltung sichtbar. Uploads der Verwaltung bleiben intern.",
+    "Private contract storage. Scanned member uploads are visible to the company and authorised staff. Staff uploads remain internal.",
   ],
   companyContractsArchived: [
     "Archiviert: Vorhandene Verträge bleiben abrufbar. Neue Uploads sind nicht möglich.",

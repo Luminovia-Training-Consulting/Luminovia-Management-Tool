@@ -23,6 +23,11 @@ const fake = vi.hoisted(() => ({
   saveDownload: vi.fn(),
   uploadDocument: vi.fn(),
 }));
+vi.mock("../files/files", () => ({
+  SubjectDocuments: ({ ownerId, kind }: { ownerId: string; kind: string }) => (
+    <p>{`Fictional file listing for ${ownerId}: ${kind}`}</p>
+  ),
+}));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: fake.rpc,
@@ -171,6 +176,38 @@ it("does not grant management authority to a contract link", async () => {
   expect(fake.rpc).not.toHaveBeenCalledWith("contract_records", {
     p_all: true,
   });
+});
+
+it("files an own PDF without registering a contract or selecting the URL target as owner", async () => {
+  await show(false);
+  fake.uploadDocument.mockResolvedValue({
+    original_name: "Own.pdf",
+    current_version_id: "own-clean-version",
+  });
+  const pdf = new File(["%PDF"], "Own.pdf", { type: "application/pdf" });
+  await userEvent.upload(
+    await screen.findByLabelText("Ausgeführter Vertrag als PDF"),
+    pdf,
+  );
+  await waitFor(() =>
+    expect(fake.uploadDocument).toHaveBeenCalledWith(
+      pdf,
+      expect.objectContaining({
+        kind: "contract",
+        ownerId: "actor",
+        scope: "personal",
+      }),
+      expect.any(Function),
+    ),
+  );
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "register_executed_contract",
+    expect.anything(),
+  );
+  await userEvent.click(screen.getByText("Meine Vertragsdateien"));
+  expect(
+    await screen.findByText("Fictional file listing for actor: contract"),
+  ).toBeVisible();
 });
 
 async function openContext(user: ReturnType<typeof userEvent.setup>) {

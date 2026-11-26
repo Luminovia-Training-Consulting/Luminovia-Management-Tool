@@ -514,7 +514,7 @@ const fileGateway = {
               contract_organisation_id: {
                 ...uuid,
                 description:
-                  "Required with kind=organisation_contract for a private company PDF. Requires company and contract management permissions. Send only file, client_id, kind and this field in that case.",
+                  "Required with kind=organisation_contract. Active members may file PDFs for their own company; staff require both company and contract management permissions, and their uploads stay internal. Send only file, client_id, kind and this field in that case.",
               },
               scope: {
                 enum: ["personal", "room", "job_before", "job_after"],

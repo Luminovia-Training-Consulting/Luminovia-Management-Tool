@@ -26,7 +26,7 @@ export const operationsRpcDocumentation = {
   organisation_contracts: {
     summary: "List scanned private PDFs filed for one company",
     description:
-      "Internal edition only. Requires an active staff account with organisations.manage and contracts.manage; client accounts are excluded. Returns up to 30 clean contracts in descending creation-time and ID order. If has_more is true, send both cursor fields from the last item. Archived companies retain access to existing contracts. Download through the private files gateway; no Storage URL is returned.",
+      "Internal edition only. Active company members see scanned member uploads for their own current company only. Authorised staff with organisations.manage and contracts.manage also see staff-filed PDFs, including archived companies. Returns up to 30 contracts in descending creation-time and ID order. If has_more is true, send both cursor fields from the last item. Download through the private files gateway; no Storage URL is returned.",
     parameters: {
       p_organisation_id: id,
       p_before_at: { type: "string", format: "date-time" },

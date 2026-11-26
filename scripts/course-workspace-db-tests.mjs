@@ -115,6 +115,32 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal((await rpc(foreign, "my_course_workspaces")).length, 0);
         },
     );
+    await check("Company roster and PDFs only include current participants of that company", async () => {
+        const completion = randomUUID();
+        await sql(`insert into private.course_completion_records(id, run_id, user_id, snapshot)
+          values (${q(completion)}, ${q(run)}, ${q(third)}, '{"participant":"Fictional learner"}')`);
+        const coursePdf = (kind, id) => rpc(client, "course_document_access", [q(kind), q(id)]);
+        assert.ok((await workspace(client)).roster.some(({user_id}) => user_id === third));
+        assert.equal((await coursePdf("completion", completion)).id, completion);
+        try {
+            await sql(`update private.company_participant_memberships set status='removed', removed_at=now()
+              where organisation_id=${q(org)} and user_id=${q(third)}`);
+            assert.ok(!(await workspace(client)).roster.some(({user_id}) => user_id === third));
+            assert.ok(!(await rpc(client, "course_enrolments", [q(run)])).some(({user_id}) => user_id === third));
+            assert.ok(!(await coursePdf("attendance", run)).roster.some(({user_id}) => user_id === third));
+            assert.ok(!(await rpc(client, "course_attendance_summary", [q(run)])).rows.some(({user_id}) => user_id === third));
+            assert.ok(!(await rpc(client, "course_session_register", [q(run), q(session)])).rows.some(({user_id}) => user_id === third));
+            assert.ok(!(await coursePdf("attendance_session", session)).roster.some(({user_id}) => user_id === third));
+            await assert.rejects(rpc(client, "save_course_session_attendance", [q(run), q(session), q(third), q("absent"), "null", "null", q(""), q(""), "0"]), /42501/);
+            assert.ok(!(await workspace(teacher)).roster.some(({user_id}) => user_id === third));
+            await assert.rejects(coursePdf("completion", completion), /42501/);
+            assert.ok((await workspace(admin)).roster.some(({user_id}) => user_id === third));
+        } finally {
+            await sql(`update private.company_participant_memberships set status='active', removed_at=null
+              where organisation_id=${q(org)} and user_id=${q(third)};
+              delete from private.course_completion_records where id=${q(completion)}`);
+        }
+    });
     await check("Concurrent spreadsheet retries commit exactly once and failed writes leave no receipt", async () => {
         const key = randomUUID();
         const title = "Fictional imported template";

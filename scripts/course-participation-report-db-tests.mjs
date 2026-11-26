@@ -19,8 +19,16 @@ for (const edition of [
   await withTestDatabase(
     "academy_course_participation_report",
     async ({ sql, actor }) => {
-      const [admin, company, foreign, learner, second, removed, instructor] =
-        Array.from({ length: 7 }, randomUUID);
+      const [
+        admin,
+        company,
+        foreign,
+        learner,
+        second,
+        removed,
+        instructor,
+        remote,
+      ] = Array.from({ length: 8 }, randomUUID);
       const [org, other, template, run, unrelated, first, last, outside] =
         Array.from({ length: 8 }, randomUUID);
       const roles = {
@@ -31,7 +39,18 @@ for (const edition of [
         [second]: "participant",
         [removed]: "participant",
         [instructor]: "lecturer",
+        [remote]: "participant",
       };
+      const participantLinks = [
+        [learner, org],
+        [second, org],
+        [remote, other],
+      ].map(([user, organisation]) => ({
+        id: randomUUID(),
+        requestId: randomUUID(),
+        user,
+        organisation,
+      }));
       const epoch = Date.now();
       const date = (days) => new Date(epoch + days * 86_400_000).toISOString();
       const terms = {
@@ -74,6 +93,24 @@ for (const edition of [
         values (${q(org)},'Fictional reporting academy'),(${q(other)},'Unrelated academy');
       insert into public.client_organisation_memberships(user_id,organisation_id)
         values (${q(company)},${q(org)}),(${q(foreign)},${q(other)});
+      insert into private.company_participant_link_requests(
+        id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at
+      ) values ${participantLinks
+        .map(
+          ({ id, requestId, user, organisation }) =>
+            `(${q(id)},${q(organisation)},${q(admin)},${q(requestId)},
+              (select luminovia_user_id from public.profiles where id=${q(user)}),
+              ${q(user)},'accepted',now()+interval '1 day')`,
+        )
+        .join(",")};
+      insert into private.company_participant_memberships(
+        organisation_id,user_id,status,link_request_id,invited_by,joined_at
+      ) values ${participantLinks
+        .map(
+          ({ id, user, organisation }) =>
+            `(${q(organisation)},${q(user)},'active',${q(id)},${q(admin)},now())`,
+        )
+        .join(",")};
       insert into public.course_templates(id,title) values (${q(template)},'Fictional course');
       insert into public.course_runs(id,template_id,organisation_id,time_zone)
         values (${q(run)},${q(template)},${q(org)},'Europe/Berlin'),
@@ -85,6 +122,7 @@ for (const edition of [
       insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
         values (${q(run)},${q(learner)},'completed',${q(admin)}),
                (${q(run)},${q(second)},'enrolled',${q(admin)}),
+               (${q(run)},${q(remote)},'completed',${q(admin)}),
                (${q(run)},${q(removed)},'removed',${q(admin)}),
                (${q(unrelated)},${q(learner)},'completed',${q(admin)});
       insert into private.course_attendance(session_id,user_id,state,register_status,staff_note)
@@ -136,10 +174,14 @@ for (const edition of [
       const full = await call(admin);
       assert.equal(full.course_id, run);
       assert.equal(full.session_count, 2);
-      assert.deepEqual(await call(company), full);
+      const companyReport = await call(company);
+      assert.deepEqual(
+        companyReport.rows.map(({ user_id }) => user_id).sort(),
+        [learner, second].sort(),
+      );
       assert.deepEqual(
         full.rows.map(({ user_id }) => user_id).sort(),
-        [learner, second].sort(),
+        [learner, second, remote].sort(),
       );
       assert.deepEqual(
         full.rows.find(({ user_id }) => user_id === learner),
@@ -170,12 +212,23 @@ for (const edition of [
         after: firstPage.next_after,
         limit: 1,
       });
-      assert.deepEqual([...firstPage.rows, ...secondPage.rows], full.rows);
+      assert.deepEqual(
+        [...firstPage.rows, ...secondPage.rows],
+        companyReport.rows,
+      );
       assert.equal(secondPage.next_after, null);
       assert.deepEqual(
         (await call(company, { after: secondPage.rows[0].user_id })).rows,
         [],
       );
+      await sql(`update private.company_participant_memberships
+        set status='removed',removed_at=now()
+        where organisation_id=${q(org)} and user_id=${q(second)}`);
+      assert.deepEqual(
+        (await call(company)).rows.map(({ user_id }) => user_id),
+        [learner],
+      );
+      assert.deepEqual(await call(admin), full);
       await assert.rejects(call(admin, { limit: 201 }), /22023/);
       for (const who of [learner, foreign, instructor])
         await assert.rejects(call(who), /42501/);
@@ -193,12 +246,29 @@ for (const edition of [
         ),
       );
       assert.equal(assignment.status, "confirmed");
-      assert.deepEqual(await call(instructor, { target: assignedCourse }), {
-        course_id: assignedCourse,
-        session_count: 1,
-        rows: [],
-        next_after: null,
+      await sql(`insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+        values (${q(assignedCourse)},${q(learner)},'completed',${q(admin)}),
+               (${q(assignedCourse)},${q(remote)},'completed',${q(admin)});`);
+      const instructorReport = await call(instructor, {
+        target: assignedCourse,
       });
+      assert.deepEqual(
+        instructorReport.rows.map(({ user_id }) => user_id),
+        [learner],
+      );
+      assert.deepEqual(
+        (await call(admin, { target: assignedCourse })).rows.map(
+          ({ user_id }) => user_id,
+        ).sort(),
+        [learner, remote].sort(),
+      );
+      await sql(`update private.company_participant_memberships
+        set status='removed',removed_at=now()
+        where organisation_id=${q(org)} and user_id=${q(learner)}`);
+      assert.deepEqual(
+        (await call(instructor, { target: assignedCourse })).rows,
+        [],
+      );
       await sql(
         `delete from public.user_roles where user_id=${q(instructor)} and role='lecturer'`,
       );

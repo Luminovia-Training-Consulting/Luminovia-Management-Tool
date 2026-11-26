@@ -156,6 +156,14 @@ it("aborts an in-flight company PDF download when the selected company changes",
   await user.click(
     screen.getByRole("button", { name: "Unternehmensverträge" }),
   );
+  await user.upload(
+    await screen.findByLabelText("Vertrag als PDF auswählen"),
+    new File(["fictional draft"], "Draft.pdf", { type: "application/pdf" }),
+  );
+  expect(
+    (screen.getByLabelText("Vertrag als PDF auswählen") as HTMLInputElement)
+      .files,
+  ).toHaveLength(1);
   await user.click(
     await screen.findByRole("button", {
       name: "PDF herunterladen: Agreement.pdf",
@@ -166,6 +174,12 @@ it("aborts an in-flight company PDF download when the selected company changes",
   rerender(dossier("a144cfc1-4a96-4e58-9ec1-4c2c54173f43"));
 
   await waitFor(() => expect(signal.aborted).toBe(true));
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("Vertrag als PDF auswählen") as HTMLInputElement)
+        .files,
+    ).toHaveLength(0),
+  );
 });
 
 it("retries the selected PDF with the same request ID and shows it only after a confirmed upload", async () => {
