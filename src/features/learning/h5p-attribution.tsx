@@ -8,13 +8,20 @@ const licences = {
   "CC-BY-4.0": ["CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/"],
 } as const;
 
-export function H5pAttribution({ credits }: { credits: Credits }) {
+export function H5pAttribution({
+  credits,
+  questionSource = false,
+}: {
+  credits: Credits;
+  questionSource?: boolean;
+}) {
   const { t } = useTranslation("learning");
   const [licenseLabel, licenseUrl] = licences[credits.license];
   return (
     <details className="space-y-2">
       <summary>
-        {t("h5pAttribution")} · {licenseLabel}
+        {t(questionSource ? "h5pQuestionAttribution" : "h5pAttribution")} ·{" "}
+        {licenseLabel}
       </summary>
       <p className="preserve-text">{credits.title}</p>
       {credits.authors.length > 0 && (
@@ -47,6 +54,9 @@ export function H5pAttribution({ credits }: { credits: Credits }) {
             </li>
           ))}
         </ul>
+      )}
+      {credits.subcontent && (
+        <H5pAttribution credits={credits.subcontent} questionSource />
       )}
       <p>{t("h5pAttributionConversion")}</p>
     </details>

@@ -1,10 +1,6 @@
-import i18n from "../../lib/i18n";
-import { scormReviewTexts } from "./scorm-package-i18n";
-import assignmentTexts from "./course-assignments-i18n";
+import { registerLearningTranslations } from "./register-learning-translations";
 
 const pairs: Record<string, [string, string]> = {
-  ...scormReviewTexts,
-  ...assignmentTexts,
   submissions: ["Dateiabgaben", "File submissions"],
   submissionOnline: [
     "Dateiabgaben sind online verfügbar.",
@@ -118,6 +114,18 @@ const pairs: Record<string, [string, string]> = {
     "Estimated duration in minutes",
   ],
   lessonDuration: ["{{count}} Minuten", "{{count}} minutes"],
+  lessonBlocks: ["Lernbausteine", "Lesson blocks"],
+  lessonBlockType: ["Art", "Type"],
+  lessonBlockTitle: ["Titel des Bausteins", "Block title"],
+  lessonBlockText: ["Text des Bausteins", "Block text"],
+  lessonBlockAnswer: ["Musterlösung", "Suggested answer"],
+  lessonBlockAdd: ["Baustein hinzufügen", "Add block"],
+  lessonBlockRemove: ["Baustein entfernen", "Remove block"],
+  lessonBlockUp: ["Baustein nach oben", "Move block up"],
+  lessonBlockDown: ["Baustein nach unten", "Move block down"],
+  lessonBlock_note: ["Hinweis", "Note"],
+  lessonBlock_practice: ["Übung", "Practice"],
+  lessonBlock_checklist: ["Checkliste", "Checklist"],
   lessonContent: ["Lektionsinhalt", "Lesson content"],
   curriculumAddModule: ["Modul hinzufügen", "Add module"],
   curriculumAddLesson: ["Lektion hinzufügen", "Add lesson"],
@@ -308,6 +316,14 @@ const pairs: Record<string, [string, string]> = {
   curriculumInvalid: [
     "Der Entwurf kann nicht gespeichert werden. Prüfe, ob alle Titel ausgefüllt sind und die Inhaltsgrenzen eingehalten werden.",
     "This draft cannot be saved. Check that every title is filled in and the content stays within the limits.",
+  ],
+  curriculumMerge: [
+    "Unabhängige Änderungen zusammenführen",
+    "Merge independent changes",
+  ],
+  curriculumMergeBlocked: [
+    "Der aktuelle Entwurf und deine Änderungen lassen sich nicht automatisch zusammenführen. Deine Eingaben sind weiterhin im Editor.",
+    "The current draft and your edits could not be merged automatically. Your edits are still in the editor.",
   ],
   curriculumConflict: [
     "Die Fassung wurde inzwischen geändert. Sichere bei Bedarf deine lokalen Änderungen, bevor du die aktuelle Fassung lädst.",
@@ -762,29 +778,6 @@ const pairs: Record<string, [string, string]> = {
     "This entry changed. Reopen it and review the current revision.",
   ],
   ltiTools: ["Externe Lernwerkzeuge", "External learning tools"],
-  ltiAuthorize: ["Lernwerkzeug wird geöffnet", "Opening learning tool"],
-  ltiAdd: ["Lernwerkzeug registrieren", "Register learning tool"],
-  ltiEdit: ["Registrierung bearbeiten", "Edit registration"],
-  ltiField_title: ["Name des Lernwerkzeugs", "Learning tool name"],
-  ltiField_client_id: ["LTI-Client-ID", "LTI client ID"],
-  ltiDeploymentId: ["LTI-Deployment-ID", "LTI deployment ID"],
-  ltiField_login_uri: ["Anmelde-URL des Werkzeugs", "Tool login URL"],
-  ltiField_redirect_uri: [
-    "Registrierte Rückgabe-URL",
-    "Registered redirect URL",
-  ],
-  ltiField_target_uri: ["Ziel-URL des Kurslinks", "Resource link target URL"],
-  ltiEnabled: ["Für diesen Kurs freigeben", "Enable for this course"],
-  ltiSave: ["Registrierung speichern", "Save registration"],
-  ltiLaunch: ["Externes Lernwerkzeug öffnen", "Open external learning tool"],
-  ltiEmpty: [
-    "Für diesen Kurs sind keine Lernwerkzeuge verfügbar.",
-    "There are no learning tools available for this course.",
-  ],
-  ltiFailed: [
-    "Der Vorgang konnte nicht abgeschlossen werden. Prüfe Berechtigung und Konfiguration. Starte den Kurslink bei Bedarf erneut.",
-    "The request could not be completed. Check access and configuration. If needed, restart the course link.",
-  ],
   weightedTab: ["Kursnoten", "Course grades"],
   gradebookTitle: ["Quiz-Notenbuch", "Quiz gradebook"],
   gradebookOffline: [
@@ -896,6 +889,12 @@ const pairs: Record<string, [string, string]> = {
   materialCancelMetadata: ["Abbrechen", "Cancel"],
   materialMetadataTitle: ["Titel", "Title"],
   materialMetadataDescription: ["Beschreibung", "Description"],
+  materialCompetencies: ["Kompetenzen", "Competencies"],
+  materialCompetencySelect: ["Verknüpfte Kompetenzen", "Linked competencies"],
+  materialCompetenciesEmpty: [
+    "Für diesen Kurs ist kein Kompetenzrahmen ausgewählt.",
+    "This course has no selected competency framework.",
+  ],
   materialMetadataSubject: ["Fachgebiet", "Subject"],
   materialMetadataTags: ["Schlagwörter", "Tags"],
   materialMetadataTagHelp: [
@@ -937,6 +936,67 @@ const pairs: Record<string, [string, string]> = {
   materialReviewOn: ["Prüfdatum", "Review date"],
   materialHistory: ["Metadatenverlauf", "Metadata history"],
   materialMoreRevisions: ["Ältere Fassungen anzeigen", "Show older revisions"],
+  materialUsage: ["Verwendung der Dateifassung", "Uses of this file version"],
+  materialUsageEmpty: [
+    "Keine aktive Freigabe im Kursbereich gefunden.",
+    "No current shares found in your course scope.",
+  ],
+  materialUsageMore: ["Weitere Kurse anzeigen", "Show more courses"],
+  materialLibraryArchive: ["Archivierte Materialien", "Archived materials"],
+  materialLibraryMasters: ["Materialvorlagen", "Master materials"],
+  materialLibraryManage: [
+    "Bibliothekseintrag verwalten",
+    "Manage library entry",
+  ],
+  materialLibraryStatusHelp: [
+    "Das Archivieren blendet den Eintrag in der Materialbibliothek aus. Bestehende Kursfreigaben gelten weiter.",
+    "Archiving hides the entry from the active material library. Existing course access still applies.",
+  ],
+  materialLibraryArchiveAction: [
+    "In der Bibliothek archivieren",
+    "Archive in library",
+  ],
+  materialLibraryRestore: [
+    "In der Bibliothek wiederherstellen",
+    "Restore in library",
+  ],
+  materialLibraryArchived: [
+    "Der Bibliothekseintrag wurde archiviert.",
+    "Library entry archived.",
+  ],
+  materialLibraryRestored: [
+    "Der Bibliothekseintrag wurde wiederhergestellt.",
+    "Library entry restored.",
+  ],
+  materialLibraryMarkMaster: [
+    "Als Materialvorlage markieren",
+    "Mark as master material",
+  ],
+  materialLibraryRemoveMaster: [
+    "Vorlagenmarkierung entfernen",
+    "Remove master designation",
+  ],
+  materialLibraryMasterAdded: [
+    "Materialvorlage markiert.",
+    "Master material marked.",
+  ],
+  materialLibraryMasterRemoved: [
+    "Vorlagenmarkierung entfernt.",
+    "Master designation removed.",
+  ],
+  materialLibraryMasterSource: ["Materialvorlage", "Master material"],
+  materialReuseIndependent: [
+    "Datei als unabhängige Kopie übernehmen",
+    "Create an independent file copy",
+  ],
+  materialReuseIndependentConfirm: [
+    "Kopie erstellen und freigeben",
+    "Create and publish copy",
+  ],
+  materialReuseIndependentSuccess: [
+    "Die Kopie ist im Zielkurs freigegeben.",
+    "The copy is available in the destination course.",
+  ],
   materialReuse: ["In weiterem Kurs verwenden", "Use in another course"],
   materialReuseHelp: [
     "Die geprüfte Fassung von {{name}} wird im Zielkurs für dieselbe Zielgruppe freigegeben.",
@@ -1027,6 +1087,10 @@ const pairs: Record<string, [string, string]> = {
   removeResourceHelp: [
     "Damit endet die Freigabe dieser Datei im aktuellen Kurs.",
     "This ends access to this file through the current course.",
+  ],
+  shareReviewedVersion: [
+    "Vorhandene Dateifassung freigeben",
+    "Share an existing file version",
   ],
   reviewedVersion: ["Geprüfte Dateifassung", "Reviewed file version"],
   audience: ["Sichtbarkeit", "Audience"],
@@ -1423,16 +1487,4 @@ const pairs: Record<string, [string, string]> = {
     "View request in company portal",
   ],
 };
-for (const [language, index] of [
-  ["de", 0],
-  ["en", 1],
-] as const)
-  i18n.addResourceBundle(
-    language,
-    "learning",
-    Object.fromEntries(
-      Object.entries(pairs).map(([key, value]) => [key, value[index]]),
-    ),
-    true,
-    true,
-  );
+registerLearningTranslations(pairs);

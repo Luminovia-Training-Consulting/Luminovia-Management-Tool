@@ -28,19 +28,45 @@ const score = z.strictObject({
   max: z.literal(100),
 });
 const scoredResult = z.strictObject({ score, success: z.boolean() });
+const quizActivity = activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/);
+const choice = z.string().regex(/^choice-[1-6]$/);
 const statement = z.union([
   z.strictObject({
     ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "attempted") }),
-    object: activity(/\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*$/),
+    object: quizActivity,
     result: scoredResult.extend({
       score: score.extend({ raw: percent.int() }),
     }),
   }),
   z.strictObject({
     ...base,
+    verb: z.strictObject({ id: z.literal(verbBase + "answered") }),
+    object: activity(
+      /\/[a-f0-9]{64}\/quiz\/[1-9][0-9]*\/h5p\/(?:[1-9]|1[0-9]|20)$/,
+    ).extend({
+      definition: z.strictObject({
+        type: z.literal("http://adlnet.gov/expapi/activities/cmi.interaction"),
+        interactionType: z.literal("choice"),
+        choices: z
+          .array(z.strictObject({ id: choice }))
+          .min(2)
+          .max(6),
+      }),
+    }),
+    result: z.strictObject({
+      completion: z.literal(true),
+      response: choice,
+      success: z.boolean(),
+    }),
+    context: z.strictObject({
+      contextActivities: z.strictObject({ parent: z.tuple([quizActivity]) }),
+    }),
+  }),
+  z.strictObject({
+    ...base,
     verb: z.strictObject({ id: z.literal(verbBase + "completed") }),
-    object: activity(/\/[a-f0-9]{64}$/),
+    object: activity(/\/[a-f0-9]{64}(?:\/(?:h5p|scorm)\/[a-f0-9]{64})?$/),
     result: z.strictObject({ completion: z.literal(true) }),
   }),
   z.strictObject({
@@ -71,4 +97,31 @@ export const courseXapiArchiveSchema = z.strictObject({
       (rows) => new Set(rows.map((row) => row.id)).size === rows.length,
       "Statement IDs must be unique",
     ),
+});
+
+const deliveryTimestamp = z.iso.datetime({ offset: true });
+const deliveryCount = z.number().int().min(0).max(2_147_483_647);
+const deliveryFailure = z
+  .enum([
+    "delivery",
+    "window_budget",
+    "window_too_dense",
+    "export_or_checkpoint",
+  ])
+  .nullable();
+export const courseXapiDeliveryStatus = z
+  .strictObject({
+    through: deliveryTimestamp,
+    reported_at: deliveryTimestamp,
+    submitted: deliveryCount,
+    retries: deliveryCount,
+    failure: deliveryFailure,
+  })
+  .nullable();
+export const courseXapiDeliveryReport = z.strictObject({
+  p_run_id: z.uuid(),
+  p_through: deliveryTimestamp,
+  p_submitted: deliveryCount,
+  p_retries: deliveryCount,
+  p_failure: deliveryFailure,
 });

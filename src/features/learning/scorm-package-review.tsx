@@ -1,20 +1,74 @@
 /** Inspect a selected SCORM archive in memory without exposing its contents as HTML or URLs. */
+import "./scorm-package-i18n";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
+import { uploadCourseScormPackage } from "../files/api";
+import { db } from "../../lib/supabase";
+import { useOnline } from "../../lib/online";
+import { changeCourseScormPackage, courseScormKey } from "./scorm-course-api";
+import { scormRuntimeAddress } from "./scorm-runtime-address";
 import type { ScormPackageReview as Review } from "./scorm-package";
 
-export function ScormPackageReview() {
+export function ScormPackageReview({
+  actor,
+  course,
+}: {
+  actor: string;
+  course: string;
+}) {
   const { t, i18n } = useTranslation("learning");
   const id = useId();
-  const [file, setFile] = useState<File>();
+  const online = useOnline();
+  const cache = useQueryClient();
+  const [chosen, setChosen] = useState<{ file: File; clientId: string }>();
+  const file = chosen?.file;
   const [busy, setBusy] = useState(false);
+  const [useRuntime, setUseRuntime] = useState(false);
+  const runtimeAvailable =
+    scormRuntimeAddress("", new URL(location.href)) !== null;
   const [report, setReport] = useState<Review>();
   const [error, setError] = useState<string>();
   const active = useRef<AbortController>(null);
   // Leaving the course section drops both the selected file and its review.
   useEffect(() => () => active.current?.abort(), []);
+  const publish = useMutation({
+    mutationFn: async ({
+      file,
+      clientId,
+      reviewed,
+    }: {
+      file: File;
+      clientId: string;
+      reviewed: Review;
+    }) => {
+      const bytes = await file.arrayBuffer();
+      const actual =
+        useRuntime && runtimeAvailable
+          ? await (await import("./scorm-package")).reviewScormPackage(bytes)
+          : (
+              await (
+                await import("./scorm-static-package")
+              ).loadScormStaticPackage(bytes)
+            ).report;
+      if (actual.sha256 !== reviewed.sha256)
+        throw new Error("scorm_publication_changed");
+      const version = await uploadCourseScormPackage(file, course, clientId);
+      const { data, error } = await db().auth.getSession();
+      if (error || data.session?.user.id !== actor)
+        throw new Error("account_changed");
+      await changeCourseScormPackage(course, version, "publish", {
+        title: reviewed.organisation,
+        sha256: reviewed.sha256,
+        lessons: reviewed.launches.map(({ id, title }) => ({ id, title })),
+        ...(useRuntime && runtimeAvailable ? { playback: "runtime" } : {}),
+      });
+    },
+    onSuccess: () =>
+      cache.invalidateQueries({ queryKey: courseScormKey(actor, course) }),
+  });
 
   async function inspect(event: FormEvent) {
     event.preventDefault();
@@ -66,16 +120,23 @@ export function ScormPackageReview() {
           <input
             type="file"
             accept=".zip,application/zip"
-            disabled={busy}
+            disabled={busy || publish.isPending}
             onChange={(event) => {
-              setFile(event.currentTarget.files?.[0]);
+              const next = event.currentTarget.files?.[0];
+              setChosen(
+                next
+                  ? { file: next, clientId: crypto.randomUUID() }
+                  : undefined,
+              );
+              publish.reset();
+              setUseRuntime(false);
               setError(undefined);
               setReport(undefined);
             }}
           />
         </Field>
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={!file || busy}>
+          <Button type="submit" disabled={!file || busy || publish.isPending}>
             {t("scormReviewInspect")}
           </Button>
           {busy && (
@@ -113,6 +174,45 @@ export function ScormPackageReview() {
               </li>
             ))}
           </ol>
+          {chosen && (
+            <>
+              {runtimeAvailable && (
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useRuntime}
+                    disabled={publish.isPending || publish.isSuccess}
+                    onChange={(event) =>
+                      setUseRuntime(event.currentTarget.checked)
+                    }
+                  />
+                  {t("scormUseRuntime")}
+                </label>
+              )}
+              <p>
+                {t(useRuntime ? "scormRuntimePublishHelp" : "scormPublishHelp")}
+              </p>
+              <Button
+                type="button"
+                disabled={!online || publish.isPending || publish.isSuccess}
+                onClick={() => publish.mutate({ ...chosen, reviewed: report })}
+              >
+                {t("scormPublish")}
+              </Button>
+            </>
+          )}
+          {publish.isPending && <p role="status">{t("scormPublishing")}</p>}
+          {publish.isSuccess && <p role="status">{t("scormPublished")}</p>}
+          {publish.isError && (
+            <Notice kind="error">
+              {t(
+                publish.error instanceof Error &&
+                  publish.error.message === "unsupported_playback"
+                  ? "scormError_unsupported_playback"
+                  : "scormSaveError",
+              )}
+            </Notice>
+          )}
         </div>
       )}
     </section>

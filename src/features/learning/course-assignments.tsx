@@ -1,4 +1,5 @@
 /** Course assignment drafts, scanned attempts and scoped assessment on the workspace. */
+import "./course-assignments-i18n";
 import { lazy, Suspense, useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { acceptedFiles, uploadCourseAssignmentSubmission } from "../files/api";
 import { downloadPortalDocument, type CourseWorkspace } from "./api";
 import {
   assignmentDefinition,
+  blankCriterion,
   type assignmentActions,
   courseAssignmentsProjection,
   rubricIsOrdered,
@@ -20,9 +22,17 @@ import {
   type CourseAssignmentAttempt,
 } from "./course-assignment-schema";
 
+import { AssignmentRubricEditor } from "./assignment-rubric-editor";
+
 const AssignmentTeams = lazy(() =>
   import("./course-assignment-teams").then((module) => ({
     default: module.AssignmentTeams,
+  })),
+);
+
+const AssignmentGradeImport = lazy(() =>
+  import("./assignment-grade-import-panel").then((module) => ({
+    default: module.AssignmentGradeImport,
   })),
 );
 
@@ -73,13 +83,6 @@ function AssignmentError({ error }: { error: unknown }) {
   );
 }
 
-const blankCriterion = () => ({
-  label: "",
-  levels: [
-    { label: "", points: 0 },
-    { label: "", points: 1 },
-  ],
-});
 const localTime = (instant: string, zone: string) =>
   DateTime.fromISO(instant).setZone(zone).toFormat("yyyy-MM-dd'T'HH:mm");
 
@@ -111,16 +114,6 @@ function AssignmentEditor({
   const publishing = useMutation({
     mutationFn: () => command("publish", {}, current?.version ?? 0),
   });
-  const updateCriterion = (
-    index: number,
-    criterion: AssignmentDefinition["rubric"][number],
-  ) =>
-    setDraft((previous) => ({
-      ...previous,
-      rubric: previous.rubric.map((item, n) =>
-        n === index ? criterion : item,
-      ),
-    }));
   function save(event: FormEvent) {
     event.preventDefault();
     const utc = zonedInstantForScheduleEdit(
@@ -195,140 +188,10 @@ function AssignmentEditor({
             />
           </label>
         </div>
-        <fieldset className="space-y-3">
-          <legend>{t("assignmentsRubric")}</legend>
-          {draft.rubric.map((criterion, index) => (
-            <fieldset className="space-y-2 border p-3" key={index}>
-              <legend>{t("assignmentsCriterion", { index: index + 1 })}</legend>
-              <label>
-                {t("assignmentsCriterionName")}
-                <input
-                  required
-                  maxLength={160}
-                  value={criterion.label}
-                  onChange={(event) =>
-                    updateCriterion(index, {
-                      ...criterion,
-                      label: event.currentTarget.value,
-                    })
-                  }
-                />
-              </label>
-              {criterion.levels.map((level, levelIndex) => (
-                <fieldset
-                  key={levelIndex}
-                  className="flex flex-wrap items-end gap-2"
-                >
-                  <legend>
-                    {t("assignmentsLevel", { index: levelIndex + 1 })}
-                  </legend>
-                  <label>
-                    {t("assignmentsLevelName")}
-                    <input
-                      required
-                      maxLength={160}
-                      value={level.label}
-                      onChange={(event) => {
-                        const label = event.currentTarget.value;
-                        updateCriterion(index, {
-                          ...criterion,
-                          levels: criterion.levels.map((entry, n) =>
-                            n === levelIndex ? { ...entry, label } : entry,
-                          ),
-                        });
-                      }}
-                    />
-                  </label>
-                  <label>
-                    {t("assignmentsLevelPoints")}
-                    <input
-                      required
-                      type="number"
-                      min={0}
-                      max={1000}
-                      value={Number.isNaN(level.points) ? "" : level.points}
-                      onChange={(event) => {
-                        const points = event.currentTarget.valueAsNumber;
-                        updateCriterion(index, {
-                          ...criterion,
-                          levels: criterion.levels.map((entry, n) =>
-                            n === levelIndex ? { ...entry, points } : entry,
-                          ),
-                        });
-                      }}
-                    />
-                  </label>
-                  {criterion.levels.length > 2 && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        updateCriterion(index, {
-                          ...criterion,
-                          levels: criterion.levels.filter(
-                            (_, n) => n !== levelIndex,
-                          ),
-                        })
-                      }
-                    >
-                      {t("assignmentsRemoveLevel")}
-                    </Button>
-                  )}
-                </fieldset>
-              ))}
-              <div className="flex flex-wrap gap-2">
-                {criterion.levels.length < 8 && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      updateCriterion(index, {
-                        ...criterion,
-                        levels: [
-                          ...criterion.levels,
-                          {
-                            label: "",
-                            points: (criterion.levels.at(-1)?.points ?? 0) + 1,
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    {t("assignmentsAddLevel")}
-                  </Button>
-                )}
-                {draft.rubric.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        rubric: draft.rubric.filter((_, n) => n !== index),
-                      })
-                    }
-                  >
-                    {t("assignmentsRemoveCriterion")}
-                  </Button>
-                )}
-              </div>
-            </fieldset>
-          ))}
-          {draft.rubric.length < 20 && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setDraft({
-                  ...draft,
-                  rubric: [...draft.rubric, blankCriterion()],
-                })
-              }
-            >
-              {t("assignmentsAddCriterion")}
-            </Button>
-          )}
-        </fieldset>
+        <AssignmentRubricEditor
+          rubric={draft.rubric}
+          onChange={(rubric) => setDraft({ ...draft, rubric })}
+        />
         <div className="flex flex-wrap gap-2">
           <Button type="submit">{t("assignmentsSave")}</Button>
           {current && current.published_version !== current.version && (
@@ -851,7 +714,7 @@ export function CourseAssignments({
               )}
               {canManage && assignment.published_version && (
                 <AssignmentExtension
-                  key={assignment.assignment_id}
+                  key={`extension:${assignment.assignment_id}`}
                   assignment={assignment}
                   command={command}
                   participants={participants}
@@ -861,7 +724,7 @@ export function CourseAssignments({
               )}
               {staff && (
                 <details
-                  key={assignment.assignment_id}
+                  key={`teams:${assignment.assignment_id}`}
                   onToggle={(event) =>
                     setOpenTeams(
                       event.currentTarget.open
@@ -875,6 +738,7 @@ export function CourseAssignments({
                     <Suspense fallback={<Loading />}>
                       <AssignmentTeams
                         teams={assignment.teams}
+                        defaultRubric={assignment.rubric}
                         command={command}
                         participants={participants}
                         zone={zone}
@@ -890,24 +754,33 @@ export function CourseAssignments({
                   {t("assignmentsTeamShared", {
                     title: assignment.teams[0].title,
                   })}
+                  {assignment.teams[0].max_attempts && (
+                    <p>
+                      {t("assignmentsTeamAttemptSummary", {
+                        count: assignment.teams[0].max_attempts,
+                      })}
+                    </p>
+                  )}
                 </Notice>
               )}
               {!staff && (
                 <details>
                   <summary>{t("assignmentsRubric")}</summary>
                   <ul>
-                    {assignment.rubric.map(({ label, levels }) => (
-                      <li key={label}>
-                        {label}
-                        <ul>
-                          {levels.map(({ label, points }) => (
-                            <li key={points}>
-                              {label} · {points}
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
+                    {(assignment.teams[0]?.rubric ?? assignment.rubric).map(
+                      ({ label, levels }) => (
+                        <li key={label}>
+                          {label}
+                          <ul>
+                            {levels.map(({ label, points }) => (
+                              <li key={points}>
+                                {label} · {points}
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </details>
               )}
@@ -921,6 +794,17 @@ export function CourseAssignments({
               )}
               {!staff && !readOnly && !assignment.can_submit && (
                 <p>{t("assignmentsUnavailable")}</p>
+              )}
+              {canManage && assignment.attempts.length > 0 && (
+                <Suspense fallback={null}>
+                  <AssignmentGradeImport
+                    key={assignment.assignment_id + ":" + offset}
+                    course={course}
+                    assignment={assignment}
+                    page={1 + offset / 25}
+                    refresh={refresh}
+                  />
+                </Suspense>
               )}
               {assignment.attempts.length === 0 ? (
                 <p>{t("assignmentsNoAttempts")}</p>

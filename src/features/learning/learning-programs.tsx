@@ -22,6 +22,11 @@ import { ProgrammePrerequisites } from "./programme-prerequisites";
 import "./learning-program-i18n";
 import "./learning-programs.css";
 
+const ProgrammePathExceptions = lazy(() =>
+  import("./programme-path-exceptions").then((module) => ({
+    default: module.ProgrammePathExceptions,
+  })),
+);
 const ProgrammeGradeReport = lazy(() =>
   import("./programme-grade-report").then((module) => ({
     default: module.ProgrammeGradeReport,
@@ -569,6 +574,16 @@ function ProgramManager({
       {program.can_edit && !program.archived && (
         <ProgrammePrerequisites program={program} refresh={refresh} />
       )}
+      {program.can_manage_path_exceptions && !program.archived && (
+        <Suspense fallback={<Loading />}>
+          <ProgrammePathExceptions
+            key={program.id}
+            program={program.id}
+            roster={(roster ?? []).filter(({ active }) => active)}
+            refresh={refresh}
+          />
+        </Suspense>
+      )}
       <ProgrammeClassProgress actor={actor} program={program.id} />
       <section className="panel programme-panel">
         {program.can_write && !program.archived && <h3>{t("enrolment")}</h3>}
@@ -727,6 +742,9 @@ function LearnerProgram({
                   </Button>
                 )}
               </div>
+              {step.prerequisite_exception?.active && (
+                <p>{t("pathExceptionActive")}</p>
+              )}
               {step.prerequisites && (
                 <div>
                   <p>

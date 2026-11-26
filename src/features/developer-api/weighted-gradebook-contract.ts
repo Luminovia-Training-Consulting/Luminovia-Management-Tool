@@ -77,7 +77,7 @@ export function weightedGradebookPaths(academy: boolean) {
         summary:
           "Save a weight policy, record exemptions, review or publish a course grade",
         description:
-          "A policy can weight released quiz grades, uploaded exam results, the current published text exam and released individual or team assignments. Review pins the exact evidence and policy. Publication requires a still-current review, matching revision counters and a different staff actor if required by policy.",
+          "A policy can weight released quiz grades, uploaded exam results, the current published text exam and released individual or team assignments. Up to 15 named categories group assessments in a hierarchy of at most three levels. Parents precede their children in the category array. Category grouping preserves the course-wide assessment weights. Review pins the exact evidence and policy. Publication requires a still-current review, matching revision counters and a different staff actor if required by policy.",
         ...(academy ? { "x-portal-licence": "active" } : {}),
         requestBody: {
           required: true,

@@ -104,17 +104,67 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       answers: ["It forwards otherwise unmatched traffic."],
     });
     assert.equal((await action(learner, save)).trim(), "1");
+    await action(
+      learner,
+      command("submit", 1, 1, {
+        answers: ["It forwards otherwise unmatched traffic."],
+      }),
+    );
+    await sql(`update private.course_text_exam_versions set closes_at=now()-interval '1 second'
+      where run_id=${q(run)} and revision=1`);
+    const reviewed = (revision, points) =>
+      command("import_reviews", 1, 0, {
+        rows: [
+          {
+            learner_id: learner,
+            expected_revision: revision,
+            points: [points],
+          },
+        ],
+      });
+    assert.deepEqual((await read(admin)).submissions[0].import_draft, {
+      revision: 0,
+      points: null,
+    });
+    assert.equal((await action(admin, reviewed(0, 8))).trim(), "1");
+    assert.equal((await read(learner)).review, null);
+    assert.deepEqual((await read(admin)).submissions[0].import_draft, {
+      revision: 1,
+      points: [8],
+    });
 
+    const gradeExport = async (who, revision = 1) =>
+      JSON.parse(
+        await actor(
+          who,
+          gate("course_text_exam_grade_export", "GET") +
+            `select public.course_text_exam_grade_export(${q(run)},${revision})`,
+        ),
+      );
+    assert.deepEqual((await gradeExport(admin)).rows, []);
+    await assert.rejects(gradeExport(learner), /42501/);
+    await assert.rejects(gradeExport(absentTeacher), /42501/);
+    await action(admin, command("release", 1, 1, { learner_id: learner }));
+    const released = await gradeExport(admin);
+    assert.equal(released.rows[0].score, 8);
+    assert.equal(released.rows[0].learner_id, learner);
+    assert.ok(!JSON.stringify(released).includes("unmatched traffic"));
+    await assert.rejects(gradeExport(admin, 2), /42501/);
     await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     assert.equal((await read(learner)).can_write, false);
     assert.equal((await read(admin)).can_author, false);
-    assert.equal((await read(learner)).attempt.revision, 1);
+    assert.equal((await read(learner)).attempt.revision, 2);
+    assert.equal((await read(admin)).submissions[0].import_draft, null);
+    assert.deepEqual((await gradeExport(admin)).rows, released.rows);
+    await assert.rejects(() => action(admin, reviewed(1, 9)), /42501/);
+    await assert.rejects(() => actor(admin, reviewed(1, 9)), /42501/);
     await assert.rejects(() => action(learner, save), /42501/);
     await assert.rejects(() => actor(learner, save), /42501/);
     await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
       where installation_id=${q(installation)}`);
     await assert.rejects(() => read(learner), /42501/);
+    await assert.rejects(gradeExport(admin), /42501/);
     await assert.rejects(
       () => actor(learner, `select public.course_text_exam(${q(run)})`),
       /42501/,

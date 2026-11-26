@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import {
   learningProgramClassProgressResult,
+  learningProgramCohortGrades,
   learningProgramGradeReport,
   learningProgramsResult,
 } from "../src/features/learning/learning-program-schema.ts";
@@ -78,12 +79,24 @@ await Promise.all(
         };
         await prepareAcademyInstallation(setup, sql);
         await configureAcademyCourseAccess({ ...setup, enabled: true }, sql);
-        const renew = (changes) => sql(`select private.apply_verified_installation_licence(${q(JSON.stringify({ ...expected, ...changes }))}::jsonb);`);
+        const renew = (changes) =>
+          sql(
+            `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...expected, ...changes }))}::jsonb);`,
+          );
         checkGradeLicence = async (readOwn, readStaff, report) => {
-          await renew({ issued_at: date(-2.75), starts_at: date(-2.5), expires_at: date(-1) });
+          await renew({
+            issued_at: date(-2.75),
+            starts_at: date(-2.5),
+            expires_at: date(-1),
+          });
           assert.deepEqual(await readOwn(), report);
           assert.deepEqual(await readStaff(), report);
-          await renew({ issued_at: date(-2.5), starts_at: date(-2.25), expires_at: date(-1), grace_until: date(-0.5) });
+          await renew({
+            issued_at: date(-2.5),
+            starts_at: date(-2.25),
+            expires_at: date(-1),
+            grace_until: date(-0.5),
+          });
           await assert.rejects(readOwn(), /42501/);
           await assert.rejects(readStaff(), /42501/);
           await renew({ issued_at: date(-2.25), starts_at: date(-2) });
@@ -207,9 +220,16 @@ await Promise.all(
       const progress = async (who = learner) =>
         (await view(who)).detail.progress;
       const grades = async (who = learner, target, verb = "GET") =>
-        learningProgramGradeReport.parse(JSON.parse(await invoke(
-          who, "learning_program_grade_report", `${q(program)}${target ? `,${q(target)}` : ""}`, verb,
-        )));
+        learningProgramGradeReport.parse(
+          JSON.parse(
+            await invoke(
+              who,
+              "learning_program_grade_report",
+              `${q(program)}${target ? `,${q(target)}` : ""}`,
+              verb,
+            ),
+          ),
+        );
 
       await assert.rejects(save(otherCompany), /42501/);
       await assert.rejects(save(company, { ids: [first, otherRun] }), /42501/);
@@ -339,15 +359,67 @@ await Promise.all(
       assert.deepEqual(await grades(admin, learner, "POST"), report);
       assert.equal(report.grade_count, 2);
       assert.equal(report.mean_percent, 73.88);
-      assert.deepEqual(report.grades.map(({ course_id, revision, percent, passed }) =>
-        [course_id, revision, percent, passed]), [[first, 2, 82.25, true], [second, 1, 65.5, false]]);
+      assert.deepEqual(
+        report.grades.map(({ course_id, revision, percent, passed }) => [
+          course_id,
+          revision,
+          percent,
+          passed,
+        ]),
+        [
+          [first, 2, 82.25, true],
+          [second, 1, 65.5, false],
+        ],
+      );
       assert.deepEqual(await grades(colleague), emptyGrades);
       assert.deepEqual(await grades(admin, colleague), emptyGrades);
-      await sql(`update public.course_enrolments set status='removed' where course_run_id=${q(first)} and user_id=${q(learner)}`);
-      assert.deepEqual((await grades()).grades.map(({ course_id }) => course_id), [second]);
-      assert.deepEqual((await grades(admin, learner)).grades.map(({ course_id }) => course_id), [second]);
-      await sql(`update public.course_enrolments set status='completed' where course_run_id=${q(first)} and user_id=${q(learner)}`);
-      console.log(`PASS ${edition} programme grade reports use frozen scoped releases, exclude drafts, and hide removed enrolments`);
+      const cohort = async (who, search = "", offset = 0) =>
+        learningProgramCohortGrades.parse(
+          JSON.parse(
+            await invoke(
+              who,
+              "learning_program_cohort_grades",
+              `${q(program)},${q(search)},${offset}`,
+              "GET",
+            ),
+          ),
+        );
+      const page = await cohort(admin);
+      assert.equal(page.more, false);
+      assert.deepEqual(
+        page.rows.find(({ participant_id }) => participant_id === learner)
+          .report,
+        report,
+      );
+      assert.deepEqual(
+        page.rows.find(({ participant_id }) => participant_id === colleague)
+          .report,
+        emptyGrades,
+      );
+      assert.deepEqual(await cohort(admin, "no possible learner match"), {
+        rows: [],
+        more: false,
+      });
+      assert.deepEqual(await cohort(admin, "", 30), { rows: [], more: false });
+      for (const who of [company, otherCompany, learner])
+        await assert.rejects(cohort(who), /42501/);
+      await sql(
+        `update public.course_enrolments set status='removed' where course_run_id=${q(first)} and user_id=${q(learner)}`,
+      );
+      assert.deepEqual(
+        (await grades()).grades.map(({ course_id }) => course_id),
+        [second],
+      );
+      assert.deepEqual(
+        (await grades(admin, learner)).grades.map(({ course_id }) => course_id),
+        [second],
+      );
+      await sql(
+        `update public.course_enrolments set status='completed' where course_run_id=${q(first)} and user_id=${q(learner)}`,
+      );
+      console.log(
+        `PASS ${edition} programme grade reports use frozen scoped releases, exclude drafts, and hide removed enrolments`,
+      );
 
       await place(company, colleague, null, 3);
       assert.deepEqual(await classes(), [groupA(1, 1, 2)]);
@@ -360,7 +432,10 @@ await Promise.all(
       );
       const hiddenCourseProgress = await progress();
       assert.equal(hiddenCourseProgress.steps[1].can_open, false);
-      assert.deepEqual((await grades()).grades.map(({ course_id }) => course_id), [first]);
+      assert.deepEqual(
+        (await grades()).grades.map(({ course_id }) => course_id),
+        [first],
+      );
       assert.equal(hiddenCourseProgress.completed, 2);
       assert.deepEqual(await classes(), [groupA(2, 1, 2)]);
       await sql(
@@ -397,13 +472,29 @@ await Promise.all(
       await sql(`insert into public.course_runs(id,template_id,organisation_id,published,time_zone)
         values (${q(last)},${q(templateOne)},${q(org)},true,'UTC');`);
       const saveAlternative = (ids, version = 0) =>
-        invoke(company, "save_learning_program",
-          `${q(alternative)},${q(org)},'Alternative path','',true,${courses(ids)},false,${version}`);
+        invoke(
+          company,
+          "save_learning_program",
+          `${q(alternative)},${q(org)},'Alternative path','',true,${courses(ids)},false,${version}`,
+        );
       const setGate = (who, mode, required, version) =>
-        invoke(who, "set_learning_program_prerequisite",
-          `${q(alternative)},3,${q(mode)},array[${required.join(",")}]::integer[],${version}`);
-      const activateAlternative = (who) => invoke(who, "start_learning_program_course", `${q(alternative)},${q(last)}`);
-      const enrolAlternative = (who, version) => invoke(company, "enrol_learning_program", `${q(alternative)},${q(who)},${version}`);
+        invoke(
+          who,
+          "set_learning_program_prerequisite",
+          `${q(alternative)},3,${q(mode)},array[${required.join(",")}]::integer[],${version}`,
+        );
+      const activateAlternative = (who) =>
+        invoke(
+          who,
+          "start_learning_program_course",
+          `${q(alternative)},${q(last)}`,
+        );
+      const enrolAlternative = (who, version) =>
+        invoke(
+          company,
+          "enrol_learning_program",
+          `${q(alternative)},${q(who)},${version}`,
+        );
       await saveAlternative([first, second, last]);
       await assert.rejects(setGate(otherCompany, "all", [1, 2], 1), /42501/);
       await assert.rejects(setGate(learner, "all", [1, 2], 1), /42501/);
@@ -417,15 +508,25 @@ await Promise.all(
         setGate(company, "any", [2, 1], 2),
         setGate(admin, "all", [1], 2),
       ]);
-      assert.equal(concurrentRules.filter(({status}) => status === "fulfilled").length, 1);
-      assert.match(concurrentRules.find(({status}) => status === "rejected").reason.message, /PT409/);
-      if (concurrentRules[0].status === "rejected") await setGate(company, "any", [1, 2], 3);
+      assert.equal(
+        concurrentRules.filter(({ status }) => status === "fulfilled").length,
+        1,
+      );
+      assert.match(
+        concurrentRules.find(({ status }) => status === "rejected").reason
+          .message,
+        /PT409/,
+      );
+      if (concurrentRules[0].status === "rejected")
+        await setGate(company, "any", [1, 2], 3);
       // An identical retry returns success without adding another revision.
       const version = (await view(company, alternative)).detail.version;
       await setGate(company, "any", [1, 2], version - 1);
       const alternativeProgramme = (await view(company, alternative)).detail;
       assert.equal(alternativeProgramme.version, version);
-      assert.deepEqual(alternativeProgramme.path_rules, {3: { mode: "any", positions: [1, 2] }});
+      assert.deepEqual(alternativeProgramme.path_rules, {
+        3: { mode: "any", positions: [1, 2] },
+      });
       await enrolAlternative(learner, version);
       await enrolAlternative(colleague, version);
       await assert.rejects(setGate(company, "all", [], version), /PT409/);
@@ -434,33 +535,76 @@ await Promise.all(
       assert.equal(learnerPath.progress.completed, 1);
       assert.equal(learnerPath.progress.completed_at, null);
       assert.equal(learnerPath.progress.steps[2].state, "ready");
-      const blocked = (await view(colleague, alternative)).detail.progress.steps[2];
+      const blocked = (await view(colleague, alternative)).detail.progress
+        .steps[2];
       assert.equal(blocked.state, "locked");
       assert.deepEqual(blocked.prerequisites, {
         mode: "any",
         items: [
-          {position: 1, title: "Module one", completed: false},
-          {position: 2, title: "Module two", completed: false},
+          { position: 1, title: "Module one", completed: false },
+          { position: 2, title: "Module two", completed: false },
         ],
       });
       await assert.rejects(activateAlternative(colleague), /PT409/);
+      const changeException = (
+        who,
+        active,
+        expected,
+        reason = "Verified learning accommodation",
+      ) =>
+        invoke(
+          who,
+          "set_learning_program_path_exception",
+          `${q(alternative)},${q(colleague)},3,${active},${q(reason)},${expected}`,
+        );
+      await assert.rejects(changeException(company, true, 0), /42501/);
+      await assert.rejects(changeException(learner, true, 0), /42501/);
+      assert.equal(await changeException(admin, true, 0), "1");
+      assert.equal(await changeException(admin, true, 0), "1");
+      const excepted = (await view(colleague, alternative)).detail.progress;
+      assert.equal(excepted.steps[2].state, "ready");
+      assert.deepEqual(excepted.steps[2].prerequisite_exception, {
+        active: true,
+        revision: 1,
+      });
+      assert.equal(excepted.completed_at, null);
+      assert.ok(
+        !JSON.stringify(excepted).includes("Verified learning accommodation"),
+      );
+      await assert.rejects(changeException(admin, false, 0), /PT409/);
+      assert.equal(await changeException(admin, false, 1), "2");
+      assert.equal(
+        (await view(colleague, alternative)).detail.progress.steps[2].state,
+        "locked",
+      );
+      await assert.rejects(activateAlternative(colleague), /PT409/);
       await activateAlternative(learner);
-      assert.equal((await view(learner, alternative)).detail.progress.steps[2].state, "in_progress");
+      assert.equal(
+        (await view(learner, alternative)).detail.progress.steps[2].state,
+        "in_progress",
+      );
       await invoke(
         admin,
         lessonAction,
-        `${q(first)},'completion_revoke',${q(JSON.stringify({id: firstReceipt, reason: "Fictional alternative prerequisite review"}))},0`,
+        `${q(first)},'completion_revoke',${q(JSON.stringify({ id: firstReceipt, reason: "Fictional alternative prerequisite review" }))},0`,
       );
-      assert.equal((await view(learner, alternative)).detail.progress.steps[2].state, "locked");
+      assert.equal(
+        (await view(learner, alternative)).detail.progress.steps[2].state,
+        "locked",
+      );
       await assert.rejects(activateAlternative(learner), /PT409/);
-      console.log(`PASS ${edition} alternative prerequisites are versioned, scoped and revoked against current receipts`);
+      console.log(
+        `PASS ${edition} alternative prerequisites are versioned, scoped and revoked against current receipts`,
+      );
 
       await save(company, { archive: true, version: 1 });
       assert.equal((await view(learner)).detail.archived, true);
       assert.deepEqual(await grades(), report);
       if (checkGradeLicence) {
         await checkGradeLicence(grades, () => grades(admin, learner), report);
-        console.log(`PASS ${edition} programme grade reports are readable in grace, denied after expiry, and retained after renewal`);
+        console.log(
+          `PASS ${edition} programme grade reports are readable in grace, denied after expiry, and retained after renewal`,
+        );
       }
       await assert.rejects(enrol(company, colleague), /PT409/);
       await sql(`update private.company_participant_memberships set status='removed',removed_at=now()
@@ -468,7 +612,12 @@ await Promise.all(
       await assert.rejects(view(learner), /42501/);
       await assert.rejects(grades(), /42501/);
       await assert.rejects(grades(admin, learner), /42501/);
-      assert.equal(await sql(`select count(*) from private.course_weighted_releases where user_id=${q(learner)}`), "3");
+      assert.equal(
+        await sql(
+          `select count(*) from private.course_weighted_releases where user_id=${q(learner)}`,
+        ),
+        "3",
+      );
       assert.deepEqual(await classes(), [groupA(1, 0, 0)]);
       if (internal) {
         await actor(
@@ -486,7 +635,9 @@ await Promise.all(
         "f",
       );
       assert.equal(
-        await sql(`select has_function_privilege('anon','public.learning_program_grade_report(uuid,uuid)','EXECUTE')`),
+        await sql(
+          `select has_function_privilege('anon','public.learning_program_grade_report(uuid,uuid)','EXECUTE')`,
+        ),
         "f",
       );
       console.log(

@@ -1,4 +1,10 @@
 /** OIDC resource-link message boundary for a locally registered LTI 1.3 tool. */
+import type { createLtiAdvantage } from "./advantage.ts";
+import type { createLtiDeepLink } from "./deep-link.ts";
+import type {
+  createDynamicRegistration,
+  RegistrationGrant,
+} from "./dynamic-registration.ts";
 import { boundedJson, RequestBodyTooLarge } from "../_shared/bounded-body.ts";
 export interface LaunchHint {
   id: string;
@@ -17,6 +23,13 @@ export interface AuthorizedLaunch {
   target_uri: string;
   redirect_uri: string;
   role: "Instructor" | "Learner";
+  nrps_enabled?: boolean;
+  deep_link_data?: string;
+  resource_link_id?: string;
+  resource_custom?: Record<string, string>;
+  ags_enabled?: boolean;
+  ags_lineitem?: string;
+  registration_scopes?: string[];
 }
 
 type ProtocolRequest = {
@@ -29,7 +42,12 @@ type ProtocolRequest = {
 };
 
 type Principal = {
-  prepare: (id: string, proof: string) => Promise<LaunchHint | null>;
+  register?: (grant: RegistrationGrant) => Promise<string | null>;
+  prepare: (
+    id: string,
+    proof: string,
+    placement?: { resource?: string; portalOrigin?: string },
+  ) => Promise<LaunchHint | null>;
   consume: (
     request: ProtocolRequest,
     proof: string,
@@ -113,6 +131,7 @@ async function signLaunch(
   signing: SigningKey,
   launch: AuthorizedLaunch,
   nonce: string,
+  services: object,
 ) {
   const issued = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT", kid: signing.publicKey.kid };
@@ -124,11 +143,20 @@ async function signLaunch(
     exp: issued + 120,
     jti: crypto.randomUUID(),
     nonce,
-    [claim + "message_type"]: "LtiResourceLinkRequest",
+    ...services,
+    [claim + "message_type"]: launch.deep_link_data
+      ? "LtiDeepLinkingRequest"
+      : "LtiResourceLinkRequest",
     [claim + "version"]: "1.3.0",
     [claim + "deployment_id"]: launch.id,
     [claim + "target_link_uri"]: launch.target_uri,
-    [claim + "resource_link"]: { id: launch.id },
+    ...(launch.deep_link_data ? {} : {
+      [claim + "resource_link"]: { id: launch.resource_link_id ?? launch.id },
+      ...(launch.resource_custom &&
+          Object.keys(launch.resource_custom).length > 0
+        ? { [claim + "custom"]: launch.resource_custom }
+        : {}),
+    }),
     [claim + "roles"]: [
       "http://purl.imsglobal.org/vocab/lis/v2/membership#" + launch.role,
     ],
@@ -181,6 +209,9 @@ function authorization(body: Record<string, unknown>): ProtocolRequest | null {
 export function createLtiHandler(options: {
   origins: string[];
   signing: SigningKey | null;
+  advantage?: ReturnType<typeof createLtiAdvantage>;
+  deepLink?: ReturnType<typeof createLtiDeepLink>;
+  dynamicRegistration?: ReturnType<typeof createDynamicRegistration>;
   principal: (bearer: string) => Promise<Principal | null>;
 }) {
   return async (request: Request) => {
@@ -212,6 +243,19 @@ export function createLtiHandler(options: {
         ? json(200, { keys: [options.signing.publicKey] })
         : json(503, { error: "lti_unconfigured" });
     }
+    if (
+      path === "/learning-lti/deep-link-return" && request.method === "POST" &&
+      options.deepLink
+    ) {
+      return await options.deepLink.receive(request);
+    }
+    const registrationResponse = await options.dynamicRegistration?.route(
+      request,
+      path,
+    );
+    if (registrationResponse) return registrationResponse;
+    const service = await options.advantage?.route(request, path);
+    if (service) return service;
     if (!allowed) return json(403, { error: "lti_origin" });
     if (request.method === "OPTIONS") {
       headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -240,16 +284,51 @@ export function createLtiHandler(options: {
         return json(400, { error: "lti_body" });
       }
       const body = input as Record<string, unknown>;
+      const principal = await options.principal(bearer);
+      if (!principal) return json(401, { error: "lti_session" });
+      if (body.action === "register") {
+        if (!principal.register || !options.dynamicRegistration) {
+          return json(503, { error: "lti_registration_unconfigured" });
+        }
+        const begun = await options.dynamicRegistration.begin(
+          body,
+          origin,
+          principal.register,
+        );
+        return begun
+          ? json(200, begun)
+          : json(403, { error: "lti_registration_grant" });
+      }
       if (typeof body.proof !== "string" || !uuid.test(body.proof)) {
         return json(400, { error: "lti_body" });
       }
-      const principal = await options.principal(bearer);
-      if (!principal) return json(401, { error: "lti_session" });
       if (
         body.action === "prepare" && typeof body.registration === "string" &&
         uuid.test(body.registration)
       ) {
-        const prepared = await principal.prepare(body.registration, body.proof);
+        if (body.mode !== undefined && body.mode !== "select") {
+          return json(400, { error: "lti_prepare" });
+        }
+        if (
+          body.mode === "select" &&
+          (!options.deepLink || body.resource !== undefined)
+        ) {
+          return json(403, { error: "lti_prepare" });
+        }
+        if (
+          body.resource !== undefined &&
+          (typeof body.resource !== "string" || !uuid.test(body.resource))
+        ) {
+          return json(400, { error: "lti_prepare" });
+        }
+        const prepared = await principal.prepare(
+          body.registration,
+          body.proof,
+          {
+            resource: body.resource,
+            portalOrigin: body.mode === "select" ? origin : undefined,
+          },
+        );
         if (!prepared) return json(403, { error: "lti_prepare" });
         const login = httpsUrl(prepared.login_uri);
         httpsUrl(prepared.target_uri);
@@ -281,10 +360,24 @@ export function createLtiHandler(options: {
         return json(403, { error: "lti_launch" });
       }
       httpsUrl(launch.target_uri);
+      if (launch.deep_link_data && !options.deepLink) {
+        return json(403, { error: "lti_launch" });
+      }
+      const claims = launch.deep_link_data
+        ? options.deepLink!.settings(
+          launch.deep_link_data,
+          launch.ags_enabled === true,
+        )
+        : options.advantage?.claims(launch) ?? {};
       return json(200, {
         redirect: launch.redirect_uri,
         state: protocol.state,
-        id_token: await signLaunch(options.signing, launch, protocol.nonce),
+        id_token: await signLaunch(
+          options.signing,
+          launch,
+          protocol.nonce,
+          claims,
+        ),
       });
     } catch (error) {
       return json(error instanceof RequestBodyTooLarge ? 413 : 400, {

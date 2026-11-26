@@ -121,6 +121,16 @@ const ScormPackageReview = lazy(() =>
     default: module.ScormPackageReview,
   })),
 );
+const CourseScormPlayer = lazy(() =>
+  import("./course-scorm-player").then((module) => ({
+    default: module.CourseScormPlayer,
+  })),
+);
+const CourseH5pPlayback = lazy(() =>
+  import("./course-h5p-playback").then((module) => ({
+    default: module.CourseH5pPlayback,
+  })),
+);
 const CourseCompletionPolicyEditor = lazy(() =>
   import("./course-completion-policy").then((module) => ({
     default: module.CourseCompletionPolicyEditor,
@@ -1647,11 +1657,35 @@ function CourseWorkspaceLayout({
             {currentSection === "course-materials" &&
               course.lms_enabled &&
               course.access.staff &&
-              canEdit && (
+              canEdit &&
+              online && (
                 <Suspense fallback={<Loading />}>
-                  <ScormPackageReview key={actor + ":" + course.id} />
+                  <ScormPackageReview
+                    key={actor + ":" + course.id}
+                    actor={actor}
+                    course={course.id}
+                  />
                 </Suspense>
               )}
+            {currentSection === "course-materials" &&
+              course.lms_enabled &&
+              (course.access.staff || learner) &&
+              (online ? (
+                <Suspense fallback={<Loading />}>
+                  <CourseScormPlayer
+                    key={`${actor}:${course.id}:scorm`}
+                    actor={actor}
+                    course={course.id}
+                  />
+                  <CourseH5pPlayback
+                    key={`${actor}:${course.id}:h5p`}
+                    actor={actor}
+                    course={course.id}
+                  />
+                </Suspense>
+              ) : (
+                <Notice>{t("submissionOnline")}</Notice>
+              ))}
           </div>
           {hasSubmissions && (
             <div
@@ -1838,6 +1872,7 @@ function CourseWorkspaceLayout({
                   <Suspense fallback={<Loading />}>
                     <CourseXapiExport
                       key={`xapi-export:${course.id}`}
+                      actor={actor}
                       runId={course.id}
                       zone={course.time_zone}
                     />

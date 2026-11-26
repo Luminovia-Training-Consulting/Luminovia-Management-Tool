@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   examExtraMinutes,
+  examGradeImportCount,
+  examGradeImportRequest,
   examInstant,
   examResultsSchema,
   examScore,
@@ -106,6 +108,14 @@ export function timedExamPaths(academy: boolean) {
         p_publish: z.boolean(),
       }),
       z.literal(true),
+      true,
+    ),
+    "/rest/v1/rpc/import_course_exam_grades": post(
+      "import_course_exam_grades",
+      "Save a reviewed spreadsheet of examination grade drafts",
+      "An assigned teacher or course manager sends 1–200 distinct current participants, the observed score for each participant, their new integer scores and the reviewed examination version. The batch commits atomically as unpublished drafts. Use the separate grade publication operation after review.",
+      examGradeImportRequest,
+      examGradeImportCount,
       true,
     ),
     "/rest/v1/rpc/published_course_exam_results": post(

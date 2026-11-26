@@ -42,7 +42,7 @@ static_resources:
                               - name: ":path"
                                 string_match:
                                   safe_regex:
-                                    regex: '.*/[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}/retry'
+                                    regex: ".*/[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}/retry"
                               - name: ":method"
                                 string_match:
                                   safe_regex: { regex: "POST|OPTIONS" }
@@ -73,6 +73,65 @@ static_resources:
                             headers:
                               - name: ":method"
                                 string_match: { exact: "GET" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            path: "/functions/v1/learning-lti/token"
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "POST" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            path: "/functions/v1/learning-lti/deep-link-return"
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "POST" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            path: "/functions/v1/learning-lti/registration"
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "POST" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            path: "/functions/v1/learning-lti/registration/configuration"
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "GET" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/memberships/[0-9a-f-]+
+                            headers:
+                              - name: ":method"
+                                string_match: { exact: "GET" }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET|POST" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET|PUT|DELETE" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+/scores
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "POST" } }
+                          route: { cluster: academy-api-gateway, timeout: 15s }
+                        - match:
+                            safe_regex:
+                              regex: /functions/v1/learning-lti/ags/[0-9a-f-]+/lineitems/[0-9a-f-]+/results
+                            headers:
+                              - name: ":method"
+                                string_match: { safe_regex: { regex: "GET" } }
                           route: { cluster: academy-api-gateway, timeout: 15s }
                         - match:
                             safe_regex:

@@ -11,6 +11,10 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { DownloadButton } from "./resources";
 import { KnowledgeEditor } from "../knowledge/editor";
 import {
+  CourseLessonBlockEditor,
+  CourseLessonBlockContent,
+} from "./course-lesson-blocks";
+import {
   courseContentAction,
   courseContentStudioKey,
   courseContentStudioQuery,
@@ -84,6 +88,9 @@ function CourseContents({
                   label={lesson.title}
                   readOnly
                 />
+                {lesson.blocks?.map((block) => (
+                  <CourseLessonBlockContent key={block.id} block={block} />
+                ))}
                 {lesson.material_ids?.map((id) => {
                   const material = byId.get(id);
                   return (
@@ -425,9 +432,11 @@ export function CourseAuthoring({
   const query = useQuery(courseContentStudioQuery(actor, courseId));
   const [localDraft, setLocalDraft] = useState<{
     content: CourseCurriculum;
+    base: CourseCurriculum;
     published_version: number;
     draft_version: number;
   } | null>(null);
+  const [mergeBlocked, setMergeBlocked] = useState(false);
   const [preview, setPreview] = useState(false);
   const [compactPreview, setCompactPreview] = useState(false);
   const [catalogueOpen, setCatalogueOpen] = useState(false);
@@ -491,7 +500,8 @@ export function CourseAuthoring({
     if (!localDraft) return null;
     try {
       return {
-        ...localDraft,
+        published_version: localDraft.published_version,
+        draft_version: localDraft.draft_version,
         content: normalizeCourseCurriculum(localDraft.content),
       };
     } catch {
@@ -590,11 +600,43 @@ export function CourseAuthoring({
   ) => {
     if (mutation.isPending) return;
     setLocalDraft((current) => ({
+      base: current?.base ?? curriculum,
       published_version: current?.published_version ?? state.published_version,
       draft_version: current?.draft_version ?? state.draft_version,
       content: update(current?.content ?? curriculum),
     }));
   };
+  async function mergeDraft() {
+    if (!localDraft || !draftPayload) return;
+    const result = await query.refetch();
+    if (!result.isSuccess) return;
+    const latest = result.data;
+    const remote = normalizeCourseCurriculum(
+      latest.draft_content ?? latest.published_content,
+    );
+    const locked =
+      latest.review?.state === "requested" ||
+      latest.review?.state === "approved" ||
+      latest.review?.state === "scheduled";
+    const merged =
+      latest.can_edit && !locked
+        ? (await import("./curriculum-merge")).mergeCourseCurriculum(
+            localDraft.base,
+            draftPayload.content,
+            remote,
+          )
+        : null;
+    setMergeBlocked(merged === null);
+    if (merged) {
+      setLocalDraft({
+        base: remote,
+        content: merged,
+        published_version: latest.published_version,
+        draft_version: latest.draft_version,
+      });
+      reset();
+    }
+  }
   const saveDraft = () => {
     if (draftPayload && !conflict)
       mutate({ action: "save_draft", payload: draftPayload });
@@ -788,20 +830,34 @@ export function CourseAuthoring({
       {conflict && (
         <div role="alert">
           <p>{t("curriculumConflict")}</p>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!online || query.isFetching}
-            onClick={async () => {
-              const result = await query.refetch();
-              if (result.isSuccess) {
-                setLocalDraft(null);
-                reset();
-              }
-            }}
-          >
-            {t("curriculumReloadDiscard")}
-          </Button>
+          {mergeBlocked && <p>{t("curriculumMergeBlocked")}</p>}
+          <div className="form-actions">
+            {draftPayload && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!online || query.isFetching}
+                onClick={() => void mergeDraft()}
+              >
+                {t("curriculumMerge")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || query.isFetching}
+              onClick={async () => {
+                const result = await query.refetch();
+                if (result.isSuccess) {
+                  setLocalDraft(null);
+                  setMergeBlocked(false);
+                  reset();
+                }
+              }}
+            >
+              {t("curriculumReloadDiscard")}
+            </Button>
+          </div>
         </div>
       )}
       {isError && !conflict && <ErrorState />}
@@ -1025,11 +1081,18 @@ export function CourseAuthoring({
                   />
                 </Field>
                 <KnowledgeEditor
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":editor"}
                   value={activeLesson.body}
                   onChange={(body) => reviseLesson({ body })}
                   label={t("lessonContent")}
                   disabled={isPending}
+                />
+                <CourseLessonBlockEditor
+                  key={activeLesson.id + ":blocks"}
+                  blocks={activeLesson.blocks ?? []}
+                  onChange={(blocks) => reviseLesson({ blocks })}
+                  pending={isPending}
+                  move={moveItem}
                 />
                 <div className="form-actions">
                   <Button
@@ -1129,13 +1192,13 @@ export function CourseAuthoring({
                   </Button>
                 </div>
                 <LessonMaterials
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":materials"}
                   selected={activeLesson.material_ids ?? []}
                   materials={materials}
                   onChange={(material_ids) => reviseLesson({ material_ids })}
                 />
                 <LessonDestination
-                  key={activeLesson.id}
+                  key={activeLesson.id + ":destination"}
                   modules={curriculum.modules}
                   sourceId={activeModule.id}
                   onMove={(destination) => {

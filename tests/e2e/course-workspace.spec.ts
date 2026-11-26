@@ -1,4 +1,4 @@
-import {expect, type Page, test} from "@playwright/test";
+import {chromium, expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {createHash, randomUUID} from "node:crypto";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
@@ -8,6 +8,7 @@ import {join} from "node:path";
 import {DateTime} from "luxon";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
+import {fillWorkbookCell} from "./helpers/spreadsheet";
 import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
 import {scormFixtureZip} from "../../scripts/testing/scorm-fixture.ts";
 import {runXapiDispatchCli} from "../../scripts/xapi-lrs-dispatch.mjs";
@@ -863,6 +864,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
             .single(),
         {requireData: true},
     );
+    await resources.getByText("Vorhandene Dateifassung freigeben", {exact: true}).click();
     await resources
         .getByLabel("Geprüfte Dateifassung", {exact: true})
         .selectOption(selected.current_version_id);
@@ -1216,7 +1218,25 @@ for (const asTeam of [false, true]) test(`${asTeam ? "Team" : "Versioned"} assig
         await submit(peerPage ?? learner, secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
         await prepare(page);
         const second = author.getByRole("listitem").filter({hasText: secondFile});
-        await second.getByRole("combobox", {name: "Protokoll", exact: true}).selectOption("1");
+        const importButton = author.getByRole("button", {name: "Aufgabenbewertungen importieren"});
+        await importButton.press("Enter");
+        const grades = page.getByRole("dialog", {name: "Aufgabenbewertungen importieren"});
+        const capture = page.waitForEvent("download");
+        await grades.getByRole("button", {name: "Excel-Vorlage herunterladen"}).click();
+        const workbook = await readFile(await (await capture).path());
+        await grades.getByLabel("Notentabelle auswählen").setInputFiles({
+            name: "assignment-grades.xlsx",
+            mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            buffer: await fillWorkbookCell(workbook, "G2", 1, asTeam ? "Fiktives Laborteam" : "Fictional Müller"),
+        });
+        await expect(grades.getByText("Offen → 1")).toBeVisible();
+        await grades.getByRole("button", {name: "1 Note als Entwurf speichern"}).press("Enter");
+        await expect(grades.getByText("1 Note wurde als Entwurf gespeichert.")).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(importButton).toBeFocused();
+        await expect(second.getByRole("combobox", {name: "Protokoll", exact: true})).toHaveValue("1");
+        await prepare(learner);
+        await expect(submission.getByText("1 / 1 Punkte", {exact: true})).toHaveCount(0);
         await second.getByRole("combobox", {name: "Veröffentlichung", exact: true}).selectOption("released");
         await second.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
         await expect(second.getByText("Rückmeldung freigegeben", {exact: true})).toBeVisible();
@@ -1612,9 +1632,145 @@ test("completed Premium course records a named closeout follow-up without resend
 
 });
 
+/** Exercise the scanner, exact download, inert launch and learner-owned progress. */
+test("published SCORM lessons open in a sandbox and retain learner completion", async ({page, browser, baseURL}, info) => {
+    test.setTimeout(120_000);
+    const f = await fixture();
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    const workspace = `/courses/${f.run}/workspace#course-materials`;
+    await adminLogin(page, f.manager);
+    await page.goto(workspace);
+    const review = page.getByRole("region", {name: "SCORM-1.2-Paketprüfung"});
+    await review.getByLabel("SCORM-ZIP auswählen").setInputFiles({
+        name: "fictional-course.zip", mimeType: "application/zip", buffer: Buffer.from(await scormFixtureZip()),
+    });
+    await review.getByRole("button", {name: "Paket prüfen"}).press("Enter");
+    const publish = review.getByRole("button", {name: "Paket veröffentlichen"});
+    await expect(publish).toBeEnabled();
+    await publish.press("Enter");
+    await expect(review.getByText("Paket für den Kurs veröffentlicht.")).toBeVisible({timeout: 45_000});
+    const staffPanel = page.getByRole("region", {name: "SCORM-Lernpakete"});
+    const scoped = await staffPanel.getByLabel("Lernpaket auswählen").locator("option").all();
+    expect(scoped).toHaveLength(2);
+    const packageId = await scoped[1].getAttribute("value");
+    expect(packageId).toMatch(/^[0-9a-f-]{36}$/);
+    await staffPanel.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+
+    const learnerContext = await browser.newContext({
+        baseURL, viewport: info.project.use.viewport,
+        isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+    });
+    try {
+        const learnerPage = await learnerContext.newPage();
+        await login(learnerPage, f.learner.email, /\/learning$/);
+        await learnerPage.goto(workspace);
+        const player = learnerPage.getByRole("region", {name: "SCORM-Lernpakete"});
+        await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+        await expect(player.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
+        await player.getByRole("button", {name: "Lernpaket öffnen"}).press("Enter");
+        const iframe = player.locator('iframe[title="Exercise <summary>"]');
+        await expect(iframe).toHaveAttribute("sandbox", "");
+        await expect(iframe.contentFrame().getByText("Fictional course file")).toBeVisible();
+        await player.getByRole("button", {name: "Lektion abschließen"}).press("Enter");
+        await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
+        await learnerPage.reload();
+        await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+        await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
+        await expect(staffPanel.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
+
+        await staffPanel.getByRole("button", {name: "Veröffentlichung zurückziehen"}).click();
+        await page.getByRole("dialog").getByRole("button", {name: "Paket zurückziehen", exact: true}).click();
+        await learnerPage.reload();
+        await expect(player.getByText("Für diesen Kurs ist kein Lernpaket veröffentlicht.")).toBeVisible();
+    } finally {
+        await learnerContext.close();
+    }
+});
+
+test.describe("separate HTTPS H5P player", () => {
+    const runtime = process.env.E2E_H5P_CONTENT_HOST;
+    const sample = process.env.E2E_H5P_SAMPLE;
+    test.skip(!runtime || !sample, "Supply the dedicated test origin and the pinned H5P TrueFalse sample.");
+    test("native workspace publishes, plays and withdraws a scanned H5P activity", async ({baseURL}, info) => {
+        test.setTimeout(120_000);
+        const browser = await chromium.launch({args: [
+            "--no-proxy-server", "--ignore-certificate-errors",
+            "--host-resolver-rules=MAP *." + runtime!.split(":")[0] + " 127.0.0.1",
+        ]});
+        const session = {
+            baseURL, viewport: info.project.use.viewport,
+            isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+            ignoreHTTPSErrors: true,
+        };
+        try {
+            const context = await browser.newContext(session);
+            const page = await context.newPage();
+            const f = await fixture();
+            await linkWorkspaceLearner(f);
+            await checked(f.adminClient.rpc("manage_course_enrolment", {
+                p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+            }));
+            const workspace = `/courses/${f.run}/workspace#course-materials`;
+            const player = (target: Page) =>
+                target.getByRole("region", {name: "Interaktive H5P-Aktivitäten"});
+            await adminLogin(page, f.manager);
+            await page.goto(workspace);
+            const staff = player(page);
+            await staff.getByText("H5P-Aktivität veröffentlichen", {exact: true}).press("Enter");
+            await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample!);
+            const publish = staff.getByRole("button", {name: "H5P-Aktivität veröffentlichen"});
+            await expect(publish).toBeEnabled();
+            await publish.press("Enter");
+            await expect(staff.getByRole("button", {name: "Aktivität öffnen"})).toBeVisible({timeout: 45_000});
+            const scope = await checked(f.adminClient.rpc("course_h5p_packages", {p_run_id: f.run}, {get: true}));
+            expect(scope.packages).toHaveLength(1);
+            const version = scope.packages[0].id;
+            const scan = await checked(f.service.from("document_versions").select("scanner_version,status").eq("id", version).single());
+            expect(scan).toMatchObject({status: "clean", scanner_version: expect.stringMatching(/^ClamAV /)});
+
+            const learnerContext = await browser.newContext(session);
+            const participant = await learnerContext.newPage();
+            await login(participant, f.learner.email, /\/learning$/);
+            await participant.goto(workspace);
+            const activity = player(participant);
+            await activity.getByRole("button", {name: "Aktivität öffnen"}).press("Enter");
+            const iframe = activity.locator('iframe[title="True/False Question"]');
+            await expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
+            expect(new URL((await iframe.getAttribute("src"))!).origin).not.toBe(baseURL);
+            const frame = iframe.contentFrame();
+            await expect(frame.getByText("Oslo is the capital of Norway.", {exact: true})).toBeVisible();
+            await expect(frame.getByRole("img", {name: "The Oslo Opera House"})).toBeVisible();
+            await frame.getByText("Yes", {exact: true}).click();
+            await frame.getByRole("button", {name: "Check"}).click();
+            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+            await participant.reload();
+            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+            await expect(staff.getByText("Abgeschlossen")).toHaveCount(0);
+
+            await staff.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+            const dialog = page.getByRole("dialog", {name: "H5P-Freigabe zurückziehen"});
+            await dialog.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+            await expect(staff.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+            await participant.reload();
+            await expect(activity.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+        } finally {
+            await browser.close();
+        }
+    });
+});
+
 /** Follow one fictional enrolment from curriculum publication to its released evidence and reports. */
 test("LMS lifecycle links curriculum, assignments, competency, completion and reports", async ({ page, browser, baseURL }, info) => {
     test.setTimeout(120_000);
+    const duplicateKeys: string[] = [];
+    page.on("console", (message) => {
+        if (message.type() === "error" && message.text().includes("Encountered two children with the same key")) {
+            duplicateKeys.push(message.text());
+        }
+    });
     const f = await fixture();
     await linkWorkspaceLearner(f);
     const course = `/courses/${f.run}/workspace`;
@@ -1630,6 +1786,11 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
     await page.getByRole("textbox", {name: "Lektionsinhalt"}).fill("Der Befehl pwd zeigt das Arbeitsverzeichnis.");
     await page.getByRole("button", {name: "Veröffentlichen", exact: true}).click();
     await expect(page.getByText(/Veröffentlicht · Fassung 1/)).toBeVisible();
+    const curriculumAudit = await new AxeBuilder({page})
+        .include("#course-curriculum")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+    expect(curriculumAudit.violations).toEqual([]);
 
     const assignment = (target: Page) => target.getByRole("region", {name: "Kursaufgaben", exact: true});
     await page.goto(assignments);
@@ -1737,9 +1898,27 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         await expect(issue).toBeDisabled();
 
         const quiz = learnerPage.getByRole("region", {name: "Mini-Quiz"});
-        await quiz.getByRole("radio", {name: "pwd", exact: true}).check();
-        await quiz.getByRole("button", {name: "Antworten verbindlich abgeben"}).click();
+        const answer = quiz.getByRole("radio", {name: "pwd", exact: true});
+        await answer.press("Space");
+        await expect(answer).toBeChecked();
+        const learnerAudit = await new AxeBuilder({page: learnerPage})
+            .include("#course-learning")
+            .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+            .analyze();
+        expect(learnerAudit.violations).toEqual([]);
+        const viewport = learnerPage.viewportSize();
+        if (!viewport) throw new Error("The browser project requires an explicit viewport");
+        await learnerPage.setViewportSize({width: 320, height: viewport.height});
+        const width = await learnerPage.locator("main").evaluate((main) => ({
+            visible: main.clientWidth,
+            scroll: main.scrollWidth,
+        }));
+        expect(width.scroll).toBeLessThanOrEqual(width.visible + 1);
+        const submitQuiz = quiz.getByRole("button", {name: "Antworten verbindlich abgeben"});
+        await expect(submitQuiz).toBeEnabled();
+        await submitQuiz.press("Enter");
         await expect(quiz.getByText(/Ergebnis: 100 %.*Bestanden/)).toBeVisible();
+        await learnerPage.setViewportSize(viewport);
         const evidence = "Fiktiver Nachweis zum Arbeitsverzeichnis.";
         await page.goto(workspace);
         const staffCompetencies = page.locator("details").filter({
@@ -1809,6 +1988,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
         const row = report.getByRole("row").filter({hasText: f.title});
         await expect(row).toBeVisible();
         await expect(row.getByRole("cell", {name: "—", exact: true})).toHaveCount(11);
+        expect(duplicateKeys).toEqual([]);
     } finally {
         await context.close();
     }

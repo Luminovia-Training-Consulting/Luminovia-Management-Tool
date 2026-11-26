@@ -14,26 +14,38 @@ export async function subscribeToRoom(client, room, table, eventTypes, events) {
       (payload) => events.push(payload.new),
     );
   }
-  let timeout;
-  await new Promise((resolve, reject) => {
-    timeout = setTimeout(
-      () => reject(new Error(`Realtime subscription timeout: ${table}`)),
-      25_000,
-    );
-    // The fixture owns teardown. Phoenix can emit CLOSED from inside
-    // unsubscribe, so removing a channel in this callback can re-enter cleanup.
-    channel.subscribe((status, error) => {
-      if (status === "SUBSCRIBED") {
-        resolve();
-      } else if (
-        status === "CHANNEL_ERROR" ||
-        status === "TIMED_OUT" ||
-        status === "CLOSED"
-      ) {
-        reject(error ?? new Error(status));
-      }
+  try {
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) reject(error);
+        else resolve();
+      };
+      const timeout = setTimeout(
+        () => finish(new Error(`Realtime subscription timeout: ${table}`)),
+        25_000,
+      );
+      channel.subscribe((status, error) => {
+        if (status === "SUBSCRIBED") {
+          finish();
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          finish(error ?? new Error(status));
+        }
+      });
     });
-  }).finally(() => clearTimeout(timeout));
+  } catch (error) {
+    // Unsubscribing fires CLOSED, including during ordinary fixture teardown.
+    // Do it outside the status callback and only for a failed initial join.
+    await client.removeChannel(channel);
+    throw error;
+  }
 }
 
 /** Fail if a real event has not arrived before the test's bounded deadline. */

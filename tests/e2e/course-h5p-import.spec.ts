@@ -1,26 +1,30 @@
 /** Import and publish a real H5P ZIP question on the disposable QA stack. */
-import { randomUUID } from "node:crypto";
 import { TextReader, Uint8ArrayWriter, ZipWriter } from "@zip.js/zip.js";
 import { expect, test } from "@playwright/test";
-import { enablePremiumAndLinkParticipant } from "../../scripts/testing/company-participant.mjs";
-import { actor, api, checked, login } from "./helpers/accounts-support";
+import AxeBuilder from "@axe-core/playwright";
+import { checked, login } from "./helpers/accounts-support";
+import { createAssessmentCourse } from "./helpers/assessment-course";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "H5P import fixtures require the canonical disposable services.",
 );
 
-/** Give fixture RPCs the same role-scoped Auth sessions as their browser actors. */
-async function authenticatedActor(name: string, role: string) {
-  const account = await actor(name, role);
-  const client = api(process.env.SUPABASE_ANON_KEY!);
-  await checked(
-    client.auth.signInWithPassword({
-      email: account.email,
-      password: process.env.E2E_PASSWORD!,
-    }),
+/** Include a real archive member that must never execute on either page. */
+async function h5pArchive(manifest: object, content: object) {
+  const writer = new ZipWriter(new Uint8ArrayWriter(), {
+    useWebWorkers: false,
+  });
+  await writer.add("h5p.json", new TextReader(JSON.stringify(manifest)));
+  await writer.add(
+    "content/content.json",
+    new TextReader(JSON.stringify(content)),
   );
-  return { ...account, client };
+  await writer.add(
+    "H5P.TestLibrary-1.0/scripts/sample.js",
+    new TextReader("globalThis.sampleH5pCodeWasLoaded = true;"),
+  );
+  return Buffer.from(await writer.close());
 }
 
 test("a staff member imports licensed H5P text and the learner sees attribution on the quiz", async ({
@@ -29,106 +33,29 @@ test("a staff member imports licensed H5P text and the learner sees attribution 
   baseURL,
 }, info) => {
   test.setTimeout(120_000);
-  // Use a fresh course and actors on each project. The isolated runner disposes
-  // of their records; the test never modifies shared fixture or grading history.
-  const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const manager = await authenticatedActor("Fictional quiz manager", "admin");
-  const company = await authenticatedActor("Fictional quiz contact", "client");
-  const learner = await authenticatedActor(
-    "Fictional quiz learner",
-    "participant",
-  );
-  const organisation = randomUUID();
-  const template = randomUUID();
-  const run = randomUUID();
-  const suffix = run.slice(0, 8);
-  await checked(
-    service.from("organisations").insert({
-      id: organisation,
-      name: `Fictional H5P organisation ${suffix}`,
-    }),
-  );
-  await checked(
-    service.from("client_organisation_memberships").insert({
-      user_id: company.id,
-      organisation_id: organisation,
-    }),
-  );
-  await checked(
-    service.from("course_templates").insert({
-      id: template,
-      title: `Fictional H5P course ${suffix}`,
-    }),
-  );
-  await checked(
-    service.from("course_runs").insert({
-      id: run,
-      template_id: template,
-      organisation_id: organisation,
-      published: true,
-    }),
-  );
-  const now = Date.now();
-  await checked(
-    service.from("course_sessions").insert({
-      course_run_id: run,
-      starts_at: new Date(now - 2 * 3_600_000).toISOString(),
-      ends_at: new Date(now - 3_600_000).toISOString(),
-    }),
-  );
-  await enablePremiumAndLinkParticipant({
-    admin: manager,
-    company,
-    learner,
-    organisation,
-    service,
-    checked,
-  });
-  await checked(
-    manager.client.rpc("manage_course_enrolment", {
-      p_course_run_id: run,
-      p_user_id: learner.id,
-      p_status: "enrolled",
-    }),
-  );
-
+  const { manager, learner, run, suffix } =
+    await createAssessmentCourse("H5P question");
   const prompt = `Ein lokaler Dateiname kann Leerzeichen enthalten. ${suffix}`;
   const name = "Fictional H5P author";
-  const writer = new ZipWriter(new Uint8ArrayWriter(), {
-    useWebWorkers: false,
-  });
-  await writer.add(
-    "h5p.json",
-    new TextReader(
-      JSON.stringify({
-        title: "A fictional H5P true/false question",
-        language: "de",
-        embedTypes: ["iframe"],
-        mainLibrary: "H5P.TrueFalse",
-        preloadedDependencies: [
-          { machineName: "H5P.TrueFalse", majorVersion: 1, minorVersion: 8 },
-        ],
-        license: "CC BY",
-        licenseVersion: "4.0",
-        authors: [{ name, role: "Author" }],
-      }),
-    ),
+  const archive = await h5pArchive(
+    {
+      title: "A fictional H5P true/false question",
+      language: "de",
+      embedTypes: ["iframe"],
+      mainLibrary: "H5P.TrueFalse",
+      preloadedDependencies: [
+        { machineName: "H5P.TrueFalse", majorVersion: 1, minorVersion: 8 },
+      ],
+      license: "CC BY",
+      licenseVersion: "4.0",
+      authors: [{ name, role: "Author" }],
+    },
+    {
+      question: `<p>${prompt}</p>`,
+      correct: "true",
+      l10n: { trueText: "Richtig", falseText: "Falsch" },
+    },
   );
-  await writer.add(
-    "content/content.json",
-    new TextReader(
-      JSON.stringify({
-        question: `<p>${prompt}</p>`,
-        correct: "true",
-        l10n: { trueText: "Richtig", falseText: "Falsch" },
-      }),
-    ),
-  );
-  await writer.add(
-    "H5P.TrueFalse-1.8/scripts/sample.js",
-    new TextReader("globalThis.sampleH5pCodeWasLoaded = true;"),
-  );
-  const archive = Buffer.from(await writer.close());
 
   const workspace = `/courses/${run}/workspace#course-learning`;
   await login(page, manager.email);
@@ -138,10 +65,10 @@ test("a staff member imports licensed H5P text and the learner sees attribution 
   const importer = quiz
     .locator("details")
     .filter({
-      has: page.getByText("H5P-Frage importieren", { exact: true }),
+      has: page.getByText("H5P importieren", { exact: true }),
     })
     .last();
-  await importer.getByText("H5P-Frage importieren", { exact: true }).click();
+  await importer.getByText("H5P importieren", { exact: true }).click();
   await importer.getByLabel("H5P-Datei auswählen").setInputFiles({
     name: "question.h5p",
     mimeType: "application/zip",
@@ -205,3 +132,244 @@ test("a staff member imports licensed H5P text and the learner sees attribution 
     await learnerContext.close();
   }
 });
+
+for (const library of ["H5P.SingleChoiceSet", "H5P.QuestionSet"]) {
+  test(`staff publishes a licensed ${library} as ordered native quiz questions`, async ({
+    page,
+    browser,
+    baseURL,
+  }, info) => {
+    test.setTimeout(120_000);
+    const { manager, learner, run, suffix } =
+      await createAssessmentCourse("H5P collection");
+    const isChoiceSet = library === "H5P.SingleChoiceSet";
+    const prompt = [
+      `Was zeigt pwd an? ${suffix}`,
+      `Dateinamenerweiterungen sind optional. ${suffix}`,
+    ];
+    const name = "Fictional H5P collection owner";
+    const embeddedName = "Fictional independently credited author";
+    const archive = await h5pArchive(
+      {
+        title: "Fictional text collection",
+        language: "de",
+        embedTypes: ["iframe"],
+        mainLibrary: library,
+        preloadedDependencies: [
+          {
+            machineName: library,
+            majorVersion: 1,
+            minorVersion: isChoiceSet ? 11 : 21,
+          },
+          ...(!isChoiceSet
+            ? [
+                {
+                  machineName: "H5P.MultiChoice",
+                  majorVersion: 1,
+                  minorVersion: 16,
+                },
+                {
+                  machineName: "H5P.TrueFalse",
+                  majorVersion: 1,
+                  minorVersion: 8,
+                },
+              ]
+            : []),
+        ],
+        license: "CC BY",
+        licenseVersion: "4.0",
+        authors: [{ name, role: "Author" }],
+      },
+      isChoiceSet
+        ? {
+            choices: [
+              {
+                question: prompt[0],
+                answers: ["Arbeitsverzeichnis", "Dateiliste"],
+              },
+              { question: prompt[1], answers: ["Richtig", "Falsch"] },
+            ],
+          }
+        : {
+            questions: [
+              {
+                library: "H5P.MultiChoice 1.16",
+                params: {
+                  question: prompt[0],
+                  answers: [
+                    { text: "Dateiliste", correct: false },
+                    { text: "Arbeitsverzeichnis", correct: true },
+                  ],
+                },
+              },
+              {
+                library: "H5P.TrueFalse 1.8",
+                params: {
+                  question: prompt[1],
+                  correct: "true",
+                  l10n: { trueText: "Richtig", falseText: "Falsch" },
+                },
+                metadata: {
+                  title: "Fictional question with its own credit",
+                  license: "CC BY",
+                  licenseVersion: "4.0",
+                  authors: [{ name: embeddedName, role: "Author" }],
+                },
+              },
+            ],
+          },
+    );
+    const workspace = `/courses/${run}/workspace#course-learning`;
+    await login(page, manager.email);
+    await page.goto(workspace);
+    const quiz = page.getByRole("region", { name: "Mini-Quiz" });
+    await quiz.getByText("Fragenbank", { exact: true }).click();
+    const importer = quiz
+      .locator("details")
+      .filter({
+        has: page.getByText("H5P importieren", { exact: true }),
+      })
+      .last();
+    await importer.getByText("H5P importieren", { exact: true }).click();
+    await importer.getByLabel("H5P-Datei auswählen").setInputFiles({
+      name: "collection.h5p",
+      mimeType: "application/zip",
+      buffer: archive,
+    });
+    for (const question of prompt)
+      await expect(importer.getByText(question, { exact: true })).toBeVisible();
+    await importer
+      .getByRole("button", { name: "Fragensammlung in Fragenbank speichern" })
+      .click();
+    await expect(importer.getByText("2 H5P-Fragen gespeichert.")).toBeVisible();
+    for (const question of prompt) {
+      await importer
+        .getByRole("listitem")
+        .filter({ hasText: question })
+        .getByRole("button", { name: "Ins Quiz übernehmen" })
+        .click();
+    }
+    await quiz
+      .getByLabel("Quiz für eingeschriebene Teilnehmende veröffentlichen")
+      .check();
+    await quiz
+      .getByRole("button", { name: "Neue Quizfassung speichern" })
+      .click();
+    const read = async () =>
+      (
+        await checked(
+          learner.client.rpc("course_workspace", { p_run_id: run }),
+          { requireData: true },
+        )
+      ).quiz;
+    await expect
+      .poll(async () =>
+        (await read())?.questions.map(
+          ({ prompt }: { prompt: string }) => prompt,
+        ),
+      )
+      .toEqual(prompt);
+    expect(
+      (await read()).questions.every(
+        (question: object) => !("correct" in question),
+      ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => "sampleH5pCodeWasLoaded" in globalThis),
+    ).toBe(false);
+
+    const learnerContext = await browser.newContext({
+      baseURL,
+      viewport: info.project.use.viewport,
+      isMobile: info.project.use.isMobile,
+      hasTouch: info.project.use.hasTouch,
+    });
+    try {
+      const learnerPage = await learnerContext.newPage();
+      await login(learnerPage, learner.email, /\/learning$/);
+      await learnerPage.goto(workspace);
+      const learnerQuiz = learnerPage.getByRole("region", {
+        name: "Mini-Quiz",
+      });
+      const second = learnerQuiz.getByRole("group", {
+        name: prompt[1],
+        exact: true,
+      });
+      await second
+        .getByText("Quelle und Lizenz · CC BY 4.0", { exact: true })
+        .click();
+      await expect(second.getByText(name, { exact: true })).toBeVisible();
+      if (!isChoiceSet) {
+        await second
+          .getByText("Quelle der Teilfrage · CC BY 4.0", { exact: true })
+          .click();
+        await expect(
+          second.getByText(embeddedName, { exact: true }),
+        ).toBeVisible();
+      }
+      const scan = await new AxeBuilder({ page: learnerPage })
+        .include('[aria-label="Mini-Quiz"]')
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+      expect(
+        scan.violations.map(({ id, nodes }) => ({
+          id,
+          targets: nodes.map(({ target }) => target),
+        })),
+      ).toEqual([]);
+
+      const firstAnswer = learnerQuiz.getByRole("radio", {
+        name: "Arbeitsverzeichnis",
+        exact: true,
+      });
+      await firstAnswer.press("Space");
+      await expect(firstAnswer).toBeChecked();
+      const secondAnswer = learnerQuiz.getByRole("radio", {
+        name: "Richtig",
+        exact: true,
+      });
+      await secondAnswer.press("Space");
+      await expect(secondAnswer).toBeChecked();
+      const submit = learnerQuiz.getByRole("button", {
+        name: "Antworten verbindlich abgeben",
+      });
+      await expect(submit).toBeEnabled();
+      await submit.press("Enter");
+      await expect(
+        learnerQuiz.getByText(/Ergebnis: 100 %.*Bestanden/),
+      ).toBeVisible();
+      expect(
+        await learnerPage.evaluate(
+          () => "sampleH5pCodeWasLoaded" in globalThis,
+        ),
+      ).toBe(false);
+
+      const archive = await checked(
+        manager.client.rpc("course_xapi_statements", {
+          p_run_id: run,
+          p_from: new Date(Date.now() - 600_000).toISOString(),
+          p_until: new Date(Date.now() + 60_000).toISOString(),
+        }),
+        { requireData: true },
+      );
+      const interactions = archive.statements.filter(
+        (event: { verb: { id: string } }) =>
+          event.verb.id.endsWith("/answered"),
+      );
+      expect(interactions).toHaveLength(2);
+      for (const [index, event] of interactions.entries()) {
+        expect(event.object.id).toMatch(
+          new RegExp(`/quiz/1/h5p/${index + 1}$`),
+        );
+        expect(event.result).toEqual({
+          completion: true,
+          response: !isChoiceSet && index === 0 ? "choice-2" : "choice-1",
+          success: true,
+        });
+        expect(JSON.stringify(event)).not.toContain(learner.email);
+      }
+    } finally {
+      await learnerContext.close();
+    }
+  });
+}

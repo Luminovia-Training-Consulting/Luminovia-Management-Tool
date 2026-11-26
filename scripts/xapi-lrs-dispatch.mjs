@@ -170,7 +170,7 @@ export async function runXapiDispatchCli(
     username: env.LMS_XAPI_LRS_USERNAME,
     password: env.LMS_XAPI_LRS_PASSWORD,
   };
-  return dispatchCourseArchives({
+  const reports = await dispatchCourseArchives({
     courses,
     state,
     now,
@@ -187,6 +187,25 @@ export async function runXapiDispatchCli(
     deliver: (archive) => deliverXapiArchive(archive, lrs),
     save: (next) => saveCheckpoint(stateFile, next),
   });
+  if (env.LMS_XAPI_MONITOR === "1") {
+    for (const report of reports) {
+      const { data: confirmed, error } = await supabase.rpc(
+        "report_course_xapi_delivery",
+        {
+          p_run_id: report.course,
+          p_through: report.through,
+          p_submitted: report.submitted,
+          p_retries: report.retries,
+          p_failure:
+            typeof report.failure === "number" || report.failure === "transport"
+              ? "delivery"
+              : report.failure,
+        },
+      );
+      if (error || confirmed !== true) report.monitor_failed = true;
+    }
+  }
+  return reports;
 }
 
 if (
@@ -198,7 +217,12 @@ if (
       throw new Error("Pass a course list and a delivery checkpoint");
     const report = await runXapiDispatchCli(process.argv[2], process.argv[3]);
     console.log(JSON.stringify(report));
-    if (report.some(({ failure }) => failure !== null)) process.exitCode = 1;
+    if (
+      report.some(
+        ({ failure, monitor_failed }) => failure !== null || monitor_failed,
+      )
+    )
+      process.exitCode = 1;
   } catch {
     console.error(
       "Could not load xAPI dispatch configuration, checkpoint or portal session.",

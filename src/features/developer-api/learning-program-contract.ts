@@ -4,12 +4,16 @@ import {
   learningProgramId,
   learningProgramClassProgressResult,
   learningProgramGradeReport,
+  learningProgramCohortGrades,
+  readLearningProgramCohortGradesRequest,
   learningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
   readLearningProgramGradeReportRequest,
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
+  programmePathExceptionRequest,
+  programmePathExceptionRevision,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
 } from "../learning/learning-program-schema.ts";
@@ -193,6 +197,58 @@ export function learningProgramPaths(academy = false) {
         },
       },
     },
+    "/rest/v1/rpc/learning_program_cohort_grades": {
+      get: {
+        ...gradeReport,
+        operationId: "getLearningProgrammeCohortGrades",
+        summary: "List current programme cohort grades",
+        description:
+          "Course managers can read 30 currently eligible programme learners per page and their authorised released course grade reports. Search matches learner names. Pass zero to start.",
+        parameters: [
+          {
+            in: "query",
+            name: "p_program_id",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            in: "query",
+            name: "p_search",
+            schema: { type: "string", maxLength: 120 },
+          },
+          {
+            in: "query",
+            name: "p_offset",
+            schema: { type: "integer", minimum: 0, default: 0 },
+          },
+        ],
+        responses: {
+          ...gradeReport.responses,
+          "200": {
+            description: "Current cohort page",
+            content: jsonContent(learningProgramCohortGrades),
+          },
+        },
+      },
+      post: {
+        ...gradeReport,
+        operationId: "readLearningProgrammeCohortGrades",
+        summary: "Read current programme cohort grades",
+        description:
+          "Returns the current page of programme learners and their authorised released course grades to course management.",
+        requestBody: {
+          required: true,
+          content: jsonContent(readLearningProgramCohortGradesRequest),
+        },
+        responses: {
+          ...gradeReport.responses,
+          "200": {
+            description: "Current cohort page",
+            content: jsonContent(learningProgramCohortGrades),
+          },
+        },
+      },
+    },
     ...(academy
       ? {
           "/rest/v1/rpc/set_company_participant_class": write(
@@ -216,6 +272,14 @@ export function learningProgramPaths(academy = false) {
       "Set explicit prerequisites for a programme step",
       "Managers can set an all or any completion rule targeting distinct earlier programme positions before any programme enrolment. Supply the reviewed version. An empty list restores the programme's existing sequential or unordered behaviour for that step.",
       programmePrerequisiteRequest,
+    ),
+    "/rest/v1/rpc/set_learning_program_path_exception": write(
+      "setLearningProgrammePathException",
+      "Grant or withdraw a prerequisite exception",
+      "Course management can grant or withdraw an exception for one current programme learner and one step. The request includes a private reason and the reviewed exception revision. The exception permits starting the step. Programme completion still requires each course completion receipt.",
+      programmePathExceptionRequest,
+      false,
+      programmePathExceptionRevision,
     ),
     "/rest/v1/rpc/enrol_learning_program": write(
       "enrolLearningProgramme",

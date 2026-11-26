@@ -8,6 +8,8 @@ services:
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
       PORTAL_LTI_TOOL_ORIGINS: ${PORTAL_LTI_TOOL_ORIGINS:-'self'}
+      PORTAL_SCORM_RUNTIME_DOMAIN: ${PORTAL_SCORM_RUNTIME_DOMAIN:-scorm-disabled.invalid}
+      PORTAL_H5P_RUNTIME_DOMAIN: ${PORTAL_H5P_RUNTIME_DOMAIN:-h5p-disabled.invalid}
       PORTAL_CADDY_ALIAS_PROFILE: cms_legacy_aliases
       PORTAL_CADDY_RESET_PROFILE: cms_hosted_reset
     volumes:

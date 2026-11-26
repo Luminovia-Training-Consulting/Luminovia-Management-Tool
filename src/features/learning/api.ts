@@ -508,16 +508,17 @@ export type PortalDocumentRequest =
   | { kind: "qualification_passport"; locale: "de" | "en" }
   | { kind: "earnings_statement"; from: string; until: string; all?: boolean };
 
-/** Downloads protected exact facts/bytes and checks the current identity again before releasing a Blob. */
-export async function downloadPortalDocument(
+/** Fetch protected exact bytes and verify the same account is still signed in. */
+export async function readPortalDocument(
   request: PortalDocumentRequest,
-  name: string,
   signal?: AbortSignal,
+  actor?: string,
 ) {
   requireOnline();
   const client = db();
   const before = (await client.auth.getSession()).data.session;
   if (!before) throw new Error("authentication_required");
+  if (actor && before.user.id !== actor) throw new Error("account_changed");
   const response = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/course-documents`,
     {
@@ -544,7 +545,19 @@ export async function downloadPortalDocument(
   const after = (await client.auth.getSession()).data.session;
   if (signal?.aborted || after?.user.id !== before.user.id)
     throw new Error("account_changed");
-  saveBlob(blob, name.replace(/[\\/]/g, "-").slice(0, 160));
+  return blob;
+}
+
+/** Downloads protected exact facts or bytes with a filename chosen by the caller. */
+export async function downloadPortalDocument(
+  request: PortalDocumentRequest,
+  name: string,
+  signal?: AbortSignal,
+) {
+  saveBlob(
+    await readPortalDocument(request, signal),
+    name.replace(/[\\/]/g, "-").slice(0, 160),
+  );
 }
 
 /** Adapts course document kinds to the common protected download boundary. */

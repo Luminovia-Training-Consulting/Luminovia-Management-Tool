@@ -2,6 +2,13 @@
 import i18n from "../../lib/i18n";
 
 const messages = {
+  portfolioReflection: ["Lernreflexion ergänzen", "Add learning reflection"],
+  portfolioReflectionGoal: ["Lernziel", "Learning goal"],
+  portfolioReflectionOutcome: [
+    "Ergebnis und Erkenntnisse",
+    "Outcome and insights",
+  ],
+  portfolioReflectionNextStep: ["Nächster Lernschritt", "Next learning step"],
   portfolioEvidenceHeading: ["Nachweise", "Supporting files"],
   portfolioAttach: ["Nachweis verknüpfen", "Link supporting file"],
   portfolioChooseFile: ["Datei auswählen", "Choose a file"],

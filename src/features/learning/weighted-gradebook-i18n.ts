@@ -14,6 +14,17 @@ i18n.addResourceBundle(
     weightedSavePolicy: "Richtlinie als neue Fassung speichern",
     weightedPolicyHelp:
       "Pflicht- und optionale Gewichte ergeben zusammen 100 %. Fehlende optionale Leistungen und Befreiungen werden aus dem Grundgewicht entfernt. Bonusleistungen addieren Prozentpunkte bis höchstens 100 %.",
+    weightedCategories: "Leistungen gruppieren",
+    weightedCategoryHelp:
+      "Bis zu drei Ebenen. Die Gewichte der einzelnen Leistungen gelten für den gesamten Kurs.",
+    weightedCategoryDepth:
+      "Eine Kategorie kann höchstens zwei übergeordnete Kategorien haben.",
+    weightedCategoryNumber: "Kategorie {{number}}",
+    weightedCategoryLabel: "Kategorie",
+    weightedCategoryParent: "Übergeordnete Kategorie",
+    weightedCategoryNone: "Keine Kategorie",
+    weightedCategoryRemove: "Kategorie entfernen",
+    weightedCategoryAdd: "Kategorie hinzufügen",
     weightedThreshold: "Bestehensgrenze (%)",
     weightedMissingPolicy: "Fehlende Pflichtleistungen",
     weightedMissingBlock: "Freigabe sperren",
@@ -78,6 +89,16 @@ i18n.addResourceBundle(
     weightedSavePolicy: "Save new policy revision",
     weightedPolicyHelp:
       "Required and optional weights total 100%. Missing optional and excused assessments leave the base weight. Bonus assessments add percentage points up to a final 100%.",
+    weightedCategories: "Group assessments",
+    weightedCategoryHelp:
+      "Use up to three levels. Each assessment weight applies across the whole course.",
+    weightedCategoryDepth: "A category can have up to two ancestors.",
+    weightedCategoryNumber: "Category {{number}}",
+    weightedCategoryLabel: "Category",
+    weightedCategoryParent: "Parent category",
+    weightedCategoryNone: "No category",
+    weightedCategoryRemove: "Remove category",
+    weightedCategoryAdd: "Add category",
     weightedThreshold: "Pass threshold (%)",
     weightedMissingPolicy: "Missing required assessments",
     weightedMissingBlock: "Block release",

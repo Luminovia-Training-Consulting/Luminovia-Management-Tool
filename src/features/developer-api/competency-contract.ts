@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   competencyAssignmentEvidenceReference,
   competencyFrameworkDefinition,
+  competencyTextExamEvidenceReference,
   courseCompetenciesSchema,
 } from "../learning/competency-schema.ts";
 
@@ -26,6 +27,7 @@ const decision = z.strictObject({
   evidence_note: z.string().min(3).max(1500),
   include_quiz: z.boolean(),
   assignment_evidence: competencyAssignmentEvidenceReference.optional(),
+  text_exam_evidence: competencyTextExamEvidenceReference.optional(),
 });
 export const competencyAction = z.toJSONSchema(
   z.discriminatedUnion("p_action", [
@@ -33,6 +35,11 @@ export const competencyAction = z.toJSONSchema(
       ...run,
       p_action: z.literal("save_framework"),
       p_payload: framework,
+    }),
+    z.strictObject({
+      ...run,
+      p_action: z.literal("archive_framework"),
+      p_payload: z.strictObject({ id, archived: z.boolean() }),
     }),
     z.strictObject({ ...run, p_action: z.literal("pin"), p_payload: mapping }),
     z.strictObject({

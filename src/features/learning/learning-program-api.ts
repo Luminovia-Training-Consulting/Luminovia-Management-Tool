@@ -6,6 +6,8 @@ import {
   learningProgramId,
   learningProgramClassProgressResult,
   learningProgramGradeReport,
+  learningProgramCohortGrades,
+  readLearningProgramCohortGradesRequest,
   learningProgramClassPlacementRequest,
   type LearningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
@@ -13,6 +15,9 @@ import {
   learningProgramsResult,
   readLearningProgramsRequest,
   programmePrerequisiteRequest,
+  programmePathExceptionRequest,
+  programmePathExceptionRevision,
+  type ProgrammePathExceptionRequest,
   type ProgrammePrerequisiteRequest,
   saveLearningProgramRequest,
   startLearningProgramCourseRequest,
@@ -94,6 +99,38 @@ export const learningProgramGradeReportQuery = (
     retry: false,
   });
 
+/** Fetch only one authorised page of current cohort grades. */
+export const learningProgramCohortGradesQuery = (
+  actor: string,
+  program: string,
+  search: string,
+  offset: number,
+) =>
+  queryOptions({
+    queryKey: [
+      ...learningProgramsKey(actor),
+      "cohort-grades",
+      program,
+      search,
+      offset,
+    ],
+    queryFn: async ({ signal }) => {
+      const args = readLearningProgramCohortGradesRequest.parse({
+        p_program_id: program,
+        p_search: search,
+        p_offset: offset,
+      });
+      const { data, error } = await db()
+        .rpc("learning_program_cohort_grades", args, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return learningProgramCohortGrades.parse(data);
+    },
+    staleTime: 0,
+    refetchOnMount: "always" as const,
+    retry: false,
+  });
+
 export async function saveLearningProgram(input: SaveLearningProgramRequest) {
   requireOnline();
   const { data, error } = await db().rpc(
@@ -114,6 +151,19 @@ export async function setLearningProgramPrerequisite(
     programmePrerequisiteRequest.parse(input),
   );
   if (error) throw error;
+}
+
+/** Confirm the next version of one learner's exception against the reviewed state. */
+export async function setLearningProgramPathException(
+  input: ProgrammePathExceptionRequest,
+) {
+  requireOnline();
+  const { data, error } = await db().rpc(
+    "set_learning_program_path_exception",
+    programmePathExceptionRequest.parse(input),
+  );
+  if (error) throw error;
+  return programmePathExceptionRevision.parse(data);
 }
 
 export async function enrolLearningProgram(input: EnrolLearningProgramRequest) {

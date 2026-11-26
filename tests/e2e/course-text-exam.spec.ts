@@ -2,8 +2,10 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { createAssessmentCourse } from "./helpers/assessment-course";
 import { checked, login } from "./helpers/accounts-support";
+import { fillWorkbookCell } from "./helpers/spreadsheet";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -154,6 +156,66 @@ test("a learner recovers private text, submits once and sees only the released g
       page.getByRole("button", { name: "Bewertung freigeben", exact: true }),
     ).toBeVisible();
     expect((await readExam()).review).toBeNull();
+    const importButton = staffExam.getByRole("button", {
+      name: "Prüfungsnoten importieren",
+    });
+    await importButton.press("Enter");
+    const importDialog = page.getByRole("dialog", {
+      name: "Prüfungsnoten importieren",
+    });
+    const capture = page.waitForEvent("download");
+    await importDialog
+      .getByRole("button", { name: "CSV-Vorlage herunterladen" })
+      .click();
+    const template = readFileSync(await (await capture).path(), "utf8");
+    expect(template).toContain(learner.id);
+    expect(template).toMatch(/,"1",""$/);
+    const input = importDialog.getByLabel("Notentabelle auswählen");
+    await input.setInputFiles({
+      name: "text-marks.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(template.replace(/,""$/, ',"9"')),
+    });
+    await expect(importDialog.getByText("8/10 → 9/10")).toBeVisible();
+    const confirmImport = importDialog.getByRole("button", {
+      name: "1 Note als Entwurf speichern",
+    });
+    await expect(confirmImport).toBeDisabled();
+    await importDialog
+      .getByRole("checkbox", { name: "1 gespeicherten Entwurf ersetzen" })
+      .check();
+    await confirmImport.press("Enter");
+    await expect(
+      importDialog.getByText("1 Note wurde als Entwurf gespeichert."),
+    ).toBeVisible();
+
+    const excelCapture = page.waitForEvent("download");
+    await importDialog
+      .getByRole("button", { name: "Excel-Vorlage herunterladen" })
+      .click();
+    const workbook = readFileSync(await (await excelCapture).path());
+    await input.setInputFiles({
+      name: "text-marks.xlsx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await fillWorkbookCell(workbook, "F2", 10, learner.id),
+    });
+    await expect(importDialog.getByText("9/10 → 10/10")).toBeVisible();
+    await importDialog
+      .getByRole("checkbox", { name: "1 gespeicherten Entwurf ersetzen" })
+      .check();
+    const scan = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(scan.violations).toEqual([]);
+    await confirmImport.press("Enter");
+    await expect(
+      importDialog.getByText("1 Note wurde als Entwurf gespeichert."),
+    ).toBeVisible();
+    expect((await readExam()).review).toBeNull();
+    await page.keyboard.press("Escape");
+    await expect(importButton).toBeFocused();
     await page
       .getByRole("button", { name: "Bewertung freigeben", exact: true })
       .click();
@@ -161,11 +223,11 @@ test("a learner recovers private text, submits once and sees only the released g
       .getByRole("dialog")
       .getByRole("button", { name: "Bewertung freigeben", exact: true })
       .click();
-    await expect.poll(async () => (await readExam()).review?.score).toBe(8);
+    await expect.poll(async () => (await readExam()).review?.score).toBe(10);
     await candidate.reload();
     await candidate.getByText("Freitextprüfung", { exact: true }).click();
     await expect(
-      candidate.getByText("Bestanden · 8 von 10 Punkten", { exact: true }),
+      candidate.getByText("Bestanden · 10 von 10 Punkten", { exact: true }),
     ).toBeVisible();
     await expect(candidate.getByText(notes, { exact: true })).toBeVisible();
     expect(

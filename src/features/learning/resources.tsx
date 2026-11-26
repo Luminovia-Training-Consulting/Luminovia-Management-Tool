@@ -69,6 +69,56 @@ export function DownloadButton({
   );
 }
 
+/** The upload and existing-version forms use the same publication choices. */
+function ResourceShareFields({
+  idPrefix,
+  audience,
+  category,
+  onAudience,
+  onCategory,
+  disabled,
+}: {
+  idPrefix: string;
+  audience: string;
+  category: string;
+  onAudience: (value: string) => void;
+  onCategory: (value: string) => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation("learning");
+  const audienceId = idPrefix + "-audience";
+  const categoryId = idPrefix + "-category";
+  return (
+    <>
+      <Field id={audienceId} label={t("audience")}>
+        <select
+          id={audienceId}
+          value={audience}
+          disabled={disabled}
+          onChange={(event) => onAudience(event.target.value)}
+        >
+          {["all", "staff", "client", "participants"].map((value) => (
+            <option key={value} value={value}>
+              {t(value)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field id={categoryId} label={t("category")}>
+        <select
+          id={categoryId}
+          value={category}
+          disabled={disabled}
+          onChange={(event) => onCategory(event.target.value)}
+        >
+          <option value="material">{t("material")}</option>
+          <option value="report">{t("report")}</option>
+        </select>
+      </Field>
+    </>
+  );
+}
+
 /** Publish only a server-confirmed clean version; failed sharing leaves a private personal upload. */
 export function Resources({
   course,
@@ -257,31 +307,14 @@ export function Resources({
               }}
             />
           </Field>
-          <Field id="upload-resource-audience" label={t("audience")}>
-            <select
-              id="upload-resource-audience"
-              value={audience}
-              disabled={upload.isPending || !!cleanVersion}
-              onChange={(event) => setAudience(event.target.value)}
-            >
-              {["all", "staff", "client", "participants"].map((value) => (
-                <option key={value} value={value}>
-                  {t(value)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="upload-resource-category" label={t("category")}>
-            <select
-              id="upload-resource-category"
-              value={category}
-              disabled={upload.isPending || !!cleanVersion}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              <option value="material">{t("material")}</option>
-              <option value="report">{t("report")}</option>
-            </select>
-          </Field>
+          <ResourceShareFields
+            idPrefix="upload-resource"
+            audience={audience}
+            category={category}
+            onAudience={setAudience}
+            onCategory={setCategory}
+            disabled={upload.isPending || !!cleanVersion}
+          />
           {upload.isPending && (
             <p role="status">
               {cleanVersion
@@ -305,63 +338,61 @@ export function Resources({
           )}
         </form>
       )}
-      {!readOnly && course.access.manager && (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate({
-              action: "resource_share",
-              payload: {
-                version_id: version,
-                audience: reviewedAudience,
-                category: reviewedCategory,
-              },
-            });
-          }}
-        >
-          <Field id="share-version" label={t("reviewedVersion")}>
-            <select
-              id="share-version"
-              value={version}
-              required
-              onChange={(event) => setVersion(event.target.value)}
+      {!readOnly &&
+        course.access.manager &&
+        course.share_options.length > 0 && (
+          <details className="mt-4">
+            <summary>{t("shareReviewedVersion")}</summary>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!online || save.isPending || upload.isPending || !version)
+                  return;
+                save.mutate({
+                  action: "resource_share",
+                  payload: {
+                    version_id: version,
+                    audience: reviewedAudience,
+                    category: reviewedCategory,
+                  },
+                });
+              }}
             >
-              <option value="">{t("choose")}</option>
-              {course.share_options.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} · {item.version}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="resource-audience" label={t("audience")}>
-            <select
-              id="resource-audience"
-              value={reviewedAudience}
-              onChange={(event) => setReviewedAudience(event.target.value)}
-            >
-              {["all", "staff", "client", "participants"].map((value) => (
-                <option key={value} value={value}>
-                  {t(value)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="resource-category" label={t("category")}>
-            <select
-              id="resource-category"
-              value={reviewedCategory}
-              onChange={(event) => setReviewedCategory(event.target.value)}
-            >
-              <option value="material">{t("material")}</option>
-              <option value="report">{t("report")}</option>
-            </select>
-          </Field>
-          <Button disabled={!online || save.isPending || !version}>
-            {t("share")}
-          </Button>
-        </form>
-      )}
+              <Field id="share-version" label={t("reviewedVersion")}>
+                <select
+                  id="share-version"
+                  value={version}
+                  required
+                  disabled={save.isPending}
+                  onChange={(event) => setVersion(event.target.value)}
+                >
+                  <option value="">{t("choose")}</option>
+                  {course.share_options.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} · {item.version}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <ResourceShareFields
+                idPrefix="resource"
+                audience={reviewedAudience}
+                category={reviewedCategory}
+                onAudience={setReviewedAudience}
+                onCategory={setReviewedCategory}
+                disabled={save.isPending}
+              />
+              <Button
+                type="submit"
+                disabled={
+                  !online || save.isPending || upload.isPending || !version
+                }
+              >
+                {t("share")}
+              </Button>
+            </form>
+          </details>
+        )}
       {save.isError && !removing && (
         <Notice kind="error">{t("saveError")}</Notice>
       )}

@@ -723,7 +723,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       "select public.notification_inbox()").then(JSON.parse).then(({items}) =>
       items.filter(({kind}) => kind === "course_weighted_grade_released"));
     const weightedPolicy = {threshold:80,missing_required:"block",separate_reviewer:false,
+      categories: [
+        {id: randomUUID(), label: "Programme marks"},
+        {id: randomUUID(), label: "Assessment"},
+      ],
       items:[{key:"quiz",weight:100,treatment:"required"}]};
+    weightedPolicy.categories[1].parent_id = weightedPolicy.categories[0].id;
+    weightedPolicy.items[0].category_id = weightedPolicy.categories[1].id;
+    await assert.rejects(weightedWrite(teacher, "policy", 0, {
+      ...weightedPolicy, categories: weightedPolicy.categories.toReversed(),
+    }), /22023/);
     await assert.rejects(weightedWrite(learner,"policy",0,weightedPolicy), /42501/);
     await weightedWrite(teacher,"policy",0,weightedPolicy);
     const weightedPreview = await weighted(teacher,learner);
@@ -735,11 +744,28 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await weightedWrite(teacher,"release",1,{...weightedLearner,expected_review:1});
     const weightedReleased = await weighted(learner);
     assert.equal(weightedReleased.history[0].result.percent,90);
+    assert.deepEqual(weightedReleased.history[0].result.categories, weightedPolicy.categories);
+    assert.equal(weightedReleased.history[0].result.components[0].category_id, weightedPolicy.categories[1].id);
     const releasedReceipt = await gradeInbox(learner);
     assert.equal(releasedReceipt.length, 1);
     assert.equal(releasedReceipt[0].href, `/courses/${run}/workspace#course-weighted-gradebook`);
     assert.deepEqual(await gradeInbox(teacher), []);
     await assert.rejects(weighted(client,learner), /42501/);
+
+    // Use a retained ended exam to exercise the dedicated import licence and
+    // its current teacher and learner scope without waiting on wall time.
+    await sql(`insert into private.course_exam_settings(run_id,required,version,updated_by)
+      values (${q(run)},true,1,${q(manager)}) on conflict (run_id) do update set required=true;
+      insert into private.course_timed_exams(run_id,title,visible_from,starts_at,ends_at,pass_percent)
+      values (${q(run)},'Fictional exam grade import',now()-interval '4 hours',now()-interval '3 hours',now()-interval '2 hours',50);`);
+    const importExam = (who, version, expected, score, viaGate = true) => actor(who,
+      (viaGate ? gate("/rpc/import_course_exam_grades") : "") +
+      `select public.import_course_exam_grades(${q(run)},${version},${q(JSON.stringify([
+        {participant_id: learner, expected_score: expected, score},
+      ]))}::jsonb)`);
+    await assert.rejects(importExam(client, 1, null, 79), /42501/);
+    assert.equal(await importExam(teacher, 1, null, 79), "1");
+    assert.equal(await sql(`select score from private.course_exam_results where run_id=${q(run)} and participant_id=${q(learner)}`), "79");
 
     await renew({
       release_commit: nextRelease,
@@ -759,6 +785,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     await assert.rejects(actor(learner,
       `select public.learning_portfolio_command(${q(portfolioEntry)},'archive','{"state_revision":0}',2)`), /42501/);
     assert.deepEqual(await weighted(learner),weightedReleased);
+    await assert.rejects(importExam(teacher, 2, 79, 80), /42501/);
+    await assert.rejects(importExam(teacher, 2, 79, 80, false), /42501/);
     assert.deepEqual(await gradeInbox(learner), releasedReceipt);
     assert.equal((await weighted(teacher,learner)).can_manage,false);
     await assert.rejects(weightedWrite(teacher,"policy",1,weightedPolicy), /42501/);

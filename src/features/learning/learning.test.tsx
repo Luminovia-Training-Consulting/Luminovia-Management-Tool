@@ -109,91 +109,97 @@ beforeEach(async () => {
       const request = {
         abortSignal: () => request,
         then: (resolve: (v: unknown) => unknown) =>
-          name === "course_content_studio"
+          name === "course_h5p_packages"
             ? Promise.resolve({
-                data: {
-                  can_edit: true,
-                  published_version: 0,
-                  published_content: { modules: [] },
-                  published_at: null,
-                  draft_version: 0,
-                  draft_base_version: 0,
-                  draft_content: null,
-                  versions: [],
-                },
+                data: { packages: [], can_publish: false, can_complete: true },
                 error: null,
               }).then(resolve)
-            : name === "course_welcome_content"
+            : name === "course_content_studio"
               ? Promise.resolve({
                   data: {
-                    version: 0,
-                    description: "",
-                    objectives: "",
-                    joining_instructions: "",
+                    can_edit: true,
+                    published_version: 0,
+                    published_content: { modules: [] },
                     published_at: null,
+                    draft_version: 0,
+                    draft_base_version: 0,
+                    draft_content: null,
+                    versions: [],
                   },
                   error: null,
                 }).then(resolve)
-              : name === "course_workspace"
-                ? Promise.resolve(fake.workspaceRead).then(() =>
-                    resolve({
-                      data: fake.workspace,
-                      error: fake.error,
-                    }),
-                  )
-                : name === "set_course_meeting_link"
-                  ? Promise.resolve(fake.pending).then((data) => {
-                      if (!fake.meetingError && data) {
-                        fake.workspace = {
-                          ...fake.workspace,
-                          meeting_link: data as CourseWorkspace["meeting_link"],
-                        };
-                      }
-                      return resolve({ data, error: fake.meetingError });
-                    })
-                  : name === "save_course_quiz_draft"
-                    ? Promise.resolve({ data: 1, error: null }).then(resolve)
-                    : name === "course_submissions"
-                      ? Promise.resolve({
-                          data: {
-                            enabled: false,
-                            can_manage: false,
-                            can_upload: false,
-                            entries: [],
-                            next: null,
-                          },
-                          error: null,
-                        }).then(resolve)
-                      : name === "course_evaluations"
+              : name === "course_welcome_content"
+                ? Promise.resolve({
+                    data: {
+                      version: 0,
+                      description: "",
+                      objectives: "",
+                      joining_instructions: "",
+                      published_at: null,
+                    },
+                    error: null,
+                  }).then(resolve)
+                : name === "course_workspace"
+                  ? Promise.resolve(fake.workspaceRead).then(() =>
+                      resolve({
+                        data: fake.workspace,
+                        error: fake.error,
+                      }),
+                    )
+                  : name === "set_course_meeting_link"
+                    ? Promise.resolve(fake.pending).then((data) => {
+                        if (!fake.meetingError && data) {
+                          fake.workspace = {
+                            ...fake.workspace,
+                            meeting_link:
+                              data as CourseWorkspace["meeting_link"],
+                          };
+                        }
+                        return resolve({ data, error: fake.meetingError });
+                      })
+                    : name === "save_course_quiz_draft"
+                      ? Promise.resolve({ data: 1, error: null }).then(resolve)
+                      : name === "course_submissions"
                         ? Promise.resolve({
                             data: {
-                              completed: true,
-                              writable: false,
-                              targets: [],
-                              mine: [],
-                              summaries: [],
+                              enabled: false,
+                              can_manage: false,
+                              can_upload: false,
+                              entries: [],
+                              next: null,
                             },
                             error: null,
                           }).then(resolve)
-                        : [
-                              "course_chat_rooms",
-                              "course_enrolments",
-                              "course_enrolment_candidates",
-                            ].includes(name)
-                          ? Promise.resolve({ data: [], error: null }).then(
-                              resolve,
-                            )
-                          : Promise.resolve(
-                              fake.pending ?? { id: null, saved: true },
-                            ).then((data) =>
-                              resolve({
-                                data,
-                                error:
-                                  args?.p_action === "resource_share"
-                                    ? fake.shareError
-                                    : fake.error,
-                              }),
-                            ),
+                        : name === "course_evaluations"
+                          ? Promise.resolve({
+                              data: {
+                                completed: true,
+                                writable: false,
+                                targets: [],
+                                mine: [],
+                                summaries: [],
+                              },
+                              error: null,
+                            }).then(resolve)
+                          : [
+                                "course_chat_rooms",
+                                "course_enrolments",
+                                "course_enrolment_candidates",
+                              ].includes(name)
+                            ? Promise.resolve({ data: [], error: null }).then(
+                                resolve,
+                              )
+                            : Promise.resolve(
+                                fake.pending ?? { id: null, saved: true },
+                              ).then((data) =>
+                                resolve({
+                                  data,
+                                  error:
+                                    args?.p_action === "resource_share"
+                                      ? fake.shareError
+                                      : fake.error,
+                                }),
+                              ),
       };
       return request;
     });
@@ -603,6 +609,17 @@ describe("connected course workspace", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("offers only a new upload when there are no reviewed file versions", async () => {
+    fake.workspace.access.manager = true;
+    setup();
+    expect(
+      await screen.findByRole("heading", { name: "Neue Kursdatei freigeben" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Vorhandene Dateifassung freigeben"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shares an authorized file version with operational audiences only", async () => {
     fake.workspace.access.manager = true;
     fake.workspace.share_options = [
@@ -610,6 +627,9 @@ describe("connected course workspace", () => {
     ];
     const user = userEvent.setup();
     setup();
+    await user.click(
+      await screen.findByText("Vorhandene Dateifassung freigeben"),
+    );
     const versions = await screen.findByRole("combobox", {
       name: "Geprüfte Dateifassung",
     });

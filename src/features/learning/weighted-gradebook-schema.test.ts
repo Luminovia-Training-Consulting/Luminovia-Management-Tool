@@ -139,3 +139,37 @@ it("validates the released learner result and rejects raw evidence in the projec
     }).success,
   ).toBe(false);
 });
+
+it("accepts nested assessment categories and rejects dangling references or cycles", () => {
+  const root = {
+    id: "be638957-4531-4984-a2c7-5471aa2b5b3c",
+    label: "Practice",
+  };
+  const child = {
+    id: "204e5964-7597-4e2a-bc30-2310c4a51b14",
+    label: "Workshop",
+    parent_id: root.id,
+  };
+  const grouped = {
+    ...validPolicy,
+    categories: [root, child],
+    items: [
+      { ...validPolicy.items[0], category_id: child.id },
+      ...validPolicy.items.slice(1),
+    ],
+  };
+  expect(weightedPolicyDraft.safeParse(grouped).success).toBe(true);
+  expect(
+    weightedPolicyDraft.safeParse({ ...grouped, categories: [root] }).success,
+  ).toBe(false);
+  expect(
+    weightedPolicyDraft.safeParse({ ...grouped, categories: [child, root] })
+      .success,
+  ).toBe(false);
+  expect(
+    weightedPolicyDraft.safeParse({
+      ...grouped,
+      categories: [{ ...root, parent_id: child.id }, child],
+    }).success,
+  ).toBe(false);
+});

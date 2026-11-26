@@ -65,7 +65,7 @@ const groups = {
   ],
   programmes: [
     ["Lernprogramme", "Learning programmes"],
-    "getLearningProgrammes readLearningProgrammes getLearningProgrammeClassProgress readLearningProgrammeClassProgress getLearningProgrammeGradeReport readLearningProgrammeGradeReport setAcademyCompanyParticipantClass saveLearningProgramme setLearningProgrammePrerequisite enrolLearningProgramme startLearningProgrammeCourse",
+    "getLearningProgrammes readLearningProgrammes getLearningProgrammeClassProgress readLearningProgrammeClassProgress getLearningProgrammeGradeReport readLearningProgrammeGradeReport getLearningProgrammeCohortGrades readLearningProgrammeCohortGrades setAcademyCompanyParticipantClass saveLearningProgramme setLearningProgrammePrerequisite setLearningProgrammePathException enrolLearningProgramme startLearningProgrammeCourse",
   ],
   enrolment: [
     [
@@ -79,7 +79,7 @@ const groups = {
       "Kursdateien und Teilnehmerabgaben",
       "Course files and participant submissions",
     ],
-    "searchAcademyCourseMaterials uploadAcademyCourseMaterial publishAcademyCourseMaterial setAcademyCourseMaterialMetadata readAcademyCourseMaterialMetadataHistory browseAcademyPublishedLessons listAcademyCourseMaterialReuseTargets reuseAcademyCourseMaterial downloadAcademyCourseDocument readAcademyCourseSubmissions setAcademyCourseSubmissions withdrawAcademyCourseSubmission",
+    "searchAcademyCourseMaterials uploadAcademyCourseMaterial publishAcademyCourseMaterial setAcademyCourseMaterialMetadata readAcademyCourseMaterialMetadataHistory readAcademyCourseMaterialUsage browseAcademyPublishedLessons listAcademyCourseMaterialReuseTargets reuseAcademyCourseMaterial downloadAcademyCourseDocument readAcademyCourseSubmissions setAcademyCourseSubmissions withdrawAcademyCourseSubmission",
   ],
   attendance: [
     [
@@ -93,7 +93,7 @@ const groups = {
       "Prüfungen, Aufgaben und Lernfortschritt",
       "Exams, learning activities and progress",
     ],
-    "setAcademyCourseExamRequirement listAcademyStudentExamPdfOptions publishAcademyStudentExamPdf withdrawAcademyExamPdf saveAcademyLearningActivity readAcademyCourseGradebook readAcademyCourseGradebookHistory exportAcademyCourseGradebook getWeightedCourseGradebook readWeightedCourseGradebook changeWeightedCourseGradebook readAcademyCourseQuestionBank saveAcademyCourseQuestionBank importAcademyH5pQuestion saveAcademyCourseQuizDraft startAcademyCourseQuizPool getCourseTextExam readCourseTextExam updateCourseTextExam readAcademyCourseCompletionStatus readAcademyCourseCompletionPolicy saveAcademyCourseCompletionPolicy readAcademyCourseAssignments writeAcademyCourseAssignment readAcademyCourseCompetencies saveAcademyCourseCompetency readAcademyPeerFeedback saveAcademyPeerFeedback readAcademyCourseXapiStatements course_exam_state save_course_exam_schedule set_course_exam_extra_time submit_course_exam save_course_exam_grades published_course_exam_results",
+    "setAcademyCourseExamRequirement listAcademyStudentExamPdfOptions publishAcademyStudentExamPdf withdrawAcademyExamPdf saveAcademyLearningActivity readAcademyCourseGradebook readAcademyCourseGradebookHistory exportAcademyCourseGradebook getWeightedCourseGradebook readWeightedCourseGradebook changeWeightedCourseGradebook readAcademyCourseQuestionBank saveAcademyCourseQuestionBank importAcademyH5pQuestion importAcademyH5pCollection saveAcademyCourseQuizDraft startAcademyCourseQuizPool getCourseTextExam readCourseTextExam readCourseTextExamGradeExport updateCourseTextExam readAcademyCourseCompletionStatus readAcademyCourseCompletionPolicy saveAcademyCourseCompletionPolicy readAcademyCourseAssignments writeAcademyCourseAssignment readAcademyCourseCompetencies saveAcademyCourseCompetency readAcademyPeerFeedback authorizeAcademyPeerFeedbackAttachment saveAcademyPeerFeedback readAcademyScormPackages writeAcademyScormPackage readAcademyScormRuntimeState saveAcademyScormRuntimeState readAcademyH5pPackages writeAcademyH5pPackage readAcademyCourseXapiStatements readAcademyXapiDeliveryMonitor reportAcademyXapiDelivery course_exam_state save_course_exam_schedule set_course_exam_extra_time submit_course_exam save_course_exam_grades import_course_exam_grades published_course_exam_results",
   ],
   portfolio: [
     ["Private Lernportfolios", "Private learning portfolios"],
@@ -101,7 +101,7 @@ const groups = {
   ],
   lti: [
     ["Externe LTI-Lernwerkzeuge", "External LTI learning tools"],
-    "readCourseLtiTools saveCourseLtiTool",
+    "readCourseLtiTools saveCourseLtiTool configureCourseLtiAdvantage configureCourseLtiDeepLink reviewCourseLtiDeepLink configureCourseLtiAgs readCourseLtiAgsGrades",
   ],
   chat: [
     ["Kurschat und Anhänge", "Course chat and attachments"],
@@ -123,10 +123,7 @@ const exceptions = [
       de: "Der Browser nutzt die Auth-Sitzung der Installation. Diese Schritte verwenden den vorhandenen Auth-Flow und keine zusätzlichen Academy-Geschäftsoperationen.",
       en: "The browser uses the installation’s Auth session. These steps use the existing Auth flow and have no additional Academy business operation.",
     },
-    relatedOperations: [
-      "humanLogin",
-      "checkAuthenticatorSettingsAvailability",
-    ],
+    relatedOperations: ["humanLogin", "checkAuthenticatorSettingsAvailability"],
   },
   {
     action: {

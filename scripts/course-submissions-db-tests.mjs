@@ -180,6 +180,9 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     const submit = (who, exam) => rpc(who, "submit_course_exam", run, exam.version_id);
     const grades = (who, scores, version, publish) =>
         rpc(who, "save_course_exam_grades", run, JSON.stringify(scores), version, publish);
+    const importGrades = (who, rows, version, course = run) =>
+        rpc(who, "import_course_exam_grades", course, version, JSON.stringify(rows));
+    const reviewedGrade = (participant_id, expected_score, score) => ({participant_id, expected_score, score});
     const results = (who, participant = null, organisation = null) =>
         rpc(who, "published_course_exam_results", participant, organisation);
 
@@ -244,6 +247,7 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     await assert.rejects(access(teacher, timed.version_id), denied);
     await assert.rejects(schedule(teacher, "-10 minutes", "-5 minutes", "30 minutes", 3), /PT409/);
     await assert.rejects(grades(teacher, {[learner]: 82}, 3, false), denied);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, null, 82)], 3), denied);
     const submittedAt = await submit(learner, timed);
     assert.ok(submittedAt);
     assert.equal(await submit(learner, timed), submittedAt);
@@ -262,13 +266,31 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     await assert.rejects(grades(teacher, {[learner]: 101}, 3, false), /22023/);
     await assert.rejects(grades(teacher, {}, 3, true), /22023/);
     assert.equal(await grades(teacher, {[learner]: 82}, 3, false), true);
+    await assert.rejects(importGrades(client, [reviewedGrade(learner, 82, 86)], 4), denied);
+    await assert.rejects(importGrades(learner, [reviewedGrade(learner, 82, 86)], 4), denied);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 82, 86)], 4, otherRun), denied);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 82, 86), reviewedGrade(learner, 82, 87)], 4), /22023/);
+    await assert.rejects(importGrades(teacher, [{participant_id: learner, score: 86}], 4), /22023/);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 82, 86.5)], 4), /22023/);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, null, 86)], 4), /PT409/);
+    await sql(`update private.company_participant_memberships set status='removed',removed_at=now()
+      where user_id=${q(peer)} and organisation_id=${q(company)};`);
+    assert.equal((await state(teacher)).rows.find(({participant_id}) => participant_id === peer).grade_import_eligible, false);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 82, 86), reviewedGrade(peer, null, 75)], 4), /PT409/);
+    const beforeImport = await state(teacher);
+    assert.equal(beforeImport.version, 4);
+    assert.equal(beforeImport.rows.find(({participant_id}) => participant_id === learner).score, 82);
+    assert.equal(await importGrades(teacher, [reviewedGrade(learner, 82, 86)], 4), 1);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 82, 86)], 4), /PT409/);
+    assert.equal((await state(teacher)).rows.find(({participant_id}) => participant_id === learner).score, 86);
     assert.deepEqual(await results(learner), {average: null, results: []});
     assert.deepEqual(await results(client, learner, company), {average: null, results: []});
-    assert.equal(await grades(teacher, {}, 4, true), true);
+    assert.equal(await grades(teacher, {}, 5, true), true);
+    await assert.rejects(importGrades(teacher, [reviewedGrade(learner, 86, 99)], 6), /PT409/);
     for (const result of [await results(learner), await results(teacher, learner), await results(client, learner, company)]) {
-        assert.equal(result.average, 82);
+        assert.equal(result.average, 86);
         assert.equal(result.results[0]?.passed, true);
-        assert.equal(result.results[0]?.score, 82);
+        assert.equal(result.results[0]?.score, 86);
     }
     for (const result of [await results(peer, learner), await results(unrelated, learner, company), await results(client, learner, otherCompany)]) {
         assert.deepEqual(result, {average: null, results: []});
@@ -278,5 +300,5 @@ await withTestDatabase("course_submissions_test", async ({sql, actor}) => {
     assert.equal((await state(teacher)).required, false);
     assert.deepEqual((await state(teacher)).rows, []);
     assert.deepEqual(await results(learner), {average: null, results: []});
-    console.log("PASS timed exam announcement, paper window, scanned final submission, staged grades, publication and scoped averages");
+    console.log("PASS timed exam announcement, paper window, scanned final submission, reviewed grade import, publication and scoped averages");
 });

@@ -1,10 +1,26 @@
 import {
+  readScormPackages,
+  scormCourseCommand,
+  scormRuntimeReadRequest,
+  scormRuntimeReadResult,
+  scormRuntimeWriteRequest,
+} from "./scorm-contract.ts";
+import {
+  readH5pPackages,
+  h5pPlaybackCommand,
+} from "./h5p-playback-contract.ts";
+import {
   competencyAction,
   competencyActionResult,
   competencyRead,
   competencyReadResult,
 } from "./competency-contract.ts";
-import { peerActionRequest, peerReadResult } from "./peer-feedback-contract.ts";
+import {
+  peerActionRequest,
+  peerAttachmentResult,
+  peerReadResult,
+  peerReadRound,
+} from "./peer-feedback-contract.ts";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
@@ -59,7 +75,11 @@ import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
 import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
-import { courseXapiArchiveSchema } from "../learning/xapi-schema.ts";
+import {
+  courseXapiArchiveSchema,
+  courseXapiDeliveryReport,
+  courseXapiDeliveryStatus,
+} from "../learning/xapi-schema.ts";
 import { timedExamPaths } from "./timed-exam-contract.ts";
 import {
   calendarExpectedRevision,
@@ -133,6 +153,8 @@ import {
   questionBankParameters,
   questionBankOptionalParameters,
   questionBankResult,
+  h5pCollectionImportParameters,
+  h5pCollectionImportResult,
   h5pQuestionImportParameters,
   h5pQuestionImportResult,
   questionBankActionParameters,
@@ -153,6 +175,8 @@ import {
   importRowResult,
   materialHistoryParameters,
   materialHistoryResult,
+  materialUsageParameters,
+  materialUsageResult,
   materialMetadataParameters,
   materialMetadataRevision,
   materialReuseParameters,
@@ -194,6 +218,7 @@ import {
 } from "../learning/course-classes-schema.ts";
 import {
   assignmentActions,
+  assignmentActionResult,
   courseAssignmentsProjection,
 } from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
@@ -4390,7 +4415,7 @@ const nativePaths = {
     "searchCourseMaterials",
     "Premium LMS",
     "Search clean course materials across all authorised courses",
-    "Filters by exact course ID and category and by a case-insensitive substring in file name, title, description, subject, learning objectives or tags. Use null to omit a filter. Returns at most 25 rows ordered by file name and resource ID. Metadata shares the file's audience. Rows without metadata return null and revision zero. Downloads require current access to the shared resource.",
+    "Filters by exact course ID and category and by a case-insensitive substring in file name, title, description, subject, learning objectives, competency names or tags. Archived shares appear only in the staff-scoped archived filter. The master filter shows active, designated reusable sources to staff. Use null to omit an ordinary filter. Returns at most 25 rows ordered by file name and resource ID. Metadata shares the file's audience. Rows without metadata return null and revision zero. Downloads require current access to the shared resource.",
     materialSearchParameters,
     materialSearchResult,
   ),
@@ -4398,7 +4423,7 @@ const nativePaths = {
     "setCourseMaterialMetadata",
     "Premium LMS",
     "Revise educational metadata on an exact course share",
-    "Requires course management or a current lecturer editing their own material in an enabled Premium course. Does not change the file version or audience. Send the last read metadata_revision (zero if missing); stale changes return 409. Identical retries return the current revision.",
+    "Requires course management or a current lecturer editing their own material in an enabled Premium course. Does not change the file version or audience. Send the last read metadata_revision (zero if missing); stale changes return 409. Set library_archived to change catalogue visibility and library_master to designate an owned reusable source. Identical retries return the current revision.",
     materialMetadataParameters,
     materialMetadataRevision,
   ),
@@ -4409,6 +4434,15 @@ const nativePaths = {
     "Current staff in an enabled course can read up to 21 metadata snapshots. Start with a null cursor and pass the last displayed revision to continue. Share withdrawal or loss of current course access disables history.",
     materialHistoryParameters,
     materialHistoryResult,
+  ),
+  "/rest/v1/rpc/course_material_usage": rpc(
+    "readCourseMaterialUsage",
+    "Premium LMS",
+    "Find active uses of a course material version",
+    "Current course staff can page through authorised shares of the exact version in the source organisation. Pass the next course ID as p_after.",
+    materialUsageParameters,
+    materialUsageResult,
+    ["p_after"],
   ),
   "/rest/v1/rpc/course_material_reuse_targets": rpc(
     "listCourseMaterialReuseTargets",
@@ -4457,6 +4491,14 @@ const nativePaths = {
     "Send the caller's exact published quiz version, next attempt number, stable request ID, expected draft revision, and one option index or null per question. The reply is the confirmed draft revision. The draft stays learner-private and consumes no attempt. The current course workspace returns this draft to its owner. Changing a stale revision returns 409.",
     quizDraftParameters,
     quizDraftRevision,
+  ),
+  "/rest/v1/rpc/course_h5p_collection_import": rpc(
+    "importH5pCollection",
+    "Premium LMS",
+    "Import a licensed H5P text question collection",
+    "Current course staff import up to 20 normalized questions from a supported text-only SingleChoiceSet or QuestionSet. One transaction stores every question and its exact archive position, including declared licence information. An identical retry returns the saved bank entries in package order.",
+    h5pCollectionImportParameters,
+    h5pCollectionImportResult,
   ),
   "/rest/v1/rpc/course_h5p_question_import": rpc(
     "importH5pQuestion",
@@ -4572,13 +4614,78 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/course_scorm_packages": rpc(
+    "readCourseScormPackages",
+    "Premium LMS",
+    "List published SCORM packages",
+    "Current authorised learners and staff can list clean packages and their own lesson completion.",
+    course,
+    readScormPackages,
+  ),
+  "/rest/v1/rpc/course_scorm_action": {
+    post: {
+      operationId: "writeCourseScormPackage",
+      tags: ["Premium LMS"],
+      summary: "Publish, withdraw or complete a SCORM package lesson",
+      description:
+        "Current staff publish the exact scanned package version. Current learners record their own completion.",
+      requestBody: { required: true, content: json(scormCourseCommand) },
+      responses: {
+        "200": {
+          description: "Confirmed action",
+          content: json({ const: true }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
+  "/rest/v1/rpc/course_h5p_packages": rpc(
+    "readCourseH5pPackages",
+    "Premium LMS",
+    "List published H5P activities",
+    "Current authorised learners and staff can list clean H5P packages and their own progress.",
+    course,
+    readH5pPackages,
+  ),
+  "/rest/v1/rpc/course_h5p_action": {
+    post: {
+      operationId: "writeCourseH5pPackage",
+      tags: ["Premium LMS"],
+      summary: "Publish or withdraw H5P and persist learner progress",
+      description:
+        "Current staff publish the exact scanned H5P package version. Enrolled learners retain completion and best reported playback score.",
+      requestBody: { required: true, content: json(h5pPlaybackCommand) },
+      responses: {
+        "200": {
+          description: "Confirmed action",
+          content: json({ const: true }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_peer_feedback": rpc(
     "readCoursePeerFeedback",
     "Premium LMS",
-    "Read a current moderated peer feedback round",
-    "Current staff see the review queue. Enrolled learners see their own entry, anonymous assigned text and approved replies addressed to them.",
-    course,
+    "Read a moderated peer feedback round",
+    "Current staff see the review queue. Enrolled learners see their own entry, anonymous assigned text and approved replies addressed to them. Select a numbered round or omit the number to read the latest round.",
+    { ...course, p_round_number: peerReadRound },
     peerReadResult,
+    ["p_round_number"],
+  ),
+  "/rest/v1/rpc/course_peer_feedback_attachment": rpc(
+    "authorizeCoursePeerFeedbackAttachment",
+    "Premium LMS",
+    "Authorize an exact peer entry attachment",
+    "Current staff, the author and a reviewer assigned during the review stage can authorize the clean version. Returns a neutral filename and checksum. The protected file gateway rechecks access before returning bytes.",
+    { ...course, p_round_number: peerReadRound, p_version_id: course.p_run_id },
+    peerAttachmentResult,
   ),
   "/rest/v1/rpc/course_peer_feedback_action": {
     post: {
@@ -4586,7 +4693,7 @@ const nativePaths = {
       tags: ["Premium LMS"],
       summary: "Join, moderate or respond to the peer feedback round",
       description:
-        "Current learners opt in and can report a released reply. Current course staff approve entries before assignment and reviews before release. Feedback remains qualitative.",
+        "Current learners opt in and can report a released reply. Current course staff approve entries before assignment and reviews before release. Scored rounds pin the selected assignment criteria and release points with approved feedback. Supply the target round number for commands after round one.",
       requestBody: { required: true, content: json(peerActionRequest) },
       responses: {
         "200": {
@@ -4600,11 +4707,41 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/course_xapi_delivery_monitor": rpc(
+    "readCourseXapiDeliveryMonitor",
+    "Premium LMS",
+    "Read the scheduled xAPI delivery status",
+    "Current course managers can read the last reported checkpoint and outcome without learner or LRS details.",
+    course,
+    z.toJSONSchema(courseXapiDeliveryStatus),
+  ),
+  "/rest/v1/rpc/report_course_xapi_delivery": {
+    post: {
+      operationId: "reportCourseXapiDelivery",
+      tags: ["Premium LMS"],
+      summary: "Record an xAPI delivery checkpoint",
+      description:
+        "Current course managers or their authenticated dispatch account can record the latest scoped delivery status.",
+      requestBody: {
+        required: true,
+        content: json(z.toJSONSchema(courseXapiDeliveryReport)),
+      },
+      responses: {
+        "200": {
+          description: "Confirmed status",
+          content: json({ const: true }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_xapi_statements": rpc(
     "readCourseXapiStatements",
     "Premium LMS",
     "Export pseudonymous xAPI learning records",
-    "Current course managers may export up to 2000 quiz attempts, released text exam and weighted course scores, or completion and revocation statements in an interval up to 366 days. The end time is exclusive. This returns an archive for local download.",
+    "Current course managers may export up to 2000 quiz attempts, H5P-origin quiz answers, released text exam and weighted course scores, or completion and revocation statements in an interval up to 366 days. The end time is exclusive. This returns an archive for local download.",
     {
       p_run_id: { type: "string", format: "uuid" },
       p_from: { type: "string", format: "date-time" },
@@ -4612,6 +4749,34 @@ const nativePaths = {
     },
     z.toJSONSchema(courseXapiArchiveSchema),
   ),
+  "/rest/v1/rpc/read_course_scorm_runtime": rpc(
+    "readCourseScormRuntimeState",
+    "Premium LMS",
+    "Read an active SCORM lesson and the learner’s saved state",
+    "Current staff may preview. Enrolled learners receive their own pseudonymous lesson state and revision.",
+    scormRuntimeReadRequest.properties!,
+    scormRuntimeReadResult,
+  ),
+  "/rest/v1/rpc/save_course_scorm_runtime": {
+    post: {
+      operationId: "saveCourseScormRuntimeState",
+      tags: ["Premium LMS"],
+      summary: "Commit one learner’s active SCORM lesson state",
+      description:
+        "Write supported SCORM 1.2 CMI fields for the exact clean lesson. Send the current revision and the same launch-session ID for all commits in that session.",
+      requestBody: { required: true, content: json(scormRuntimeWriteRequest) },
+      responses: {
+        "200": {
+          description: "Committed revision",
+          content: json({ type: "integer", minimum: 1 }),
+        },
+        "400": error,
+        "401": error,
+        "403": error,
+        "409": error,
+      },
+    },
+  },
   "/rest/v1/rpc/course_gradebook": rpc(
     "readCourseGradebook",
     "Premium LMS",
@@ -4655,7 +4820,7 @@ const nativePaths = {
     "courseAssignmentAction",
     "Premium LMS",
     "Save, publish, submit or assess a course assignment",
-    "Staff can save and publish versioned rubrics, grant an extension, record a review or configure teams. Pass team_id, title, member_ids and a nullable ISO timestamp due_at to save_team. Pass team_id to remove_team. Team membership is fixed after the first accepted submission. Participants submit their exact clean reservation to create an individual or shared team attempt. Writes compare the last read version.",
+    "Staff can save and publish versioned rubrics, grant an extension, record a review or configure teams. Pass team_id, title, member_ids and a nullable ISO timestamp due_at to save_team. Pass team_id to remove_team. Team membership is fixed after the first accepted submission. Participants submit their exact clean reservation to create an individual or shared team attempt. Writes compare the last read version. Use import_reviews with p_expected_version 0 and up to 25 rows with attempt_id, rubric_version, review_version and scores. The batch updates only unpublished drafts.",
     {
       ...course,
       p_assignment_id: uuid,
@@ -4663,7 +4828,7 @@ const nativePaths = {
       p_payload: { type: "object" },
       p_expected_version: version,
     },
-    object({ id: uuid }),
+    z.toJSONSchema(assignmentActionResult),
   ),
   "/rest/v1/rpc/course_submissions": rpc(
     "courseSubmissions",

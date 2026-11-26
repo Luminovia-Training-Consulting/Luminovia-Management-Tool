@@ -15,11 +15,13 @@ node scripts/academy-course-quiz-pool-db-tests.mjs
 node scripts/course-text-exam-db-tests.mjs
 node scripts/academy-course-text-exam-db-tests.mjs
 node scripts/course-h5p-import-db-tests.mjs
+node scripts/course-h5p-playback-db-tests.mjs
 node scripts/academy-course-h5p-import-db-tests.mjs
 node scripts/academy-question-bank-db-tests.mjs
 node scripts/course-competency-db-tests.mjs
 node scripts/academy-course-competency-db-tests.mjs
 node scripts/course-completion-policy-db-tests.mjs
+node scripts/course-scorm-runtime-db-tests.mjs
 node scripts/course-peer-feedback-db-tests.mjs
 node scripts/academy-course-peer-feedback-db-tests.mjs
 npx --no-install supabase db lint --schema public,private --fail-on warning

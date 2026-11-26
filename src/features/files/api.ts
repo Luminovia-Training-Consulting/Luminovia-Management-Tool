@@ -97,7 +97,7 @@ export function uploadOrganisationContract(
   return transferUpload(form, endpoint());
 }
 
-const learningSubmissionMaxBytes = 10 * 1024 * 1024;
+export const learningSubmissionMaxBytes = 10 * 1024 * 1024;
 
 /** Reserve and scan a private file for the caller's own enrolment. */
 export function uploadCourseSubmission(
@@ -169,6 +169,36 @@ export function uploadAcademyCourseChatAttachment(
     endpoint() + "?mode=academy-course-chat",
     onProgress,
   );
+}
+
+/** Dedicated course learning archives return only the exact version after scanning. */
+export async function uploadCourseArchive(
+  format: "scorm" | "h5p",
+  file: File,
+  run: string,
+  clientId: string,
+) {
+  if (file.size < 4 || file.size > learningSubmissionMaxBytes)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set(`${format}_course_id`, run);
+  form.set("client_id", clientId);
+  const document = await transferUpload(
+    form,
+    endpoint() + `?mode=${format}-package`,
+  );
+  if (document.kind !== `${format}_package` || !document.current_version_id)
+    throw new Error("upload_failed");
+  return document.current_version_id;
+}
+
+export function uploadCourseScormPackage(
+  file: File,
+  run: string,
+  clientId: string,
+) {
+  return uploadCourseArchive("scorm", file, run, clientId);
 }
 
 /** Upload protected attendance evidence for one exact academy session. */
@@ -313,6 +343,44 @@ async function downloadFile(
   if (error || data.session?.user.id !== session.user.id)
     throw new Error("account_changed");
   return blob;
+}
+
+/** Save the exact moderated attachment under a neutral filename. */
+export async function saveCoursePeerAttachment(
+  run: string,
+  round: number,
+  version: string,
+  name: string,
+) {
+  const blob = await downloadFile({
+    action: "course_peer_feedback_download",
+    run_id: run,
+    round,
+    version_id: version,
+  });
+  saveBlob(blob, name);
+}
+
+/** Fetch the same scanned bytes after a live learner or staff grant. */
+export function downloadCourseScormPackage(
+  run: string,
+  version: string,
+  signal: AbortSignal,
+) {
+  return downloadCourseArchive("scorm", run, version, signal);
+}
+
+/** Download only the clean published archive authorized for the active account. */
+export function downloadCourseArchive(
+  format: "scorm" | "h5p",
+  run: string,
+  version: string,
+  signal: AbortSignal,
+) {
+  return downloadFile(
+    { action: `course_${format}_download`, run_id: run, version_id: version },
+    signal,
+  );
 }
 
 /** Check the private source library without retrieving document bytes. */

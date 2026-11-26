@@ -18,7 +18,7 @@ import "./competencies-i18n";
 
 type Props = { actor: string; course: CourseWorkspace; editable: boolean };
 type Command = {
-  action: "save_framework" | "pin" | "assess";
+  action: "save_framework" | "archive_framework" | "pin" | "assess";
   revision: number;
   payload: Record<string, unknown>;
 };
@@ -282,6 +282,7 @@ function FrameworkControls({
                 title: frame.content.title,
                 revision: frame.revision,
               })}
+              {frame.archived && ` · ${t("competencyFrameworkArchived")}`}
             </option>
           ))}
         </select>
@@ -298,14 +299,14 @@ function FrameworkControls({
         <Button
           type="button"
           variant="secondary"
-          disabled={!chosen || write.isPending}
+          disabled={!chosen || chosen.archived || write.isPending}
           onClick={() => chosen && setEditor(chosen)}
         >
           {t("competencyEditFramework")}
         </Button>
         <Button
           type="button"
-          disabled={!chosen || isPinned || write.isPending}
+          disabled={!chosen || chosen.archived || isPinned || write.isPending}
           onClick={() =>
             chosen &&
             write.mutate({
@@ -320,7 +321,31 @@ function FrameworkControls({
         >
           {t("competencySetFramework")}
         </Button>
+        {chosen && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={write.isPending}
+            onClick={() =>
+              write.mutate(
+                {
+                  action: "archive_framework",
+                  revision: chosen.revision,
+                  payload: { id: chosen.id, archived: !chosen.archived },
+                },
+                { onSuccess: () => setEditor(null) },
+              )
+            }
+          >
+            {t(
+              chosen.archived
+                ? "competencyRestoreFramework"
+                : "competencyArchiveFramework",
+            )}
+          </Button>
+        )}
       </div>
+      {chosen && <p>{t("competencyArchiveHelp")}</p>}
       {editor && (
         <FrameworkEditor
           key={editor.id + ":" + editor.revision}
@@ -365,6 +390,12 @@ function AssessmentForm({
   const [note, setNote] = useState("");
   const [includeQuiz, setIncludeQuiz] = useState(false);
   const [assignment, setAssignment] = useState("");
+  const [exam, setExam] = useState("");
+  const examOption = data.text_exam_option;
+  const examKey = examOption
+    ? `${examOption.exam_revision}:${examOption.review_revision}`
+    : "";
+  const staleExam = Boolean(exam && exam !== examKey);
   const assignmentOptions = data.assignment_options.map((item) => ({
     ...item,
     key: `${item.attempt_id}:${item.review_version}`,
@@ -384,6 +415,7 @@ function AssessmentForm({
           !level ||
           note.trim().length < 3 ||
           staleSelection ||
+          staleExam ||
           write.isPending
         )
           return;
@@ -398,6 +430,13 @@ function AssessmentForm({
               level_id: level,
               evidence_note: note,
               include_quiz: includeQuiz,
+              ...(exam &&
+                examOption && {
+                  text_exam_evidence: {
+                    exam_revision: examOption.exam_revision,
+                    review_revision: examOption.review_revision,
+                  },
+                }),
               ...(selected && {
                 assignment_evidence: {
                   assignment_id: selected.assignment_id,
@@ -412,6 +451,7 @@ function AssessmentForm({
               setNote("");
               setIncludeQuiz(false);
               setAssignment("");
+              setExam("");
             },
           },
         );
@@ -485,7 +525,25 @@ function AssessmentForm({
             </select>
           </Field>
         )}
-        <Button type="submit" disabled={staleSelection}>
+        {(examOption || staleExam) && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={Boolean(exam)}
+              disabled={!exam && !examOption}
+              onChange={(event) =>
+                setExam(event.currentTarget.checked ? examKey : "")
+              }
+            />
+            {examOption
+              ? t("competencyTextExam") +
+                " · " +
+                t("competencyExamEvidence", examOption)
+              : t("competencyConflict")}
+          </label>
+        )}
+        {staleExam && <Notice kind="error">{t("competencyConflict")}</Notice>}
+        <Button type="submit" disabled={staleSelection || staleExam}>
           {t("competencyPublishDecision")}
         </Button>
       </fieldset>
@@ -538,6 +596,12 @@ function DecisionHistory({
                   "competencyAssignmentEvidence",
                   decision.assignment_evidence,
                 )}
+              </p>
+            )}
+            {decision.text_exam_evidence && (
+              <p>
+                {t("competencyTextExam")} ·{" "}
+                {t("competencyExamEvidence", decision.text_exam_evidence)}
               </p>
             )}
             <time dateTime={decision.created_at}>

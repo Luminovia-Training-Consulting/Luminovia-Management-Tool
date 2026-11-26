@@ -7,6 +7,23 @@ const labels = {
     "Freitextprüfungen sind online verfügbar.",
     "Text exams are available online.",
   ],
+  secondReviewer: [
+    "Freigabe durch eine zweite Lehrkraft verlangen",
+    "Require a second course staff member to publish grades",
+  ],
+  awaitingSecondReviewer: [
+    "Eine zweite Lehrkraft muss diese Bewertung freigeben.",
+    "A second course staff member must release this assessment.",
+  ],
+  exportGrades: [
+    "Freigegebene Prüfungsnoten als CSV",
+    "Export released exam grades as CSV",
+  ],
+  exporting: ["Prüfungsnoten werden exportiert …", "Exporting exam grades…"],
+  exportFailed: [
+    "Prüfungsnoten konnten nicht exportiert werden.",
+    "Exam grades could not be exported.",
+  ],
   readOnly: ["Diese Prüfung ist im Lesemodus.", "This exam is read-only."],
   noExam: [
     "Hier ist noch keine Freitextprüfung veröffentlicht.",

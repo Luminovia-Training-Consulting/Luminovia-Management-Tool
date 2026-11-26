@@ -125,16 +125,22 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
   const paths = Object.keys(document.paths).filter(
     (path) => !path.startsWith("/functions/v1/portal-api/v1/"),
   );
-  expect(paths).toHaveLength(154);
+  expect(paths).toHaveLength(174);
   expect(paths).toContain("/rest/v1/rpc/course_text_exam");
   expect(paths).toContain("/rest/v1/rpc/course_text_exam_action");
   expect(paths).toContain("/rest/v1/rpc/course_h5p_question_import");
+  expect(paths).toContain("/rest/v1/rpc/course_h5p_collection_import");
   expect(paths).toContain("/rest/v1/rpc/learning_portfolio");
   expect(paths).toContain("/rest/v1/rpc/learning_portfolio_command");
   expect(paths).toContain("/rest/v1/rpc/course_weighted_gradebook");
   expect(paths).toContain("/rest/v1/rpc/course_weighted_gradebook_command");
   expect(paths).toContain("/rest/v1/rpc/course_lti_tools");
   expect(paths).toContain("/rest/v1/rpc/save_course_lti_tool");
+  expect(paths).toContain("/rest/v1/rpc/configure_course_lti_advantage");
+  expect(paths).toContain("/rest/v1/rpc/configure_course_lti_deep_link");
+  expect(paths).toContain("/rest/v1/rpc/lti_deep_link_review");
+  expect(paths).toContain("/rest/v1/rpc/configure_course_lti_ags");
+  expect(paths).toContain("/rest/v1/rpc/course_lti_ags_grades");
   expect(paths).toContain("/rest/v1/rpc/course_material_metadata_history");
   expect(paths).toContain("/rest/v1/rpc/course_curriculum_catalogue");
   expect(paths).toContain("/rest/v1/rpc/set_learning_program_prerequisite");

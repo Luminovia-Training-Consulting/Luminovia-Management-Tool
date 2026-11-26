@@ -10,6 +10,7 @@ import {
 } from "../learning/course-completion-policy-schema.ts";
 import {
   h5pAttributionSchema,
+  h5pCollectionImportSchema,
   h5pQuestionImportSchema,
 } from "../learning/h5p-import-schema.ts";
 import { workspaceAttendanceHistorySchema } from "../learning/attendance-schema.ts";
@@ -79,7 +80,10 @@ export const materialHistoryResult = {
 export const materialSearchParameters = {
   p_course_id: nullable(uuid),
   p_search: nullable({ ...text, maxLength: 200 }),
-  p_category: nullable(materialCategory),
+  p_category: nullable({
+    type: "string",
+    enum: ["material", "report", "archived", "master"],
+  }),
   p_offset: integer,
 };
 export const materialSearchResult = {
@@ -92,6 +96,10 @@ export const materialSearchResult = {
       name: text,
       version: integer,
       category: materialCategory,
+      audience: {
+        type: "string",
+        enum: ["all", "staff", "client", "participants"],
+      },
       can_upload: boolean,
       can_edit_metadata: boolean,
       can_read_metadata_history: boolean,
@@ -101,6 +109,32 @@ export const materialSearchResult = {
     }),
   ),
   maxItems: 25,
+};
+export const materialUsageParameters = { p_resource_id: uuid, p_after: uuid };
+export const materialUsageResult = {
+  type: "object",
+  additionalProperties: false,
+  required: ["items", "next"],
+  properties: {
+    items: {
+      type: "array",
+      maxItems: 25,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "title", "audiences"],
+        properties: {
+          id: uuid,
+          title: { type: "string" },
+          audiences: {
+            type: "array",
+            items: { enum: ["all", "staff", "client", "participants"] },
+          },
+        },
+      },
+    },
+    next: { anyOf: [uuid, { type: "null" }] },
+  },
 };
 export const materialReuseTargetsParameters = {
   p_resource_id: uuid,
@@ -228,6 +262,17 @@ export const h5pQuestionImportParameters = {
 export const h5pQuestionImportResult = record({
   ...questionBankEntryFields,
   h5p_attribution: h5pAttribution,
+});
+export const h5pCollectionImportParameters = {
+  p_run_id: uuid,
+  p_package: z.toJSONSchema(h5pCollectionImportSchema),
+};
+export const h5pCollectionImportResult = record({
+  questions: {
+    ...itemList(h5pQuestionImportResult),
+    minItems: 1,
+    maxItems: 20,
+  },
 });
 export const questionBankActionParameters = {
   p_run_id: uuid,

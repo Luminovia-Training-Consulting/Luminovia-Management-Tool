@@ -28,7 +28,8 @@ type ReviewError =
   | "unsafe_paths"
   | "invalid_manifest"
   | "unsupported_manifest"
-  | "missing_resources";
+  | "missing_resources"
+  | "unsupported_playback";
 
 export class ScormReviewError extends Error {
   constructor(readonly code: ReviewError) {
@@ -265,6 +266,8 @@ function inspectManifest(source: string, files: ReadonlySet<string>) {
 export async function reviewScormPackage(
   bytes: ArrayBuffer,
   signal?: AbortSignal,
+  inspectLaunch?: (path: string, bytes: Uint8Array) => void,
+  runtimeFiles?: Map<string, Uint8Array<ArrayBuffer>>,
 ): Promise<ScormPackageReview> {
   signal?.throwIfAborted();
   if (bytes.byteLength < 4 || bytes.byteLength > scormPackageMaxBytes)
@@ -350,8 +353,26 @@ export async function reviewScormPackage(
       throw new ScormReviewError("invalid_manifest");
     }
     const structure = inspectManifest(text, new Set(files.keys()));
+    const launchPaths = new Set(structure.launches.map(({ path }) => path));
     for (const [name, entry] of files) {
-      if (name !== manifestName) await consumePackageEntry(entry, null, signal);
+      if (name === manifestName) continue;
+      // Check every CRC. Static playback only reads the actual launch bytes, bounded
+      // more tightly than general package resources and retained by the caller alone.
+      const isLaunch = launchPaths.has(name);
+      const retain =
+        runtimeFiles &&
+        (isLaunch ||
+          /\.(?:html?|js|css|png|gif|jpe?g|webp|mp3|mp4|ogg|wav|woff2?)$/i.test(
+            name,
+          ));
+      if (retain || (inspectLaunch && isLaunch)) {
+        if (isLaunch && entry.uncompressedSize > maxManifestBytes)
+          throw new ScormReviewError("archive_limits");
+        const content = new Uint8Array(entry.uncompressedSize);
+        await consumePackageEntry(entry, content, signal);
+        if (retain) runtimeFiles.set(name, content);
+        if (isLaunch) inspectLaunch?.(name, content);
+      } else await consumePackageEntry(entry, null, signal);
     }
     signal?.throwIfAborted();
     const sha256 = await coursePackageDigest(bytes);

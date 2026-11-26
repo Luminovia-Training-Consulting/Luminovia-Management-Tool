@@ -1,0 +1,16 @@
+{
+  "name": "luminovia-isolated-h5p-content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "2.25.0",
+    "h5p-standalone": "3.8.2"
+  }
+}

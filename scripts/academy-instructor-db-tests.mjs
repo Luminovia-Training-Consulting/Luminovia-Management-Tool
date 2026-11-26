@@ -19,8 +19,17 @@ const configure = (id, release, enabled = true) =>
 // published quiz, a confirmed scan or a registered external tool.
 const featureFixtureOperations = new Map([
   [
+    "course-scorm-runtime-db-tests.mjs",
+    ["read_course_scorm_runtime", "save_course_scorm_runtime"],
+  ],
+  [
     "learning-program-db-tests.mjs",
-    ["set_learning_program_prerequisite", "learning_program_grade_report"],
+    [
+      "set_learning_program_prerequisite",
+      "learning_program_grade_report",
+      "set_learning_program_path_exception",
+      "learning_program_cohort_grades",
+    ],
   ],
   [
     "academy-course-document-db-tests.mjs",
@@ -32,6 +41,7 @@ const featureFixtureOperations = new Map([
       "course_gradebook_export",
       "course_weighted_gradebook",
       "course_weighted_gradebook_command",
+      "import_course_exam_grades",
       "set_course_material_metadata",
       "course_completion_status",
     ],
@@ -40,16 +50,27 @@ const featureFixtureOperations = new Map([
     "course-workspace-db-tests.mjs",
     [
       "course_material_metadata_history",
+      "course_material_usage",
       "course_material_reuse_targets",
       "reuse_course_material",
       "course_lti_tools",
       "save_course_lti_tool",
+      "configure_course_lti_advantage",
+      "configure_course_lti_deep_link",
+      "lti_deep_link_review",
+      "configure_course_lti_ags",
+      "course_lti_ags_grades",
       "course_xapi_statements",
+      "course_xapi_delivery_monitor",
+      "report_course_xapi_delivery",
     ],
   ],
   ["course-submissions-db-tests.mjs", ["set_course_exam_extra_time"]],
   ["academy-course-quiz-pool-db-tests.mjs", ["start_course_quiz_pool"]],
-  ["academy-course-h5p-import-db-tests.mjs", ["course_h5p_question_import"]],
+  [
+    "academy-course-h5p-import-db-tests.mjs",
+    ["course_h5p_question_import", "course_h5p_collection_import"],
+  ],
   [
     "academy-question-bank-db-tests.mjs",
     [
@@ -64,7 +85,13 @@ const featureFixtureOperations = new Map([
   ],
   [
     "academy-course-peer-feedback-db-tests.mjs",
-    ["course_peer_feedback", "course_peer_feedback_action"],
+    [
+      "course_peer_feedback",
+      "course_peer_feedback_attachment",
+      "course_peer_feedback_action",
+      "course_scorm_packages",
+      "course_scorm_action",
+    ],
   ],
   [
     "course-assignments-db-tests.mjs",
@@ -76,7 +103,15 @@ const featureFixtureOperations = new Map([
   ],
   [
     "academy-course-text-exam-db-tests.mjs",
-    ["course_text_exam", "course_text_exam_action"],
+    [
+      "course_text_exam",
+      "course_text_exam_action",
+      "course_text_exam_grade_export",
+    ],
+  ],
+  [
+    "course-h5p-playback-db-tests.mjs",
+    ["course_h5p_packages", "course_h5p_action"],
   ],
   ["course-curriculum-catalogue-db-tests.mjs", ["course_curriculum_catalogue"]],
 ]);

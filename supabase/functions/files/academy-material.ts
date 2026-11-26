@@ -1,6 +1,8 @@
 /** Parse the narrow course-material multipart transport before file-side effects. */
 export const assignmentSubmissionQuery = "?mode=assignment-submission";
 export const courseSubmissionQuery = "?mode=course-submission";
+export const courseScormQuery = "?mode=scorm-package";
+export const courseH5pQuery = "?mode=h5p-package";
 export const academyMaterialQuery = "?mode=academy-material";
 export const academyStudentExamQuery = "?mode=academy-student-exam";
 export const academyCourseChatQuery = "?mode=academy-course-chat";
@@ -21,11 +23,18 @@ export function courseSubmissionRun(form: FormData, intake: boolean, assignment 
     return scopedTarget(form, intake, "course_run_id", assignment ? ["assignment_id"] : []);
 }
 
+/** Use a separate multipart field so a ZIP cannot enter generic course submissions. */
+export function courseArchiveRun(form: FormData, format: "scorm" | "h5p" | null): string | null {
+    const scorm = scopedTarget(form, format === "scorm", "scorm_course_id");
+    const h5p = scopedTarget(form, format === "h5p", "h5p_course_id");
+    return scorm ?? h5p;
+}
+
 export function academyAttendanceSession(form: FormData, intake: boolean): string | null {
     return scopedTarget(form, intake, "academy_session_id");
 }
 
-function scopedTarget(form: FormData, intake: boolean, field: "academy_course_id" | "academy_room_id" | "academy_session_id" | "course_run_id", extra: string[] = []) {
+function scopedTarget(form: FormData, intake: boolean, field: "academy_course_id" | "academy_room_id" | "academy_session_id" | "course_run_id" | "scorm_course_id" | "h5p_course_id", extra: string[] = []) {
     const course = form.get(field);
     if (!intake && course === null) return null;
     if (

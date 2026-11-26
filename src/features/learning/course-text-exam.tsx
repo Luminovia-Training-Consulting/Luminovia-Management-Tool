@@ -1,5 +1,5 @@
 /** A course-scoped native exam with versioned papers, private answers and explicit grade release. */
-import { useEffect, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -9,9 +9,12 @@ import { Dialog } from "../../components/ui/dialog";
 import { dateTime, resolveScheduleWindow } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
+import { downloadCsv } from "../../lib/csv";
 import {
   textExamCommand,
   textExamDraft,
+  textExamExportPage,
+  textExamExportRequest,
   textExamState,
   type TextExamCommand,
   type TextExamState,
@@ -25,6 +28,12 @@ type Review = NonNullable<TextExamState["review"]>;
 type WithoutRun<T> = T extends unknown ? Omit<T, "p_run_id"> : never;
 type Action = WithoutRun<TextExamCommand>;
 type Run = (command: Action) => Promise<unknown>;
+
+const TextExamGradeImport = lazy(() =>
+  import("./text-exam-grade-import-panel").then((module) => ({
+    default: module.TextExamGradeImport,
+  })),
+);
 
 export function CourseTextExam(props: Props) {
   const { t } = useTranslation("textExam");
@@ -71,7 +80,14 @@ function ExamWorkspace({ actor, course, zone }: Props) {
     },
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data?.exam && !data.exam.questions) return 10_000;
+      if (!data?.exam) return false;
+      if (!data.exam.questions) return 10_000;
+      if (data.staff && data.can_write && data.exam.published_at) {
+        const untilGrading =
+          Date.parse(data.exam.deadline) - Date.parse(data.now);
+        if (untilGrading > 0)
+          return Math.min(10_000, Math.max(1000, untilGrading));
+      }
       return false;
     },
   });
@@ -88,6 +104,62 @@ function ExamWorkspace({ actor, course, zone }: Props) {
       return data;
     },
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
+  });
+  const grades = useMutation({
+    mutationFn: async (paperRevision: number) => {
+      requireOnline();
+      const rows: unknown[][] = [
+        [
+          "learner_id",
+          "learner",
+          "exam_revision",
+          "grade_revision",
+          "submitted_at",
+          "score",
+          "max_points",
+          "passed",
+          "released_at",
+        ],
+      ];
+      let after: string | null = null;
+      let asOf: string | null = null;
+      do {
+        const { data, error } = await db().rpc(
+          "course_text_exam_grade_export",
+          textExamExportRequest.parse({
+            p_run_id: course,
+            p_revision: paperRevision,
+            p_after: after,
+            p_as_of: asOf,
+          }),
+        );
+        if (error) throw error;
+        const page = textExamExportPage.parse(data);
+        if (
+          (after && page.next && page.next <= after) ||
+          (asOf && asOf !== page.as_of)
+        )
+          throw new Error("Exam export pagination changed");
+        for (const row of page.rows)
+          rows.push([
+            row.learner_id,
+            row.name,
+            paperRevision,
+            row.grade_revision,
+            row.submitted_at,
+            row.score,
+            row.max_points,
+            row.passed,
+            row.released_at,
+          ]);
+        after = page.next;
+        asOf = page.as_of;
+      } while (after);
+      const { data, error } = await db().auth.getSession();
+      if (error || data.session?.user.id !== actor)
+        throw new Error("Exam export actor changed");
+      downloadCsv(`text-exam-grades-v${paperRevision}.csv`, rows);
+    },
   });
   const reload = () => {
     write.reset();
@@ -157,6 +229,38 @@ function ExamWorkspace({ actor, course, zone }: Props) {
           {state.staff && (
             <p>{t(paper.published_at ? "publishedVersion" : "draftVersion")}</p>
           )}
+        </div>
+      )}
+      {state.staff && paper?.published_at && (
+        <div className="space-y-2">
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || grades.isPending}
+              onClick={() => grades.mutate(paper.revision)}
+            >
+              {t(grades.isPending ? "exporting" : "exportGrades")}
+            </Button>
+            {paper.questions &&
+              state.submissions.length > 0 &&
+              Date.parse(state.now) >= Date.parse(paper.deadline) && (
+                <Suspense fallback={null}>
+                  <TextExamGradeImport
+                    course={course}
+                    version={paper.revision}
+                    offset={offset}
+                    maxima={paper.questions.map(
+                      (question) => question.max_points,
+                    )}
+                    submissions={state.submissions}
+                    disabled={disabled}
+                    refresh={() => client.invalidateQueries({ queryKey: key })}
+                  />
+                </Suspense>
+              )}
+          </div>
+          {grades.isError && <Notice kind="error">{t("exportFailed")}</Notice>}
         </div>
       )}
       {!paper && !state.can_author && <p>{t("noExam")}</p>}
@@ -251,6 +355,9 @@ function ExamAuthor({
   const [opens, setOpens] = useState(localTime(paper?.opens_at));
   const [closes, setCloses] = useState(localTime(paper?.closes_at));
   const [minimum, setMinimum] = useState(String(paper?.pass_percent ?? 70));
+  const [secondReviewer, setSecondReviewer] = useState(
+    paper?.second_reviewer_required ?? false,
+  );
   const [nextQuestion, setNextQuestion] = useState(
     (paper?.questions?.length ?? 1) + 1,
   );
@@ -297,6 +404,7 @@ function ExamAuthor({
             opens_at: window.starts_at,
             closes_at: window.ends_at,
             pass_percent: Number(minimum),
+            second_reviewer_required: secondReviewer,
             questions: questions.map((question) => ({
               prompt: question.prompt,
               max_points: Number(question.points),
@@ -349,6 +457,16 @@ function ExamAuthor({
               />
             </Field>
           </div>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={secondReviewer}
+              onChange={(event) =>
+                setSecondReviewer(event.currentTarget.checked)
+              }
+            />
+            {t("secondReviewer")}
+          </label>
           {questions.map((question, index) => (
             <fieldset
               className="space-y-2 rounded-md border p-3"
@@ -753,11 +871,16 @@ function ReviewForm({
           <Button disabled={!dirty}>{t("saveReview")}</Button>
         </fieldset>
       </form>
+      {review &&
+        !review.released_at &&
+        !dirty &&
+        review.can_release === false &&
+        !disabled && <p role="status">{t("awaitingSecondReviewer")}</p>}
       {review && !review.released_at && !dirty && (
         <Confirm
           label={t("release")}
           details={t("releasePrompt")}
-          disabled={disabled}
+          disabled={disabled || review.can_release === false}
           submit={() =>
             run({
               p_action: "release",

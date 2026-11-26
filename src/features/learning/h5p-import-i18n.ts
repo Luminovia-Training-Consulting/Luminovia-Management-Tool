@@ -2,11 +2,11 @@
 import i18n from "../../lib/i18n";
 
 const labels = {
-  h5pImportTitle: ["H5P-Frage importieren", "Import H5P question"],
+  h5pImportTitle: ["H5P importieren", "Import H5P"],
   h5pImportFile: ["H5P-Datei auswählen", "Choose H5P file"],
   h5pImportHelp: [
-    "Unterstützt werden textbasierte Einzelwahl- und Wahr/Falsch-Fragen mit CC0 1.0 oder CC BY 4.0. Prüfe Frage, Antwort und Lizenz vor dem Speichern.",
-    "Supports text-only single-choice and true/false questions with CC0 1.0 or CC BY 4.0. Review the question, answer and licence before saving.",
+    "Importiere textbasierte Einzelwahl- und Wahr/Falsch-Fragen oder eine Sammlung mit maximal 20 Fragen. Prüfe die Lösungen und die Lizenz vor dem Speichern.",
+    "Import text-only single-choice and true/false questions or a collection of up to 20 questions. Review the answers and licence before saving.",
   ],
   h5pImportSave: [
     "H5P-Frage in Fragenbank speichern",
@@ -15,6 +15,26 @@ const labels = {
   h5pImportSaved: [
     "H5P-Frage in der Fragenbank gespeichert.",
     "H5P question saved to the bank.",
+  ],
+  h5pImportCollectionSave: [
+    "Fragensammlung in Fragenbank speichern",
+    "Save question collection to bank",
+  ],
+  h5pImportCollectionSaved_one: [
+    "{{count}} H5P-Frage gespeichert.",
+    "{{count}} H5P question saved.",
+  ],
+  h5pImportCollectionSaved_other: [
+    "{{count}} H5P-Fragen gespeichert.",
+    "{{count}} H5P questions saved.",
+  ],
+  h5pQuestionAttribution: [
+    "Quelle der Teilfrage",
+    "Individual question source",
+  ],
+  h5pCollectionConversion: [
+    "Die Sammlung wird als einzelne Quizfragen importiert. Kursquiz, Punkte und Versuche folgen den Einstellungen des Portals.",
+    "The collection imports as individual quiz questions. The course quiz uses the portal's scoring and attempt settings.",
   ],
   h5pImportArchived: [
     "Der zugehörige Fragenbankeintrag ist archiviert. Stelle ihn in der Fragenbank wieder her, um ihn zu verwenden.",

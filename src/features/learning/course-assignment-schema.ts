@@ -28,6 +28,8 @@ export const assignmentTeamInput = z.object({
   title: z.string().trim().min(1).max(100),
   due_at: instant.nullable(),
   member_ids: z.array(z.uuid()).min(1).max(20),
+  max_attempts: z.number().int().min(1).max(10).nullable().optional(),
+  rubric: rubric.nullable().optional(),
 });
 
 const assignmentTeam = assignmentTeamInput.omit({ team_id: true }).extend({
@@ -43,6 +45,7 @@ export const assignmentActions = [
   "extend",
   "submit",
   "review",
+  "import_reviews",
   "save_team",
   "remove_team",
 ] as const;
@@ -57,6 +60,8 @@ const attempt = z.object({
   file_name: z.string(),
   submitted_at: instant,
   rubric,
+  rubric_version: version.optional(),
+  import_eligible: z.boolean().nullish(),
   review: z
     .object({
       version,
@@ -66,6 +71,25 @@ const attempt = z.object({
       private_note: z.string().nullable(),
     })
     .nullable(),
+});
+
+export const assignmentReviewImport = z.strictObject({
+  rows: z
+    .array(
+      z.strictObject({
+        attempt_id: z.uuid(),
+        rubric_version: version.max(999_999_999),
+        review_version: z.number().int().min(0).max(999_999_999),
+        scores: z.array(points).min(1).max(20),
+      }),
+    )
+    .min(1)
+    .max(25),
+});
+
+export const assignmentActionResult = z.object({
+  id: z.uuid(),
+  imported: z.number().int().min(1).max(25).optional(),
 });
 
 export const courseAssignmentsProjection = z.object({
@@ -122,3 +146,11 @@ export function rubricIsOrdered(value: AssignmentDefinition["rubric"]) {
     )
   );
 }
+
+export const blankCriterion = () => ({
+  label: "",
+  levels: [
+    { label: "", points: 0 },
+    { label: "", points: 1 },
+  ],
+});

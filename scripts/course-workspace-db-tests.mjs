@@ -1,6 +1,6 @@
 /** Exercise course workspace RPCs with fictional actors in an isolated database. */
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
+import {generateKeyPairSync, randomUUID} from "node:crypto";
 import {z} from "zod";
 import {courseXapiArchiveSchema} from "../src/features/learning/xapi-schema.ts";
 import {portalOpenApi} from "../src/features/developer-api/contract.ts";
@@ -310,6 +310,29 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(await revise(admin, 4, { ...metadata, review_on: "", learning_objectives: "" }), 5);
             assert.equal((await history(admin))[0].content.review_on, undefined);
             assert.equal((await history(admin))[0].content.learning_objectives, undefined);
+            const competencyFramework = randomUUID();
+            const competency = { id: randomUUID(), code: "VOL-01", title: "Analyse persistent storage" };
+            const competencyLink = { ...competency, framework_id: competencyFramework, framework_revision: 1 };
+            const competencyData = { ...metadata, competencies: [competencyLink] };
+            await assert.rejects(revise(admin, 5, competencyData), /22023/);
+            await sql(`begin;
+              insert into private.lms_competency_frameworks(id,organisation_id,revision)
+                values (${q(competencyFramework)},${q(org)},1);
+              insert into private.lms_competency_framework_revisions(framework_id,revision,created_by,content)
+                values (${q(competencyFramework)},1,${q(admin)},${q(JSON.stringify({
+                  title: "Fictional storage framework",
+                  competencies: [competency],
+                  levels: [{id: randomUUID(), title: "Introduced"}, {id: randomUUID(), title: "Ready"}],
+                }))}::jsonb);
+              insert into private.lms_course_competency_pins(run_id,revision,framework_id,framework_revision,created_by)
+                values (${q(run)},1,${q(competencyFramework)},1,${q(admin)});
+              commit;`);
+            assert.equal(await revise(admin, 5, competencyData), 6);
+            assert.deepEqual((await materialSearch(learner, run, "vol-01"))[0].metadata.competencies, [competencyLink]);
+            assert.deepEqual(await materialSearch(foreign, run, "vol-01"), []);
+            assert.equal(await revise(admin, 6, metadata), 6);
+            await assert.rejects(revise(admin, 6, { ...metadata, competencies: [{...competencyLink, title: "Forged"}] }), /22023/);
+
             const targets = (who) => rpc(who, "course_material_reuse_targets", [q(resource), q("")]);
             const reuse = (who, destination) => rpc(who, "reuse_course_material", [q(resource), q(destination), "true"]);
             const foreignRun = randomUUID();
@@ -324,7 +347,15 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(reused, retried);
             assert.notEqual(reused, resource);
             assert.equal((await workspace(learner, current)).resources[0].version_id, versionId);
+            const usage = (who, after = "null") => rpc(who, "course_material_usage", [q(resource), after]);
+            const useReport = await usage(admin);
+            assert.deepEqual(new Set(useReport.items.map(({id}) => id)), new Set([run, current]));
+            assert.equal(useReport.next, null);
+            assert.deepEqual(await usage(admin, q(useReport.items.at(-1).id)), {items: [], next: null});
+            for (const who of [learner, client, foreign]) await assert.rejects(usage(who), /42501/);
+
             assert.equal((await materialSearch(admin, current))[0].metadata.description, metadata.description);
+            assert.equal((await materialSearch(admin, current))[0].metadata.competencies, undefined);
             assert.deepEqual((await targets(admin)).map(({id, shared}) => [id, shared]), [[current, true]]);
             await revise(admin, 1, { ...metadata, title: "Destination-only title" }, reused);
             assert.equal((await materialSearch(admin, run))[0].metadata.title, "Fictional workbook");
@@ -725,6 +756,24 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 await assert.rejects(xapi(who), /42501/);
             }
             await assert.rejects(xapi(admin, "2020-01-01T00:00:00Z", "2026-01-01T00:00:00Z"), /22023/);
+            const monitor = (who) => actor(who,
+                `select coalesce(public.course_xapi_delivery_monitor(${q(run)}), 'null'::jsonb)`
+            ).then(JSON.parse);
+            const report = (who, through, failure = "null") =>
+                rpc(who, "report_course_xapi_delivery", [q(run), q(through), "2", "1", failure]);
+            assert.equal(await monitor(admin), null);
+            for (const who of [learner, teacher, client, foreign]) {
+                await assert.rejects(monitor(who), /42501/);
+                await assert.rejects(report(who, "2026-11-26T12:00:00Z"), /42501/);
+            }
+            assert.equal(await report(admin, "2026-11-26T12:00:00Z", q("delivery")), true);
+            assert.equal((await monitor(admin)).failure, "delivery");
+            assert.equal(await report(admin, "2026-11-26T12:05:00Z"), true);
+            const delivered = await monitor(admin);
+            assert.equal(delivered.failure, null);
+            assert.equal(delivered.retries, 1);
+            assert.equal(await report(admin, "2026-11-26T12:00:00Z", q("delivery")), true);
+            assert.deepEqual(await monitor(admin), delivered);
             const archive = courseXapiArchiveSchema.parse(await xapi(admin));
             assert.deepEqual(await xapi(admin), archive);
             const completedStatement = archive.statements.find((entry) => entry.verb.id.endsWith("/completed"));
@@ -1223,12 +1272,287 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await assert.rejects(finish(learner, learnerSession, next, { nonce: "fresh-nonce" }), /PT409/);
         const fresh = await finish(learner, learnerSession, next, {nonce: "fresh-nonce", state: "fresh-state"});
         assert.equal(fresh.subject, launched.subject);
+        // An explicitly enabled roster uses the launch pseudonym and never
+        // returns account UUIDs, customer data or private contact information.
+        const {publicKey} = generateKeyPairSync("rsa", {modulusLength: 2048});
+        const key = {...publicKey.export({format: "jwk"}), kid: "fictional-lti-key"};
+        const configure = (who, session, version, publicKey, nrps) =>
+            invoke(who, session, "configure_course_lti_advantage", [
+                q(deployment), version, publicKey ? q(JSON.stringify(publicKey)) : "null", nrps,
+            ]);
+        const rosterScope = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+        const toolRpc = (name, args) => sql(`
+          begin; set local role service_role;
+          set local request.path=${q("/rpc/" + name)}; set local request.method='POST';
+          set local request.headers='{}'; select public.require_portal_access();
+          select coalesce(to_jsonb(public.${name}(${args.join(",")})),'null'::jsonb); commit;
+        `).then(JSON.parse);
+        const issue = (assertion, scopes = rosterScope) =>
+            toolRpc("lti_issue_service_token", [
+                q(deployment), 2, q(assertion), "now()+interval '4 minutes'", `array[${q(scopes)}]`,
+            ]);
+        const roster = (token, id = deployment, role = null, after = null, limit = 100) =>
+            toolRpc("lti_course_memberships", [
+                q(id), q(token), role ? q(role) : "null", after ? q(after) : "null", limit,
+            ]);
+        await assert.rejects(configure(learner, learnerSession, 1, key, true), /42501/);
+        await assert.rejects(configure(admin, managerSession, 1, {...key, d: "private-parameter"}, true), /22023/);
+        assert.equal(await configure(admin, managerSession, 1, key, true), 2);
+        await assert.rejects(configure(admin, managerSession, 1, key, true), /PT409/);
+        assert.ok(!Object.hasOwn((await invoke(learner, learnerSession, "course_lti_tools", [q(run)])).tools[0], "tool_public_key"));
+        const enabled = await start(learner, learnerSession);
+        const rosterLaunch = await finish(learner, learnerSession, enabled, {nonce: "roster-nonce", state: "roster-state"});
+        assert.equal(rosterLaunch.nrps_enabled, true);
+        assert.equal(rosterLaunch.subject, launched.subject);
+        assert.deepEqual(await toolRpc("lti_service_registration", [q(clientId), "null"]), {
+            id: deployment, version: 2, key,
+        });
+        await assert.rejects(invoke(admin, managerSession, "lti_service_registration", [q(clientId), q(deployment)]), /42501/);
+        await assert.rejects(issue("wrong-scope", "fictional.scope"), /22023/);
+        const token = await issue("fixture-assertion");
+        assert.match(token, /^[0-9a-f]{64}$/);
+        await assert.rejects(issue("fixture-assertion"), /42501/);
+        await assert.rejects(roster(token, randomUUID()), /42501/);
+        await assert.rejects(roster("0".repeat(64)), /42501/);
+        const membership = await roster(token);
+        assert.equal(membership.context_id, launched.context_id);
+        assert.equal(membership.members.length, 4);
+        assert.ok(membership.members.some(({user_id}) => user_id === launched.subject));
+        assert.ok(membership.members.every((member) => Object.keys(member).sort().join(",") === "roles,status,user_id"));
+        assert.ok(!JSON.stringify(membership).includes(learner));
+        assert.equal((await roster(token, deployment, "Instructor")).members.length, 1);
+        const firstPage = await roster(token, deployment, "Learner", null, 1);
+        assert.equal(firstPage.members.length, 2); // one page plus next-page marker row
+        const secondPage = await roster(token, deployment, "Learner", firstPage.members[0].user_id, 1);
+        assert.equal(secondPage.members[0].user_id, firstPage.members[1].user_id);
+        await sql(`update private.lti_service_tokens set expires_at=now()-interval '1 minute'
+            where token_hash=extensions.digest(${q(token)},'sha256')`);
+        await assert.rejects(roster(token), /42501/);
+        const beforeRevision = await issue("before-revision");
+        const picker = "https://lti-fixture.example.invalid/select";
+        const configurePicker = (who, session, version, uri) =>
+            invoke(who, session, "configure_course_lti_deep_link", [
+                q(deployment), version, uri ? q(uri) : "null",
+            ]);
+        const prepare = (who, session, resource, origin) =>
+            invoke(who, session, "prepare_lti_placement", [
+                q(deployment), q(proof), resource ? q(resource) : "null",
+                origin ? q(origin) : "null",
+            ]);
+        const applyLink = (who, session, id, action) =>
+            invoke(who, session, "lti_deep_link_review", [q(id), q(action)]);
+        const returnSelection = (choice, item, revision = 3) =>
+            toolRpc("receive_lti_deep_link", [q(deployment), revision, q(choice.deep_link_data),
+                item ? q(JSON.stringify(item)) : "null",
+            ]);
+        const portalOrigin = "https://fixture-portal.example.invalid";
+        await assert.rejects(configurePicker(learner, learnerSession, 2, picker), /42501/);
+        await assert.rejects(configurePicker(admin, managerSession, 2, "http://fixture.invalid/select"), /22023/);
+        assert.equal(await configurePicker(admin, managerSession, 2, picker), 3);
+        await assert.rejects(prepare(learner, learnerSession, null, portalOrigin), /42501/);
+        const selection = await prepare(teacher, teacherSession, null, portalOrigin);
+        assert.equal(selection.target_uri, picker);
+        const choice = await finish(teacher, teacherSession, selection, {nonce: "pick-content",state: "pick-content"});
+        assert.equal(choice.role, "Instructor");
+        assert.match(choice.deep_link_data, /^[a-f0-9]{64}$/);
+        assert.equal(choice.target_uri, picker);
+        const link = {
+            title: "Fictional selected activity",
+            url: "https://lti-fixture.example.invalid/activities/unit-2",
+            custom: {chapter:"2"},
+        };
+        await assert.rejects(returnSelection(choice,{...link,url:"https://foreign.example.invalid/activity"}), /22023/);
+        await assert.rejects(returnSelection(choice,{...link,custom:{invalid:42}}), /22023/);
+        await assert.rejects(returnSelection(choice,{...link,lineItem:{scoreMaximum:15}}), /42501/);
+        const received = await returnSelection(choice,link);
+        assert.equal(received.origin, portalOrigin);
+        await assert.rejects(returnSelection(choice,link), /42501/);
+        await assert.rejects(applyLink(learner,learnerSession,received.id,"read"), /42501/);
+        await assert.rejects(applyLink(admin,managerSession,received.id,"publish"), /42501/);
+        await assert.rejects(prepare(learner,learnerSession,received.id,null), /42501/);
+        const draftLink = await applyLink(teacher,teacherSession,received.id,"read");
+        assert.equal(draftLink.title,link.title);
+        assert.equal(draftLink.published,false);
+        assert.equal((await applyLink(teacher,teacherSession,received.id,"publish")).published,true);
+        assert.equal((await applyLink(teacher,teacherSession,received.id,"publish")).published,true);
+        const available = await invoke(learner,learnerSession,"course_lti_tools",[q(run)]);
+        assert.deepEqual(available.tools[0].links,[{id:received.id,title:link.title}]);
+        assert.equal(available.tools[0].can_select,false);
+        const linkHint = await prepare(learner,learnerSession,received.id,null);
+        assert.equal(linkHint.target_uri,link.url);
+        const openedLink = await finish(learner,learnerSession,linkHint,{nonce:"use-link",state:"use-link"});
+        assert.equal(openedLink.target_uri,link.url);
+        assert.equal(openedLink.id,deployment);
+        assert.equal(openedLink.resource_link_id,received.id);
+        assert.equal(openedLink.subject,launched.subject);
+        assert.deepEqual(openedLink.resource_custom,link.custom);
+        const resourceToken = await toolRpc("lti_issue_service_token", [
+            q(deployment), 3, q("bound-resource"), "now()+interval '4 minutes'", `array[${q(rosterScope)}]`,
+        ]);
+        const linkRoster = (linkId) => toolRpc("lti_resource_memberships", [
+            q(deployment), q(resourceToken), "null", "null", 100, q(linkId),
+        ]);
+        assert.deepEqual((await linkRoster(received.id)).resource_custom,link.custom);
+        assert.equal(await linkRoster(randomUUID()),null);
+        const withdrawnLinkHint = await prepare(learner,learnerSession,received.id,null);
+        const withdrawn = await applyLink(teacher,teacherSession,received.id,"withdraw");
+        assert.equal(withdrawn.run_id,run);
+        assert.equal(await linkRoster(received.id),null);
+        await assert.rejects(finish(learner,learnerSession,withdrawnLinkHint,{nonce:"withdrawn",state:"withdrawn"}),/42501/);
+        await assert.rejects(prepare(learner,learnerSession,received.id,null),/42501/);
         const withheld = await start(learner, learnerSession);
-        assert.equal(await register(admin, managerSession, 1, login, false), 2);
+        assert.equal(await register(admin, managerSession, 3, login, false), 4);
+        await assert.rejects(roster(beforeRevision), /42501/);
         await assert.rejects(finish(learner, learnerSession, withheld), /42501/);
         await assert.rejects(start(learner, learnerSession), /42501/);
         // Signup/session entitlement is rechecked, even while the profile stays active.
-        assert.equal(await register(admin, managerSession, 2), 3);
+        assert.equal(await register(admin, managerSession, 4), 5);
+        await assert.rejects(roster(beforeRevision), /42501/);
+        const enableGrades = (who, session, revision, enabled) =>
+            invoke(who, session, "configure_course_lti_ags", [q(deployment), revision, enabled]);
+        const gradeScope = (scope) => `https://purl.imsglobal.org/spec/lti-ags/scope/${scope}`;
+        const issueGrades = (scopes, revision) =>
+            toolRpc("lti_issue_service_token", [
+                q(deployment), revision, q(randomUUID()), "now()+interval '4 minutes'",
+                `array[${scopes.map((scope) => q(gradeScope(scope))).join(",")}]`,
+            ]);
+        const grades = (credential, command, item, input = {}, id = deployment) =>
+            toolRpc("lti_ags_service", [
+                q(id), q(credential), q(command), item ? q(item) : "null", q(JSON.stringify(input)),
+            ]);
+        const readLedger = (who, session) => invoke(who, session, "course_lti_ags_grades", [
+            q(deployment), "null", 10,
+        ]);
+        await assert.rejects(issueGrades(["lineitem"], 5), /42501/);
+        await assert.rejects(enableGrades(learner, learnerSession, 5, true), /42501/);
+        assert.equal(await enableGrades(admin, managerSession, 5, true), 6);
+        await assert.rejects(enableGrades(admin, managerSession, 5, false), /PT409/);
+        const gradeToken = await issueGrades(["lineitem", "result.readonly", "score"], 6);
+        const readToken = await issueGrades(["lineitem.readonly"], 6);
+        await assert.rejects(grades(readToken,"create",null,{label: "Denied", scoreMaximum: 5}),/42501/);
+        await assert.rejects(grades(gradeToken,"list",null,{},randomUUID()),/42501/);
+        await assert.rejects(grades(gradeToken,"create",null,{
+            label: "Foreign link", scoreMaximum: 10, resourceLinkId: randomUUID(),
+        }),/PT404/);
+        const gradedHint = await prepare(teacher,teacherSession,null,portalOrigin);
+        const gradedPick = await finish(teacher,teacherSession,gradedHint,{
+            nonce:"graded-selection",state:"graded-selection",
+        });
+        assert.equal(gradedPick.ags_enabled,true);
+        const declaration = {
+            scoreMaximum:12.5, resourceId:"fixture-graded-placement", tag:"first-review", gradesReleased:true,
+        };
+        await assert.rejects(returnSelection(gradedPick,{...link,lineItem:{...declaration,scoreMaximum:-2}},6),/22023/);
+        const gradedLink = await returnSelection(gradedPick,{...link,lineItem:declaration},6);
+        assert.deepEqual((await applyLink(teacher,teacherSession,gradedLink.id,"read")).line_item,{
+            label:link.title,maximum:12.5,
+        });
+        assert.deepEqual(await grades(readToken,"list",null,{resource_id:declaration.resourceId}),[]);
+        assert.equal((await applyLink(teacher,teacherSession,gradedLink.id,"publish")).published,true);
+        assert.equal((await applyLink(teacher,teacherSession,gradedLink.id,"publish")).published,true);
+        const [declaredItem] = await grades(readToken,"list",null,{resource_id:declaration.resourceId});
+        assert.equal(declaredItem.label,link.title);
+        assert.equal(declaredItem.scoreMaximum,12.5);
+        assert.equal(declaredItem.resourceLinkId,gradedLink.id);
+        assert.equal(declaredItem.tag,declaration.tag);
+        assert.ok(!Object.hasOwn(declaredItem,"gradesReleased"));
+        const chosenLink = await prepare(learner,learnerSession,gradedLink.id,null);
+        const gradedResource = await finish(learner,learnerSession,chosenLink,{
+            nonce:"graded-resource",state:"graded-resource",
+        });
+        assert.equal(gradedResource.ags_lineitem,declaredItem.id);
+        const item = await grades(gradeToken,"create",null,{
+            label: "Fictional skills check", scoreMaximum: 20, resourceLinkId: deployment, resourceId: "worksheet",
+            tag: "lab",
+        });
+        assert.equal((await grades(readToken,"read",item.id)).label,"Fictional skills check");
+        assert.deepEqual(await grades(readToken,"list",null,{resource_id: "worksheet", tag: "lab"}),[item]);
+        const withGrades = await start(learner, learnerSession);
+        const gradeLaunch = await finish(learner, learnerSession, withGrades,{
+            nonce: "ags-launch-nonce", state: "ags-launch-state",
+        });
+        assert.equal(gradeLaunch.ags_enabled,true);
+        assert.equal(gradeLaunch.ags_lineitem,item.id);
+        assert.equal((await invoke(teacher,teacherSession,"course_lti_tools",[q(run)])).tools[0].view_grades,true);
+        assert.equal((await invoke(learner,learnerSession,"course_lti_tools",[q(run)])).tools[0].view_grades,false);
+        const timestamp = Date.now() - 20_000;
+        const submission = (offset,extra = {}) => ({
+            timestamp: new Date(timestamp + offset).toISOString(), userId: launched.subject,
+            activityProgress: "Completed", gradingProgress: "FullyGraded", scoreGiven: 12, scoreMaximum: 10,
+            ...extra,
+        });
+        await assert.rejects(grades(readToken,"score",item.id,submission(1000)),/42501/);
+        await assert.rejects(grades(gradeToken,"score",item.id,submission(1000,{userId: randomUUID()})),/PT404/);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(1000)),true);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(500,{scoreGiven: 1})),true);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(2000,{gradingProgress: "PendingManual", scoreGiven: 1})),true);
+        assert.deepEqual(await grades(gradeToken,"results",item.id,{user_id:launched.subject}),[
+            {userId:launched.subject,resultScore:24,resultMaximum:20},
+        ]);
+        assert.equal((await grades(gradeToken,"update",item.id,{
+            label: "Fictional skills check",scoreMaximum: 25,resourceId: "worksheet",tag: "lab",
+        })).scoreMaximum,25);
+        assert.equal((await grades(gradeToken,"results",item.id))[0].resultScore,30);
+        assert.equal((await readLedger(teacher,teacherSession)).find((row) => row.id === item.id).results[0].score,30);
+        await assert.rejects(readLedger(learner,learnerSession),/42501/);
+        assert.equal(await grades(gradeToken,"score",item.id,submission(3000,{scoreGiven:null,scoreMaximum:null})),true);
+        assert.deepEqual(await grades(gradeToken,"results",item.id),[]);
+        assert.equal(await grades(gradeToken,"delete",item.id),true);
+        await assert.rejects(grades(gradeToken,"read",item.id),/PT404/);
+        assert.equal(await enableGrades(admin,managerSession,6,false),7);
+        await assert.rejects(grades(gradeToken,"list",null),/42501/);
+
+        const beginRegistration = (who, session, jwks) =>
+            invoke(who, session, "lti_begin_dynamic_registration", [
+                q(run), q("https://dynamic-fixture.example.invalid/register"), q(jwks),
+                q(JSON.stringify(key)), "false", "true",
+            ]);
+        const expectedJwks = "https://dynamic-fixture.example.invalid/keys";
+        const dynamicMetadata = {
+            title: "Fictional dynamically registered tool",
+            login: "https://dynamic-fixture.example.invalid/login",
+            redirect: "https://dynamic-fixture.example.invalid/response",
+            target: "https://dynamic-fixture.example.invalid/target",
+            jwks: expectedJwks,
+            picker: "https://dynamic-fixture.example.invalid/picker",
+            scopes: [rosterScope,gradeScope("score")],
+        };
+        const registerDynamic = (credential, metadata = dynamicMetadata) =>
+            toolRpc("lti_complete_dynamic_registration", [q(credential), q(JSON.stringify(metadata))]);
+        await assert.rejects(beginRegistration(learner,learnerSession,expectedJwks),/42501/);
+        await assert.rejects(beginRegistration(admin,managerSession,"https://unrelated.example.invalid/public"),/22023/);
+        const dynamicGrant = await beginRegistration(admin,managerSession,expectedJwks);
+        assert.match(dynamicGrant,/^[a-f0-9]{64}$/);
+        await assert.rejects(invoke(admin,managerSession,"lti_complete_dynamic_registration",[
+            q(dynamicGrant),q(JSON.stringify(dynamicMetadata)),
+        ]),/42501/);
+        await assert.rejects(registerDynamic(dynamicGrant,{...dynamicMetadata,
+            redirect:"https://unrelated.example.invalid/response",
+        }),/22023/);
+        const dynamic = await registerDynamic(dynamicGrant);
+        assert.deepEqual(dynamic.scopes,[gradeScope("score")]);
+        await assert.rejects(registerDynamic(dynamicGrant),/42501/);
+        const draftTool = (await invoke(admin,managerSession,"course_lti_tools",[q(run)]))
+            .tools.find(({id}) => id === dynamic.id);
+        assert.equal(draftTool.active,false);
+        assert.equal(draftTool.deep_link_uri,dynamicMetadata.picker);
+        assert.ok(!(await invoke(learner,learnerSession,"course_lti_tools",[q(run)]))
+            .tools.some(({id}) => id === dynamic.id));
+        const dynamicToken = (scope, version) => toolRpc("lti_issue_service_token", [
+            q(dynamic.id),version,q(randomUUID()),"now()+interval '4 minutes'",`array[${q(scope)}]`,
+        ]);
+        await assert.rejects(dynamicToken(gradeScope("score"),1),/42501/);
+        assert.equal(await invoke(admin,managerSession,"save_course_lti_tool",[
+            q(dynamic.id),q(run),q(dynamicMetadata.title),q(dynamic.client_id),q(dynamicMetadata.login),
+            q(dynamicMetadata.redirect),q(dynamicMetadata.target),"true",1,
+        ]),2);
+        assert.match(await dynamicToken(gradeScope("score"),2),/^[a-f0-9]{64}$/);
+        await assert.rejects(dynamicToken(gradeScope("lineitem"),2),/42501/);
+        await assert.rejects(dynamicToken(rosterScope,2),/42501/);
+        const strandedGrant = await beginRegistration(admin,managerSession,expectedJwks);
+        await sql(`delete from auth.sessions where id=${q(managerSession)}`);
+        await assert.rejects(registerDynamic(strandedGrant),/42501/);
+
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);

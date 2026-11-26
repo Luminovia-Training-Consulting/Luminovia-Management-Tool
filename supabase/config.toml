@@ -464,5 +464,5 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.learning-lti]
-# JWKS is public. The worker separately validates Auth and exact browser origin before any launch.
+# JWKS is public. The worker validates browser Auth and origin, and separately verifies tool assertions and scoped service tokens.
 verify_jwt = false
