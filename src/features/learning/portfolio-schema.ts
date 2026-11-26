@@ -4,11 +4,18 @@ import { z } from "zod";
 const uuid = z.uuid();
 const revisionNumber = z.number().int().min(1).max(30);
 const date = z.iso.datetime({ offset: true });
+export const portfolioEvidence = z.strictObject({
+  version_id: uuid,
+  name: z.string().min(1).max(200),
+});
+export type PortfolioEvidence = z.infer<typeof portfolioEvidence>;
+const evidenceList = z.array(portfolioEvidence).max(5).default([]);
 const revision = z.strictObject({
   revision: revisionNumber,
   title: z.string(),
   body: z.string(),
   created_at: date,
+  evidence: evidenceList,
 });
 export const portfolioEntry = z.strictObject({
   id: uuid,
@@ -49,6 +56,7 @@ export const portfolioTeacher = z.strictObject({
       revision: revisionNumber,
       shared_at: date,
       learner: z.string(),
+      evidence: evidenceList,
     }),
   ),
   has_more: z.boolean(),
@@ -73,6 +81,11 @@ export const portfolioCommand = z.discriminatedUnion("p_action", [
       title: z.string().trim().min(1).max(140),
       body: z.string().trim().min(1).max(4000),
     }),
+  }),
+  z.strictObject({
+    ...commandKey,
+    p_action: z.enum(["link", "unlink"]),
+    p_payload: z.strictObject({ version_id: uuid }),
   }),
   z.strictObject({
     ...commandKey,

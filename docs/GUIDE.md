@@ -329,6 +329,8 @@ Open **Mein Portfolio / My portfolio** from the learning area. Create a text ent
 
 Choose **Fassung teilen / Share revision**, select the course and instructor, and confirm the numbered revision. Only that named instructor can read the chosen snapshot under **Geteilte Portfolios / Shared portfolios** in the course workspace, while both actors retain the required course access. Edits stay private until you share a new revision. **Freigabe widerrufen / Revoke share** removes subsequent access to the old snapshot. Academy grace permits reads and personal exports.
 
+Under **Nachweis verknüpfen / Link supporting file**, select a file and use **Datei prüfen und verknüpfen / Scan and link file**. Each revision supports five files of up to 10 MiB. Linking or unlinking creates a new private revision. A named instructor can download only the linked files of the shared revision while that share and both actors’ course access remain current. Revoke the earlier share to withdraw access to its linked files. The personal JSON export includes file names and references. Download the files themselves from the portfolio.
+
 **Eintrag archivieren / Archive entry** keeps your revisions and revokes every active share. Open **Archivierte Einträge anzeigen / Show archived entries** to restore the entry privately or delete it by entering its exact title. Deletion removes every stored revision and share receipt from the portfolio. Copies exported earlier are outside the portfolio.
 
 ### Programme access prerequisites

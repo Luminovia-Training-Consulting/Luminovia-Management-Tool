@@ -886,3 +886,48 @@ Deno.test("private submissions use one exact service-resolved version and fail c
     assert((await handler(request({...body, owner_id: id}))).status === 400);
     assert(resolved === 3 && downloaded === 3);
 });
+
+Deno.test("portfolio evidence binds the exact revision and never streams after revocation", async () => {
+    const version = "77cb1012-7949-4b4e-bfb8-1d820c85b01d";
+    const body = {kind: "portfolio_evidence", id, revision: 4, shared: true, version_id: version};
+    const payload = new TextEncoder().encode("Fictional work");
+    const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", payload))]
+        .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    let revoked = false;
+    let revokeDuringRead = false;
+    let calls = 0;
+    const handler = createCourseDocumentHandler({
+        origins: ["https://portal.example.invalid"],
+        authenticate: async () => id,
+        rpc: async (_token, name, args) => {
+            assert(name === "learning_portfolio_evidence_access");
+            assert(args.p_id === id && args.p_revision === 4 && args.p_shared === true && args.p_version_id === version);
+            return {data: revoked ? null : {
+                version_id: version, name: "evidence.txt", mime_type: "text/plain",
+                size_bytes: payload.byteLength, sha256: hash,
+            }, error: null};
+        },
+        retainedPath: async (file, checksum) => {
+            assert(file === version && checksum === hash);
+            return "private-test-path";
+        },
+        download: async (path) => {
+            assert(path === "private-test-path");
+            calls++;
+            if (revokeDuringRead) revoked = true;
+            return payload;
+        },
+        render: async () => { throw new Error("Portfolio bytes must not be rendered"); },
+        recordDownload: async () => { throw new Error("No administrative portfolio download journal"); },
+    });
+    const allowed = await handler(request(body));
+    assert(allowed.status === 200 && await allowed.text() === "Fictional work");
+    assert(allowed.headers.get("content-disposition") === 'attachment; filename="evidence.txt"');
+    revokeDuringRead = true;
+    const crossed = await handler(request(body));
+    assert(crossed.status === 403);
+    assert((await handler(request(body))).status === 403);
+    assert((await handler(request({...body, shared: "true"}))).status === 400);
+    assert((await handler(request({...body, revision: 31}))).status === 400);
+    assert(calls === 2);
+});

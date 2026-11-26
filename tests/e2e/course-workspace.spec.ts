@@ -1812,7 +1812,7 @@ test("LMS lifecycle links curriculum, assignments, competency, completion and re
 
 /** Exercise private authoring, a named frozen share, own export and revocation in real sessions. */
 test("a personal portfolio shares only the reviewed revision with the chosen course instructor", async ({page, browser, baseURL}, info) => {
-    test.setTimeout(100_000);
+    test.setTimeout(140_000);
     const f = await fixture();
     await linkWorkspaceLearner(f);
     await checked(f.adminClient.rpc("manage_course_enrolment", {
@@ -1825,9 +1825,21 @@ test("a personal portfolio shares only the reviewed revision with the chosen cou
     await ownPortfolio.getByLabel("Titel des Eintrags").fill("Fictional reflection");
     await ownPortfolio.getByLabel("Inhalt des Eintrags").fill("Version one. Shared with chosen instructor.");
     await ownPortfolio.getByRole("button", {name: "Eintrag speichern", exact: true}).click();
+    const evidenceName = "fictional-evidence.txt";
+    const evidence = Buffer.from("Fictional supporting work for the learner’s reflection.");
+    await ownPortfolio.getByText("Nachweis verknüpfen", {exact: true}).click();
+    await ownPortfolio.getByLabel("Datei auswählen").setInputFiles({
+        name: evidenceName, mimeType: "text/plain", buffer: evidence,
+    });
+    await ownPortfolio.getByRole("button", {name: "Datei prüfen und verknüpfen"}).click();
+    await expect(ownPortfolio.getByText(evidenceName, {exact: true})).toBeVisible();
+    const ownReceipt = page.waitForEvent("download");
+    await ownPortfolio.getByRole("button", {name: evidenceName + " herunterladen"}).click();
+    expect(await readFile(await (await ownReceipt).path())).toEqual(evidence);
+
     await ownPortfolio.getByRole("button", {name: "Fassung teilen", exact: true}).click();
     await ownPortfolio.getByLabel("Lehrkraft und Kurs").selectOption(f.run + ":" + f.teacher.id);
-    await ownPortfolio.getByRole("button", {name: "Fassung 1 freigeben", exact: true}).click();
+    await ownPortfolio.getByRole("button", {name: "Fassung 2 freigeben", exact: true}).click();
     await expect(ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true})).toBeVisible();
 
     const instructor = await browser.newContext({baseURL, viewport: info.project.use.viewport,
@@ -1838,6 +1850,18 @@ test("a personal portfolio shares only the reviewed revision with the chosen cou
         await teacher.goto(`/courses/${f.run}/workspace#course-portfolio`);
         const assigned = teacher.getByRole("region", {name: "Geteilte Portfolios", exact: true});
         await expect(assigned.getByText("Version one. Shared with chosen instructor.")).toBeVisible();
+        const teacherDownload = teacher.waitForEvent("download");
+        const teacherRequest = teacher.waitForRequest((request) =>
+            request.url().endsWith("/functions/v1/course-documents") &&
+            request.postDataJSON()?.kind === "portfolio_evidence",
+        );
+        await assigned.getByRole("button", {name: evidenceName + " herunterladen"}).click();
+        expect(await readFile(await (await teacherDownload).path())).toEqual(evidence);
+        const evidenceRequest = await teacherRequest;
+
+        await ownPortfolio.getByRole("button", {name: "Verknüpfung für " + evidenceName + " lösen"}).click();
+        await expect(ownPortfolio.getByText(evidenceName, {exact: true})).toHaveCount(0);
+
 
         await ownPortfolio.getByRole("button", {name: "Eintrag bearbeiten", exact: true}).click();
         await ownPortfolio.getByLabel("Inhalt des Eintrags").fill("Version two. Private.");
@@ -1845,22 +1869,30 @@ test("a personal portfolio shares only the reviewed revision with the chosen cou
         await expect(ownPortfolio.getByText("Version two. Private.", {exact: true})).toBeVisible();
         await teacher.reload();
         await expect(assigned.getByText("Version one. Shared with chosen instructor.")).toBeVisible();
+        await expect(assigned.getByText(evidenceName, {exact: true})).toBeVisible();
         await expect(assigned.getByText("Version two. Private.")).toHaveCount(0);
 
         const download = page.waitForEvent("download");
         await ownPortfolio.getByRole("button", {name: "Mein Portfolio exportieren"}).click();
         const exported = JSON.parse(await readFile(await (await download).path(), "utf8"));
         expect(exported[0].history).toMatchObject([
-            {revision: 2, body: "Version two. Private."},
-            {revision: 1, body: "Version one. Shared with chosen instructor."},
+            {revision: 4, body: "Version two. Private.", evidence: []},
+            {revision: 3, body: "Version one. Shared with chosen instructor.", evidence: []},
+            {revision: 2, evidence: [{name: evidenceName}]},
+            {revision: 1, body: "Version one. Shared with chosen instructor.", evidence: []},
         ]);
         await ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true}).click();
         await expect(ownPortfolio.getByText("Widerrufen", {exact: true})).toBeVisible();
+        const denied = await teacher.request.post(evidenceRequest.url(), {
+            headers: await evidenceRequest.allHeaders(),
+            data: evidenceRequest.postDataJSON(),
+        });
+        expect(denied.status()).toBe(403);
         await teacher.reload();
         await expect(assigned.getByText("Für dich sind keine Portfolioeinträge freigegeben.")).toBeVisible();
         await ownPortfolio.getByRole("button", {name: "Fassung teilen", exact: true}).click();
         await ownPortfolio.getByLabel("Lehrkraft und Kurs").selectOption(f.run + ":" + f.teacher.id);
-        await ownPortfolio.getByRole("button", {name: "Fassung 2 freigeben", exact: true}).click();
+        await ownPortfolio.getByRole("button", {name: "Fassung 4 freigeben", exact: true}).click();
         await expect(ownPortfolio.getByRole("button", {name: "Freigabe widerrufen", exact: true})).toBeVisible();
         await teacher.reload();
         await expect(assigned.getByText("Version two. Private.", {exact: true})).toBeVisible();

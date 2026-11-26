@@ -1091,6 +1091,75 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         assert.equal(await sql(`select count(*) from private.learning_portfolio_revisions where entry_id=${q(id)};`), "0");
         assert.equal(await sql(`select count(*) from private.learning_portfolio_shares where entry_id=${q(id)};`), "0");
     });
+    await check("Scanned portfolio files require both a matching version and a current named share", async () => {
+        const id = randomUUID(), clientId = randomUUID(), hash = "b".repeat(64), filename = "reflection.txt";
+        const edit = (who, action, payload, revision) =>
+            rpc(who, "learning_portfolio_command", [q(id), q(action), q(JSON.stringify(payload)), revision]);
+        const reserve = (who, checksum = hash) => rpc(who, "reserve_learning_portfolio_evidence",
+            [q(filename), q("text/plain"), 26, q(clientId), q(checksum)]);
+        const readFile = (who, target, revision, shared, version) =>
+            rpc(who, "learning_portfolio_evidence_access", [q(target), revision, shared, q(version)]);
+        const view = (who, course) => rpc(who, "learning_portfolio", [course ? q(course) : "null"]);
+        const file = await reserve(learner);
+        const other = await reserve(second);
+        assert.deepEqual(await reserve(learner), file);
+        await assert.rejects(reserve(learner, "a".repeat(64)), /PT409/);
+        assert.equal(await actor(learner, `select count(*) from public.documents where id=${q(file.document_id)}`), "0");
+        assert.equal(await actor(learner, `select count(*) from public.document_versions where id=${q(file.version_id)}`), "0");
+        assert.equal(await actor(second, `select public.learning_portfolio_evidence_upload_status(${q(file.document_id)},${q(file.version_id)}) is null`), "t");
+        await assert.rejects(rpc(admin, "reserve_document", [q(filename), q("text/plain"), 26, q("personal"), q("portfolio_evidence"), "null", "null", q(randomUUID())]), /42501/);
+
+        const text = {title: "Evidence entry", body: "Own notes"};
+        await edit(learner, "save", text, 0);
+        await assert.rejects(edit(learner, "link", {version_id: file.version_id}, 1), /42501/);
+        const lease = await sql(`begin; set local role service_role; select public.deletion_upload_begin(${q(file.document_id)},${q(file.version_id)}); commit`);
+        await sql(`update public.documents set status='scanning' where id=${q(file.document_id)};
+            update public.document_versions set status='scanning' where id=${q(file.version_id)};`);
+        const verdict = (checksum) => sql(`begin; set local role service_role;
+            select public.complete_document_upload(${q(file.document_id)},${q(file.version_id)},${q(lease)},${q(checksum)},'ClamAV fictional scanner');
+            commit`);
+        await assert.rejects(verdict("a".repeat(64)), /22023/);
+        await verdict(hash);
+        await sql(`begin; set local role service_role; select public.deletion_upload_end(${q(lease)}); commit`);
+
+        const version = {version_id: file.version_id};
+        assert.deepEqual(await edit(learner, "link", version, 1), {revision: 2});
+        assert.deepEqual(await edit(learner, "link", version, 1), {revision: 2});
+        await assert.rejects(edit(second, "link", version, 2), /42501/);
+        await assert.rejects(edit(learner, "link", {version_id: other.version_id}, 2), /42501/);
+        assert.equal((await readFile(learner, id, 2, false, file.version_id)).name, filename);
+        await assert.rejects(readFile(teacher, id, 2, false, file.version_id), /42501/);
+        await assert.rejects(readFile(learner, id, 1, false, file.version_id), /42501/);
+        const recipient = {course_id: run, teacher_id: teacher};
+        const share = (await edit(learner, "share", recipient, 2)).share_id;
+        const expected = {name: filename, version_id: file.version_id};
+        assert.deepEqual((await view(teacher, run)).shares.find((item) => item.id === share).evidence, [expected]);
+        assert.equal((await readFile(teacher, share, 2, true, file.version_id)).sha256, hash);
+        for (const who of [admin, client, second]) {
+            await assert.rejects(readFile(who, share, 2, true, file.version_id), /42501/);
+        }
+        await assert.rejects(readFile(teacher, share, 1, true, file.version_id), /42501/);
+        await assert.rejects(readFile(teacher, share, 2, true, other.version_id), /42501/);
+
+        await edit(learner, "save", {...text, body: "Edited text retains evidence"}, 2);
+        assert.equal((await readFile(learner, id, 3, false, file.version_id)).name, filename);
+        await edit(learner, "unlink", version, 3);
+        await assert.rejects(readFile(learner, id, 4, false, file.version_id), /42501/);
+        assert.equal((await readFile(teacher, share, 2, true, file.version_id)).name, filename);
+        await edit(learner, "revoke", {share_id: share}, 0);
+        await assert.rejects(readFile(teacher, share, 2, true, file.version_id), /42501/);
+        await edit(learner, "link", version, 4);
+        const nextShare = (await edit(learner, "share", recipient, 5)).share_id;
+        await edit(learner, "archive", {state_revision: 0}, 5);
+        await assert.rejects(readFile(teacher, nextShare, 5, true, file.version_id), /42501/);
+        await assert.rejects(readFile(learner, id, 5, false, file.version_id), /42501/);
+        await edit(learner, "restore", {state_revision: 1}, 5);
+        assert.equal((await readFile(learner, id, 5, false, file.version_id)).name, filename);
+        await assert.rejects(readFile(teacher, nextShare, 5, true, file.version_id), /42501/);
+        await edit(learner, "archive", {state_revision: 2}, 5);
+        await edit(learner, "delete", {state_revision: 3, title: text.title}, 5);
+        assert.equal(await sql(`select count(*) from private.learning_portfolio_evidence where entry_id=${q(id)}`), "0");
+    });
     await check("LTI tool registration and launch bind current course roles, Auth sessions and one-time proof", async () => {
         const deployment = randomUUID();
         const managerSession = randomUUID();

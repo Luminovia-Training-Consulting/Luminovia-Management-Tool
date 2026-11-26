@@ -192,7 +192,10 @@ import {
   courseClassAssignment,
   courseClassOptions,
 } from "../learning/course-classes-schema.ts";
-import { assignmentActions, courseAssignmentsProjection } from "../learning/course-assignment-schema.ts";
+import {
+  assignmentActions,
+  courseAssignmentsProjection,
+} from "../learning/course-assignment-schema.ts";
 import { courseSubmissionPage } from "../learning/course-submission-schema.ts";
 import { courseChatProtectionSchema } from "../learning/course-chat-protection-schema.ts";
 import {
@@ -421,7 +424,7 @@ const courseDocuments = {
     tags: ["Premium LMS"],
     summary: "Download an authorized course document or chat attachment",
     description:
-      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes. For participant_submission use the Premium course ID and exact submission version ID. Only the submitting learner or the current scoped course team can download it.",
+      "Returns protected bytes only after current access and file integrity checks. Request attendance with the course-run ID for a course-wide PDF. Request attendance_session with a session ID for an exact-session PDF or CSV. Current course staff and authorised company contacts can download the selected register. Request uploaded attendance evidence using its course resource ID. Chat requests use the message ID and exact attachment version. Inspecting a retained company chat attachment as an active administrator requires both the organisation and an audit reason. With company Premium turned off, the retained_course_file request requires exact archived exam or material scope and a fresh audit reason. Only a current internal administrator may download retained bytes. For participant_submission use the Premium course ID and exact submission version ID. Only the submitting learner or the current scoped course team can download it. For portfolio_evidence send the exact revision and version_id, with shared=false and the owner entry ID or shared=true and the named share receipt ID.",
     parameters: [gatewayOriginHeader],
     requestBody: {
       required: true,
@@ -497,6 +500,13 @@ const courseDocuments = {
             id: uuid,
             version_id: uuid,
           }),
+          object({
+            kind: { const: "portfolio_evidence" },
+            id: uuid,
+            version_id: uuid,
+            revision: { type: "integer", minimum: 1, maximum: 30 },
+            shared: boolean,
+          }),
         ],
       }),
     },
@@ -522,7 +532,7 @@ const fileGateway = {
     tags: ["Files"],
     summary: "Upload scanned documents or read authorized bytes",
     description:
-      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. Use ?mode=exam-submission for a scanned draft during the current exam window, then confirm it with submit_course_exam. Use ?mode=assignment-submission for the current published assignment, with assignment_id as an additional field. Confirm the exact scan-bound version with course_assignment_action. The two other scoped modes accept only course_run_id, client_id and file.",
+      "Use multipart form data to upload up to 100 MiB. A clean response identifies the resulting document and exact version. Keep the same client_id and bytes for a retry. To read protected bytes, send the JSON action and current authorized reference. The gateway requires an approved browser Origin and checks permissions, scope and clean status. Use ?mode=course-submission for an enrolled participant to privately submit up to 10 MiB to a Premium course that explicitly accepts submissions. Use ?mode=exam-submission for a scanned draft during the current exam window, then confirm it with submit_course_exam. Use ?mode=assignment-submission for the current published assignment, with assignment_id as an additional field. Confirm the exact scan-bound version with course_assignment_action. Course and exam submission modes accept only course_run_id, client_id and file. Use ?mode=portfolio-evidence with only file (up to 10 MiB) and client_id. Link the scan-confirmed version with learning_portfolio_command.",
     parameters: [
       gatewayOriginHeader,
       {
@@ -534,6 +544,7 @@ const fileGateway = {
             "course-submission",
             "exam-submission",
             "assignment-submission",
+            "portfolio-evidence",
           ],
           type: "string",
         },
@@ -4515,7 +4526,10 @@ const nativePaths = {
       summary: "Publish, pin or review completion requirements",
       description:
         "Course managers publish revisions, explicitly pin the latest revision to one enrolment and record or withdraw reasoned assignment or competency exceptions. Current course staff can record or withdraw a reasoned verification. Each operation compares the last-read revision.",
-      requestBody: { required: true, content: json(courseCompletionPolicyAction) },
+      requestBody: {
+        required: true,
+        content: json(courseCompletionPolicyAction),
+      },
       responses: {
         "200": {
           description: "Confirmed revision",

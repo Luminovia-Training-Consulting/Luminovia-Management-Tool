@@ -687,7 +687,25 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `select public.learning_portfolio_command(${q(portfolioEntry)},${q(operation)},${q(JSON.stringify(payload))},${version})`).then(JSON.parse);
     const note = {title: "Fictional private learning notes", body: "Reviewed practice exercise"};
     await portfolioEdit(learner, "save", note);
-    const receipt = await portfolioEdit(learner, "share", {course_id: run, teacher_id: teacher}, 1);
+    const evidenceDigest = "c".repeat(64);
+    const reserveEvidence = (withGate = true) => actor(learner,
+      (withGate ? gate("/rpc/reserve_learning_portfolio_evidence") : "") +
+      `select public.reserve_learning_portfolio_evidence('academy-portfolio.txt','text/plain',12,${q(randomUUID())},${q(evidenceDigest)})`).then(JSON.parse);
+    const evidence = await reserveEvidence();
+    const evidenceStatus = () => actor(learner, gate("/rpc/learning_portfolio_evidence_upload_status") +
+      `select public.learning_portfolio_evidence_upload_status(${q(evidence.document_id)},${q(evidence.version_id)})`).then(JSON.parse);
+    assert.equal((await evidenceStatus()).document.status, "quarantined");
+    await assert.rejects(portfolioEdit(learner, "link", {version_id: evidence.version_id}, 1), /42501/);
+    await sql(`update public.documents set status='clean' where id=${q(evidence.document_id)};
+      update public.document_versions set status='clean', sha256=${q(evidenceDigest)},
+        scanner_version='ClamAV fictional fixture' where id=${q(evidence.version_id)};`);
+    await portfolioEdit(learner, "link", {version_id: evidence.version_id}, 1);
+    const receipt = await portfolioEdit(learner, "share", {course_id: run, teacher_id: teacher}, 2);
+    const academyEvidence = (who, target, shared) => actor(who, gate("/rpc/learning_portfolio_evidence_access") +
+      `select public.learning_portfolio_evidence_access(${q(target)},2,${shared},${q(evidence.version_id)})`).then(JSON.parse);
+    assert.equal((await academyEvidence(teacher, receipt.share_id, true)).name, "academy-portfolio.txt");
+    assert.equal((await academyEvidence(learner, portfolioEntry, false)).sha256, evidenceDigest);
+    await assert.rejects(academyEvidence(manager, receipt.share_id, true), /42501/);
     const sharedPortfolio = await portfolio(teacher, run);
     assert.equal(sharedPortfolio.shares[0].id, receipt.share_id);
     assert.equal(sharedPortfolio.shares[0].body, note.body);
@@ -730,10 +748,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     assert.deepEqual(await portfolio(teacher, run), sharedPortfolio);
     assert.deepEqual(await portfolio(learner), personalPortfolio);
+    assert.equal((await academyEvidence(teacher, receipt.share_id, true)).name, "academy-portfolio.txt");
+    assert.equal((await academyEvidence(learner, portfolioEntry, false)).sha256, evidenceDigest);
+    await assert.rejects(reserveEvidence(), /42501/);
+    await assert.rejects(reserveEvidence(false), /42501/);
+    await assert.rejects(evidenceStatus(), /42501/);
+    await assert.rejects(portfolioEdit(learner, "unlink", {version_id: evidence.version_id}, 2), /42501/);
     await assert.rejects(portfolioEdit(learner, "revoke", {share_id: receipt.share_id}), /42501/);
-    await assert.rejects(portfolioEdit(learner, "archive", {state_revision: 0}, 1), /42501/);
+    await assert.rejects(portfolioEdit(learner, "archive", {state_revision: 0}, 2), /42501/);
     await assert.rejects(actor(learner,
-      `select public.learning_portfolio_command(${q(portfolioEntry)},'archive','{"state_revision":0}',1)`), /42501/);
+      `select public.learning_portfolio_command(${q(portfolioEntry)},'archive','{"state_revision":0}',2)`), /42501/);
     assert.deepEqual(await weighted(learner),weightedReleased);
     assert.deepEqual(await gradeInbox(learner), releasedReceipt);
     assert.equal((await weighted(teacher,learner)).can_manage,false);

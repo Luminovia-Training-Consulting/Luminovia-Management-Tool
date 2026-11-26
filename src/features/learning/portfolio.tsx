@@ -19,6 +19,10 @@ import {
   type PortfolioEntry,
   type PortfolioShareTarget,
 } from "./portfolio-schema";
+import {
+  PortfolioEvidenceFiles,
+  PortfolioEvidencePicker,
+} from "./portfolio-evidence";
 import "./portfolio-lifecycle-i18n";
 
 /** Invalidate only this actor's permission-scoped snapshots after a write. */
@@ -112,7 +116,15 @@ function EntryEditor({
 }
 
 /** Fetch other versions only when the owner opens history on this entry. */
-function EntryHistory({ actor, entry }: { actor: string; entry: string }) {
+function EntryHistory({
+  actor,
+  entry,
+  archived,
+}: {
+  actor: string;
+  entry: string;
+  archived: boolean;
+}) {
   const { t } = useTranslation("learning");
   const query = useQuery(personalPortfolioQuery(actor, entry));
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
@@ -126,6 +138,12 @@ function EntryHistory({ actor, entry }: { actor: string; entry: string }) {
             {revision.title}
           </strong>
           <p className="preserve-text">{revision.body}</p>
+          <PortfolioEvidenceFiles
+            items={revision.evidence}
+            id={entry}
+            revision={revision.revision}
+            archived={archived}
+          />
         </li>
       ))}
     </ol>
@@ -223,9 +241,50 @@ function EntryRow({
     <li className="panel learning-panel space-y-2">
       <h3>{entry.current.title}</h3>
       <p className="preserve-text">{entry.current.body}</p>
+      <PortfolioEvidenceFiles
+        items={entry.current.evidence}
+        id={entry.id}
+        revision={entry.current.revision}
+        archived={archived}
+        pending={change.isPending}
+        unlink={
+          readOnly || archived || entry.current.revision >= 30
+            ? undefined
+            : (version_id) => {
+                change.mutate({
+                  ...entryVersion,
+                  p_action: "unlink",
+                  p_payload: { version_id },
+                });
+              }
+        }
+      />
+      {!readOnly &&
+        !archived &&
+        (entry.current.evidence.length >= 5 || entry.current.revision >= 30 ? (
+          <p>{t("portfolioEvidenceLimit")}</p>
+        ) : (
+          <PortfolioEvidencePicker
+            link={(version_id) =>
+              change.mutateAsync({
+                ...entryVersion,
+                p_action: "link",
+                p_payload: { version_id },
+              })
+            }
+            pending={change.isPending}
+            clearError={change.reset}
+            error={(error) =>
+              change.error ? null : <PortfolioMutationError error={error} />
+            }
+          />
+        ))}
+
       <details onToggle={(event) => setHistory(event.currentTarget.open)}>
         <summary>{t("portfolioHistory")}</summary>
-        {history && <EntryHistory actor={actor} entry={entry.id} />}
+        {history && (
+          <EntryHistory actor={actor} entry={entry.id} archived={archived} />
+        )}
       </details>
       {!readOnly && !archived && (
         <div className="form-actions">
@@ -533,6 +592,12 @@ function CoursePortfolioPage({
               {share.learner} · {t("portfolioRevision", share)}
             </p>
             <p className="preserve-text">{share.body}</p>
+            <PortfolioEvidenceFiles
+              items={share.evidence}
+              id={share.id}
+              revision={share.revision}
+              shared
+            />
           </li>
         ))}
       </ul>

@@ -10,9 +10,19 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { PersonalPortfolio } from "./portfolio";
+import { PortfolioEvidenceFiles } from "./portfolio-evidence";
 import "./i18n";
 
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+const { rpc, upload, download } = vi.hoisted(() => ({
+  rpc: vi.fn(),
+  upload: vi.fn(),
+  download: vi.fn(),
+}));
+vi.mock("../files/api", () => ({
+  acceptedFiles: ".txt",
+  uploadPortfolioEvidence: upload,
+}));
+vi.mock("./api", () => ({ downloadPortalDocument: download }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 vi.mock("../../lib/online", () => ({
   requireOnline: vi.fn(),
@@ -65,6 +75,8 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   rpc.mockReset();
+  upload.mockReset();
+  download.mockReset();
 });
 
 it("requires a named recipient and sends the reviewed immutable revision", async () => {
@@ -105,4 +117,61 @@ it("shows personal entries and export with no edit or share controls during lice
   expect(
     screen.queryByRole("button", { name: "Share revision" }),
   ).not.toBeInTheDocument();
+});
+
+it("links only the scanner-confirmed version to the visible owner revision", async () => {
+  const cleanVersion = "5ee2578b-a20c-4fd1-8095-476d6dfea006";
+  upload.mockResolvedValue(cleanVersion);
+  mount();
+  fireEvent.change(await screen.findByLabelText("Choose a file"), {
+    target: {
+      files: [
+        new File(["Fictional proof"], "exercise.txt", { type: "text/plain" }),
+      ],
+    },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Scan and link file", hidden: true }),
+  );
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith("learning_portfolio_command", {
+      p_entry_id: entry,
+      p_action: "link",
+      p_expected_revision: 2,
+      p_payload: { version_id: cleanVersion },
+    }),
+  );
+});
+
+it("requests the exact version from the named share without owner controls", async () => {
+  download.mockResolvedValue(undefined);
+  const version = "5ee2578b-a20c-4fd1-8095-476d6dfea006";
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PortfolioEvidenceFiles
+        id={entry}
+        revision={2}
+        shared
+        items={[{ version_id: version, name: "exercise.txt" }]}
+      />
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.queryByRole("button", { name: "Unlink exercise.txt" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Download exercise.txt" }),
+  );
+  await waitFor(() =>
+    expect(download).toHaveBeenCalledWith(
+      {
+        kind: "portfolio_evidence",
+        id: entry,
+        revision: 2,
+        shared: true,
+        version_id: version,
+      },
+      "exercise.txt",
+    ),
+  );
 });

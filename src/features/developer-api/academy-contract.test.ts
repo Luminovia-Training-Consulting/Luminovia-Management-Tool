@@ -793,6 +793,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                 "academy-pwa-icon",
                 "course-submission",
                 "assignment-submission",
+                "portfolio-evidence",
                 "exam-submission",
               ],
             },
@@ -817,6 +818,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
                   {
                     additionalProperties: false,
                     required: ["icon_192", "icon_512", "maskable_512"],
+                  },
+                  {
+                    additionalProperties: false,
+                    required: ["client_id", "file"],
+                    properties: { file: { format: "binary" } },
                   },
                 ],
               },
@@ -862,6 +868,9 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         "/rest/v1/rpc/reserve_academy_course_material",
         "/rest/v1/rpc/academy_course_material_status",
         "/rest/v1/rpc/academy_course_material_scan",
+        "/rest/v1/rpc/reserve_learning_portfolio_evidence",
+        "/rest/v1/rpc/learning_portfolio_evidence_upload_status",
+        "/rest/v1/rpc/learning_portfolio_evidence_access",
       ])
         expect(Object.keys(spec.paths)).not.toContain(servicePath);
     });

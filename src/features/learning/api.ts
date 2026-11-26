@@ -477,6 +477,13 @@ export type PortalDocumentRequest =
   | { kind: "attendance_evidence"; id: string }
   | { kind: "participant_submission"; id: string; version_id: string }
   | {
+      kind: "portfolio_evidence";
+      id: string;
+      version_id: string;
+      revision: number;
+      shared: boolean;
+    }
+  | {
       kind: "attendance" | "attendance_session";
       id: string;
       format?: "pdf" | "csv";

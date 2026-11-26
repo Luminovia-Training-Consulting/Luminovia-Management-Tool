@@ -49,7 +49,9 @@ export type PortalDocument = z.infer<z.ZodObject<typeof metadataFields>> &
 export const cleanUploadReceipt = z.strictObject({
   document: z.strictObject({
     ...metadataFields,
-    kind: documentKind.or(z.literal("participant_submission")),
+    kind: documentKind.or(
+      z.enum(["participant_submission", "portfolio_evidence"]),
+    ),
     size_bytes: z
       .number()
       .int()

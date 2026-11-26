@@ -138,8 +138,9 @@ Deno.serve(async (request: Request) => {
         const academyIntake = academyChat || academyAttendance || examReservation !== null || query === academyMaterialQuery;
         const examSubmission = query === '?mode=exam-submission';
         const assignmentSubmission = query === assignmentSubmissionQuery;
+        const portfolioUpload = query === '?mode=portfolio-evidence';
         const submissionIntake = query === courseSubmissionQuery || examSubmission || assignmentSubmission;
-        const scopedIntake = academyIntake || submissionIntake;
+        const scopedIntake = academyIntake || submissionIntake || portfolioUpload;
         const multipart = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data';
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (scopedIntake) {
@@ -154,6 +155,10 @@ Deno.serve(async (request: Request) => {
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
             const form = await boundedFormData(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
+            if (portfolioUpload && (
+                [...form.keys()].some((field) => field !== 'file' && field !== 'client_id') ||
+                form.getAll('file').length !== 1 || form.getAll('client_id').length !== 1
+            )) return json(400, {error: 'invalid_request'});
             const company = form.get('contract_organisation_id');
             const companyUpload = form.get('kind') === 'organisation_contract';
             if (companyUpload || company !== null) {
@@ -175,7 +180,7 @@ Deno.serve(async (request: Request) => {
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
-            if (file.size > (protectedUpload ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
+            if (file.size > (protectedUpload || portfolioUpload ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
             const bytes = new Uint8Array(await file.arrayBuffer());
             const mime = await validateFile(bytes, name, file.type);
             if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
@@ -196,7 +201,11 @@ Deno.serve(async (request: Request) => {
             if (messageOnly !== null && (messageOnly !== 'true' || scope !== 'room' || kind !== 'chat' || !roomId || jobId || replaceId || ownerId)) return json(400, {error: 'invalid_request'});
             const courseChat = form.get('course_chat');
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
-            const reserved = companyUpload
+            const reserved = portfolioUpload
+                ? await user.rpc('reserve_learning_portfolio_evidence', {
+                    p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
+                })
+                : companyUpload
                 ? await user.rpc('reserve_organisation_contract', {p_organisation_id: company, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
                 : submissionRun
                 ? await user.rpc(assignmentSubmission ? 'reserve_course_assignment_submission'
@@ -221,7 +230,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            if ((protectedUpload || companyUpload) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+            if ((protectedUpload || companyUpload || portfolioUpload) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
                 return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
@@ -240,7 +249,14 @@ Deno.serve(async (request: Request) => {
                 if (status.error || !status.data?.document) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             };
-            const scopedStatus = companyUpload ? async () => {
+            const scopedStatus = portfolioUpload ? async () => {
+                const status = await user.rpc('learning_portfolio_evidence_upload_status', {
+                    p_document_id: reservation.document_id,
+                    p_version_id: reservation.version_id,
+                });
+                if (status.error || status.data?.document?.kind !== 'portfolio_evidence') throw new Error('access_denied');
+                return status.data as {document: Document; sha256: string | null};
+            } : companyUpload ? async () => {
                 const status = await user.rpc('organisation_contract_upload_status', {
                     p_organisation_id: company,
                     p_document_id: reservation.document_id,

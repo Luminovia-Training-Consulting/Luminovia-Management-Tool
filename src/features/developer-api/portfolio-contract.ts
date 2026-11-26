@@ -32,7 +32,7 @@ export function portfolioPaths(academy: boolean) {
         summary:
           "Read or export your own portfolio, or see snapshots shared with you by current learners",
         description:
-          "Omit the course ID to access only your own entries; p_export includes all personal revisions. An assigned instructor may supply a course ID to page through immutable revisions explicitly shared with that instructor. Management rights alone grant no access.",
+          "Omit the course ID to access only your own entries; p_export includes all personal revisions. An assigned instructor may supply a course ID to page through immutable revisions explicitly shared with that instructor. Evidence metadata belongs to the exact snapshot. The file gateway rechecks access to each file. Management rights alone grant no access.",
         ...(academy ? { "x-portal-licence": "active-or-grace" } : {}),
         requestBody: {
           required: false,
@@ -52,9 +52,9 @@ export function portfolioPaths(academy: boolean) {
         ...common,
         operationId: "changeLearningPortfolio",
         summary:
-          "Edit, share, archive, restore or erase an owned portfolio entry",
+          "Edit, attach evidence to, share, archive, restore or erase an owned portfolio entry",
         description:
-          "Save and share compare the reviewed entry revision. Sharing requires current course enrolment and a named current instructor. Archiving revokes active shares. Archive, restore and erase compare content and state revisions. Erasing also requires an archived entry and its exact title.",
+          "Save, link, unlink and share compare the reviewed entry revision. Link an owned clean version returned by the file gateway in portfolio-evidence mode. Linking and unlinking create new revisions and preserve existing share snapshots. Sharing requires current course enrolment and a named current instructor. Archiving revokes active shares. Archive, restore and erase compare content and state revisions. Erasing also requires an archived entry and its exact title.",
         ...(academy ? { "x-portal-licence": "active" } : {}),
         requestBody: { required: true, content: jsonContent(portfolioCommand) },
         responses: {

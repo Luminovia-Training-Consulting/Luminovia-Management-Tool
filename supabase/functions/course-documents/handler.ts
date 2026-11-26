@@ -75,6 +75,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             const kind = body.kind;
             if (typeof kind !== "string") return json(400, "invalid_request");
             const submission = kind === "participant_submission";
+            const portfolioEvidence = kind === "portfolio_evidence";
             const attendance = kind === "attendance" || kind === "attendance_session";
             const retained = kind === "retained_course_file";
             let name: string, args: Record<string, unknown>;
@@ -167,6 +168,14 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 name = "course_submission_access";
                 args = {p_run_id: body.id, p_version_id: body.version_id};
             } else if (
+                portfolioEvidence && uuid(body.id) && uuid(body.version_id) &&
+                typeof body.revision === "number" && Number.isInteger(body.revision) &&
+                body.revision >= 1 && body.revision <= 30 && typeof body.shared === "boolean" &&
+                Object.keys(body).every((key) => ["kind", "id", "version_id", "revision", "shared"].includes(key))
+            ) {
+                name = "learning_portfolio_evidence_access";
+                args = {p_id: body.id, p_version_id: body.version_id, p_revision: body.revision, p_shared: body.shared};
+            } else if (
                 kind === "assignment_confirmation" &&
                 uuid(body.id) &&
                 Object.keys(body).every((key) => ["kind", "id"].includes(key))
@@ -208,15 +217,15 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 kind === "exam" ||
                 kind === "request_resource" ||
                 kind === "wiki_resource" ||
-                kind === "course_chat_attachment" || retained || submission
+                kind === "course_chat_attachment" || retained || submission || portfolioEvidence
             ) {
                 const fileId = body.id;
                 if (!uuid(fileId)) return json(403, "document_unavailable");
-                const exactProtectedVersion = retained || submission;
+                const exactProtectedVersion = retained || submission || portfolioEvidence;
                 if ((kind === "course_chat_attachment" || exactProtectedVersion) &&
                     (!Number.isSafeInteger(first.data.size_bytes) ||
                         Number(first.data.size_bytes) < 1 ||
-                        Number(first.data.size_bytes) > (submission ? 10 : 100) * 1024 * 1024)) {
+                        Number(first.data.size_bytes) > (submission || portfolioEvidence ? 10 : 100) * 1024 * 1024)) {
                     return json(403, "document_unavailable");
                 }
                 let objectPath: string | null = null;
