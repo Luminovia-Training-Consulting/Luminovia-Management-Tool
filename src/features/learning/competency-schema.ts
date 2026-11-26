@@ -4,7 +4,7 @@ import { z } from "zod";
 const id = z.uuid();
 const revision = z.number().int().positive();
 const level = z.strictObject({ id, title: z.string().trim().min(1).max(100) });
-const competency = z.strictObject({
+export const competencyDefinition = z.strictObject({
   id,
   code: z.string().trim().min(1).max(30),
   title: z.string().trim().min(1).max(140),
@@ -12,7 +12,7 @@ const competency = z.strictObject({
 export const competencyFrameworkDefinition = z.strictObject({
   title: z.string().trim().min(1).max(150),
   levels: z.array(level).min(2).max(8),
-  competencies: z.array(competency).min(1).max(30),
+  competencies: z.array(competencyDefinition).min(1).max(30),
 });
 const framework = z.strictObject({
   id,

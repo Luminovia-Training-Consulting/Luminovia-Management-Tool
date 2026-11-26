@@ -30,8 +30,10 @@ import {
   materialLanguage,
   materialMetadataSchema,
   type MaterialMetadata,
+  type MaterialCompetency,
 } from "./material-metadata-schema";
 import { DownloadButton } from "./resources";
+import { courseCompetenciesSchema } from "./competency-schema";
 
 const pageSize = 24;
 const categories = ["material", "report"] as const;
@@ -62,6 +64,96 @@ const languageLabels = {
   en: "materialLanguageEnglish",
   other: "materialLanguageOther",
 } as const;
+
+function competencyKey(link: MaterialCompetency) {
+  return `${link.framework_id}:${link.id}`;
+}
+
+function MaterialCompetencies({
+  actor,
+  course,
+  selected,
+  onChange,
+}: {
+  actor: string;
+  course: string;
+  selected: MaterialCompetency[];
+  onChange: (links: MaterialCompetency[]) => void;
+}) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const [open, setOpen] = useState(false);
+  const framework = useQuery({
+    queryKey: [
+      ...courseMaterialLibraryKey(actor),
+      "competency-options",
+      course,
+    ],
+    enabled: open && online,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("course_competencies", { p_run_id: course }, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return courseCompetenciesSchema.parse(data).pinned_framework;
+    },
+    retry: false,
+  });
+  const choices = new Map(selected.map((link) => [competencyKey(link), link]));
+  if (framework.data) {
+    const { id, revision, content } = framework.data;
+    for (const competency of content.competencies) {
+      const link = {
+        ...competency,
+        framework_id: id,
+        framework_revision: revision,
+      };
+      if (!choices.has(competencyKey(link)))
+        choices.set(competencyKey(link), link);
+    }
+  }
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{t("materialCompetencies")}</summary>
+      {open && online && framework.isPending && <Loading />}
+      {framework.isError && (
+        <ErrorState retry={() => void framework.refetch()} />
+      )}
+      {framework.isSuccess && choices.size === 0 && (
+        <p>{t("materialCompetenciesEmpty")}</p>
+      )}
+      {choices.size > 0 && (
+        <fieldset>
+          <legend>{t("materialCompetencySelect")}</legend>
+          {[...choices].map(([key, link]) => {
+            const checked = selected.some(
+              (item) => competencyKey(item) === key,
+            );
+            return (
+              <label key={key} className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!online || (!checked && selected.length >= 12)}
+                  onChange={(event) =>
+                    onChange(
+                      event.currentTarget.checked
+                        ? [...selected, link]
+                        : selected.filter(
+                            (item) => competencyKey(item) !== key,
+                          ),
+                    )
+                  }
+                />
+                {link.code} · {link.title}
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+    </details>
+  );
+}
 
 /** Keep the revision that opened the form; background refreshes must not rebase unsaved text. */
 function MaterialMetadataEditor({
@@ -166,6 +258,14 @@ function MaterialMetadataEditor({
             }
           />
         </Field>
+        <MaterialCompetencies
+          actor={actor}
+          course={material.course_id}
+          selected={metadata.competencies ?? []}
+          onChange={(competencies) =>
+            setMetadata({ ...metadata, competencies })
+          }
+        />
         <Field id={`${id}-review-on`} label={t("materialReviewOn")}>
           <input
             type="date"
@@ -380,6 +480,15 @@ function MaterialMetadataDetails({ metadata }: { metadata: MaterialMetadata }) {
             }).format(new Date(metadata.review_on))}
           </time>
         </p>
+      )}
+      {Boolean(metadata.competencies?.length) && (
+        <ul aria-label={t("materialCompetencies")}>
+          {metadata.competencies?.map((link) => (
+            <li key={competencyKey(link)}>
+              {link.code} · {link.title}
+            </li>
+          ))}
+        </ul>
       )}
       {metadata.tags.length > 0 && (
         <small>

@@ -1045,6 +1045,12 @@ const pairs: Record<string, [string, string]> = {
   materialCancelMetadata: ["Abbrechen", "Cancel"],
   materialMetadataTitle: ["Titel", "Title"],
   materialMetadataDescription: ["Beschreibung", "Description"],
+  materialCompetencies: ["Kompetenzen", "Competencies"],
+  materialCompetencySelect: ["Verknüpfte Kompetenzen", "Linked competencies"],
+  materialCompetenciesEmpty: [
+    "Für diesen Kurs ist kein Kompetenzrahmen ausgewählt.",
+    "This course has no selected competency framework.",
+  ],
   materialMetadataSubject: ["Fachgebiet", "Subject"],
   materialMetadataTags: ["Schlagwörter", "Tags"],
   materialMetadataTagHelp: [
