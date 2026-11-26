@@ -97,7 +97,7 @@ export function uploadOrganisationContract(
   return transferUpload(form, endpoint());
 }
 
-const courseSubmissionMaxBytes = 10 * 1024 * 1024;
+const learningSubmissionMaxBytes = 10 * 1024 * 1024;
 
 /** Reserve and scan a private file for the caller's own enrolment. */
 export function uploadCourseSubmission(
@@ -106,7 +106,7 @@ export function uploadCourseSubmission(
   clientId: string,
   exam = false,
 ) {
-  if (file.size < 1 || file.size > courseSubmissionMaxBytes)
+  if (file.size < 1 || file.size > learningSubmissionMaxBytes)
     throw new Error("file_size");
   const form = new FormData();
   form.set("file", file);
@@ -125,7 +125,7 @@ export function uploadCourseAssignmentSubmission(
   assignmentId: string,
   clientId: string,
 ) {
-  if (file.size < 1 || file.size > courseSubmissionMaxBytes)
+  if (file.size < 1 || file.size > learningSubmissionMaxBytes)
     throw new Error("file_size");
   const form = new FormData();
   form.set("file", file);
@@ -222,7 +222,7 @@ function uploadAcademyExamFile(
 
 /** Send portfolio evidence through the authenticated scanner and its dedicated reservation. */
 export async function uploadPortfolioEvidence(file: File, clientId: string) {
-  if (file.size < 1 || file.size > 10 * 1024 * 1024)
+  if (file.size < 1 || file.size > learningSubmissionMaxBytes)
     throw new Error("file_size");
   const form = new FormData();
   form.set("file", file);

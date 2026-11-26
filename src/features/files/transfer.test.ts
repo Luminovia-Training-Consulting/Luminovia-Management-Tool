@@ -18,6 +18,7 @@ import {
   uploadCourseSubmission,
   uploadDocument,
   uploadOrganisationContract,
+  uploadPortfolioEvidence,
 } from "./api";
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }));
@@ -235,6 +236,56 @@ describe("online, authenticated document transfers", () => {
     }
     expect(Request.requests).toHaveLength(0);
   });
+
+  it("rejects empty and oversized portfolio evidence before opening an upload", async () => {
+    for (const size of [0, 10 * 1024 * 1024 + 1]) {
+      const bytes = new File([new Uint8Array(size)], "evidence.pdf", {
+        type: "application/pdf",
+      });
+      await expect(uploadPortfolioEvidence(bytes, "retry-key")).rejects.toThrow(
+        "file_size",
+      );
+    }
+    expect(Request.requests).toHaveLength(0);
+  });
+
+  it("returns the exact scan-confirmed version from the portfolio file gateway", async () => {
+    const bytes = file();
+    const pending = uploadPortfolioEvidence(bytes, "retry-key");
+    await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+    const request = Request.requests[0];
+    expect(request.open).toHaveBeenCalledWith(
+      "POST",
+      "https://fictional.example.invalid/backend/functions/v1/files?mode=portfolio-evidence",
+    );
+    expect([...request.form!]).toEqual([
+      ["file", bytes],
+      ["client_id", "retry-key"],
+    ]);
+    request.respond(200, {
+      document: {
+        status: "clean",
+        kind: "portfolio_evidence",
+        current_version_id: "evidence-version",
+      },
+    });
+    await expect(pending).resolves.toBe("evidence-version");
+  });
+
+  it.each([
+    { kind: "material", current_version_id: "wrong-version" },
+    { kind: "portfolio_evidence", current_version_id: null },
+  ])(
+    "rejects an unrelated or missing portfolio receipt version",
+    async (document) => {
+      const pending = uploadPortfolioEvidence(file(), "retry-key");
+      await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+      Request.requests[0].respond(200, {
+        document: { status: "clean", ...document },
+      });
+      await expect(pending).rejects.toThrow("upload_failed");
+    },
+  );
 
   it("sends an academy chat draft only with its room, retry key and file", async () => {
     const promise = uploadAcademyCourseChatAttachment(
