@@ -7,7 +7,11 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { downloadCsv } from "../../lib/csv";
 import { requireOnline, useOnline } from "../../lib/online";
-import { learningProgramGradeReportQuery } from "./learning-program-api";
+import {
+  learningProgramCohortGradesQuery,
+  learningProgramGradeReportQuery,
+} from "./learning-program-api";
+import { programmeCohortPageSize } from "./learning-program-schema";
 
 type Learner = { id: string; name: string };
 type ProgrammeScope = { actor: string; program: string };
@@ -23,26 +27,29 @@ export function ProgrammeGradeReport({
   const online = useOnline();
   const title = t(learners ? "programmeGradeStaff" : "programmeGradeSelf");
   return (
-    <details
-      className="panel programme-panel"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary>{title}</summary>
-      {open &&
-        (online ? (
-          learners ? (
-            <StaffGradeSelection
-              actor={actor}
-              program={program}
-              learners={learners}
-            />
+    <>
+      <details
+        className="panel programme-panel"
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+      >
+        <summary>{title}</summary>
+        {open &&
+          (online ? (
+            learners ? (
+              <StaffGradeSelection
+                actor={actor}
+                program={program}
+                learners={learners}
+              />
+            ) : (
+              <ReleasedGrades actor={actor} program={program} />
+            )
           ) : (
-            <ReleasedGrades actor={actor} program={program} />
-          )
-        ) : (
-          <p role="status">{t("programmeGradeOffline")}</p>
-        ))}
-    </details>
+            <p role="status">{t("programmeGradeOffline")}</p>
+          ))}
+      </details>
+      {learners && <CohortGradeDisclosure actor={actor} program={program} />}
+    </>
   );
 }
 
@@ -193,5 +200,171 @@ function ReleasedGrades({
         <Notice kind="error">{t("programmeGradeExportError")}</Notice>
       )}
     </div>
+  );
+}
+
+function CohortGradeDisclosure({ actor, program }: ProgrammeScope) {
+  const { t } = useTranslation("learningPrograms");
+  const [open, setOpen] = useState(false);
+  const online = useOnline();
+  return (
+    <details
+      className="panel programme-panel"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>{t("cohortGrades")}</summary>
+      {open &&
+        (online ? (
+          <CohortGradePage actor={actor} program={program} />
+        ) : (
+          <p role="status">{t("programmeGradeOffline")}</p>
+        ))}
+    </details>
+  );
+}
+
+function CohortGradePage({ actor, program }: ProgrammeScope) {
+  const { t, i18n } = useTranslation("learningPrograms");
+  const id = useId();
+  const [filter, setFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const report = useQuery(
+    learningProgramCohortGradesQuery(actor, program, search, offset),
+  );
+  const percentage = new Intl.NumberFormat(i18n.resolvedLanguage, {
+    style: "percent",
+    maximumFractionDigits: 2,
+  });
+  const csv = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      const { data } = await report.refetch({ throwOnError: true });
+      if (!data) throw new Error("No current cohort grade page");
+      downloadCsv("programme-cohort-grades.csv", [
+        [
+          "learner",
+          "learner_id",
+          "course",
+          "released_percentage",
+          "passed",
+          "released_at",
+        ],
+        ...data.rows.flatMap(({ name, participant_id, report }) =>
+          report.grades.map((grade) => [
+            name,
+            participant_id,
+            grade.title,
+            grade.percent,
+            grade.passed,
+            grade.released_at,
+          ]),
+        ),
+      ]);
+    },
+  });
+
+  return (
+    <>
+      <form
+        className="programme-picker"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSearch(filter.trim());
+          setOffset(0);
+          csv.reset();
+        }}
+      >
+        <Field id={id} label={t("findParticipant")}>
+          <input
+            type="search"
+            value={filter}
+            maxLength={120}
+            onChange={(event) => setFilter(event.currentTarget.value)}
+          />
+        </Field>
+        <Button type="submit" variant="secondary" disabled={csv.isPending}>
+          {t("cohortGradeSearch")}
+        </Button>
+      </form>
+      {report.isPending && <Loading />}
+      {report.isError && <ErrorState retry={() => void report.refetch()} />}
+      {report.data && (
+        <>
+          {report.data.rows.length ? (
+            <ul className="programme-roster">
+              {report.data.rows.map(
+                ({ participant_id, name, report: learner }) => (
+                  <li key={participant_id}>
+                    <details>
+                      <summary>
+                        {name} ·{" "}
+                        {t("programmeGradeCount", {
+                          count: learner.grade_count,
+                        })}
+                      </summary>
+                      {learner.grades.length ? (
+                        <ul>
+                          {learner.grades.map(
+                            ({ course_id, title, percent, passed }) => (
+                              <li key={course_id}>
+                                {title} · {percentage.format(percent / 100)} ·{" "}
+                                {t(
+                                  passed
+                                    ? "programmeGradePass"
+                                    : "programmeGradeFail",
+                                )}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      ) : (
+                        <p>{t("programmeGradeEmpty")}</p>
+                      )}
+                    </details>
+                  </li>
+                ),
+              )}
+            </ul>
+          ) : (
+            <p>{t("rosterEmpty")}</p>
+          )}
+          <div className="form-actions">
+            {offset > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={csv.isPending}
+                onClick={() => setOffset(offset - programmeCohortPageSize)}
+              >
+                {t("cohortGradePrevious")}
+              </Button>
+            )}
+            {report.data.more && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={csv.isPending}
+                onClick={() => setOffset(offset + programmeCohortPageSize)}
+              >
+                {t("cohortGradeNext")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                csv.isPending ||
+                !report.data.rows.some(({ report }) => report.grades.length)
+              }
+              onClick={() => csv.mutate()}
+            >
+              {t("cohortGradeExport")}
+            </Button>
+          </div>
+          {csv.isError && <Notice kind="error">{t("saveFailed")}</Notice>}
+        </>
+      )}
+    </>
   );
 }

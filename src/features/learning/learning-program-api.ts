@@ -6,6 +6,8 @@ import {
   learningProgramId,
   learningProgramClassProgressResult,
   learningProgramGradeReport,
+  learningProgramCohortGrades,
+  readLearningProgramCohortGradesRequest,
   learningProgramClassPlacementRequest,
   type LearningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
@@ -91,6 +93,38 @@ export const learningProgramGradeReportQuery = (
         .abortSignal(signal);
       if (error) throw error;
       return learningProgramGradeReport.parse(data);
+    },
+    staleTime: 0,
+    refetchOnMount: "always" as const,
+    retry: false,
+  });
+
+/** Fetch only one authorised page of current cohort grades. */
+export const learningProgramCohortGradesQuery = (
+  actor: string,
+  program: string,
+  search: string,
+  offset: number,
+) =>
+  queryOptions({
+    queryKey: [
+      ...learningProgramsKey(actor),
+      "cohort-grades",
+      program,
+      search,
+      offset,
+    ],
+    queryFn: async ({ signal }) => {
+      const args = readLearningProgramCohortGradesRequest.parse({
+        p_program_id: program,
+        p_search: search,
+        p_offset: offset,
+      });
+      const { data, error } = await db()
+        .rpc("learning_program_cohort_grades", args, { get: true })
+        .abortSignal(signal);
+      if (error) throw error;
+      return learningProgramCohortGrades.parse(data);
     },
     staleTime: 0,
     refetchOnMount: "always" as const,

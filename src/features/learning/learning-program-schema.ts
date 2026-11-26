@@ -166,6 +166,25 @@ export const readLearningProgramGradeReportRequest = z.strictObject({
   p_user_id: learningProgramId.nullable().optional(),
 });
 
+export const programmeCohortPageSize = 30;
+export const learningProgramCohortGrades = z.strictObject({
+  more: z.boolean(),
+  rows: z
+    .array(
+      z.strictObject({
+        participant_id: learningProgramId,
+        name: z.string(),
+        report: learningProgramGradeReport,
+      }),
+    )
+    .max(programmeCohortPageSize),
+});
+export const readLearningProgramCohortGradesRequest = z.strictObject({
+  p_program_id: learningProgramId,
+  p_search: z.string().max(120).optional(),
+  p_offset: z.number().int().min(0).max(2_147_483_647).optional(),
+});
+
 export const readLearningProgramsRequest = z.strictObject({
   p_program_id: learningProgramId.nullable().optional(),
   p_organisation_id: learningProgramId.nullable().optional(),

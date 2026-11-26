@@ -32,6 +32,11 @@ i18n.addResourceBundle("de", "learningPrograms", {
   pathExceptionSaved: "Ausnahme gespeichert.",
   pathExceptionError:
     "Die Ausnahme konnte nicht gespeichert werden. Prüfe den aktuellen Stand und wähle den Kurs erneut aus.",
+  cohortGrades: "Kursnoten der Kohorte",
+  cohortGradeSearch: "Suchen",
+  cohortGradePrevious: "Vorherige Seite",
+  cohortGradeNext: "Nächste Seite",
+  cohortGradeExport: "Noten dieser Seite als CSV",
   pathSave: "Voraussetzungen speichern",
   pathSaved: "Voraussetzungen gespeichert.",
   pathError:
@@ -165,6 +170,11 @@ i18n.addResourceBundle("en", "learningPrograms", {
   pathExceptionSaved: "Exception saved.",
   pathExceptionError:
     "The exception could not be saved. Review the current state and choose the course again.",
+  cohortGrades: "Cohort course grades",
+  cohortGradeSearch: "Search",
+  cohortGradePrevious: "Previous page",
+  cohortGradeNext: "Next page",
+  cohortGradeExport: "Export grades on this page as CSV",
   pathSave: "Save prerequisites",
   pathSaved: "Prerequisites saved.",
   pathError: "The prerequisites could not be saved. Reload the programme.",

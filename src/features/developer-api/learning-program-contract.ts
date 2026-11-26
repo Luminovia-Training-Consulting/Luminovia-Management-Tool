@@ -4,6 +4,8 @@ import {
   learningProgramId,
   learningProgramClassProgressResult,
   learningProgramGradeReport,
+  learningProgramCohortGrades,
+  readLearningProgramCohortGradesRequest,
   learningProgramClassPlacementRequest,
   readLearningProgramClassProgressRequest,
   readLearningProgramGradeReportRequest,
@@ -192,6 +194,58 @@ export function learningProgramPaths(academy = false) {
         requestBody: {
           required: true,
           content: jsonContent(readLearningProgramGradeReportRequest),
+        },
+      },
+    },
+    "/rest/v1/rpc/learning_program_cohort_grades": {
+      get: {
+        ...gradeReport,
+        operationId: "getLearningProgrammeCohortGrades",
+        summary: "List current programme cohort grades",
+        description:
+          "Course managers can read 30 currently eligible programme learners per page and their authorised released course grade reports. Search matches learner names. Pass zero to start.",
+        parameters: [
+          {
+            in: "query",
+            name: "p_program_id",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            in: "query",
+            name: "p_search",
+            schema: { type: "string", maxLength: 120 },
+          },
+          {
+            in: "query",
+            name: "p_offset",
+            schema: { type: "integer", minimum: 0, default: 0 },
+          },
+        ],
+        responses: {
+          ...gradeReport.responses,
+          "200": {
+            description: "Current cohort page",
+            content: jsonContent(learningProgramCohortGrades),
+          },
+        },
+      },
+      post: {
+        ...gradeReport,
+        operationId: "readLearningProgrammeCohortGrades",
+        summary: "Read current programme cohort grades",
+        description:
+          "Returns the current page of programme learners and their authorised released course grades to course management.",
+        requestBody: {
+          required: true,
+          content: jsonContent(readLearningProgramCohortGradesRequest),
+        },
+        responses: {
+          ...gradeReport.responses,
+          "200": {
+            description: "Current cohort page",
+            content: jsonContent(learningProgramCohortGrades),
+          },
         },
       },
     },
