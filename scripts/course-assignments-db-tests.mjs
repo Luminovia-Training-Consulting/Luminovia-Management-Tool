@@ -224,13 +224,42 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
     action(admin, "review", { ...review, scores: [7] }, 0),
     /22023/,
   );
+  const importRow = (attemptId, rubricVersion, reviewVersion, scores) => ({
+    attempt_id: attemptId, rubric_version: rubricVersion, review_version: reviewVersion, scores,
+  });
+  const importReviews = (rows, who = admin) => action(who, "import_reviews", { rows }, 0);
+  const importable = (await view(admin)).detail.attempts[0];
+  assert.equal(importable.rubric_version, 1);
+  assert.equal(importable.import_eligible, true);
+  assert.equal((await view(learner)).detail.attempts[0].import_eligible, null);
+  await assert.rejects(importReviews([importRow(receipt.id, 1, 0, [0])], peer), /42501/);
+  await assert.rejects(importReviews([importRow(receipt.id, 2, 0, [0])]), /PT409/);
+  await assert.rejects(importReviews([importRow(receipt.id, 1, 0, [7])]), /22023/);
+  await assert.rejects(importReviews([
+    importRow(receipt.id, 1, 0, [0]), importRow(receipt.id, 1, 0, [0]),
+  ]), /22023/);
+  assert.equal((await view(admin)).detail.attempts[0].review, null);
+  const learnerEnrolment = `where course_run_id=${q(run)} and user_id=${q(learner)}`;
+  await sql(`update public.course_enrolments set status='removed' ${learnerEnrolment}`);
+  assert.equal((await view(admin)).detail.attempts[0].import_eligible, false);
+  await assert.rejects(importReviews([importRow(receipt.id, 1, 0, [0])]), /PT409/);
+  await sql(`update public.course_enrolments set status='enrolled' ${learnerEnrolment}`);
   await action(admin, "review", review, 0);
+  await assert.rejects(importReviews([importRow(receipt.id, 1, 0, [0])]), /PT409/);
+  assert.deepEqual(await importReviews([importRow(receipt.id, 1, 1, [0])]), {
+    id: assignment, imported: 1,
+  });
+  const imported = (await view(admin)).detail.attempts[0].review;
+  assert.deepEqual(imported.scores, [0]);
+  assert.equal(imported.feedback, review.feedback);
+  assert.equal(imported.private_note, review.private_note);
   assert.equal((await view(learner)).detail.attempts[0].review, null);
   await assert.rejects(
     action(admin, "review", { ...review, state: "revision_requested" }, 0),
     /PT409/,
   );
-  await action(admin, "review", { ...review, state: "revision_requested" }, 1);
+  await action(admin, "review", { ...review, state: "revision_requested" }, 2);
+  await assert.rejects(importReviews([importRow(receipt.id, 1, 3, [0])]), /PT409/);
   const resubmissionView = (await view(learner)).detail;
   assert.equal(resubmissionView.attempts[0].review.feedback, review.feedback);
   assert.equal(resubmissionView.attempts[0].review.private_note, null);
@@ -413,11 +442,17 @@ await withTestDatabase("course_assignments", async ({ sql, actor }) => {
       `select private.course_completion_assignment_released(${q(teamAssignment)},${q(id)})`,
     );
   assert.equal(await completionEvidence(learner), "f");
+  assert.equal((await teamView(admin)).attempts[0].import_eligible, true);
+  assert.deepEqual(await teamAction(admin, "import_reviews", {
+    rows: [importRow(revised.id, 1, 0, [8])],
+  }, 0), { id: teamAssignment, imported: 1 });
+  assert.equal((await teamView(peer)).attempts[0].review, null);
+  assert.equal(await completionEvidence(learner), "f");
   await teamAction(
     admin,
     "review",
     { ...teamReview, attempt_id: revised.id, state: "released" },
-    0,
+    1,
   );
   assert.equal((await teamView(learner)).attempts[0].review.state, "released");
   assert.equal((await teamView(peer)).attempts[0].review.private_note, null);

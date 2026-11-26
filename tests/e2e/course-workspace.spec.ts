@@ -8,6 +8,7 @@ import {join} from "node:path";
 import {DateTime} from "luxon";
 import {Uint8ArrayReader, Uint8ArrayWriter, ZipWriter} from "@zip.js/zip.js";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
+import {fillWorkbookCell} from "./helpers/spreadsheet";
 import {accountingTestPdf} from "../../scripts/testing/accounting-pdf.mjs";
 import {scormFixtureZip} from "../../scripts/testing/scorm-fixture.ts";
 import {runXapiDispatchCli} from "../../scripts/xapi-lrs-dispatch.mjs";
@@ -1217,7 +1218,25 @@ for (const asTeam of [false, true]) test(`${asTeam ? "Team" : "Versioned"} assig
         await submit(peerPage ?? learner, secondFile, "Fiktives Laborprotokoll mit Beobachtungen.\n");
         await prepare(page);
         const second = author.getByRole("listitem").filter({hasText: secondFile});
-        await second.getByRole("combobox", {name: "Protokoll", exact: true}).selectOption("1");
+        const importButton = author.getByRole("button", {name: "Aufgabenbewertungen importieren"});
+        await importButton.press("Enter");
+        const grades = page.getByRole("dialog", {name: "Aufgabenbewertungen importieren"});
+        const capture = page.waitForEvent("download");
+        await grades.getByRole("button", {name: "Excel-Vorlage herunterladen"}).click();
+        const workbook = await readFile(await (await capture).path());
+        await grades.getByLabel("Notentabelle auswählen").setInputFiles({
+            name: "assignment-grades.xlsx",
+            mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            buffer: await fillWorkbookCell(workbook, "G2", 1, asTeam ? "Fiktives Laborteam" : "Fictional Müller"),
+        });
+        await expect(grades.getByText("Offen → 1")).toBeVisible();
+        await grades.getByRole("button", {name: "1 Note als Entwurf speichern"}).press("Enter");
+        await expect(grades.getByText("1 Note wurde als Entwurf gespeichert.")).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(importButton).toBeFocused();
+        await expect(second.getByRole("combobox", {name: "Protokoll", exact: true})).toHaveValue("1");
+        await prepare(learner);
+        await expect(submission.getByText("1 / 1 Punkte", {exact: true})).toHaveCount(0);
         await second.getByRole("combobox", {name: "Veröffentlichung", exact: true}).selectOption("released");
         await second.getByRole("button", {name: "Rückmeldung speichern", exact: true}).click();
         await expect(second.getByText("Rückmeldung freigegeben", {exact: true})).toBeVisible();

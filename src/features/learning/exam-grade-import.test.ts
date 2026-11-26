@@ -14,6 +14,13 @@ import {
   textExamGradeTemplateRows,
 } from "./text-exam-grade-import";
 
+import {
+  assignmentGradeHeaders,
+  assignmentGradeRows,
+  readAssignmentGradeImport,
+} from "./assignment-grade-import";
+import type { CourseAssignmentAttempt } from "./course-assignment-schema";
+
 const run = "19bcd476-8f8b-4cc8-9e5d-19dea2550be2";
 const learner = "ef67dd2e-eb97-40f1-81f4-dcb6ef7ef28a";
 const other = "ef67dd2e-eb97-40f1-81f4-dcb6ef7ef28b";
@@ -184,3 +191,90 @@ it("rejects duplicate submissions in a text exam workbook", async () => {
     readTextExamGradeImport(source, run, 5, maxima, submitted),
   ).rejects.toMatchObject({ row: 3 });
 });
+
+const assigned = (
+  id: string,
+  criterionCount: number,
+): CourseAssignmentAttempt => ({
+  id,
+  user_id: learner,
+  display_name: "Fictional candidate",
+  team_title: id === other ? "Fictional team" : null,
+  attempt_no: 1,
+  file_version_id: null,
+  file_name: "fictional.txt",
+  submitted_at: "2026-01-01T00:00:00Z",
+  import_eligible: true,
+  rubric: Array.from({ length: criterionCount }, (_, index) => ({
+    label: "Criterion " + (index + 1),
+    levels: [
+      { label: "Pending", points: 0 },
+      { label: "Met", points: 8 },
+    ],
+  })),
+  review: null,
+});
+const assignment = "4bbb9b66-75f7-4ab7-bd2f-608ea08dc8f5";
+const assignmentRoster = [
+  { attempt: assigned(learner, 1), version: 1 },
+  { attempt: assigned(other, 20), version: 2 },
+];
+const assignmentHeaders = assignmentGradeHeaders(20);
+
+it("round-trips exact assignment revisions including twenty criteria and an earlier rubric", async () => {
+  const rows = assignmentGradeRows(run, assignment, 20, assignmentRoster);
+  rows[0][6] = 0;
+  rows[1].fill(8, 6);
+  const xlsx = file(
+    await spreadsheetXlsxTemplate(assignmentHeaders, rows),
+    "xlsx",
+  );
+  const csv = file(csvText([assignmentHeaders, ...rows]));
+  for (const source of [csv, xlsx]) {
+    const actual = await readAssignmentGradeImport(
+      source,
+      run,
+      assignment,
+      20,
+      assignmentRoster,
+    );
+    expect(actual.map(({ row }) => row)).toEqual([
+      {
+        attempt_id: learner,
+        rubric_version: 1,
+        review_version: 0,
+        scores: [0],
+      },
+      {
+        attempt_id: other,
+        rubric_version: 2,
+        review_version: 0,
+        scores: Array(20).fill(8),
+      },
+    ]);
+  }
+});
+
+it.each([
+  [1, other],
+  [4, 2],
+  [5, 1],
+  [6, 7],
+  [7, 8],
+])(
+  "rejects assignment rows with mismatched scope or rubric cells",
+  async (column, value) => {
+    const [row] = assignmentGradeRows(run, assignment, 20, assignmentRoster);
+    row[6] = 8;
+    row[column] = value;
+    await expect(
+      readAssignmentGradeImport(
+        file(csvText([assignmentHeaders, row])),
+        run,
+        assignment,
+        20,
+        assignmentRoster,
+      ),
+    ).rejects.toMatchObject({ row: 2 });
+  },
+);

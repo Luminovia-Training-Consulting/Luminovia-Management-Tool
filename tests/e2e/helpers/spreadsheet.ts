@@ -11,9 +11,9 @@ import {
 
 export async function fillWorkbookCell(
   template: Uint8Array,
-  cell: "E2" | "F2",
+  cell: "E2" | "F2" | "G2",
   score: number,
-  learnerId: string,
+  expectedValue: string,
 ) {
   const source = new ZipReader(new Uint8ArrayReader(template));
   const edited = new ZipWriter(new Uint8ArrayWriter());
@@ -24,7 +24,7 @@ export async function fillWorkbookCell(
       if (entry.directory) continue;
       let xml = await entry.getData(new TextWriter());
       if (entry.filename === worksheet) {
-        expect(xml).toContain(learnerId);
+        expect(xml).toContain(expectedValue);
         const blank = new RegExp(`<c r="${cell}"[^>]*>[\\s\\S]*?<\\/c>`);
         expect(xml).toMatch(blank);
         xml = xml.replace(blank, `<c r="${cell}"><v>${score}</v></c>`);
