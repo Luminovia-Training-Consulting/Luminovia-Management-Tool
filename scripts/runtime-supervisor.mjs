@@ -197,10 +197,16 @@ try {
     }
     const origin = config.site;
     const extra = readEnvFile(join(runtimeDir, "services.env"));
+    // Only the opt-in LTI settings flow to the worker; never add them to browser or status state.
+    const localLti = readEnvFile(join(runtimeDir, "lti.env"));
     privateWrite(
         join(runtimeDir, "functions.env"),
         Object.entries({
             ...extra,
+            ...(localLti.LTI_PLATFORM_ISSUER && localLti.LTI_PLATFORM_RSA_PRIVATE_JWK ? {
+                LTI_PLATFORM_ISSUER: localLti.LTI_PLATFORM_ISSUER,
+                LTI_PLATFORM_RSA_PRIVATE_JWK: localLti.LTI_PLATFORM_RSA_PRIVATE_JWK,
+            } : {}),
             PORTAL_INVITES_ENABLED: "true",
             PORTAL_ALLOWED_ORIGINS: localEdgeOrigins(config).join(","),
             PORTAL_APP_ORIGIN: origin,
