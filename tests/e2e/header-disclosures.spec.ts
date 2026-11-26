@@ -52,6 +52,7 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
       const accountTrigger = account.locator("summary");
       await accountTrigger.click();
       await expectInsideViewport(account.locator(".account-menu-panel"));
+      await expect(account.locator(".account-menu-signout")).toBeHidden();
       await account.getByRole("link").first().focus();
       await page.keyboard.press("Escape");
       await expect(accountTrigger).toBeFocused();
@@ -67,12 +68,36 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
       await expectInsideViewport(bell.locator(".notification-popover"));
       await more.locator("summary").click();
       await expect(bell).toHaveJSProperty("open", false);
-      await expectInsideViewport(more.locator(".mobile-menu-panel"));
+      const menuPanel = more.locator(".mobile-menu-panel");
+      await expectInsideViewport(menuPanel);
+      await expect(menuPanel).toHaveCSS("position", "fixed");
+      await expect(more.locator("nav")).toHaveCSS("overflow-y", "auto");
+      const footer = menuPanel.locator(".mobile-menu-footer");
+      await expect(footer).toBeVisible();
+      await expect(
+        menuPanel.getByRole("button", { name: /Abmelden|Sign out/ }),
+      ).toBeVisible();
+      const bottomGap = await menuPanel.evaluate((panel) => {
+        const panelBottom = panel.getBoundingClientRect().bottom;
+        const footerBottom = panel
+          .querySelector(".mobile-menu-footer")!
+          .getBoundingClientRect().bottom;
+        return panelBottom - footerBottom;
+      });
+      expect(bottomGap).toBeLessThanOrEqual(1);
       await expect(header.getByRole("search")).toHaveCount(1);
       await expect(header.locator(".notification-menu")).toHaveCount(1);
       await page.keyboard.press("Escape");
       await expect(more).toHaveJSProperty("open", false);
+      await expect(more.locator("summary")).toBeFocused();
     }
+
+    await page.setViewportSize({ width: 320, height: 240 });
+    await more.locator("summary").click();
+    await expectInsideViewport(more.locator(".mobile-menu-panel"));
+    await expect(more.locator(".mobile-menu-footer")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(more.locator("summary")).toBeFocused();
 
     await page.goto("/admin/people");
     const peopleSearch = page.locator("#people-search");
@@ -83,6 +108,9 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
     }));
     expect(widths.field).toBeLessThanOrEqual(320);
     expect(widths.page).toBeLessThanOrEqual(320);
+    await more.locator("summary").click();
+    await more.getByRole("button", { name: /Abmelden|Sign out/ }).click();
+    await expect(page).toHaveURL(/\/login$/);
   } finally {
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
     await checked(service.auth.admin.deleteUser(admin.id));

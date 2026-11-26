@@ -23,6 +23,7 @@ const groups: Record<
     "assignment_withdrawal_withdrawn",
     "job_reopened",
     "job_matching",
+    "course_offer_published",
     "session_reminder",
     "calendar_invitation",
     "replacement_available",

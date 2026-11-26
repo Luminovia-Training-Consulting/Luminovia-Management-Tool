@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { DateTime } from "luxon";
-import { actor, api, checked, login } from "./helpers/accounts-support";
+import { actor, api, checked, login, signOut } from "./helpers/accounts-support";
 
 test.skip(process.env.PORTAL_TEST_MODE !== "1", "Use the isolated portal.");
 
@@ -155,7 +155,7 @@ test("a sick day returns only that day's sessions to the top of normal job disco
   ).rpc("job_detail", { p_job_id: receipt.job_id });
   expect(denied.error?.code).toBe("42501");
 
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  await signOut(page);
   await login(page, available.email);
   await page.goto(`/jobs?q=${encodeURIComponent(prefix)}`);
   const cards = page.locator(".jobs-grid > .job-card");

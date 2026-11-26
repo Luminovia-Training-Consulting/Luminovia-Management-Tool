@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
 import {randomUUID} from "node:crypto";
-import {actor, api, checked, login} from "./helpers/accounts-support";
+import {actor, api, checked, login, signOut} from "./helpers/accounts-support";
 
 /** Exercise responsive native disclosures and real subscription/offline actions with disposable fictional records. */
 test("calendar secret links and explicit minimal offline schedule survive reload and clear on logout", async ({
@@ -298,7 +298,7 @@ test("calendar secret links and explicit minimal offline schedule survive reload
             page.getByText(/Gespeicherte Vorschau: Änderungen und Absagen/),
         ).toBeVisible();
         await page.context().setOffline(false);
-        await page.getByRole("button", {name: "Abmelden", exact: true}).click();
+        await signOut(page);
         await expect(page).toHaveURL(/\/login$/);
         await expect.poll(async () => Boolean(await readSnapshot())).toBe(false);
     } finally {

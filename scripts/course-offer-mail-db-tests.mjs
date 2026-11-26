@@ -1,3 +1,4 @@
+/** Verify first publication and independent, recipient-scoped email and device delivery. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
@@ -56,6 +57,10 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
         update public.profiles set locale = 'en' where id = ${q(matching)};
         update private.delivery_preferences set email_enabled = true where user_id <> ${q(optedOut)};
         update private.notification_preferences set job_updates = false where user_id = ${q(noUpdates)};
+        update private.push_configuration set enabled = true;
+        insert into private.push_subscriptions(user_id,endpoint,p256dh,auth_secret,device_token,label)
+          select profile.id,'https://fcm.googleapis.com/' || profile.id::text,'fixture','fixture',gen_random_uuid(),'Fictional device'
+          from public.profiles profile where profile.id in (${[matching, broad, optedOut, noUpdates, inactive, noRole, differentArea].map(q).join(",")});
         insert into public.organisations(id,name) values(${q(company)},'Fictional company');
         insert into private.company_lecturers(organisation_id,lecturer_id) values(${q(company)},${q(broad)});
         insert into public.topics(id,kind,label_de,label_en) values(${q(topic)},'topic','Übung','Practice');
@@ -101,6 +106,16 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
     (await queue(job))
       .filter(({ kind }) => kind === "course_offer_published")
       .map(({ user }) => user);
+  const pushQueue = async (job) =>
+    JSON.parse(
+      await sql(`
+    select coalesce(jsonb_agg(jsonb_build_object('id', o.id, 'user', n.user_id,
+      'kind', n.kind, 'state', o.state) order by n.user_id),'[]'::jsonb)
+    from private.notification_push_outbox o join public.notifications n on n.id = o.notification_id
+    where n.resource_id = ${q(job)};`),
+    );
+  const preparePush = (lease) =>
+    service("prepare_notification_push", [q(lease.id), q(lease.lease_token)]);
   const publish = (job) =>
     sql(`update public.jobs set status='published' where id=${q(job)}`);
   const create = async ({
@@ -137,6 +152,7 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
 
   const draft = await create({ commission: true });
   assert.deepEqual(await queue(draft), []);
+  assert.deepEqual(await pushQueue(draft), []);
   const version = Number(
     await sql(
       `select lifecycle_version from public.jobs where id = ${q(draft)}`,
@@ -147,6 +163,26 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
     `select public.manage_job_offer(${q(draft)},'published',${version},${q(randomUUID())},'{}'::jsonb)`,
   );
   assert.deepEqual(await richUsers(draft), [matching, broad].sort());
+  assert.deepEqual(
+    (await pushQueue(draft))
+      .filter(({ kind }) => kind === "course_offer_published")
+      .map(({ user }) => user),
+    [matching, broad, optedOut].sort(),
+  );
+  const firstPushLeases = await service("lease_notification_push", [20]);
+  const firstPushDeliveries = (
+    await Promise.all(firstPushLeases.map(preparePush))
+  ).filter(Boolean);
+  assert.equal(firstPushDeliveries.length, 3);
+  for (const delivery of firstPushDeliveries) {
+    assert.deepEqual(Object.keys(delivery).sort(), [
+      "device_token",
+      "id",
+      "lease_token",
+      "locale",
+      "subscription",
+    ]);
+  }
   assert.equal(
     await actor(broad, `select count(*) from public.jobs where id=${q(draft)}`),
     "1",
@@ -157,6 +193,13 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
       `select count(*) from public.jobs where id=${q(draft)}`,
     ),
     "0",
+  );
+  const inbox = JSON.parse(
+    await actor(optedOut, "select public.notification_inbox()"),
+  );
+  assert.equal(
+    inbox.items.find(({ kind }) => kind === "course_offer_published")?.href,
+    `/jobs/${draft}`,
   );
   const leases = await service("lease_notification_emails", [20]);
   for (const lease of leases) {
@@ -186,7 +229,7 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
       broad,
       `select count(*) from public.notifications where kind='course_offer_published'`,
     ),
-    "0",
+    "1",
   );
   await sql(
     `update public.jobs set description='Edited' where id=${q(draft)};`,
@@ -211,6 +254,14 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
   const internal = await create({ status: "published", internal: true });
   assert.deepEqual(await richUsers(restricted), [broad]);
   assert.deepEqual(await richUsers(internal), [broad]);
+  const restrictedDevice = (await pushQueue(restricted)).find(
+    ({ kind }) => kind === "course_offer_published",
+  );
+  assert.equal(restrictedDevice?.user, broad);
+  const restrictedPush = (await service("lease_notification_push", [100])).find(
+    ({ id }) => id === restrictedDevice.id,
+  );
+  assert.ok(restrictedPush);
   const internalOutbox =
     await sql(`select o.id from private.notification_email_outbox o
       join public.notifications n on n.id=o.notification_id
@@ -229,6 +280,12 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
   assert.equal(await finish(internalLease), true);
   await sql(
     `delete from private.company_lecturers where organisation_id=${q(company)} and lecturer_id=${q(broad)};`,
+  );
+  assert.equal(await preparePush(restrictedPush), null);
+  assert.equal(
+    (await pushQueue(restricted)).find(({ id }) => id === restrictedDevice.id)
+      ?.state,
+    "suppressed",
   );
   for (const lease of privateLeases.filter(({ id }) => id !== internalOutbox))
     await prepare(lease);
