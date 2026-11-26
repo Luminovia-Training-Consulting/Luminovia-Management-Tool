@@ -47,18 +47,7 @@ function openLesson(payload, send) {
     "<!doctype html><html></html>",
     "text/html",
   );
-  // Parse archived markup in an inert template. The approved resource mapping
-  // replaces URL attributes before a dedicated-origin browser loads the frame.
-  const template = shell.createElement("template");
   const text = new TextDecoder("utf-8", { fatal: true });
-  template.innerHTML = text.decode(files.get(payload.path));
-  if (
-    template.content.querySelector(
-      "frame,frameset,iframe,object,embed,base,form",
-    )
-  ) {
-    throw new Error("Unsupported SCORM launch layout");
-  }
   const assetUrls = new Map();
   const mime = new Map([
     ["js", "text/javascript"],
@@ -81,16 +70,20 @@ function openLesson(payload, send) {
       "https://assets.invalid/" +
       relativeTo.split("/").map(encodeURIComponent).join("/");
     const url = new URL(value, source);
-    const path = url.pathname
-      .split("/")
-      .slice(1)
-      .map(decodeURIComponent)
-      .join("/");
-    if (url.origin !== "https://assets.invalid" || !files.has(path))
+    try {
+      const path = url.pathname
+        .split("/")
+        .slice(1)
+        .map(decodeURIComponent)
+        .join("/");
+      if (url.origin !== "https://assets.invalid" || !files.has(path))
+        return null;
+      return path;
+    } catch {
       return null;
-    return path;
+    }
   };
-  const urlFor = (value, relativeTo = payload.path, expectedMime = "") => {
+  const urlFor = (value, relativeTo, expectedMime = "") => {
     const path = identify(value, relativeTo);
     if (!path) return null;
     const extension = path.split(".").pop()?.toLowerCase();
@@ -123,52 +116,86 @@ function openLesson(payload, send) {
     return address;
   };
 
-  for (const element of template.content.querySelectorAll("*")) {
-    if (element.localName === "meta") {
-      element.remove();
-      continue;
+  const contentUrls = new Map();
+  function render(path) {
+    const previous = contentUrls.get(path);
+    if (previous) return previous;
+    // Inert parsing avoids resource reads until the isolated browser loads
+    // the reviewed markup and its mapped local assets.
+    const template = shell.createElement("template");
+    template.innerHTML = text.decode(files.get(path));
+    if (
+      template.content.querySelector(
+        "frame,frameset,iframe,object,embed,base,form",
+      )
+    ) {
+      throw new Error("Unsupported SCORM launch layout");
     }
-    if (element.namespaceURI !== "http://www.w3.org/1999/xhtml") {
-      element.remove();
-      continue;
-    }
-    for (const attribute of [...element.attributes]) {
-      if (
-        /^(action|srcset|target|ping|formaction|srcdoc|background|manifest|data|xlink:href|attributionsrc)$/i.test(
-          attribute.name,
-        )
-      ) {
-        element.removeAttribute(attribute.name);
+    for (const element of template.content.querySelectorAll("*")) {
+      if (element.localName === "meta") {
+        element.remove();
+        continue;
+      }
+      if (element.namespaceURI !== "http://www.w3.org/1999/xhtml") {
+        element.remove();
+        continue;
+      }
+      for (const attribute of [...element.attributes]) {
+        if (
+          /^(action|srcset|target|ping|formaction|srcdoc|background|manifest|data|data-scorm-href|xlink:href|attributionsrc)$/i.test(
+            attribute.name,
+          )
+        ) {
+          element.removeAttribute(attribute.name);
+        }
+      }
+      for (const attribute of ["href", "src", "poster"]) {
+        const value = element.getAttribute(attribute);
+        if (!value) continue;
+        if (attribute === "href" && element.localName === "a") {
+          if (value.startsWith("#")) continue;
+          const destination = identify(value, path);
+          if (
+            destination &&
+            /\.html?$/i.test(destination) &&
+            !value.split("#", 1)[0].includes("?")
+          ) {
+            element.setAttribute("href", "#");
+            element.setAttribute("data-scorm-href", value);
+          } else {
+            element.removeAttribute(attribute);
+          }
+          continue;
+        }
+        const expected =
+          element.localName === "script" && attribute === "src"
+            ? "text/javascript"
+            : element.localName === "link" &&
+                attribute === "href" &&
+                element.getAttribute("rel")?.toLowerCase() === "stylesheet"
+              ? "text/css"
+              : ["img", "video", "source", "audio", "track"].includes(
+                    element.localName,
+                  )
+                ? ""
+                : null;
+        const mapped = expected === null ? null : urlFor(value, path, expected);
+        if (mapped) element.setAttribute(attribute, mapped);
+        else if (element.localName === "script" || element.localName === "link")
+          throw new Error("Unsupported linked resource");
+        else element.removeAttribute(attribute);
       }
     }
-    for (const attribute of ["href", "src", "poster"]) {
-      const value = element.getAttribute(attribute);
-      if (!value) continue;
-      if (
-        attribute === "href" &&
-        element.localName === "a" &&
-        value.startsWith("#")
-      )
-        continue;
-      const expected =
-        element.localName === "script" && attribute === "src"
-          ? "text/javascript"
-          : element.localName === "link" &&
-              attribute === "href" &&
-              element.getAttribute("rel")?.toLowerCase() === "stylesheet"
-            ? "text/css"
-            : ["img", "video", "source", "audio", "track"].includes(
-                  element.localName,
-                )
-              ? ""
-              : null;
-      const mapped =
-        expected === null ? null : urlFor(value, payload.path, expected);
-      if (mapped) element.setAttribute(attribute, mapped);
-      else if (element.localName === "script" || element.localName === "link")
-        throw new Error("Unsupported linked resource");
-      else element.removeAttribute(attribute);
-    }
+
+    const markup =
+      "<!doctype html><html><head><meta charset=utf-8></head><body>" +
+      template.innerHTML +
+      "</body></html>";
+    const address = URL.createObjectURL(
+      new Blob([markup], { type: "text/html;charset=utf-8" }),
+    );
+    contentUrls.set(path, address);
+    return address;
   }
 
   window.API = createScormApi(payload.cmi, {
@@ -178,19 +205,35 @@ function openLesson(payload, send) {
   const iframe = document.createElement("iframe");
   iframe.title = payload.title;
   iframe.referrerPolicy = "no-referrer";
-  const launchMarkup =
-    "<!doctype html><html><head><meta charset=utf-8></head><body>" +
-    template.innerHTML +
-    "</body></html>";
-  const contentUrl = URL.createObjectURL(
-    new Blob([launchMarkup], { type: "text/html;charset=utf-8" }),
-  );
-  iframe.src = contentUrl;
+  let currentPath = payload.path;
+  iframe.addEventListener("load", () => {
+    iframe.contentDocument?.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target?.closest?.("a[data-scorm-href]");
+        if (!target) return;
+        event.preventDefault();
+        const href = target.getAttribute("data-scorm-href");
+        const path = identify(href, currentPath);
+        if (!path || !/\.html?$/i.test(path)) return;
+        try {
+          const documentUrl = render(path);
+          const hash = href.includes("#") ? href.slice(href.indexOf("#")) : "";
+          currentPath = path;
+          iframe.src = documentUrl + hash;
+        } catch {
+          send("scorm:error");
+        }
+      },
+      true,
+    );
+  });
+  iframe.src = render(currentPath);
   document.body.replaceChildren(iframe);
   window.addEventListener(
     "pagehide",
     () => {
-      URL.revokeObjectURL(contentUrl);
+      for (const url of contentUrls.values()) URL.revokeObjectURL(url);
       for (const url of assetUrls.values()) URL.revokeObjectURL(url);
     },
     { once: true },
