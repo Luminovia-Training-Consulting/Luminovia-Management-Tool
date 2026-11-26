@@ -944,7 +944,7 @@ function Completion({
           />
         </>
       ) : active ? (
-        <>
+        <div className="space-y-3">
           <CompletionRequirements query={status} zone={course.time_zone} />
           {academy !== "grace" && (
             <Button
@@ -959,7 +959,7 @@ function Completion({
               {t("issueCompletion")}
             </Button>
           )}
-        </>
+        </div>
       ) : null}
       <Result error={save.isError} />
     </section>
