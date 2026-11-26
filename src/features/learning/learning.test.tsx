@@ -603,6 +603,17 @@ describe("connected course workspace", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("offers only a new upload when there are no reviewed file versions", async () => {
+    fake.workspace.access.manager = true;
+    setup();
+    expect(
+      await screen.findByRole("heading", { name: "Neue Kursdatei freigeben" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Vorhandene Dateifassung freigeben"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shares an authorized file version with operational audiences only", async () => {
     fake.workspace.access.manager = true;
     fake.workspace.share_options = [
@@ -610,6 +621,9 @@ describe("connected course workspace", () => {
     ];
     const user = userEvent.setup();
     setup();
+    await user.click(
+      await screen.findByText("Vorhandene Dateifassung freigeben"),
+    );
     const versions = await screen.findByRole("combobox", {
       name: "Geprüfte Dateifassung",
     });

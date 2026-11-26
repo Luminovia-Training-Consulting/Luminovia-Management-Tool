@@ -1028,6 +1028,10 @@ const pairs: Record<string, [string, string]> = {
     "Damit endet die Freigabe dieser Datei im aktuellen Kurs.",
     "This ends access to this file through the current course.",
   ],
+  shareReviewedVersion: [
+    "Vorhandene Dateifassung freigeben",
+    "Share an existing file version",
+  ],
   reviewedVersion: ["Geprüfte Dateifassung", "Reviewed file version"],
   audience: ["Sichtbarkeit", "Audience"],
   category: ["Dokumentart", "Document category"],

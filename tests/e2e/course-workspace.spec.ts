@@ -863,6 +863,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
             .single(),
         {requireData: true},
     );
+    await resources.getByText("Vorhandene Dateifassung freigeben", {exact: true}).click();
     await resources
         .getByLabel("Geprüfte Dateifassung", {exact: true})
         .selectOption(selected.current_version_id);
