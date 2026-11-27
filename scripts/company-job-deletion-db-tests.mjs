@@ -594,6 +594,7 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
                 "can_edit_course_details",
                 "can_edit_metadata",
                 "replaceable_claim_ids",
+                "partial_replaceable_claim_ids",
                 "can_edit_dispatch",
                 "can_edit_schedule",
                 "can_reassign_company",
@@ -617,6 +618,7 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
                 assert.equal(current.gross_budget, privileged ? 300.03 : null);
                 assert.equal(current.max_net_budget, privileged ? 300.03 : null);
                 assert.deepEqual(current.claims, []);
+                assert.deepEqual(current.partial_replaceable_claim_ids, []);
                 assert.equal(current.organisation_id, [admin, owner, manager].includes(who) ? org : null);
                 for (const field of ["class_id", "class_name", "dispatch_contact", "meeting_url"])
                     assert.equal(current[field], null, field);
@@ -661,6 +663,7 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
             assert.equal(ownDispatch.gross_budget, null);
             assert.equal(ownDispatch.max_net_budget, null);
             assert.deepEqual(ownDispatch.claims, []);
+            assert.deepEqual(ownDispatch.partial_replaceable_claim_ids, []);
             await assert.rejects(read(otherCompany, rolePriced, "aal1"), /42501|denied/i);
             const publicRate = JSON.parse(
                 await sql(
