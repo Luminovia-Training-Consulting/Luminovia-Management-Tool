@@ -230,6 +230,7 @@ function resourceLabel(
     course_notebooks: "courseNotebooks",
     course_resource_acknowledgements: "courseResourceAcknowledgements",
     notification_email_outbox: "emailDeliveries",
+    customer_order_receipts: "customerOrderReceipts",
     notification_push_outbox: "pushDeliveries",
     teaching_preparation: "teachingPreparation",
     client_request_briefs: "clientRequestBriefs",

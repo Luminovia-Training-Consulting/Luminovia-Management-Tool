@@ -68,6 +68,10 @@ const pairs: Record<string, [string, string]> = {
     "E-Mail-Vorgänge zur Auftragsveröffentlichung",
     "Job publication email records",
   ],
+  customerOrderReceipts: [
+    "Bestätigungen für Unternehmensaufträge",
+    "Company order receipts",
+  ],
   assignmentPricingRecords: [
     "Zuweisungskonditionen",
     "Assignment pricing records",
