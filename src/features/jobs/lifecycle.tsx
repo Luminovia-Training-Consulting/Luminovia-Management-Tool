@@ -39,7 +39,6 @@ import {
 } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./lifecycle.css";
-
 import { ManualAssignment } from "./manual-assignment";
 import { topicsQuery } from "../../lib/queries";
 import { selectableTopics } from "../taxonomy/selection";
@@ -65,6 +64,12 @@ type Confirmation = {
 };
 
 /** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
+const JobPublicationWindow = lazy(() =>
+  import("./job-publication-window").then(({ JobPublicationWindow }) => ({
+    default: JobPublicationWindow,
+  })),
+);
+
 const AssignmentMatchingRequirements = lazy(() =>
   import("./matching-preferences").then(
     ({ AssignmentMatchingRequirements }) => ({
@@ -431,10 +436,15 @@ export function JobLifecyclePanel({
         )}
       {info.can_manage && (
         <Suspense fallback={null}>
-          <AssignmentMatchingRequirements
-            actor={session!.user.id}
-            job={job.id}
-          />
+          {online && (
+            <JobPublicationWindow actor={session!.user.id} job={job.id} />
+          )}
+          {online && (
+            <AssignmentMatchingRequirements
+              actor={session!.user.id}
+              job={job.id}
+            />
+          )}
         </Suspense>
       )}
       {info.can_manage && (

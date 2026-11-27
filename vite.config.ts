@@ -329,6 +329,7 @@ export default defineConfig(({ mode }) => {
             "**/training-commercial-*.{js,css}",
             "**/training-course-preset-*.{js,css}",
             "**/matching-preferences-*.js",
+            "**/job-publication-window-*.js",
             "**/offer-delivery-summary-*.js",
             "**/expense-panel-*.{js,css}",
             "**/assignment-finance-*.{js,css}",

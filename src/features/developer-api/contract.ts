@@ -1211,6 +1211,43 @@ const jobRequirementFields = {
   teaching_languages: teachingLanguageCodes,
   document_evidence_required: boolean,
 };
+const publicationAudience = { enum: ["marketplace", "selected", "priority"] };
+const publicationPlan = object({
+  version,
+  time_zone: text,
+  can_schedule: boolean,
+  state: {
+    enum: [
+      "scheduled",
+      "active",
+      "released",
+      "expired",
+      "cancelled",
+      "blocked",
+      null,
+    ],
+  },
+  audience: { anyOf: [publicationAudience, { type: "null" }] },
+  opens_at: nullableDateTime,
+  selection_ends_at: nullableDateTime,
+  invitees: {
+    type: "array",
+    maxItems: 40,
+    items: object({
+      id: uuid,
+      name: text,
+      status: {
+        enum: ["accepted", "cancelled", "expired", "scheduled", "available"],
+      },
+    }),
+  },
+});
+const publicationScheduleInput = object({
+  audience: publicationAudience,
+  opens_at: nullableDateTime,
+  selection_ends_at: nullableDateTime,
+  lecturer_ids: { type: "array", maxItems: 40, items: uuid },
+});
 const manualAssignmentReceipt = {
   anyOf: [
     object({ status: replacementRefusal }),
@@ -3119,6 +3156,43 @@ const nativePaths = {
       p_payload: object(jobRequirementFields),
     },
     object({ version, can_edit: boolean, ...jobRequirementFields }),
+  ),
+  "/rest/v1/rpc/job_publication_plan": rpc(
+    "native_job_publication_plan",
+    "Jobs",
+    "Read a reviewed offer publication plan",
+    "Requires internal job management authority. Includes the job revision, release window and invitation states.",
+    { p_job_id: uuid },
+    publicationPlan,
+  ),
+  "/rest/v1/rpc/job_publication_candidates": rpc(
+    "native_job_publication_candidates",
+    "Jobs",
+    "Find eligible lecturers to invite",
+    "Requires current job management authority and a draft offer. Results omit private calendar detail, eligibility evidence and compensation.",
+    { p_job_id: uuid, p_search: { ...text, maxLength: 120, default: "" } },
+    { type: "array", maxItems: 40, items: object({ id: uuid, name: text }) },
+    ["p_search"],
+  ),
+  "/rest/v1/rpc/job_publication_action": rpc(
+    "native_job_publication_action",
+    "Jobs",
+    "Review publication timing and assignment invitations",
+    "Requires current internal job management and the current job revision. Schedule with explicit offsets, or use a null opening time to publish now. Cancel a scheduled plan with an empty payload, or cancel a single unaccepted invitation with its lecturer ID. Replay the exact request with the same request ID.",
+    {
+      p_job_id: uuid,
+      p_action: { enum: ["schedule", "cancel", "cancel_invitation"] },
+      p_expected_version: version,
+      ...idempotency,
+      p_payload: {
+        oneOf: [
+          publicationScheduleInput,
+          object({}),
+          object({ lecturer_id: uuid }),
+        ],
+      },
+    },
+    publicationPlan,
   ),
   "/rest/v1/rpc/manual_assignment_candidates": rpc(
     "native_manual_assignment_candidates",
