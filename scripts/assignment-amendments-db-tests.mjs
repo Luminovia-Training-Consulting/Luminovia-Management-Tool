@@ -396,11 +396,21 @@ await withTestDatabase(
     assert.equal(report.gross_total_amount, 300);
     assert.equal(report.lecturer_net_total_amount, 170);
     assert.equal(report.platform_total_amount, 130);
-    const dateAfter = (days) =>
-      new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+    const [forecastFrom, forecastUntil] = (
+      await sql(`
+        select min(session.starts_at at time zone (
+          select time_zone from public.profiles where id=${q(admin)}
+        ))::date::text || '|' ||
+        (min(session.starts_at at time zone (
+          select time_zone from public.profiles where id=${q(admin)}
+        ))::date + 1)::text
+        from public.assignment_sessions session
+        where session.claim_id=${q(linked.claim)} and session.released_at is null
+      `)
+    ).split("|");
     const forecast = await rpc(admin, "finance_forecast", [
-      dateAfter(8),
-      dateAfter(12),
+      forecastFrom,
+      forecastUntil,
       0,
     ]);
     const [month] = forecast.months;
