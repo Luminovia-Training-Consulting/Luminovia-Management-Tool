@@ -30,8 +30,6 @@ import { AcademyCourseAccess } from "../features/auth/installation-access";
 import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
 import { SignOutButton } from "../features/auth/sign-out-button";
-import { HelpCenter } from "../features/help/help";
-import { AcademyAdministrationPage } from "../features/learning/academy-administration";
 import { LearningHubPage } from "../features/learning/course-hub";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
@@ -49,6 +47,17 @@ import "../features/analytics/learning-i18n";
 import "../features/learning/academy-timetable-i18n";
 import "./academy-routes.css";
 
+// Public sign-in and the learning entry do not need the administration or help screens.
+const HelpCenter = lazy(() =>
+  import("../features/help/help").then((module) => ({
+    default: module.HelpCenter,
+  })),
+);
+const AcademyAdministrationPage = lazy(() =>
+  import("../features/learning/academy-administration").then((module) => ({
+    default: module.AcademyAdministrationPage,
+  })),
+);
 const AcademyTimetable = lazy(() =>
   import("../features/learning/academy-timetable").then((module) => ({
     default: module.AcademyTimetable,
