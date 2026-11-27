@@ -31,12 +31,13 @@ test("management prices its own offer and edits it before acceptance", async ({p
     await expect(page.getByText("Senior-Dozent:in – Standardanteil", {exact: false})).toHaveCount(0);
     const create = page.waitForResponse(
         (response) => response.request().method() === "POST" &&
-            new URL(response.url()).pathname.endsWith("/rest/v1/rpc/create_capacity_job"),
+            new URL(response.url()).pathname.endsWith("/rest/v1/rpc/training_offer_creator_draft_action") &&
+            response.request().postDataJSON()?.p_action === "commit",
     );
     await page.getByRole("button", {name: "Auftrag speichern", exact: true}).click();
     const created = await create;
     expect(created.ok()).toBe(true);
-    const id = await created.json();
+    const {job_id: id} = await created.json();
 
     const managerApi = api(process.env.SUPABASE_ANON_KEY!);
     await checked(managerApi.auth.signInWithPassword({email: manager.email, password: process.env.E2E_PASSWORD!}));

@@ -325,6 +325,12 @@ import {
   companyReferenceLimit,
 } from "../operations/company-participant-schema.ts";
 
+import {
+  offerDraftIndex,
+  offerDraftReceipt,
+  offerDraftSnapshot,
+} from "../admin/offer-creator-draft-schema.ts";
+
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
 const version = { type: "integer", minimum: 0 };
@@ -2483,6 +2489,52 @@ const nativePaths = {
         }),
       ]),
     ),
+  ),
+  "/rest/v1/rpc/training_offer_creator_drafts": rpc(
+    "listTrainingOfferCreatorDrafts",
+    "Jobs",
+    "List or restore the caller's assignment drafts",
+    "Internal installation only. Requires jobs.manage and courses.manage for a course-backed draft. Omit the course to list standalone drafts and pass the draft ID to restore its exact revision.",
+    { p_course_run_id: nullableUuid, p_draft_id: nullableUuid },
+    z.toJSONSchema(offerDraftIndex),
+    ["p_course_run_id", "p_draft_id"],
+  ),
+  "/rest/v1/rpc/training_offer_creator_draft_action": rpc(
+    "changeTrainingOfferCreatorDraft",
+    "Jobs",
+    "Save, duplicate, discard or confirm an assignment draft",
+    "Requires the draft owner and the expected revision. Confirming invokes the existing assignment creator and records the result atomically. Replay the same draft revision and confirmation after an interrupted response.",
+    {
+      p_course_run_id: nullableUuid,
+      p_draft_id: uuid,
+      p_expected_revision: version,
+      p_action: { enum: ["save", "duplicate", "discard", "commit"] },
+      p_payload: {
+        anyOf: [
+          z.toJSONSchema(offerDraftSnapshot),
+          object({ new_id: uuid }),
+          { type: "object", maxProperties: 0 },
+          {
+            type: "object",
+            properties: {
+              offer: {
+                type: "object",
+                description:
+                  "Offer payload for the selected course-backed or standalone creator.",
+              },
+              commission: { type: ["number", "null"] },
+              capacity: { type: "integer", minimum: 1, maximum: 20 },
+              organisation_id: nullableUuid,
+              preset_id: nullableUuid,
+              preset_revision: { type: ["integer", "null"], minimum: 1 },
+            },
+            required: ["offer"],
+            additionalProperties: false,
+          },
+        ],
+      },
+    },
+    z.toJSONSchema(offerDraftReceipt),
   ),
   "/rest/v1/rpc/course_creator_drafts": rpc(
     "listCourseCreatorDrafts",

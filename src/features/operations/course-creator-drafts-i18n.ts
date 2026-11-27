@@ -2,6 +2,18 @@
 import i18n from "../../lib/i18n";
 
 const labels = {
+  offerLibrary: ["Gespeicherte Angebotsentwürfe", "Saved offer drafts"],
+  offerLibraryDescription: [
+    "Setze einen eigenen Entwurf fort oder öffne den bereits angelegten Auftrag.",
+    "Resume your own draft or open the confirmed assignment.",
+  ],
+  newOfferDraft: ["Neuen Entwurf beginnen", "Start a new draft"],
+  untitledOffer: ["Angebotsentwurf ohne Titel", "Untitled offer draft"],
+  openAssignment: ["Auftrag ansehen", "View assignment"],
+  acceptCourseRevision: [
+    "Aktuellen Kursstand übernehmen",
+    "Use the current course revision",
+  ],
   library: ["Kurs- und Auftragsentwürfe", "Course and assignment drafts"],
   start: [
     "Kurs- und Auftragsassistent starten",

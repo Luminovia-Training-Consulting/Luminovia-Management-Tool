@@ -324,6 +324,7 @@ export default defineConfig(({ mode }) => {
             "**/delivery-schema-*.js",
             "**/delivery-i18n-*.js",
             "**/course-creator-drafts-*.js",
+            "**/offer-creator-drafts-*.js",
             "**/course-reuse-*.{js,css}",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",

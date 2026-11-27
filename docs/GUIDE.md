@@ -746,6 +746,8 @@ The log records structured activity such as account creation, invitations, acces
 
 The shell's **Im Portal suchen / Search the portal** uses server-authorised cursor search across jobs, clean files, permitted wiki/forum/chat, people, courses, client/task and authorised commercial metadata. Enter at least two characters; load another page when available. Private drafts, message/task source access and commercial capabilities remain enforced, and the destination checks access again. A copied UUID, favourite or old notification never becomes a grant.
 
+Open **Gespeicherte Angebotsentwürfe / Saved offer drafts** in a standalone or course-backed offer form to resume or duplicate an unfinished offer. **Zwischenstand speichern / Save progress** saves incomplete values without creating a public listing. The library links to the resulting assignment after the offer is confirmed.
+
 When copying a course, choose the schedule and content to reuse, then review the preview before saving. You can include an unpublished offer based on its base compensation and optionally its eligibility requirements. The copied offer needs its own terms and publication review.
 
 In an eligible assignment, **Einzelne Termine vertreten / Replace selected sessions** lets staff with job and finance permissions select the eligible future dates, search for a lecturer, and review the separate cover fee. The original lecturer retains their other dates and recorded teaching. Finance reviews the retained delivery before invoicing. Assignments with a reserved or issued invoice are unavailable for this action.

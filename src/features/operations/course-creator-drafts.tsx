@@ -21,14 +21,17 @@ import {
 import "./course-creator-drafts-i18n";
 
 /** Render revision feedback and debounce complete immutable form snapshots. */
-export function CourseCreatorDraftSaveBar({
+export function DraftSaveBar<Snapshot>({
   snapshot,
   saver,
   busy,
   onReload,
 }: {
-  snapshot: CourseCreatorSnapshot;
-  saver: CourseCreatorDraftSaver;
+  snapshot: Snapshot;
+  saver: {
+    status: CourseCreatorDraftSaver["status"];
+    write: (candidate: Snapshot) => Promise<unknown>;
+  };
   busy: boolean;
   onReload: () => void;
 }) {
@@ -95,6 +98,16 @@ export function CourseCreatorDraftSaveBar({
       )}
     </div>
   );
+}
+
+/** Present the common draft controls with the course creator's exact snapshot type. */
+export function CourseCreatorDraftSaveBar(props: {
+  snapshot: CourseCreatorSnapshot;
+  saver: CourseCreatorDraftSaver;
+  busy: boolean;
+  onReload: () => void;
+}) {
+  return <DraftSaveBar {...props} />;
 }
 
 /** Recover, duplicate or discard an owned draft without exposing any other manager's work. */

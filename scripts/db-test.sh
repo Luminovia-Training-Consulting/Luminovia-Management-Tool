@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 node scripts/db-rpc-tests.mjs
 node scripts/lecturer-expenses-db-tests.mjs
 node scripts/course-creator-db-tests.mjs
+node scripts/offer-creator-drafts-db-tests.mjs
 node scripts/training-commercial-db-tests.mjs
 node scripts/training-delivery-db-tests.mjs
 node scripts/training-control-db-tests.mjs

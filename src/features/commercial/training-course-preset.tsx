@@ -21,7 +21,7 @@ export function TrainingCoursePreset({
 }: {
   actor: string;
   organisationId: string;
-  applied: CommercialPreset | null;
+  applied: Pick<CommercialPreset, "name"> | null;
   onApply: (preset: CommercialPreset | null) => void;
   disabled: boolean;
 }) {

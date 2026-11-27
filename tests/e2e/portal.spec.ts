@@ -585,13 +585,14 @@ test("admin uses password-only access and publishes a five-session job through t
         page.waitForResponse(
             (response) =>
                 response.request().method() === "POST" &&
-                new URL(response.url()).pathname.endsWith("/rest/v1/rpc/create_capacity_job"),
+                new URL(response.url()).pathname.endsWith("/rest/v1/rpc/training_offer_creator_draft_action") &&
+                response.request().postDataJSON()?.p_action === "commit",
             {timeout: 25_000},
         ),
         page.getByRole("button", {name: "Auftrag speichern", exact: true}).click(),
     ]);
     expect(publication.ok(), "The server confirms the saved and published assignment").toBe(true);
-    const publishedId = await publication.json();
+    const {job_id: publishedId} = await publication.json();
     await expect(
         page
             .locator('.notice[role="status"]')

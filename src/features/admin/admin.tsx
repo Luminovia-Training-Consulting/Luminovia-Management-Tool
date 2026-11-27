@@ -20,10 +20,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { CourseCommissionField, RoleFeePreview } from "../commercial/pricing";
 
-import {
-  presetBaseTotal,
-  type CommercialPreset,
-} from "../commercial/training-commercial-api";
+import { presetBaseTotal } from "../commercial/training-commercial-api";
 import {
   commissionAccessQuery,
   commissionKeys,
@@ -37,12 +34,17 @@ import {
   courseRunJobDefaultsQuery,
 } from "../operations/building-blocks-api";
 import {
-  courseOfferCurrencySchema,
-  courseOfferRateUnitSchema,
   courseRecordId,
   courseTemplateFormSchema,
   type CourseRunOfferPayload,
 } from "../operations/course-building-block-schema";
+import {
+  offerInput as schema,
+  type OfferInput as Values,
+  type OfferDraftSnapshot,
+} from "./offer-creator-draft-schema";
+import type { OfferDraftEditor } from "./offer-creator-drafts";
+import { DraftSaveBar } from "../operations/course-creator-drafts";
 import "./course-i18n";
 import "../jobs/lifecycle-i18n";
 import "../jobs/briefing-i18n";
@@ -51,7 +53,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { dateTime, money, validZone, zonedInstant } from "../../lib/dates";
+import { dateTime, money, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -62,6 +64,8 @@ import {
   PageHeading,
 } from "../../components/common";
 
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
+
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const TrainingCoursePreset = lazy(() =>
   import("../commercial/training-course-preset").then(
@@ -69,45 +73,22 @@ const TrainingCoursePreset = lazy(() =>
   ),
 );
 
-const schema = z.object({
-  title: z.string().trim().min(1).max(200),
-  description: z.string().max(10000),
-  customer_name: z.string().trim().min(1).max(200),
-  organisation: z.union([z.string().uuid(), z.literal("")]),
-  delivery_type: z.enum(["online", "onsite"]),
-  location: z.string().max(500),
-  time_zone: z.string().refine(validZone),
-  amount: z.number().nonnegative().max(1000000),
-  total_amount: z.number().nonnegative().max(1000000),
-  currency: courseOfferCurrencySchema,
-  rate_unit: courseOfferRateUnitSchema,
-  terms: z.string().max(10000),
-  publish: z.boolean(),
-  requires_contract: z.boolean(),
-  claim_deadline: z.string(),
-  capacity: z.number().int().min(1).max(20),
-  topic_ids: z.array(z.string()),
-  sessions: z
-    .array(
-      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
-    )
-    .min(1)
-    .max(60),
-});
-/** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
-type Values = z.infer<typeof schema>;
+const OfferCreatorDrafts = lazy(() => import("./offer-creator-drafts"));
 
 /** Create the complete offer and bind a course-derived request to its reviewed source revision. */
 function JobForm({
   courseRun: initialSource,
+  draft,
 }: {
   courseRun?: CourseRunJobDefaults;
+  draft?: OfferDraftEditor;
 }) {
   // Keep the reviewed source stable while editing money. A background refetch
   // must not silently replace the schedule or bypass the server revision check.
   const [courseRun] = useState(initialSource);
   const { t, i18n } = useTranslation();
   const courseText = useTranslation("courseOffer").t;
+  const draftText = useTranslation("courseCreator").t;
   const lifeText = useTranslation("jobLifecycle").t;
   const briefingText = useTranslation("jobBriefing").t;
   const { t: priceText } = useTranslation("platform");
@@ -117,12 +98,21 @@ function JobForm({
   const pricing = useQuery(commissionAccessQuery(actor));
   const fullFinance = Boolean(pricing.data?.can_manage_gross);
   const scopedPricing = Boolean(pricing.data?.can_manage_own_course_pricing);
-  const [commission, setCommission] = useState("");
-  const [appliedPreset, setAppliedPreset] = useState<CommercialPreset | null>(
-    null,
+  const [commission, setCommission] = useState(
+    draft?.restored?.commission ?? "",
   );
+  const [appliedPreset, setAppliedPreset] = useState(
+    draft?.restored?.preset ?? null,
+  );
+  const [reviewedSource, setReviewedSource] = useState(
+    draft?.restored?.source_revision ?? courseRun?.source_revision ?? null,
+  );
+  const staleDraft = Boolean(
+    courseRun && reviewedSource !== courseRun.source_revision,
+  );
+
   const [internalOnly, setInternalOnly] = useState(
-    Boolean(courseRun?.company_only_course),
+    draft?.restored?.internal_only ?? Boolean(courseRun?.company_only_course),
   );
   const gross =
     !internalOnly && (fullFinance || (scopedPricing && commission !== ""));
@@ -163,47 +153,54 @@ function JobForm({
           })
         : schema.extend({ terms: schema.shape.terms.min(1) }),
     ),
-    defaultValues: {
-      title: courseRun?.title ?? "",
-      description: courseRun?.description ?? "",
-      customer_name: courseRun?.customer_name ?? "",
-      organisation: courseRun?.organisation_id ?? "",
-      delivery_type: courseRun?.delivery_type ?? "online",
-      location: courseRun?.location ?? "",
-      time_zone: courseRun?.time_zone ?? "Europe/Berlin",
-      amount: 400,
-      total_amount: 400 * (courseRun?.sessions.length ?? 5),
-      currency: "EUR",
-      rate_unit: "per_day",
-      terms: "",
-      publish: false,
-      requires_contract: false,
-      claim_deadline: "",
-      capacity: 1,
-      topic_ids: courseRun?.topic_ids ?? [],
-      sessions: courseRun
-        ? courseRun.sessions.map((session) => ({
-            starts_at: DateTime.fromISO(session.starts_at)
-              .setZone(courseRun.time_zone)
-              .toFormat("yyyy-MM-dd'T'HH:mm"),
-            ends_at: DateTime.fromISO(session.ends_at)
-              .setZone(courseRun.time_zone)
-              .toFormat("yyyy-MM-dd'T'HH:mm"),
-          }))
-        : Array.from({ length: 5 }, (_, i) => {
-            const d = DateTime.now()
-              .setZone("Europe/Berlin")
-              .plus({ days: i + 7 });
-            return {
-              starts_at: d
-                .set({ hour: 9, minute: 0 })
-                .toFormat("yyyy-MM-dd'T'HH:mm"),
-              ends_at: d
-                .set({ hour: 15, minute: 0 })
-                .toFormat("yyyy-MM-dd'T'HH:mm"),
-            };
-          }),
-    },
+    defaultValues: draft?.restored
+      ? {
+          ...draft.restored.values,
+          amount: draft.restored.values.amount ?? Number.NaN,
+          total_amount: draft.restored.values.total_amount ?? Number.NaN,
+          capacity: draft.restored.values.capacity ?? Number.NaN,
+        }
+      : {
+          title: courseRun?.title ?? "",
+          description: courseRun?.description ?? "",
+          customer_name: courseRun?.customer_name ?? "",
+          organisation: courseRun?.organisation_id ?? "",
+          delivery_type: courseRun?.delivery_type ?? "online",
+          location: courseRun?.location ?? "",
+          time_zone: courseRun?.time_zone ?? "Europe/Berlin",
+          amount: 400,
+          total_amount: 400 * (courseRun?.sessions.length ?? 5),
+          currency: "EUR",
+          rate_unit: "per_day",
+          terms: "",
+          publish: false,
+          requires_contract: false,
+          claim_deadline: "",
+          capacity: 1,
+          topic_ids: courseRun?.topic_ids ?? [],
+          sessions: courseRun
+            ? courseRun.sessions.map((session) => ({
+                starts_at: DateTime.fromISO(session.starts_at)
+                  .setZone(courseRun.time_zone)
+                  .toFormat("yyyy-MM-dd'T'HH:mm"),
+                ends_at: DateTime.fromISO(session.ends_at)
+                  .setZone(courseRun.time_zone)
+                  .toFormat("yyyy-MM-dd'T'HH:mm"),
+              }))
+            : Array.from({ length: 5 }, (_, i) => {
+                const d = DateTime.now()
+                  .setZone("Europe/Berlin")
+                  .plus({ days: i + 7 });
+                return {
+                  starts_at: d
+                    .set({ hour: 9, minute: 0 })
+                    .toFormat("yyyy-MM-dd'T'HH:mm"),
+                  ends_at: d
+                    .set({ hour: 15, minute: 0 })
+                    .toFormat("yyyy-MM-dd'T'HH:mm"),
+                };
+              }),
+        },
   });
   const watchedRate = useWatch({ control, name: "amount" });
   const watchedTotal = useWatch({ control, name: "total_amount" });
@@ -216,10 +213,36 @@ function JobForm({
     control,
     name: "sessions",
   });
+  // Watch the unfinished form, including incomplete numeric and date fields.
+  useWatch({ control, disabled: !draft });
+  function currentSnapshot(): OfferDraftSnapshot {
+    const values = getValues();
+    return {
+      values: {
+        ...values,
+        amount: Number.isFinite(values.amount) ? values.amount : null,
+        total_amount: Number.isFinite(values.total_amount)
+          ? values.total_amount
+          : null,
+        capacity: Number.isFinite(values.capacity) ? values.capacity : null,
+      },
+      commission,
+      internal_only: internalOnly,
+      preset: appliedPreset && {
+        id: appliedPreset.id,
+        name: appliedPreset.name,
+        currency: appliedPreset.currency,
+        revision: appliedPreset.revision,
+      },
+      source_revision: reviewedSource,
+    };
+  }
+
   const create = useMutation({
     mutationFn: async (values: Values) => {
       requireOnline();
       if (
+        staleDraft ||
         Number.isNaN(percent) ||
         (appliedPreset &&
           !internalOnly &&
@@ -293,6 +316,16 @@ function JobForm({
                   : { amount, total_amount }),
               }),
         };
+        if (draft) {
+          const receipt = await draft.write(currentSnapshot(), {
+            offer: payload,
+            commission: percent,
+            preset_id: !internalOnly && fullFinance ? appliedPreset?.id : null,
+            preset_revision:
+              !internalOnly && fullFinance ? appliedPreset?.revision : null,
+          });
+          return courseRecordId.parse(receipt);
+        }
         const signature = JSON.stringify([
           courseRun.course_run_id,
           payload,
@@ -329,6 +362,15 @@ function JobForm({
       const payload = gross
         ? { ...base, gross_amount: amount, gross_total_amount: total_amount }
         : { ...base, amount, total_amount };
+      if (draft) {
+        const receipt = await draft.write(currentSnapshot(), {
+          offer: payload,
+          commission: percent,
+          capacity,
+          organisation_id: organisation || null,
+        });
+        return courseRecordId.parse(receipt);
+      }
       const signature = JSON.stringify([
         organisation,
         capacity,
@@ -403,6 +445,18 @@ function JobForm({
       })}
     >
       <h2>{courseRun ? courseText("fromCourse") : t("createJob")}</h2>
+      {staleDraft && (
+        <Notice kind="error">
+          {courseText("sourceChanged")}{" "}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setReviewedSource(courseRun!.source_revision)}
+          >
+            {draftText("acceptCourseRevision")}
+          </Button>
+        </Notice>
+      )}
       {courseRun && (
         <>
           <p>{courseText("sourceHelp")}</p>
@@ -880,7 +934,11 @@ function JobForm({
             <Button
               type="button"
               disabled={
-                !online || Number.isNaN(percent) || create.isPending || done
+                !online ||
+                staleDraft ||
+                Number.isNaN(percent) ||
+                create.isPending ||
+                done
               }
               onClick={handleSubmit((values) => {
                 setReviewOnSave(true);
@@ -893,7 +951,11 @@ function JobForm({
               type="submit"
               variant="secondary"
               disabled={
-                !online || Number.isNaN(percent) || create.isPending || done
+                !online ||
+                staleDraft ||
+                Number.isNaN(percent) ||
+                create.isPending ||
+                done
               }
             >
               {courseText("saveOfferDraft")}
@@ -911,12 +973,20 @@ function JobForm({
               !online ||
               Number.isNaN(percent) ||
               create.isPending ||
-              (done && (!isDirty || Boolean(courseRun)))
+              (done && (Boolean(draft) || !isDirty || Boolean(courseRun)))
             }
           >
             {t(create.isPending ? "saving" : "saveJob")}
           </Button>
         </>
+      )}
+      {draft && !done && (
+        <DraftSaveBar
+          snapshot={currentSnapshot()}
+          saver={draft}
+          busy={create.isPending}
+          onReload={draft.reload}
+        />
       )}
       {Object.keys(errors).length > 0 && (
         <Notice kind="error">{t("invalidForm")}</Notice>
@@ -976,6 +1046,10 @@ function JobForm({
                 type="button"
                 variant="secondary"
                 onClick={() => {
+                  if (draft) {
+                    draft.start();
+                    return;
+                  }
                   retry.clear();
                   setDone(false);
                   setPublishedDraft(false);
@@ -986,6 +1060,11 @@ function JobForm({
                 {courseText("addAnother")}
               </Button>
             )}
+          {draft && !courseRun && (
+            <Button type="button" variant="secondary" onClick={draft.start}>
+              {draftText("newOfferDraft")}
+            </Button>
+          )}
           <Button asChild variant="secondary">
             <Link to={`/jobs/${createdId}`}>
               {courseText(
@@ -1040,7 +1119,29 @@ export function CourseOfferForm({ runId }: { runId: string }) {
         </Button>
       </>
     );
-  return <JobForm key={runId} courseRun={course.data} />;
+  return <OfferEditor actor={actor} course={course.data} />;
+}
+
+/** The live draft editor is shared by both offer entry points. */
+function OfferEditor({
+  actor,
+  course,
+}: {
+  actor: string;
+  course?: CourseRunJobDefaults;
+}) {
+  if (!__PORTAL_INTERNAL_EDITION__) return <JobForm courseRun={course} />;
+  return (
+    <Suspense fallback={<Loading />}>
+      <OfferCreatorDrafts
+        key={course?.course_run_id ?? "standalone"}
+        actor={actor}
+        course={course?.course_run_id ?? null}
+        Form={JobForm}
+        courseRun={course}
+      />
+    </Suspense>
+  );
 }
 
 /** Choose a standalone draft or server-loaded course source from the route and current capabilities. */
@@ -1086,7 +1187,7 @@ export function AdminPage() {
           {runId ? (
             <CourseOfferForm runId={runId} />
           ) : (
-            <JobForm key="standalone" />
+            <OfferEditor actor={session!.user.id} />
           )}
         </div>
       ) : params.get("view") === "jobs" ? (

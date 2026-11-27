@@ -3,7 +3,14 @@
  * inputs. SDK/DOM fixtures isolate the form; actual server/data acceptance remains separate.
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -13,6 +20,7 @@ import type { CourseRunJobDefaults } from "../operations/building-blocks-api";
 
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(),
+  draftRpc: vi.fn(),
   source: {} as CourseRunJobDefaults,
   gross: true,
   scopedPricing: false,
@@ -33,7 +41,9 @@ vi.mock("../operations/building-blocks", () => ({
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
-      const response = mock.rpc(name, args);
+      const response = name.startsWith("training_offer_creator_draft")
+        ? mock.draftRpc(name, args)
+        : mock.rpc(name, args);
       return Object.assign(response, { abortSignal: () => response });
     },
     from: () => ({
@@ -119,6 +129,81 @@ beforeEach(async () => {
         return { data: [], error: null };
       },
     );
+  // Model only the draft transport here. The existing payload tests still
+  // inspect the exact command forwarded to the same authoritative creator.
+  const drafts = new Map<
+    string,
+    {
+      id: string;
+      revision: number;
+      updated_at: string;
+      title: string;
+      state: string;
+      payload: Record<string, unknown> | null;
+      job_id: string | null;
+    }
+  >();
+  mock.draftRpc.mockReset().mockImplementation(async (name, args) => {
+    if (name === "training_offer_creator_drafts") {
+      const data = args.p_draft_id
+        ? Array.from(drafts.values()).filter(
+            (item) => item.id === args.p_draft_id,
+          )
+        : Array.from(drafts.values()).map((item) => ({
+            ...item,
+            payload: null,
+          }));
+      return { data, error: null };
+    }
+    const id = args.p_draft_id as string;
+    if (args.p_action === "save") {
+      const data = {
+        id,
+        revision: Number(args.p_expected_revision) + 1,
+        updated_at: "2030-01-01T00:00:00Z",
+        state: "editing",
+        title: args.p_payload.values.title,
+        payload: args.p_payload,
+        job_id: null,
+      };
+      drafts.set(id, data);
+      return { data, error: null };
+    }
+    const payload = args.p_payload;
+    const command = {
+      p_course_run_id: args.p_course_run_id,
+      p_payload: payload.offer,
+      p_client_id: id,
+      ...(payload.commission === null
+        ? {}
+        : { p_platform_percent: payload.commission }),
+      ...(payload.preset_id
+        ? {
+            p_preset_id: payload.preset_id,
+            p_preset_revision: payload.preset_revision,
+          }
+        : {}),
+    };
+    const response = await mock.rpc(
+      payload.preset_id
+        ? "create_training_offer_from_preset"
+        : "create_course_run_job",
+      command,
+    );
+    if (response.error) return response;
+    const data = {
+      ...drafts.get(id),
+      id,
+      revision: Number(args.p_expected_revision) + 1,
+      updated_at: "2030-01-01T00:00:00Z",
+      title: payload.offer.title ?? source.title,
+      state: "created",
+      payload: null,
+      job_id: response.data,
+    };
+    drafts.set(id, data);
+    return { data, error: null };
+  });
   cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -531,4 +616,36 @@ it("copies customer pricing only on explicit application and submits the exact p
   expect(
     mock.rpc.mock.calls.some(([name]) => name === "create_course_run_job"),
   ).toBe(false);
+});
+
+it("saves an incomplete offer and restores it from the owned draft library after a remount", async () => {
+  const user = userEvent.setup();
+  const first = setup();
+  const input = await screen.findByLabelText("Titel der Stellenanzeige");
+  await user.clear(input);
+  await user.type(input, "Fictional resumed offer");
+  await user.click(
+    screen.getByRole("button", { name: "Zwischenstand speichern" }),
+  );
+  await screen.findByText("Entwurf auf dem Server gespeichert.");
+  first.unmount();
+
+  setup();
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Gespeicherte Angebotsentwürfe",
+    }),
+  );
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Gespeicherte Angebotsentwürfe" }),
+  );
+  expect(await dialog.findByText("Fictional resumed offer")).toBeVisible();
+  await user.click(dialog.getByRole("button", { name: "Weiterbearbeiten" }));
+  expect(await screen.findByLabelText("Titel der Stellenanzeige")).toHaveValue(
+    "Fictional resumed offer",
+  );
+  expect(mock.rpc).not.toHaveBeenCalledWith(
+    "create_course_run_job",
+    expect.anything(),
+  );
 });
