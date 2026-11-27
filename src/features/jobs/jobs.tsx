@@ -246,7 +246,17 @@ export function JobDetail() {
           new Date(sessions.at(-1)!.ends_at),
         )
       : null;
-  const deliveryFallback = (
+  const deliveryFallback = job.delivery_summary ? (
+    <>
+      <span>{t(job.delivery_summary.mode)}</span>
+      {job.delivery_summary.locations.map(({ city, country }) => (
+        <span key={`${city}:${country}`}>
+          <MapPin size={17} aria-hidden="true" />
+          {[city, country].filter(Boolean).join(", ")}
+        </span>
+      ))}
+    </>
+  ) : (
     <>
       {job.location && (
         <span>
@@ -328,7 +338,7 @@ export function JobDetail() {
         <div className="section-stack job-detail-sections">
           <section className="panel">
             <div className="inline-meta">
-              {online && !companyDispatchOnly ? (
+              {online && !companyDispatchOnly && !job.delivery_summary ? (
                 <Suspense fallback={deliveryFallback}>
                   <OfferDeliverySummary
                     actor={session!.user.id}

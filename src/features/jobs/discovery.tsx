@@ -90,7 +90,7 @@ function FilterForm({
         <Field id="discovery-delivery" label={common("delivery")}>
           <select {...register("delivery")}>
             <option value="">{common("all")}</option>
-            {["online", "onsite"].map((s) => (
+            {["online", "onsite", "hybrid", "mixed"].map((s) => (
               <option key={s} value={s}>
                 {common(s)}
               </option>

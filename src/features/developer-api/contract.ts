@@ -59,6 +59,7 @@ import {
   analyticsScopes,
 } from "../analytics/schema.ts";
 import { accountingPaths } from "./accounting-contract.ts";
+import { assignmentFinanceSchema } from "../commercial/assignment-finance-schema.ts";
 import { settlementJournalSchema } from "../accounting/settlement-journal-schema.ts";
 import {
   expenseReportSchema,
@@ -2570,6 +2571,14 @@ const nativePaths = {
       p_request_id: uuid,
     },
     z.toJSONSchema(expenseResultSchema),
+  ),
+  "/rest/v1/rpc/assignment_finance_reconciliation": rpc(
+    "getAssignmentFinanceReconciliation",
+    "Finance",
+    "Reconcile the current assignment's financial records",
+    "Returns the authorised accepted terms, adjustments, confirmed teaching, approved timesheets, current invoice balances and expenses. Gross customer figures require gross finance authority. Grouped customer payments are not attributed to individual claims.",
+    { p_claim_id: uuid },
+    z.toJSONSchema(assignmentFinanceSchema),
   ),
   "/rest/v1/rpc/accounting_settlement_with_expenses": rpc(
     "getSettlementWithExpenses",

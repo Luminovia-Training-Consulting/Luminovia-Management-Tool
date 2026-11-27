@@ -1,6 +1,7 @@
 /** Database projections and filters shared by job browsing and OpenAPI. */
 import { currencyCodes } from "../../lib/currencies.ts";
 import { z } from "zod";
+import { offerDelivery } from "../training/delivery-schema.ts";
 import { validZone } from "../../lib/dates.ts";
 
 const bound = z.number().min(0).max(1_000_000_000).nullable().default(null);
@@ -9,7 +10,7 @@ export const jobFilterFieldsSchema = z
     q: z.string().max(160).default(""),
     customer: z.string().max(120).default(""),
     topic_ids: z.array(z.uuid()).max(20).default([]),
-    delivery: z.enum(["", "online", "onsite"]).default(""),
+    delivery: z.enum(["", "online", "onsite", "hybrid", "mixed"]).default(""),
     status: z
       .enum(["", "draft", "published", "filled", "archived"])
       .default(""),
@@ -97,6 +98,7 @@ export const jobSchema = z.object({
   description: z.string(),
   customer_name: z.string(),
   delivery_type: z.enum(["online", "onsite"]),
+  delivery_summary: offerDelivery.nullable().optional(),
   location: z.string(),
   time_zone: z.string().refine(validZone),
   status: z.enum(["draft", "published", "filled", "archived"]),

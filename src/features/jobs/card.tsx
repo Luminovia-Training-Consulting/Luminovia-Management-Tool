@@ -21,6 +21,13 @@ export const JobCard = memo(function JobCard({
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
   const priceText = useTranslation("platform").t;
+  const mode = job.delivery_summary?.mode ?? job.delivery_type;
+  const locations = job.delivery_summary
+    ? job.delivery_summary.locations
+        .map(({ city, country }) => [city, country].filter(Boolean).join(", "))
+        .filter(Boolean)
+        .join(" · ")
+    : job.location;
   const first = job.job_sessions.reduce<
     Job["job_sessions"][number] | undefined
   >(
@@ -34,7 +41,7 @@ export const JobCard = memo(function JobCard({
   return (
     <article className={`job-card accent-${index % 4}`}>
       <div className="job-card-top">
-        <span className="badge">{t(job.delivery_type)}</span>
+        <span className="badge">{t(mode)}</span>
         {job.urgent_reopened_at && job.status === "published" ? (
           <span className="status job-urgent">{t("sickDay:urgent")}</span>
         ) : (
@@ -58,7 +65,7 @@ export const JobCard = memo(function JobCard({
         </span>
         <span>
           <MapPin size={16} />
-          {job.location || t(job.delivery_type)}
+          {locations || t(mode)}
         </span>
       </div>
       <div className="job-card-bottom">

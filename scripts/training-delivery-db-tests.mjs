@@ -106,6 +106,20 @@ await withTestDatabase("training_delivery", async ({ sql, actor }) => {
     mode: "hybrid",
     locations: [{ city: "Brisbane", country: "Australia" }],
   });
+  const marketplace = (mode) =>
+    call(
+      `public.job_discovery(${wire({ delivery: mode })},null,30)`,
+      "lecturer",
+    ).then(JSON.parse);
+  const matched = await marketplace("hybrid");
+  assert.equal(
+    matched.items.find(({ id }) => id === ids.job).delivery_summary.mode,
+    "hybrid",
+  );
+  assert.equal(
+    (await marketplace("online")).items.some(({ id }) => id === ids.job),
+    false,
+  );
   await assert.rejects(save(5, room), /PT409/);
   const accepted = JSON.parse(
     await call(

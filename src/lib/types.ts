@@ -55,6 +55,11 @@ export interface Job {
   title: string;
   description: string;
   customer_name: string;
+  /** Effective travel facts for structured course offers; legacy offers omit them. */
+  delivery_summary?: {
+    mode: "online" | "onsite" | "hybrid" | "mixed";
+    locations: { city: string | null; country: string | null }[];
+  } | null;
   delivery_type: "online" | "onsite";
   location: string;
   time_zone: string;

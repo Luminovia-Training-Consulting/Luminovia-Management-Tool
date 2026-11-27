@@ -495,6 +495,8 @@ const pairs: Record<string, [string, string]> = {
   all: ["Alle", "All"],
   online: ["Online", "Online"],
   onsite: ["Vor Ort", "On site"],
+  hybrid: ["Hybrid", "Hybrid"],
+  mixed: ["Gemischte Durchführung", "Mixed delivery"],
   published: ["Offen", "Open"],
   filled: ["Vergeben", "Filled"],
   draft: ["Entwurf", "Draft"],

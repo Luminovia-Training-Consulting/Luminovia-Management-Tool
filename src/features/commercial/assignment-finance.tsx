@@ -3,58 +3,15 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { ErrorState, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import { currencyCodes } from "../../lib/currencies";
 import { money } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { downloadPortalDocument } from "../learning/api";
+import { assignmentFinanceSchema } from "./assignment-finance-schema";
 import "./assignment-finance-i18n";
-
-const decimal = z.string().regex(/^-?\d+(?:\.\d+)?$/);
-const optional = decimal.nullable();
-const currency = z.enum(currencyCodes);
-const reportSchema = z.object({
-  currency,
-  claim_status: z.string(),
-  agreed_lecturer: decimal,
-  adjustment_lecturer: decimal,
-  agreed_customer: optional,
-  contract_margin: optional,
-  approved_timesheet_minutes: z.number().int().nonnegative().nullable(),
-  recorded_teaching_minutes: z.number().int().nonnegative().nullable(),
-  delivered_minutes: z.number().int().nonnegative().nullable(),
-  lecturer_invoices: z.array(
-    z.object({
-      id: z.uuid(),
-      number: z.string(),
-      state: z.string(),
-      amount: decimal,
-    }),
-  ),
-  lecturer_invoiced: optional,
-  lecturer_paid: optional,
-  lecturer_outstanding: optional,
-  cancellation_compensation: optional,
-  customer_invoice_number: z.string().nullable(),
-  customer_invoice_grouped: z.boolean().nullable(),
-  customer_invoiced: optional,
-  customer_net_invoiced: optional,
-  customer_received: optional,
-  customer_retained: optional,
-  customer_outstanding: optional,
-  expenses: z.array(
-    z.object({
-      currency,
-      approved: decimal,
-      paid: decimal,
-      outstanding: decimal,
-    }),
-  ),
-});
 
 /** Query only when the actor opens a specific current finance assignment. */
 function Reconciliation({
@@ -76,7 +33,7 @@ function Reconciliation({
         )
         .abortSignal(signal);
       if (error) throw error;
-      return reportSchema.parse(data);
+      return assignmentFinanceSchema.parse(data);
     },
   });
   if (query.isPending) return <Loading />;
