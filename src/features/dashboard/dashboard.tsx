@@ -60,6 +60,8 @@ export function Dashboard() {
   const notifications = useQuery({
     ...notificationPreviewQuery(session!.user.id),
     enabled: roles.isSuccess && teaching,
+    // The header owns polling for this actor's shared preview.
+    refetchInterval: false,
   });
   const removals = notifications.data?.items.filter(
     (item) =>

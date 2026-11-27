@@ -138,16 +138,27 @@ export const offerPolicyQuery = (actor: string, job: string) =>
         | null;
     },
   });
-/** Read the client_organisations server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
-export const clientOrganisationsQuery = (actor: string) =>
-  queryOptions({
-    queryKey: commissionKeys.organisations(actor),
-    queryFn: async () => {
-      const { data, error } = await db().rpc("client_organisations");
+/** Read the authorised company projection, optionally restricting the response to active membership IDs. */
+export const clientOrganisationsQuery = (
+  actor: string,
+  membershipIds?: string[],
+) => {
+  const scope = membershipIds && [...membershipIds].sort();
+  return queryOptions({
+    queryKey: scope
+      ? [...commissionKeys.organisations(actor), scope]
+      : commissionKeys.organisations(actor),
+    queryFn: async ({ signal }) => {
+      if (scope?.length === 0) return [];
+      const request = db().rpc("client_organisations");
+      const { data, error } = await (scope
+        ? request.in("id", scope).abortSignal(signal)
+        : request);
       if (error) throw error;
       return (data ?? []) as ClientOrganisation[];
     },
   });
+};
 /** Read the client_requests server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const clientRequestsQuery = (
   actor: string,

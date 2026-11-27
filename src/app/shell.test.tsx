@@ -91,7 +91,10 @@ vi.mock("@tanstack/react-query", async (original) => {
                       unread_count: 0,
                       as_of: "2026-11-15T12:00:00Z",
                     } satisfies InboxPage)
-                  : [],
+                  : options.queryKey[0] === "deletions" &&
+                      options.queryKey[1] === "access"
+                    ? { can_admin: false, kinds: [] }
+                    : [],
         isPending:
           options.queryKey[0] === "permissions" && access.permissionsLoading,
         isSuccess:

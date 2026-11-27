@@ -10,9 +10,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { ProfileCompanyContracts } from "./company-contracts";
 
-const { from, rpc, upload } = vi.hoisted(() => ({
+const { from, rpc, companyFilter, upload } = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
+  companyFilter: vi.fn(),
   upload: vi.fn(),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ from, rpc }) }));
@@ -48,16 +49,24 @@ function showProfileContracts(memberships: string[]) {
   expect(activeOnly).toHaveBeenCalledWith("removed_at", null);
 }
 
-it("opens and saves PDFs through the own company dossier even when the directory also returns another company", async () => {
+it("requests only active own company IDs before opening and saving PDFs in the selected dossier", async () => {
   rpc.mockImplementation((name) =>
     name === "client_organisations"
-      ? Promise.resolve({
-          error: null,
-          data: [
-            { id: ownCompany, name: "Fictional own company" },
-            { id: otherCompany, name: "Different company" },
-          ],
-        })
+      ? {
+          in: (column: string, ids: string[]) => ({
+            abortSignal: async () => {
+              companyFilter(column, ids);
+              const directory = [
+                { id: ownCompany, name: "Fictional own company" },
+                { id: otherCompany, name: "Different company" },
+              ];
+              return {
+                error: null,
+                data: directory.filter(({ id }) => ids.includes(id)),
+              };
+            },
+          }),
+        }
       : {
           abortSignal: async () => ({
             data: { items: [], has_more: false },
@@ -71,6 +80,7 @@ it("opens and saves PDFs through the own company dossier even when the directory
     name: "Unternehmensverträge",
   });
   expect(within(region).getAllByRole("button")).toHaveLength(1);
+  expect(companyFilter).toHaveBeenCalledExactlyOnceWith("id", [ownCompany]);
   expect(
     within(region).queryByText("Different company"),
   ).not.toBeInTheDocument();

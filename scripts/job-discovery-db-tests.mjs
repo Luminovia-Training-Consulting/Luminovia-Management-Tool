@@ -90,6 +90,24 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 "select id from public.jobs where title='Private draft'",
             );
             await assert.rejects(detail(teacher, hidden), /42501/);
+            for (const role of ["anon", "authenticated", "service_role"]) {
+                assert.equal(
+                    await sql(`select has_function_privilege(${q(role)}, 'private.job_discovery_quote_authorized(uuid,boolean)', 'EXECUTE')`),
+                    "f",
+                );
+            }
+            const restricted = {
+                customer: "Fictional restricted",
+                include_history: true,
+                currency: "EUR",
+                min_total: 0,
+                sort: "total_asc",
+            };
+            assert.deepEqual((await rpc(teacher, restricted)).items, []);
+            assert.deepEqual(
+                (await rpc(manager, restricted)).items.map(({id}) => id),
+                [hidden],
+            );
             assert.equal((await detail(manager, hidden, "aal1")).status, "draft");
             assert.equal((await detail(manager, hidden)).status, "draft");
             const page = await rpc(teacher, {}, null, 2);
@@ -136,6 +154,14 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             assert.equal((await rpc(teacher, {q: "Exact%XAlias"})).items.length, 0);
             assert.equal((await rpc(teacher, {customer: "[same]"})).items.length, 0);
             assert.equal((await rpc(teacher, {q: "Fictional [same] academy"})).items.length, 0);
+            const hiddenCustomerOrder = await rpc(teacher, {sort: "customer_asc"}, null, 1);
+            assert.equal(hiddenCustomerOrder.next_cursor.text, "");
+            await sql(`update public.jobs set location='Fictional private campus marker' where id='${id}'`);
+            assert.deepEqual((await rpc(teacher, {q: "Fictional private campus marker"})).items, []);
+            assert.deepEqual(
+                (await rpc(manager, {q: "Fictional private campus marker"})).items.map((item) => item.id),
+                [id],
+            );
             assert.equal(
                 (
                     await rpc(teacher, {

@@ -583,11 +583,7 @@ export function LecturerContracts({
 }) {
   const { t } = useTranslation("commercial");
   const profile = useQuery(profileQuery(actor));
-  const records = useQuery({
-    ...contractsQuery(actor, true),
-    // The existing RPC supports own/all. Only this lecturer's records reach either UI.
-    select: (all) => all.filter(({ user_id }) => user_id === lecturer),
-  });
+  const records = useQuery(contractsQuery(actor, true, lecturer));
   const [registering, setRegistering] = useState(false);
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   if (records.isPending) return <Loading />;
@@ -643,7 +639,7 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
     manager && z.string().uuid().safeParse(target).success ? target : "";
   const effectiveAll = manager && (all || Boolean(selectedUser));
   const records = useQuery({
-    ...contractsQuery(actor, effectiveAll),
+    ...contractsQuery(actor, effectiveAll, selectedUser || undefined),
     enabled: !staff || manager,
   });
   const [registering, setRegistering] = useState(false);
@@ -652,14 +648,14 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
     enabled: manager && registering,
   });
   const [search, setSearch] = useState("");
-  const filtered =
-    records.data?.filter(
-      (record) =>
-        (!selectedUser || record.user_id === selectedUser) &&
+  const term = search.toLocaleLowerCase();
+  const filtered = term
+    ? (records.data?.filter((record) =>
         `${record.title} ${record.user_name}`
           .toLocaleLowerCase()
-          .includes(search.toLocaleLowerCase()),
-    ) ?? [];
+          .includes(term),
+      ) ?? [])
+    : (records.data ?? []);
   if (staff) {
     if (access.isPending) return <Loading />;
     if (access.isError)

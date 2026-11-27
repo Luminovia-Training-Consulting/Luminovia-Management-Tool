@@ -20,6 +20,7 @@ const second = "8dfbba01-bc2e-406e-b5d5-86eccfee37c7";
 const fake = vi.hoisted(() => ({
   roles: vi.fn(),
   rpc: vi.fn(),
+  contractFilter: vi.fn(),
   readVersion: vi.fn(),
   saveDownload: vi.fn(),
   uploadDocument: vi.fn(),
@@ -106,7 +107,7 @@ async function show(
   await i18n.changeLanguage("de");
   fake.roles.mockResolvedValue(roles);
   fake.rpc.mockImplementation(
-    async (name: string, args?: { p_all?: boolean; p_user_id?: string }) => {
+    (name: string, args?: { p_all?: boolean; p_user_id?: string }) => {
       let data: unknown = null;
       switch (name) {
         case "commercial_access":
@@ -118,15 +119,29 @@ async function show(
             { id: second, display_name: "Another lecturer" },
           ];
           break;
-        case "contract_records":
-          data = args?.p_all
+        case "contract_records": {
+          const records = args?.p_all
             ? [
                 record("delegated", target, "Delegated contract"),
                 record("private", target, "Lecturer's own upload"),
                 record("other", second, "Other person's contract"),
               ]
             : [record("personal", "actor", "Personal contract")];
-          break;
+          return Object.assign(
+            Promise.resolve({ data: records, error: null }),
+            {
+              eq: (column: string, lecturer: string) => ({
+                abortSignal: async () => {
+                  fake.contractFilter(column, lecturer);
+                  return {
+                    data: records.filter(({ user_id }) => user_id === lecturer),
+                    error: null,
+                  };
+                },
+              }),
+            },
+          );
+        }
         case "contract_registration_candidates":
           data = [
             {
@@ -138,7 +153,7 @@ async function show(
         case "register_executed_contract":
           data = "new-contract";
       }
-      return { data, error: null };
+      return Promise.resolve({ data, error: null });
     },
   );
   fake.readVersion.mockImplementation(async (_table, _columns, filters) => ({
@@ -169,6 +184,16 @@ async function show(
 
 it("preselects the lecturer and loads the scanned-file candidates in the registration dialog", async () => {
   await show(true);
+  expect(
+    await screen.findByRole("heading", { name: "Delegated contract" }),
+  ).toBeVisible();
+  expect(fake.contractFilter).toHaveBeenCalledExactlyOnceWith(
+    "user_id",
+    target,
+  );
+  expect(
+    fake.rpc.mock.calls.filter(([name]) => name === "contract_records"),
+  ).toHaveLength(1);
   await userEvent.click(
     await screen.findByRole("button", {
       name: "Ausgeführten Vertrag hinterlegen",
@@ -288,6 +313,10 @@ it("registers only the selected lecturer and offers only their parent contracts 
     await context.findByRole("heading", { name: "Delegated contract" }),
   ).toBeVisible();
   expect(context.queryByText("Other person's contract")).toBeNull();
+  expect(fake.contractFilter).toHaveBeenCalledExactlyOnceWith(
+    "user_id",
+    target,
+  );
   const registration = await openRegistration(user, context);
   expect(registration.queryByLabelText("Dozent:in")).toBeNull();
   await user.type(registration.getByLabelText("Titel"), "Fictional addendum");
