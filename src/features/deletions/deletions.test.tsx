@@ -112,6 +112,24 @@ async function acknowledge() {
 }
 
 describe("permanent deletion confirmation", () => {
+  it("loads operation receipts only after the server grants a deletion scope", async () => {
+    access = { can_admin: false, kinds: [] };
+    const { client } = setup();
+    await waitFor(() =>
+      expect(
+        client.getQueryData(deletionAccessQuery("actor-a").queryKey),
+      ).toEqual(access),
+    );
+    expect(state.request).not.toHaveBeenCalledWith("deletions/operations");
+
+    access = { can_admin: false, kinds: ["job"] };
+    await act(async () => {
+      client.setQueryData(deletionAccessQuery("actor-a").queryKey, access);
+    });
+    await waitFor(() =>
+      expect(state.request).toHaveBeenCalledWith("deletions/operations"),
+    );
+  });
   it.each([
     ["de", "Endgültig löschen", "Richtlinien für gewichtete Kursnoten"],
     ["en", "Delete permanently", "Weighted grading policies"],

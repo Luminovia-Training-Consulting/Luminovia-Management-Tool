@@ -142,15 +142,19 @@ it("offers delegated evidence and expertise management from the selected person'
 
 it("opens lecturer contracts by keyboard and restores focus to the selected person's action", async () => {
   await i18n.changeLanguage("de");
-  fake.rpc.mockImplementation(async (name: string) => ({
-    data:
-      name === "commercial_access"
-        ? { can_manage_contracts: true }
-        : name === "commercial_people"
-          ? [{ id: lecturer, display_name: "Fictional person" }]
-          : [],
-    error: null,
+  const filter = vi.fn(() => ({
+    abortSignal: async () => ({ data: [], error: null }),
   }));
+  fake.rpc.mockImplementation((name: string) => {
+    if (name === "contract_records") return { eq: filter };
+    return {
+      data:
+        name === "commercial_access"
+          ? { can_manage_contracts: true }
+          : [{ id: lecturer, display_name: "Fictional person" }],
+      error: null,
+    };
+  });
   mount(lecturer);
   const user = userEvent.setup();
   const action = await screen.findByRole("button", {
@@ -171,6 +175,7 @@ it("opens lecturer contracts by keyboard and restores focus to the selected pers
       name: "Ausgeführten Vertrag hinterlegen",
     }),
   ).toBeVisible();
+  expect(filter).toHaveBeenCalledWith("user_id", lecturer);
   await user.keyboard("{Escape}");
   await waitFor(() => expect(action).toHaveFocus());
 });

@@ -18,8 +18,11 @@ export function ProfileCompanyContracts({ actor }: { actor: string }) {
     enabled: online,
   });
   const hasMemberships = memberships.isSuccess && memberships.data.length > 0;
+  // A member with gross revenue access may otherwise receive the entire active company directory.
+  const membershipIds =
+    memberships.data?.map(({ organisation_id }) => organisation_id) ?? [];
   const organisations = useQuery({
-    ...clientOrganisationsQuery(actor),
+    ...clientOrganisationsQuery(actor, membershipIds),
     enabled: online && hasMemberships,
   });
   if (!online) return null;
@@ -31,11 +34,7 @@ export function ProfileCompanyContracts({ actor }: { actor: string }) {
   if (organisations.isError)
     return <ErrorState retry={() => void organisations.refetch()} />;
 
-  // A member who is also authorised to see gross revenue may receive a wider directory.
-  const ownIds = new Set(
-    memberships.data.map(({ organisation_id }) => organisation_id),
-  );
-  const companies = organisations.data?.filter(({ id }) => ownIds.has(id));
+  const companies = organisations.data;
   if (!companies?.length) return null;
 
   return (

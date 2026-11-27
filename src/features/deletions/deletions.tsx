@@ -87,7 +87,10 @@ function OperationReceipts({
 }) {
   const { t } = useTranslation("deletions");
   const access = useQuery(deletionAccessQuery(actor));
-  const receipts = useQuery(deletionReceiptsQuery(actor));
+  const receipts = useQuery({
+    ...deletionReceiptsQuery(actor),
+    enabled: access.isSuccess && access.data.kinds.length > 0,
+  });
   const attempts = useQuery(deletionAttemptsQuery(actor));
   const pending = receipts.data.filter(
     (operation) =>

@@ -55,13 +55,21 @@ export const commercialPeopleQuery = (actor: string) =>
     },
   });
 /** Read the contract_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
-export const contractsQuery = (actor: string, all: boolean) =>
+export const contractsQuery = (
+  actor: string,
+  all: boolean,
+  lecturer?: string,
+) =>
   queryOptions({
-    queryKey: [...commercialKeys.contracts(actor), all],
-    queryFn: async () => {
-      const { data, error } = await db().rpc("contract_records", {
+    queryKey: [...commercialKeys.contracts(actor), all, lecturer ?? null],
+    queryFn: async ({ signal }) => {
+      const request = db().rpc("contract_records", {
         p_all: all,
       });
+      // The RPC still verifies the requested access. The filter limits this view's response.
+      const { data, error } = await (lecturer
+        ? request.eq("user_id", lecturer).abortSignal(signal)
+        : request);
       if (error) throw error;
       return (data ?? []) as ContractRecord[];
     },

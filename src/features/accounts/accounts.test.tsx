@@ -162,7 +162,10 @@ describe("Account administration", () => {
   it("opens the person-bound contracts dialog in the selected lecturer's account details", async () => {
     fake.capabilities = ["users.manage", "contracts.manage"];
     const previous = fake.rpc.getMockImplementation()!;
-    fake.rpc.mockImplementation(async (name: string) => {
+    const filter = vi.fn(() => ({
+      abortSignal: async () => ({ data: [], error: null }),
+    }));
+    fake.rpc.mockImplementation((name: string) => {
       if (name === "commercial_access")
         return { data: { can_manage_contracts: true }, error: null };
       if (name === "commercial_people")
@@ -170,7 +173,7 @@ describe("Account administration", () => {
           data: [{ id: "teacher-id", display_name: "Anna" }],
           error: null,
         };
-      if (name === "contract_records") return { data: [], error: null };
+      if (name === "contract_records") return { eq: filter };
       return previous(name);
     });
     page();
@@ -196,6 +199,7 @@ describe("Account administration", () => {
       }),
     ).toBeVisible();
     expect(fake.rpc).toHaveBeenCalledWith("contract_records", { p_all: true });
+    expect(filter).toHaveBeenCalledWith("user_id", "teacher-id");
     await user.keyboard("{Escape}");
     expect(contracts).toHaveFocus();
   });

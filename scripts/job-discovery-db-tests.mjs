@@ -90,6 +90,24 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 "select id from public.jobs where title='Private draft'",
             );
             await assert.rejects(detail(teacher, hidden), /42501/);
+            for (const role of ["anon", "authenticated", "service_role"]) {
+                assert.equal(
+                    await sql(`select has_function_privilege(${q(role)}, 'private.job_discovery_quote_authorized(uuid,boolean)', 'EXECUTE')`),
+                    "f",
+                );
+            }
+            const restricted = {
+                customer: "Fictional restricted",
+                include_history: true,
+                currency: "EUR",
+                min_total: 0,
+                sort: "total_asc",
+            };
+            assert.deepEqual((await rpc(teacher, restricted)).items, []);
+            assert.deepEqual(
+                (await rpc(manager, restricted)).items.map(({id}) => id),
+                [hidden],
+            );
             assert.equal((await detail(manager, hidden, "aal1")).status, "draft");
             assert.equal((await detail(manager, hidden)).status, "draft");
             const page = await rpc(teacher, {}, null, 2);

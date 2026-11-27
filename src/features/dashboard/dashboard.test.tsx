@@ -597,6 +597,16 @@ describe("role-aware dashboard previews", () => {
       ),
     ).toHaveLength(1);
   });
+  it("keeps the teaching dashboard alert on the shared shell polling schedule", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    setup();
+    await screen.findByText("Fictional course update");
+    expect(rpcCalls("notification_inbox")).toHaveLength(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31000);
+    });
+    expect(rpcCalls("notification_inbox")).toHaveLength(1);
+  });
   it("loads the teaching day once it is opened, preserving it across closing and reopening", async () => {
     fake.rpcData.teaching_day = {
       day: "2026-11-24",
