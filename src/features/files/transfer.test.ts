@@ -752,13 +752,11 @@ describe("online, authenticated document transfers", () => {
   );
 
   it("keeps the expense and reviewed version in a receipt download", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ error: "access_denied" }), {
-          status: 403,
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: "access_denied" }), {
+        status: 403,
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     await expect(
       saveExpenseReceipt("expense-id", "reviewed-version", "Receipt.pdf"),

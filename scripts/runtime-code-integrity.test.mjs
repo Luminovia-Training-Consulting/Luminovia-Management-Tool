@@ -100,6 +100,26 @@ test("awaited import destructuring resolves runtime exports without rooting unus
     }
 });
 
+test("React.lazy consumes a default export but a bare dynamic import does not", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-lazy-default-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(join(fixture, "src/main.ts"), `
+            import { lazy as load } from 'react';
+            const Screen = load(() => import('./screen'));
+            void Screen;
+            void import('./side-effect');
+        `);
+        writeFileSync(join(fixture, "src/screen.ts"), "export default function ScreenBody() {}");
+        writeFileSync(join(fixture, "src/side-effect.ts"), "export default function UnusedBody() {}");
+        const entries = new Map(scanRuntimeExports(fixture).map((entry) => [entry.name, entry]));
+        assert.equal(entries.get("ScreenBody").reachable, true);
+        assert.equal(entries.get("UnusedBody").reachable, false);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
+});
+
 test("both edition routes count as used through the production alias", () => {
     const fixture = mkdtempSync(join(tmpdir(), "luminovia-edition-entrypoints-"));
     try {

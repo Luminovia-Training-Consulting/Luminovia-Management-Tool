@@ -1,4 +1,3 @@
-import { RemovalAppealsPanel } from "../jobs/removal-appeals";
 import { SessionScroll } from "../../components/session-scroll";
 /**
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
@@ -74,6 +73,10 @@ const TrainingCoursePreset = lazy(() =>
   ),
 );
 
+const RemovalAppealsPanel = lazy(async () => {
+  const { RemovalAppealsPanel } = await import("../jobs/removal-appeals");
+  return { default: RemovalAppealsPanel };
+});
 const OfferCreatorDrafts = lazy(() => import("./offer-creator-drafts"));
 
 /** Create the complete offer and bind a course-derived request to its reviewed source revision. */
@@ -1196,7 +1199,9 @@ export function AdminPage() {
           <Link to="/admin/assignments">
             {de ? "Zur Auftragsübersicht" : "Back to assignment overview"}
           </Link>
-          <RemovalAppealsPanel actor={session!.user.id} />
+          <Suspense fallback={<Loading />}>
+            <RemovalAppealsPanel actor={session!.user.id} />
+          </Suspense>
         </div>
       ) : params.get("view") === "jobs" ? (
         <div className="section-stack">

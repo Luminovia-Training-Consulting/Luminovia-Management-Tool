@@ -2,7 +2,7 @@
  * Room directory, direct-message creation and active conversation selection. Selection owns
  * thread lifetime; contacts and membership come from authorized server projections.
  */
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -42,7 +42,7 @@ import {
 } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
-import { ChatRetention } from "./retention";
+
 import type { ChatRoom } from "./types";
 import { RoomActivity } from "./room-activity";
 import { RoomUnread } from "./room-unread";
@@ -52,6 +52,11 @@ import "./i18n";
 import "./pins-i18n";
 import "./room-archive-i18n";
 import "./chat.css";
+
+const ChatRetention = lazy(async () => {
+  const { ChatRetention } = await import("./retention");
+  return { default: ChatRetention };
+});
 
 const filterCategories = ["company", "staff", "course", "lecturer"] as const;
 type DirectoryPreference = {
@@ -348,7 +353,11 @@ function ChatDirectory({ actor }: { actor: string }) {
           {permissions.data?.includes("users.manage") &&
             roles.data?.some(
               (role) => role === "owner" || role === "admin",
-            ) && <ChatRetention actor={actor} />}
+            ) && (
+              <Suspense fallback={null}>
+                <ChatRetention actor={actor} />
+              </Suspense>
+            )}
           <Button
             variant="secondary"
             onClick={() => setContactsOpen(true)}
