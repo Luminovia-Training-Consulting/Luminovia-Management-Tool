@@ -327,7 +327,9 @@ it("recovers a server-saved creator draft and confirms the course with its recor
   );
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
   await userEvent.click(
-    within(dialog).getByRole("button", { name: "Zwischenstand speichern" }),
+    await within(dialog).findByRole("button", {
+      name: "Zwischenstand speichern",
+    }),
   );
   await waitFor(() =>
     expect(within(dialog).getByRole("status")).toHaveTextContent(
@@ -601,7 +603,7 @@ it.each([
       expect.anything(),
     );
     await userEvent.click(
-      dialog.getByRole("button", { name: "Zwischenstand speichern" }),
+      await dialog.findByRole("button", { name: "Zwischenstand speichern" }),
     );
     await dialog.findByText("Entwurf auf dem Server gespeichert.");
     expect(state.rpc).toHaveBeenCalledWith(

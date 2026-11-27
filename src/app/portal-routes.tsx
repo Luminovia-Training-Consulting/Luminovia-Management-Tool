@@ -33,7 +33,9 @@ import {
 import { isAssignmentRequest } from "../features/admin/navigation-links";
 import { Shell } from "./shell";
 import { Preferences } from "../components/preferences";
-import { ErrorState, Loading } from "../components/common";
+import { ErrorState, Loading, Notice } from "../components/common";
+import { useOnline } from "../lib/online";
+import { useTranslation } from "react-i18next";
 import { PageNotFound } from "../components/page-not-found";
 import { isConfigured } from "../lib/supabase";
 import { permissionsQuery, userRolesQuery } from "../lib/queries";
@@ -560,7 +562,7 @@ export default function PortalRoutes() {
             />
             <Route path="people" element={<PeopleDirectory />} />
             <Route path="people/:id" element={<PersonProfile />} />
-            <Route path="control-center" element={<ControlCenterPage />} />
+            <Route path="control-center" element={<ControlCenterRoute />} />
             <Route path="topics" element={<TaxonomyPage />} />
             <Route path="contracts" element={<ContractsPage />} />
             <Route path="changes" element={<ChangeRequestsPage />} />
@@ -623,6 +625,13 @@ export default function PortalRoutes() {
 }
 
 /** Keep bookmarks for the former separate expertise directory working. */
+/** Keep the offline shell available without loading online-only management code. */
+function ControlCenterRoute() {
+  const online = useOnline();
+  const { t } = useTranslation();
+  return online ? <ControlCenterPage /> : <Notice>{t("offline")}</Notice>;
+}
+
 function LegacyLecturersRoute() {
   const [params] = useSearchParams();
   const id = params.get("user");
