@@ -88,13 +88,16 @@ function workflow(name) {
     );
 }
 
-test("manual native acceptance uses a revision-specific concurrency group", () => {
+test("workflow concurrency preserves pushes and isolates manual revisions", () => {
     for (const name of ["ci", "security"]) {
-        const concurrency = workflow(name).concurrency;
-        assert.equal(concurrency["cancel-in-progress"], "true");
+        const {concurrency} = workflow(name);
+        const cancellation = concurrency["cancel-in-progress"];
+        assert.equal(allows(cancellation, {event_name: "push"}), false);
+        assert.equal(allows(cancellation, {event_name: "pull_request"}), true);
+        assert.equal(allows(cancellation, {event_name: "workflow_dispatch"}), true);
         assert.ok(concurrency.group.includes("github.head_ref || github.ref_name"));
         assert.ok(concurrency.group.includes(
-            "github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || ''",
+            "github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || github.event_name == 'push' && format('-push-{0}', github.run_id) || ''",
         ));
     }
 });
