@@ -5461,19 +5461,19 @@ const nativePaths = {
   },
   "/rest/v1/rpc/course_scorm_packages": rpc(
     "readCourseScormPackages",
-    "Premium LMS",
+    "Standard LMS",
     "List published SCORM packages",
-    "Current authorised learners and staff can list clean packages and their own lesson completion.",
+    "Current authorised learners and staff can list clean static packages and their own lesson completion. Interactive packages require Premium in the internal portal.",
     course,
     readScormPackages,
   ),
   "/rest/v1/rpc/course_scorm_action": {
     post: {
       operationId: "writeCourseScormPackage",
-      tags: ["Premium LMS"],
+      tags: ["Standard LMS"],
       summary: "Publish, withdraw or complete a SCORM package lesson",
       description:
-        "Current staff publish the exact scanned package version. Current learners record their own completion.",
+        "Current staff publish the exact validated package version. Current learners record their own static lesson progress. Interactive publication and runtime evidence require Premium in the internal portal.",
       requestBody: { required: true, content: json(scormCourseCommand) },
       responses: {
         "200": {

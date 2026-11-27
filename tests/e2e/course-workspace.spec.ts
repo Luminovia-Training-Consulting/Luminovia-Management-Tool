@@ -1686,62 +1686,75 @@ test("completed Premium course records a named closeout follow-up without resend
 });
 
 /** Exercise the scanner, exact download, inert launch and learner-owned progress. */
-test("published SCORM lessons open in a sandbox and retain learner completion", async ({page, browser, baseURL}, info) => {
-    test.setTimeout(120_000);
-    const f = await fixture();
-    await linkWorkspaceLearner(f);
-    await checked(f.adminClient.rpc("manage_course_enrolment", {
-        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
-    }));
-    const workspace = `/courses/${f.run}/workspace#course-materials`;
-    await adminLogin(page, f.manager);
-    await page.goto(workspace);
-    const review = page.getByRole("region", {name: "SCORM-1.2-Paketprüfung"});
-    await review.getByLabel("SCORM-ZIP auswählen").setInputFiles({
-        name: "fictional-course.zip", mimeType: "application/zip", buffer: Buffer.from(await scormFixtureZip()),
-    });
-    await review.getByRole("button", {name: "Paket prüfen"}).press("Enter");
-    const publish = review.getByRole("button", {name: "Paket veröffentlichen"});
-    await expect(publish).toBeEnabled();
-    await publish.press("Enter");
-    await expect(review.getByText("Paket für den Kurs veröffentlicht.")).toBeVisible({timeout: 45_000});
-    const staffPanel = page.getByRole("region", {name: "SCORM-Lernpakete"});
-    const scoped = await staffPanel.getByLabel("Lernpaket auswählen").locator("option").all();
-    expect(scoped).toHaveLength(2);
-    const packageId = await scoped[1].getAttribute("value");
-    expect(packageId).toMatch(/^[0-9a-f-]{36}$/);
-    await staffPanel.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+for (const premium of [true, false]) {
+    test(`published SCORM lessons open in a sandbox and retain learner completion (${premium ? "Premium" : "Standard"})`, async ({page, browser, baseURL}, info) => {
+        test.setTimeout(120_000);
+        const f = await fixture({premium});
+        await linkWorkspaceLearner(f);
+        await checked(f.adminClient.rpc("manage_course_enrolment", {
+            p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+        }));
+        const workspace = `/courses/${f.run}/workspace#course-materials`;
+        const openStandardScorm = async (target: Page) => {
+            if (!premium) await target.getByText("SCORM-Kursinhalte", {exact: true}).click();
+        };
+        await adminLogin(page, f.manager);
+        await page.goto(workspace);
+        await openStandardScorm(page);
+        const review = page.getByRole("region", {name: "SCORM-1.2-Paketprüfung"});
+        await review.getByLabel("SCORM-ZIP auswählen").setInputFiles({
+            name: "fictional-course.zip", mimeType: "application/zip", buffer: Buffer.from(await scormFixtureZip()),
+        });
+        await review.getByRole("button", {name: "Paket prüfen"}).press("Enter");
+        const publish = review.getByRole("button", {name: "Paket veröffentlichen"});
+        await expect(publish).toBeEnabled();
+        if (!premium) {
+            await expect(review.getByLabel("Interaktive SCORM-Wiedergabe")).toHaveCount(0);
+            await expect(page.getByRole("region", {name: "Kursprüfung", exact: true})).toHaveCount(0);
+        }
+        await publish.press("Enter");
+        await expect(review.getByText("Paket für den Kurs veröffentlicht.")).toBeVisible({timeout: 45_000});
+        const staffPanel = page.getByRole("region", {name: "SCORM-Lernpakete"});
+        const scoped = await staffPanel.getByLabel("Lernpaket auswählen").locator("option").all();
+        expect(scoped).toHaveLength(2);
+        const packageId = await scoped[1].getAttribute("value");
+        expect(packageId).toMatch(/^[0-9a-f-]{36}$/);
+        await staffPanel.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
 
-    const learnerContext = await browser.newContext({
-        baseURL, viewport: info.project.use.viewport,
-        isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
-    });
-    try {
-        const learnerPage = await learnerContext.newPage();
-        await login(learnerPage, f.learner.email, /\/learning$/);
-        await learnerPage.goto(workspace);
-        const player = learnerPage.getByRole("region", {name: "SCORM-Lernpakete"});
-        await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
-        await expect(player.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
-        await player.getByRole("button", {name: "Lernpaket öffnen"}).press("Enter");
-        const iframe = player.locator('iframe[title="Exercise <summary>"]');
-        await expect(iframe).toHaveAttribute("sandbox", "");
-        await expect(iframe.contentFrame().getByText("Fictional course file")).toBeVisible();
-        await player.getByRole("button", {name: "Lektion abschließen"}).press("Enter");
-        await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
-        await learnerPage.reload();
-        await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
-        await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
-        await expect(staffPanel.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
+        const learnerContext = await browser.newContext({
+            baseURL, viewport: info.project.use.viewport,
+            isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+        });
+        try {
+            const learnerPage = await learnerContext.newPage();
+            await login(learnerPage, f.learner.email, /\/learning$/);
+            await learnerPage.goto(workspace);
+            await openStandardScorm(learnerPage);
+            const player = learnerPage.getByRole("region", {name: "SCORM-Lernpakete"});
+            await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+            await expect(player.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
+            await player.getByRole("button", {name: "Lernpaket öffnen"}).press("Enter");
+            const iframe = player.locator('iframe[title="Exercise <summary>"]');
+            await expect(iframe).toHaveAttribute("sandbox", "");
+            await expect(iframe.contentFrame().getByText("Fictional course file")).toBeVisible();
+            await player.getByRole("button", {name: "Lektion abschließen"}).press("Enter");
+            await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
+            await learnerPage.reload();
+            await openStandardScorm(learnerPage);
+            await player.getByLabel("Lernpaket auswählen").selectOption({label: "Fictional package"});
+            await expect(player.getByText("1 von 1 Lektionen abgeschlossen")).toBeVisible();
+            await expect(staffPanel.getByText("0 von 1 Lektionen abgeschlossen")).toBeVisible();
 
-        await staffPanel.getByRole("button", {name: "Veröffentlichung zurückziehen"}).click();
-        await page.getByRole("dialog").getByRole("button", {name: "Paket zurückziehen", exact: true}).click();
-        await learnerPage.reload();
-        await expect(player.getByText("Für diesen Kurs ist kein Lernpaket veröffentlicht.")).toBeVisible();
-    } finally {
-        await learnerContext.close();
-    }
-});
+            await staffPanel.getByRole("button", {name: "Veröffentlichung zurückziehen"}).click();
+            await page.getByRole("dialog").getByRole("button", {name: "Paket zurückziehen", exact: true}).click();
+            await learnerPage.reload();
+            await openStandardScorm(learnerPage);
+            await expect(player.getByText("Für diesen Kurs ist kein Lernpaket veröffentlicht.")).toBeVisible();
+        } finally {
+            await learnerContext.close();
+        }
+    });
+}
 
 test.describe("separate HTTPS H5P player", () => {
     test("native workspace publishes, plays and withdraws a scanned H5P activity", async ({baseURL}, info) => {

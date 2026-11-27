@@ -1667,26 +1667,14 @@ function CourseWorkspaceLayout({
             />
             {currentSection === "course-materials" &&
               course.lms_enabled &&
-              course.access.staff &&
-              canEdit &&
-              online && (
-                <Suspense fallback={<Loading />}>
-                  <ScormPackageReview
-                    key={actor + ":" + course.id}
-                    actor={actor}
-                    course={course.id}
-                  />
-                </Suspense>
-              )}
-            {currentSection === "course-materials" &&
-              course.lms_enabled &&
               (course.access.staff || learner) &&
               (online ? (
                 <Suspense fallback={<Loading />}>
-                  <CourseScormPlayer
+                  <ScormMaterials
                     key={`${actor}:${course.id}:scorm`}
                     actor={actor}
-                    course={course.id}
+                    course={course}
+                    editable={course.access.staff && canEdit}
                   />
                   <CourseH5pPlayback
                     key={`${actor}:${course.id}:h5p`}
@@ -1968,7 +1956,30 @@ function CourseWorkspaceLayout({
   );
 }
 
-/** Standard access renders operational course facts only, even on an old Premium deep link. */
+function ScormMaterials({
+  actor,
+  course,
+  editable,
+}: {
+  actor: string;
+  course: CourseWorkspace;
+  editable: boolean;
+}) {
+  return (
+    <>
+      {editable && (
+        <ScormPackageReview
+          actor={actor}
+          course={course.id}
+          allowRuntime={course.lms_enabled}
+        />
+      )}
+      <CourseScormPlayer actor={actor} course={course.id} />
+    </>
+  );
+}
+
+/** Standard access loads the shared course content and permitted operational views. */
 function StandardCourseWorkspace({
   course,
   internal,
@@ -1979,6 +1990,7 @@ function StandardCourseWorkspace({
   actor: string;
 }) {
   const { t } = useTranslation("learning");
+  const [scormOpen, setScormOpen] = useState(false);
   return (
     <div className="section-stack">
       <PageHeading
@@ -2021,6 +2033,21 @@ function StandardCourseWorkspace({
       </div>
       <div id="course-materials">
         <Resources course={course} actor={actor} />
+        {(course.access.staff || course.access.learner) && (
+          <details onToggle={(event) => setScormOpen(event.currentTarget.open)}>
+            <summary>{t("standardScormMaterials")}</summary>
+            {scormOpen && (
+              <Suspense fallback={<Loading />}>
+                <ScormMaterials
+                  key={course.id}
+                  actor={actor}
+                  course={course}
+                  editable={course.access.staff}
+                />
+              </Suspense>
+            )}
+          </details>
+        )}
       </div>
       {(course.access.staff || course.access.learner) && (
         <CourseAuthoring

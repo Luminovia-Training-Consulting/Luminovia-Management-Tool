@@ -627,6 +627,7 @@ const pairs: Record<string, [string, string]> = {
     "This company's learning module is currently OFF. Base course details and sessions remain available; learning content, participant features and materials are blocked.",
   ],
   standardCourseCompleted: ["Kurs abgeschlossen", "Course completed"],
+  standardScormMaterials: ["SCORM-Kursinhalte", "SCORM course content"],
   standardCourseInProgress: ["Kurs in Bearbeitung", "Course in progress"],
   premiumOffCourseBadge: ["Standard-LMS", "Standard LMS"],
   workspaceDisabledTitle: [
