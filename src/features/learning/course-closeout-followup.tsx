@@ -14,26 +14,44 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import { useAuth } from "../auth/auth-context";
 import { closeoutCopy } from "./course-closeout-i18n";
-import { courseCloseoutFollowupSchema } from "./course-closeout-schema";
+import {
+  courseCloseoutFollowupSchema,
+  trainingEscalationDetailSchema,
+} from "./course-closeout-schema";
 
 type Task = z.infer<typeof courseCloseoutFollowupSchema>;
 type State = Exclude<Task["state"], "cancelled">;
 
-function Followup({ taskId }: { taskId: string }) {
+function Followup({
+  taskId,
+  escalation,
+}: {
+  taskId: string;
+  escalation: boolean;
+}) {
   const { i18n } = useTranslation();
   const de = i18n.language.startsWith("de");
   const online = useOnline();
   const actor = useAuth().session!.user.id;
   const client = useQueryClient();
-  const key = ["course-closeout-followup", actor, taskId];
+  const key = ["course-closeout-followup", actor, taskId, escalation];
+  const schema = courseCloseoutFollowupSchema.extend({
+    description: trainingEscalationDetailSchema.shape.description.optional(),
+  });
   const query = useQuery({
     queryKey: key,
     queryFn: async ({ signal }) => {
       const { data, error } = await db()
-        .rpc("course_closeout_followup", { p_task_id: taskId }, { get: true })
+        .rpc(
+          escalation
+            ? "training_escalation_detail"
+            : "course_closeout_followup",
+          { p_task_id: taskId },
+          { get: true },
+        )
         .abortSignal(signal);
       if (error) throw error;
-      return courseCloseoutFollowupSchema.parse(data);
+      return schema.parse(data);
     },
     retry: false,
   });
@@ -47,7 +65,9 @@ function Followup({ taskId }: { taskId: string }) {
     }) => {
       requireOnline();
       const { data, error } = await db().rpc(
-        "set_course_closeout_followup_state",
+        escalation
+          ? "set_training_escalation_state"
+          : "set_course_closeout_followup_state",
         {
           p_task_id: taskId,
           p_state: state,
@@ -55,11 +75,13 @@ function Followup({ taskId }: { taskId: string }) {
         },
       );
       if (error) throw error;
-      return courseCloseoutFollowupSchema.parse(data);
+      return schema.parse(data);
     },
     onSuccess: (task) => {
       client.setQueryData(key, task);
-      void client.invalidateQueries({ queryKey: ["course-closeout"] });
+      void client.invalidateQueries({
+        queryKey: escalation ? ["training-control"] : ["course-closeout"],
+      });
     },
   });
 
@@ -87,8 +109,21 @@ function Followup({ taskId }: { taskId: string }) {
             {dateTime(task.due_at, i18n.language, task.time_zone)}
           </p>
         )}
-        <Link to={`/courses/${task.course_run_id}/workspace#course-closeout`}>
-          {de ? "Zum Kursabschluss" : "Open course closeout"}
+        {task.description && <p>{task.description}</p>}
+        <Link
+          to={
+            escalation
+              ? `/courses?run=${task.course_run_id}`
+              : `/courses/${task.course_run_id}/workspace#course-closeout`
+          }
+        >
+          {escalation
+            ? de
+              ? "Zum Kurs"
+              : "Open course"
+            : de
+              ? "Zum Kursabschluss"
+              : "Open course closeout"}
         </Link>
         {save.isError && (
           <ErrorState
@@ -127,9 +162,16 @@ function Followup({ taskId }: { taskId: string }) {
 
 export function CourseCloseoutFollowupRoute() {
   const [params] = useSearchParams();
-  const task = z.uuid().safeParse(params.get("task"));
+  const escalation = params.has("escalation");
+  const task = z
+    .uuid()
+    .safeParse(params.get(escalation ? "escalation" : "task"));
   return task.success ? (
-    <Followup key={task.data} taskId={task.data} />
+    <Followup
+      key={`${task.data}:${escalation}`}
+      taskId={task.data}
+      escalation={escalation}
+    />
   ) : (
     <Navigate to="/" replace />
   );

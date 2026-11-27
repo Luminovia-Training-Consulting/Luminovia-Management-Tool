@@ -251,6 +251,7 @@ import {
 } from "../readiness/course-start-schema.ts";
 import {
   courseCloseoutFollowupSchema,
+  trainingEscalationDetailSchema,
   courseCloseoutRequest,
   courseCloseoutResponse,
 } from "../learning/course-closeout-schema.ts";
@@ -2771,6 +2772,26 @@ const nativePaths = {
     },
     z.toJSONSchema(trainingEscalationSchema),
     ["p_organisation_id", "p_topic_id"],
+  ),
+  "/rest/v1/rpc/training_escalation_detail": rpc(
+    "readTrainingEscalationTask",
+    "Operations",
+    "Read an assigned escalation task",
+    "Uses the current shared workbench permissions on the internal installation.",
+    { p_task_id: uuid },
+    z.toJSONSchema(trainingEscalationDetailSchema),
+  ),
+  "/rest/v1/rpc/set_training_escalation_state": rpc(
+    "setTrainingEscalationTaskState",
+    "Operations",
+    "Change an escalation task's status",
+    "Requires current workbench access and the task's reviewed version. Exact retries return the committed state.",
+    {
+      p_task_id: uuid,
+      p_state: { enum: ["open", "doing", "done"] },
+      p_version: { ...version, minimum: 1 },
+    },
+    z.toJSONSchema(trainingEscalationDetailSchema),
   ),
   "/rest/v1/rpc/acknowledge_training_issue": rpc(
     "acknowledgeTrainingIssue",

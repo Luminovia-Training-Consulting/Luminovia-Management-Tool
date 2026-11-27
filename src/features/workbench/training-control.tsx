@@ -211,7 +211,7 @@ export default function TrainingControl({
                           {issue.escalation && (
                             <p>
                               <Link
-                                to={`/workbench?task=${issue.escalation.id}`}
+                                to={`/workbench?escalation=${issue.escalation.id}`}
                               >
                                 {t("escalationTask")}
                               </Link>

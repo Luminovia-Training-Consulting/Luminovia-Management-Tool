@@ -138,9 +138,23 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
     ),
     "1",
   );
-  await sql(
-    `update private.work_tasks set state='done' where id=${quoteSql(task.id)}`,
-  );
+  const readTask = (who) =>
+    actor(
+      fixture[who],
+      `select public.training_escalation_detail(${quoteSql(task.id)})`,
+      "aal2",
+    ).then(JSON.parse);
+  assert.match((await readTask("second")).description, /qualified substitute/);
+  await assert.rejects(readTask("lecturer"), /permission|privilege/i);
+  const finish = () =>
+    actor(
+      fixture.second,
+      `select public.set_training_escalation_state(${quoteSql(task.id)},'done',1)`,
+      "aal2",
+    ).then(JSON.parse);
+  const finished = await finish();
+  assert.equal(finished.state, "done");
+  assert.deepEqual(await finish(), finished);
   assert.equal(
     (await fetch("second")).operations.issues.find(
       (item) => item.code === "staffing",

@@ -502,7 +502,7 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
   await user.click(submit);
   expect(
     await screen.findByRole("link", { name: "Aufgabe ansehen" }),
-  ).toHaveAttribute("href", `/workbench?task=${job}`);
+  ).toHaveAttribute("href", `/workbench?escalation=${job}`);
   expect(fake.rpc).toHaveBeenCalledWith(
     "escalate_training_issue",
     expect.objectContaining({
