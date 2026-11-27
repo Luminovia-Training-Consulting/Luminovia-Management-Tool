@@ -109,3 +109,44 @@ it("generates selected ranges, weekend blocks and multiple windows per day", () 
     }),
   ).toThrow("invalid_schedule");
 });
+
+describe("schedule expansion limits", () => {
+  const defaults = { start: "09:00", end: "10:00" };
+  const dates = {
+    kind: "dates" as const,
+    dates: "2027-01-18",
+    weekdays: {},
+    defaults,
+  };
+  const range = {
+    kind: "range" as const,
+    firstDay: "2027-01-18",
+    lastDay: "2027-01-25",
+    weekdays: { 1: [defaults] },
+    defaults,
+  };
+
+  it.each([
+    { ...dates, dates: "" },
+    { ...dates, excludedDates: dates.dates },
+    { ...dates, defaults: { ...defaults, start: "25:00" } },
+    { ...dates, defaults: { ...defaults, end: "25:00" } },
+    { ...dates, defaults: { ...defaults, end: "08:00" } },
+    {
+      ...dates,
+      dates: Array.from({ length: 61 }, (_, index) => `date-${index}`).join(
+        " ",
+      ),
+    },
+    { ...range, lastDay: "2027-01-17" },
+    { ...range, lastDay: "2032-01-18" },
+    { ...range, lastDay: "2029-01-18" },
+    { ...range, everyWeeks: 0 },
+    { ...range, everyWeeks: 5 },
+    { ...range, everyWeeks: 1.5 },
+    { ...range, weekdays: {} },
+    { ...range, weekdays: { 1: [{ ...defaults, end: "25:00" }] } },
+  ])("rejects an invalid schedule %#", (plan) => {
+    expect(() => teachingSchedule(plan)).toThrow("invalid_schedule");
+  });
+});

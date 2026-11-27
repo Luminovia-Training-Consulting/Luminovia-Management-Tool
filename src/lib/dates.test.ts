@@ -4,10 +4,12 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import {
+  compareScheduleInstants,
   dateTime,
   formatUtcDate,
   money,
   resolveScheduleWindow,
+  validScheduleIntervals,
   validZone,
   zonedInstant,
   zonedInstantForEdit,
@@ -227,4 +229,37 @@ it("reuses currency formatters without mixing currencies or languages", () => {
   } finally {
     constructor.mockRestore();
   }
+});
+
+describe("precise schedule intervals", () => {
+  const start = "2027-01-18T08:00:00Z";
+  const split = "2027-01-18T08:00:00.000001Z";
+  const end = "2027-01-18T08:00:00.000002Z";
+
+  it("compares sub-millisecond instants across offsets and rejects invalid endpoints", () => {
+    expect(compareScheduleInstants(split, start)).toBe(1);
+    expect(compareScheduleInstants("2027-01-18T08:00:01Z", start)).toBe(1000);
+    expect(
+      compareScheduleInstants(split, "2027-01-18T09:00:00.000001+01:00"),
+    ).toBe(0);
+    expect(compareScheduleInstants("invalid", start)).toBeNull();
+    expect(compareScheduleInstants(start, "invalid")).toBeNull();
+  });
+
+  it("accepts adjacent unsorted intervals and rejects overlaps and incomplete windows", () => {
+    const later = { starts_at: split, ends_at: end };
+    const earlier = { starts_at: start, ends_at: split };
+    expect(validScheduleIntervals([later, earlier])).toBe(true);
+    expect(validScheduleIntervals([later, { ...earlier, ends_at: end }])).toBe(
+      false,
+    );
+    expect(validScheduleIntervals([{ ...later, starts_at: null }])).toBe(false);
+    expect(validScheduleIntervals([{ ...later, ends_at: null }])).toBe(false);
+    expect(
+      validScheduleIntervals([{ starts_at: start, ends_at: "invalid" }]),
+    ).toBe(false);
+    expect(validScheduleIntervals([{ starts_at: end, ends_at: start }])).toBe(
+      false,
+    );
+  });
 });
