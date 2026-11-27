@@ -1,5 +1,11 @@
 /** Edition entry point, shared PWA notices and render fallback. */
-import { Component, type ReactNode, Suspense } from "react";
+import {
+  Component,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import EditionRoutes from "@edition-routes";
@@ -7,15 +13,23 @@ import { Loading } from "../components/common";
 import { PwaInstallOffer } from "../components/pwa-install";
 import { Button } from "../components/ui/button";
 import { useOnline } from "../lib/online";
+import { watchPwaUpdates } from "./pwa-update-check";
 
 /** Expose offline/update state and activate a new service worker only through the visible user action. */
 function AppNotices() {
   const { t } = useTranslation();
   const online = useOnline();
+  const [registration, setRegistration] = useState<ServiceWorkerRegistration>();
   const {
     needRefresh: [refresh, setRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    onRegisteredSW: (_, registered) => setRegistration(registered),
+  });
+  useEffect(() => {
+    if (registration)
+      return watchPwaUpdates(registration, () => setRefresh(true));
+  }, [registration, setRefresh]);
   return (
     <>
       <PwaInstallOffer enabled={online && !refresh} />

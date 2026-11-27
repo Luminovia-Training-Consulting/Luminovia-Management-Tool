@@ -3,7 +3,7 @@
  * observed membership revocation immediately discards room data and stops pending refreshes.
  */
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { chatKeys } from "./api";
 
@@ -24,35 +24,63 @@ export function useChatRealtime(actor: string, room: string | undefined) {
     let accessRevoked = false;
     let visibilityKey: string | undefined;
     let wasSubscribed = false;
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-    let messagesPending = false;
-    let roomsPending = false;
+    // Keep history and the room directory independent. Otherwise a long history
+    // refresh would delay unread counts, and new events would keep cancelling it.
+    function refreshQueue(queryKey: QueryKey) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let queued = false;
+      let inFlight = false;
+      const schedule = () => {
+        if (
+          !active ||
+          accessRevoked ||
+          !queued ||
+          inFlight ||
+          timer !== undefined
+        )
+          return;
+        timer = setTimeout(() => {
+          timer = undefined;
+          if (!active || accessRevoked) return;
+          queued = false;
+          inFlight = true;
+          // A page load or a poll that started before this event can finish first.
+          // Revalidate once more afterward so its result cannot swallow the event.
+          const alreadyFetching =
+            client.isFetching({ queryKey, type: "active" }) > 0;
+          void client
+            .invalidateQueries({ queryKey }, { cancelRefetch: false })
+            .then(() => {
+              inFlight = false;
+              queued ||= alreadyFetching;
+              schedule();
+            });
+        }, 150);
+      };
+      return {
+        request() {
+          queued = true;
+          schedule();
+        },
+        cancel() {
+          if (timer !== undefined) clearTimeout(timer);
+          timer = undefined;
+          queued = false;
+        },
+      };
+    }
+    const history = refreshQueue(chatKeys.messages(actor, room));
+    const directory = refreshQueue(chatKeys.rooms(actor));
     const cancelRefresh = () => {
-      if (refreshTimer !== undefined) clearTimeout(refreshTimer);
-      refreshTimer = undefined;
-      messagesPending = false;
-      roomsPending = false;
+      history.cancel();
+      directory.cancel();
     };
     // The first notification sets a short, fixed deadline. Later events share
     // that refresh, so a busy stream neither restarts every history-page request
     // nor postpones authorised revalidation indefinitely.
     const refresh = (messages: boolean, rooms: boolean) => {
-      if (!active || accessRevoked) return;
-      messagesPending ||= messages;
-      roomsPending ||= rooms;
-      if (refreshTimer !== undefined) return;
-      refreshTimer = setTimeout(() => {
-        const messageRefresh = messagesPending;
-        const roomRefresh = roomsPending;
-        cancelRefresh();
-        if (!active || accessRevoked) return;
-        if (messageRefresh)
-          void client.invalidateQueries({
-            queryKey: chatKeys.messages(actor, room),
-          });
-        if (roomRefresh)
-          void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
-      }, 150);
+      if (messages) history.request();
+      if (rooms) directory.request();
     };
     const channel = db()
       .channel(`portal-room-${room}-${actor}`, {

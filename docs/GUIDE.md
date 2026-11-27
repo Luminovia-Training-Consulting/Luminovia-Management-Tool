@@ -87,6 +87,8 @@ The same account can stay signed in on multiple devices. Signing out ends the cu
 
 On a phone, including the installed PWA, open the **Mehr / More** navigation menu and choose **Abmelden / Sign out** in its footer. On a desktop, use the sign-out action at the bottom of the sidebar.
 
+The installed web app checks for a new version when it returns to the foreground or reconnects while visible. Save your work before selecting **Jetzt aktualisieren / Update now**. A waiting update can be offered again when you return to the app.
+
 Account security uses password and recovery controls. Management operations require current database permissions and resource scope. A role label alone does not grant access and a screen cannot override backend denial. Sign out after using a shared device. If the portal reports a sign-out failure, the current session remains open so you can retry before leaving the device.
 
 ### Mail transport administration

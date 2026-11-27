@@ -60,8 +60,9 @@ it("refreshes the server-confirmed room list when another session changes the un
   await act(async () => {
     await vi.advanceTimersByTimeAsync(200);
   });
-  expect(invalidate).toHaveBeenCalledWith({
-    queryKey: ["chat-rooms", "actor"],
-  });
+  expect(invalidate).toHaveBeenCalledWith(
+    { queryKey: ["chat-rooms", "actor"] },
+    { cancelRefetch: false },
+  );
   client.clear();
 });
