@@ -144,9 +144,17 @@ await withTestDatabase("delegated_people", async ({ sql, actor }) => {
     ),
     companyAccountUpdate,
   );
-  await premium(org, false, 1);
-  await assert.rejects(identify(manager), /42501/);
+  assert.deepEqual(JSON.parse(await premium(org, false, 1)), {
+    status: "updated",
+    enabled: false,
+    version: 2,
+  });
+  assert.equal(
+    await sql(`select private.standard_lms_read_enabled(${q(org)})::text`),
+    "true",
+  );
+  assert.deepEqual(await identify(manager), update);
   console.log(
-    "PASS shared profiles require staff authority and Premium revocation denies scoped reads",
+    "PASS staff access remains available through Standard LMS after Premium is disabled",
   );
 });
