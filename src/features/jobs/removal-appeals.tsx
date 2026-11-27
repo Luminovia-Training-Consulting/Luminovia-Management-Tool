@@ -32,6 +32,30 @@ const records = z
 
 type Appeal = z.infer<typeof records>[number];
 
+/** Keep appeal status and actions inside the internal edition's lazy notification module. */
+export function RemovalAppealNotification({
+  status,
+  decisionReason,
+  actor,
+  claim,
+}: {
+  status: "available" | "pending" | "approved" | "rejected";
+  decisionReason?: string | null;
+  actor?: string;
+  claim?: string | null;
+}) {
+  const { t } = useTranslation("removalAppeals");
+  if (status === "available")
+    return actor && claim ? (
+      <SubmitRemovalAppeal actor={actor} claim={claim} />
+    ) : null;
+  return (
+    <p>
+      <strong>{t(status)}</strong> {decisionReason}
+    </p>
+  );
+}
+
 export function SubmitRemovalAppeal({
   actor,
   claim,
