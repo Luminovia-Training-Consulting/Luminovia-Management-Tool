@@ -163,7 +163,7 @@ try {
     await command("docker", [
         "exec", `supabase_db_${config.id}`, "psql", "-X", "-qAt", "-U", "supabase_admin",
         "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
-        "select private.ensure_administration_activity_schedule(); select private.ensure_course_curriculum_schedule(); select private.ensure_job_publication_schedule()",
+        "select private.ensure_administration_activity_schedule(); select private.ensure_course_curriculum_schedule(); select private.ensure_job_publication_schedule(); select private.ensure_chat_retention_schedule()",
     ], {quiet: true, log, timeoutMs: 10000});
     await command(process.execPath, ["scripts/local-env.mjs"], {
         quiet: true,

@@ -45,6 +45,7 @@ import {
 import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
+import { ChatRetention } from "./retention";
 import { MembersPanel, RoomIcon } from "./manage";
 import { MessageBubble } from "./message";
 import { TopicMessagePins } from "./topic-message-pins";
@@ -450,6 +451,7 @@ export function ChatThread({
           </span>
         </div>
         <div className="chat-thread-controls">
+          <ChatRetention actor={actor} roomId={room.id} />
           {!["dm", "general"].includes(room.kind) && (
             <Button
               variant="ghost"

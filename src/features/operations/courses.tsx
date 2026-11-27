@@ -140,6 +140,7 @@ const runSchema = z.object({
   time_zone: z.string().refine(validZone),
   delivery_type: z.enum(["online", "onsite"]),
   venue: z.string().max(500),
+  teaching_language: z.enum(["", "de", "en"]).optional(),
   archived: z.boolean(),
   sessions: z
     .array(
@@ -479,6 +480,7 @@ function RunForm({
         original?.time_zone ?? initialSchedule?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
       venue: original?.venue ?? "",
+      teaching_language: original?.teaching_language ?? "",
       archived: Boolean(original?.archived_at),
       sessions: original
         ? [...original.course_sessions]
@@ -694,6 +696,7 @@ function RunForm({
           organisation_id,
           time_zone,
           delivery_type,
+          teaching_language,
           venue,
         } = values;
         const fields = intent.content;
@@ -705,6 +708,7 @@ function RunForm({
               organisation_id,
               time_zone,
               delivery_type,
+              teaching_language,
               venue,
               sessions,
             },
@@ -748,8 +752,13 @@ function RunForm({
         }
         templateId = createdTemplate.current!.id;
       }
+      const { teaching_language, ...runValues } = values;
       const payload = {
-        ...values,
+        ...runValues,
+        ...(teaching_language !== undefined &&
+        teaching_language !== (original?.teaching_language ?? "")
+          ? { teaching_language }
+          : {}),
         template_id: templateId,
         sessions,
         published: original?.published ?? false,
@@ -865,6 +874,15 @@ function RunForm({
         </Notice>
       )}
       {creator && <h3>{creatorText("information")}</h3>}
+      {canEditCourseDetails && !linked && (
+        <Field id="run-teaching-language" label={t("teachingLanguage")}>
+          <select id="run-teaching-language" {...register("teaching_language")}>
+            <option value="">{t("teachingLanguageUnset")}</option>
+            <option value="de">{t("teachingLanguageGerman")}</option>
+            <option value="en">{t("teachingLanguageEnglish")}</option>
+          </select>
+        </Field>
+      )}
       <div className="course-run-source-fields">
         {(!canEditCourseDetails || !canEditCompany) && (
           <dl className="course-run-retained-details">
@@ -3095,6 +3113,16 @@ export function CoursesPage() {
             <p className="preserve-text">
               {findTemplate(detail)?.syllabus || "—"}
             </p>
+            {detail.teaching_language && (
+              <p>
+                <strong>{t("teachingLanguage")}</strong>{" "}
+                {t(
+                  detail.teaching_language === "de"
+                    ? "teachingLanguageGerman"
+                    : "teachingLanguageEnglish",
+                )}
+              </p>
+            )}
             <h3>{t("prerequisites")}</h3>
             <p className="preserve-text">
               {findTemplate(detail)?.prerequisites || "—"}

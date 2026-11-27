@@ -17,6 +17,7 @@ const groups: Record<
     "academy_course_enrolled",
     "claim_confirmed",
     "claim_cancelled",
+    "course_assignment_removal_appeal",
     "partial_teaching_replacement",
     "assignment_change",
     "assignment_withdrawal_requested",

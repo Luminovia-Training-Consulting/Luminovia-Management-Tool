@@ -39,7 +39,60 @@ const messageParameters = {
   },
 };
 
+const retentionHours = {
+  type: "integer",
+  enum: [0, 8, 168, 336],
+};
+const nullableRetentionHours = {
+  anyOf: [retentionHours, { type: "null" }],
+};
+const retentionScope = {
+  anyOf: [uuid, { type: "null" }],
+  description:
+    "Use null for the installation default or provide an accessible room ID.",
+};
+const retentionVersion = { type: "integer", minimum: 0 };
+const retentionPolicy = {
+  type: "object",
+  properties: {
+    hours: nullableRetentionHours,
+    default_hours: retentionHours,
+    version: retentionVersion,
+    can_edit: { type: "boolean" },
+  },
+  required: ["hours", "default_hours", "version", "can_edit"],
+  additionalProperties: false,
+};
+
 export const chatOperationDocumentation = {
+  chat_retention_policy: {
+    summary: "Read the chat retention policy",
+    description:
+      "Requires current room access or installation administration authority for the default. A null room duration inherits the default. Zero disables expiry.",
+    parameters: { p_room_id: retentionScope },
+    result: retentionPolicy,
+    errors: { "403": "The caller lacks access to the requested scope." },
+  },
+  set_chat_retention_policy: {
+    summary: "Set the retention policy for a chat or the installation",
+    description:
+      "Use the version from the most recent policy read. Policy changes apply to existing and new messages. The installation default requires administration authority. Room writes require current access and management authority.",
+    parameters: {
+      p_room_id: retentionScope,
+      p_hours: {
+        ...nullableRetentionHours,
+        description:
+          "Set zero to disable expiry. Null is only valid for a room and restores inheritance.",
+      },
+      p_expected_version: retentionVersion,
+    },
+    result: retentionPolicy,
+    errors: {
+      "400": "The retention duration or version is invalid.",
+      "403": "The caller cannot change the policy in this scope.",
+      "409": "Reload the policy because its version has changed.",
+    },
+  },
   chat_room_members: {
     summary: "List members of an accessible chat room",
     description:

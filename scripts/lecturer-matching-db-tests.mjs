@@ -74,6 +74,56 @@ await withTestDatabase("lecturer_matching", async ({ sql, actor }) => {
     /42501/,
   );
 
+  // A course language applies to offers even without independent job requirements.
+  const [template, languageJob] = Array.from({ length: 2 }, randomUUID);
+  await sql(`insert into public.course_templates(id,title)
+    values (${q(template)},'Fictional English course')`);
+  const coursePayload = {
+    template_id: template,
+    teaching_language: "en",
+    sessions: [
+      { starts_at: "2040-01-02T23:00:00Z", ends_at: "2040-01-03T01:00:00Z" },
+    ],
+  };
+  const course = await actor(
+    admin,
+    `select public.save_course_run(null, ${q(JSON.stringify(coursePayload))}::jsonb)`,
+  );
+  assert.equal(
+    await sql(
+      `select teaching_language from public.course_runs where id=${q(course)}`,
+    ),
+    "en",
+  );
+  await sql(`
+    insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+    values (${q(languageJob)},${q(course)},'Fictional English offer','Fictional customer','online','published',100,100,'EUR','fixed_total','Fictional terms');
+  `);
+  assert.equal(
+    await actor(
+      suitable,
+      `select count(*) from public.jobs where id=${q(languageJob)}`,
+    ),
+    "1",
+  );
+  assert.equal(
+    await actor(
+      wrongLanguage,
+      `select count(*) from public.jobs where id=${q(languageJob)}`,
+    ),
+    "0",
+  );
+  await sql(
+    `update public.jobs set urgent_reopened_at=now() where id=${q(languageJob)}`,
+  );
+  assert.equal(
+    await actor(
+      wrongLanguage,
+      `select count(*) from public.jobs where id=${q(languageJob)}`,
+    ),
+    "0",
+  );
+
   await rpc(unattested, "save_lecturer_matching_preferences", 0, prefs);
   for (const [user, expiry] of [
     [expired, "2040-01-03T15:00:00Z"],

@@ -1,3 +1,4 @@
+import { SubmitRemovalAppeal } from "../jobs/removal-appeals";
 import { memo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -64,6 +65,7 @@ export function CategorySelector({
 /** Display validated internal destinations and bind each notification to its read action. */
 export const NotificationRow = memo(function NotificationRow({
   item,
+  appealActor,
   zone,
   compact,
   disabled,
@@ -71,6 +73,7 @@ export const NotificationRow = memo(function NotificationRow({
   mark,
 }: {
   item: NotificationItem;
+  appealActor?: string;
   zone: string;
   compact?: boolean;
   disabled: boolean;
@@ -78,6 +81,7 @@ export const NotificationRow = memo(function NotificationRow({
   mark: (id: string, read: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("inbox");
+  const appeal = useTranslation("removalAppeals").t;
   return (
     <li
       className={`notification-row ${item.read_at ? "" : "notification-unread"}`}
@@ -95,6 +99,20 @@ export const NotificationRow = memo(function NotificationRow({
       </strong>
       {item.title && <p>{item.title}</p>}
       {item.removal_reason && <p>{item.removal_reason}</p>}
+      {item.appeal_status && item.appeal_status !== "available" && (
+        <p>
+          <strong>{appeal(item.appeal_status)}</strong>{" "}
+          {item.appeal_decision_reason}
+        </p>
+      )}
+      {appealActor &&
+        item.appeal_status === "available" &&
+        item.appeal_claim_id && (
+          <SubmitRemovalAppeal
+            actor={appealActor}
+            claim={item.appeal_claim_id}
+          />
+        )}
       <small>{dateTime(item.created_at, i18n.language, zone)}</small>
       {item.href ? (
         <Link to={item.href}>{t("open")}</Link>
