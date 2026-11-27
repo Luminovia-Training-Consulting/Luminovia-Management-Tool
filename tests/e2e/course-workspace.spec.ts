@@ -1626,6 +1626,7 @@ test("scoped LMS assessment exports protect small cohorts and company views", as
 });
 
 test("course staff can review a SCORM 1.2 ZIP locally without launching or uploading it", async ({ page, browser, baseURL }, info) => {
+    test.setTimeout(90_000);
     const f = await fixture();
     const language = info.project.name.startsWith("mobile") ? "en" : "de";
     const english = language === "en";

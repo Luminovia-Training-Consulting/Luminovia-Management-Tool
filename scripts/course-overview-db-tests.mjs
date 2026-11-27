@@ -66,6 +66,21 @@ await withTestDatabase("course_overview", async ({ actor, sql }) => {
     ),
   );
   await switchPremium(a, false, 1);
+  const afterDowngrade = await list(learner);
+  assert.equal(afterDowngrade.length, 2);
+  assert.equal(afterDowngrade.find(({ id }) => id === runA).lms_enabled, false);
+  assert.equal(afterDowngrade.find(({ id }) => id === runB).lms_enabled, true);
+  const standardCourse = JSON.parse(
+    await actor(learner, `select public.course_workspace(${q(runA)})`),
+  );
+  assert.equal(standardCourse.access.learner, true);
+  assert.equal(standardCourse.lms_enabled, false);
+  await assert.rejects(
+    actor(learner, `select public.course_gradebook(${q(runA)})`),
+    /42501/,
+  );
+  await sql(`update private.company_participant_memberships set status='removed'
+    where organisation_id=${q(a)} and user_id=${q(learner)}`);
   assert.deepEqual(
     (await list(learner)).map(({ id }) => id),
     [runB],
@@ -75,6 +90,6 @@ await withTestDatabase("course_overview", async ({ actor, sql }) => {
     false,
   );
   console.log(
-    "PASS live organisation names and next sessions with exact Premium company revocation",
+    "PASS live organisation names and next sessions with retained Standard courses and exact company membership revocation",
   );
 });

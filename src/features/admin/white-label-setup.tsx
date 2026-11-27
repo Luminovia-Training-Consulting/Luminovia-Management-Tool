@@ -124,8 +124,8 @@ export function WhiteLabelSetupPage() {
       <PageHeading
         title="White Label"
         description={word(
-          "Bereite eine eigenständige Akademie mit Premium LMS, eigener Domain und eigener Verwaltung vor.",
-          "Prepare a dedicated academy with Premium LMS, its own domain and its own administration.",
+          "Bereite eine eigenständige Akademie mit eigener Domain, eigener Verwaltung und dem gebuchten LMS-Paket vor.",
+          "Prepare a dedicated academy with its own domain, administration, and selected LMS package.",
         )}
       />
       <div className="section-stack">
@@ -212,6 +212,9 @@ function WhiteLabelSettingsForm({
     Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [errors, setErrors] = useState<string[]>([]);
   const [applied, setApplied] = useState(false);
+  const [packageChosen, setPackageChosen] = useState(
+    Boolean(saved?.licence.lms_package),
+  );
   const requestId = useRef<string | undefined>(saved?.request_id);
   const mutation = useMutation({
     mutationFn: (settings: AcademyCustomerDraft) =>
@@ -269,6 +272,9 @@ function WhiteLabelSettingsForm({
       },
       licence: {
         release_commit: field("licence.release_commit"),
+        ...(packageChosen || field("licence.lms_package") !== "premium"
+          ? { lms_package: field("licence.lms_package") }
+          : {}),
         limits: {
           seat_count: Number(field("licence.limits.seat_count")),
           storage_bytes: Number(field("licence.limits.storage_bytes")),
@@ -528,6 +534,21 @@ function WhiteLabelSettingsForm({
         </fieldset>
         <fieldset disabled={mutation.isPending}>
           <legend>{word("Vertrag und Lizenz", "Agreement and licence")}</legend>
+          <DraftSelect
+            name="licence.lms_package"
+            defaultValue={saved?.licence.lms_package ?? "premium"}
+            label={word("LMS-Paket", "LMS package")}
+            options={[
+              ["standard", "Standard LMS"],
+              ["premium", "Premium LMS"],
+            ]}
+            hint={word(
+              "Das Paket gilt für die erste signierte Lizenz. Für eine laufende Academy ändert der Betreiber das Paket mit einer neuen signierten Lizenz.",
+              "The package applies to the first signed licence. The operator changes the package for a running Academy with a new signed licence.",
+            )}
+            onChange={() => setPackageChosen(true)}
+            errors={errors}
+          />
           <div className="form-row">
             <DraftField
               name="support.agreement_reference"
@@ -673,14 +694,22 @@ function DraftSelect({
   errors,
   options,
   defaultValue,
-}: DraftFieldProps & { options: [string, string][]; defaultValue?: string }) {
+  hint,
+  onChange,
+}: DraftFieldProps & {
+  options: [string, string][];
+  defaultValue?: string;
+  hint?: string;
+  onChange?: () => void;
+}) {
   return (
     <Field
       id={"white-label-" + name.replaceAll(".", "-")}
       label={label}
       error={errors.includes(name)}
+      hint={hint}
     >
-      <select name={name} defaultValue={defaultValue}>
+      <select name={name} defaultValue={defaultValue} onChange={onChange}>
         {options.map(([value, text]) => (
           <option key={value} value={value}>
             {text}

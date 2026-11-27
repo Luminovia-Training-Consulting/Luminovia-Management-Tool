@@ -52,6 +52,8 @@ test("admin saves Academy settings only for an active company member", async ({p
             await page.getByLabel(label, {exact: true}).fill(value);
         }
         await page.getByLabel("Standarddarstellung", {exact: true}).selectOption("dark");
+        await expect(page.getByLabel("LMS-Paket", {exact: true})).toHaveValue("premium");
+        await page.getByLabel("LMS-Paket", {exact: true}).selectOption("standard");
         const submit = page.getByRole("button", {name: "Einstellungen speichern"});
         await submit.click();
         await expect(page.getByText("Die Adresse muss zu einem aktiven Firmenkonto dieses Unternehmens gehören.")).toBeVisible();
@@ -67,12 +69,23 @@ test("admin saves Academy settings only for an active company member", async ({p
         await expect(page.getByLabel("Name der Akademie")).toHaveValue("Fictional Training Academy");
         await expect(page.getByLabel("Standarddarstellung")).toHaveValue("dark");
         await expect(page.getByLabel("Datenregion")).toHaveValue("eu-central");
+        await expect(page.getByLabel("LMS-Paket", {exact: true})).toHaveValue("standard");
         await expect(page.getByLabel("Kontoplätze")).toHaveValue("40");
         const adminApi = api(process.env.SUPABASE_ANON_KEY!);
         const managerApi = api(process.env.SUPABASE_ANON_KEY!);
         await checked(adminApi.auth.signInWithPassword({email: admin.email, password: process.env.E2E_PASSWORD!}));
         await checked(managerApi.auth.signInWithPassword({email: manager.email, password: process.env.E2E_PASSWORD!}));
         const current = await checked(adminApi.rpc("academy_customer_setup", {p_organisation_id: organisation}), {requireData: true});
+        expect(current.settings.licence.lms_package).toBe("standard");
+        const invalid = await adminApi.rpc("academy_customer_setup", {
+            p_organisation_id: organisation,
+            p_expected_revision: current.revision,
+            p_settings: {
+                ...current.settings,
+                licence: {...current.settings.licence, lms_package: "unsupported"},
+            },
+        });
+        expect(invalid.status).toBe(400);
         const conflicting = {...current.settings, legal_customer_name: "Older edit"};
         const stale = await adminApi.rpc("academy_customer_setup", {
             p_organisation_id: organisation, p_expected_revision: 0, p_settings: conflicting,

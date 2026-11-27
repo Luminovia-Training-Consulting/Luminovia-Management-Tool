@@ -31,7 +31,7 @@ node scripts/academy-customer-draft.mjs approve "$private_registry" "$private_dr
 
 Compare the preview and original private draft before setting `exact_approval` to the complete `APPROVE …` text returned by the preview. Any change to the approved details requires a fresh review. Keep `approved-drafts.json` private. It records names, contact addresses and approval times. An exact retry returns the original installation ID and receipt.
 
-Use the [signed runtime handoff](RUNTIME-HANDOFF.md) to pass the approved installation and target to the customer operator. The operator confirms the local path and generates the private configuration on their own machine. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. Runtime creation, licence issuance and publication each require their own operator action.
+Use the [signed runtime handoff](RUNTIME-HANDOFF.md) to pass the approved installation and target to the customer operator. The operator confirms the local path and generates the private configuration on their own machine. Use the approved exact release, limits and customer agreement in the separate licence issuer and staging steps. White Label setup records the LMS package independently of hosting. Choose Standard LMS or Premium LMS in the setup or supply `licence.lms_package` in the private draft. An omitted field keeps the legacy Premium default. Runtime creation, licence issuance and publication each require their own operator action.
 
 ## Issue or renew a customer licence
 
@@ -47,7 +47,7 @@ node scripts/academy-customer-draft.mjs export-licence "$private_registry" "$lic
 
 Use the full `ISSUE …` text from the preview and the trusted Ed25519 issuer key in a private file. The export writes `licence-<action_id>.signed` with mode 0600 in the registry directory. Share only this file, through the agreed fulfilment channel. Keep the registry and the signing key private. The registry records the reviewed terms, the exact signed envelope and the timestamp for every action. Retrying the same action returns its original receipt. Concurrent requests from the same previous licence can record only one successor.
 
-- Use `initial-licensed` with `preceding_licence_sha256: null` and the release and limits from the approved draft.
+- Use `initial-licensed` with `preceding_licence_sha256: null` and the release and limits from the approved draft. If the draft records a package, the request must match it. For Standard LMS, set `lms_package: "standard"` in a version 2 request. Premium LMS uses `"premium"` or the legacy default.
 - Use `renew` to issue the next licensed term. Set `preceding_licence_sha256` to the latest recorded envelope digest from `licence-history`. The successor must have a later issue timestamp and expiry. Enter any revised quotas in the new request and choose the release the operator will actually install. Apply the replacement once its validity starts.
 - Use `adopt-licensed` to record an already issued licence as the first ledger entry. Use the exact signed terms and set `existing_licence_sha256` to the SHA-256 of the envelope text without its final newline. Pass its private file path as the last argument to `issue-licence`. The command verifies the trusted signature and installation binding before recording the original envelope.
 

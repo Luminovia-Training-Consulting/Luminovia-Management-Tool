@@ -129,7 +129,9 @@ export function planCustomerAcademyDraft(input) {
       installation_id: id,
       edition: draft.target.edition,
       release_commit: draft.licence.release_commit,
-      modules: ["lms"],
+      modules: [
+        draft.licence.lms_package === "standard" ? "lms-standard" : "lms",
+      ],
       limits: draft.licence.limits,
     },
     approval_sha256: approvalHash(draft),
@@ -807,6 +809,9 @@ function publicReview(plan) {
     smtp_mode: draft.smtp_mode,
     backup_retention_days: draft.backup_retention_days,
     licensed_limits: draft.licence.limits,
+    ...(draft.licence.lms_package && {
+      lms_package: draft.licence.lms_package,
+    }),
     release_commit: draft.licence.release_commit,
     approval: "APPROVE " + approval_sha256,
   };

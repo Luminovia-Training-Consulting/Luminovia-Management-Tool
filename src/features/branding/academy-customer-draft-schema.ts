@@ -102,6 +102,7 @@ export const academyCustomerDraftSchema = z
     licence: z.strictObject({
       release_commit: releaseCommit,
       limits: licenceLimits,
+      lms_package: z.enum(["standard", "premium"]).optional(),
     }),
   })
   .superRefine((draft, state) => {

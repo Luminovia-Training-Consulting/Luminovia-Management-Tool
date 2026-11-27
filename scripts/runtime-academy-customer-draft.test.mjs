@@ -27,6 +27,7 @@ import {
   signAcademyLicence,
   verifyAcademyLicence,
 } from "./academy-licence.mjs";
+import { planLicenceAction } from "./academy-customer-licensing.mjs";
 import { signAcademyRuntimeHandoff } from "./academy-runtime-handoff.mjs";
 import { readPrivateFixture } from "./testing/read-private-fixture.mjs";
 
@@ -78,6 +79,70 @@ test("saved portal settings can be reviewed and approved through stdin", async (
   assert.equal(preview.approval, reviewToken(planCustomerAcademyDraft(entry)));
   assert.equal(execute("approve", preview.approval).created, true);
   assert.equal(execute("approve", preview.approval).created, false);
+});
+
+test("binds the explicitly selected setup package to the first licence without changing legacy digests", () => {
+  const entry = draft();
+  const legacy = planCustomerAcademyDraft(entry);
+  assert.equal(legacy.draft.licence.lms_package, undefined);
+  assert.deepEqual(legacy.unsigned_licence_selection.modules, ["lms"]);
+  const standard = planCustomerAcademyDraft({
+    ...entry,
+    licence: { ...entry.licence, lms_package: "standard" },
+  });
+  const premium = planCustomerAcademyDraft({
+    ...entry,
+    licence: { ...entry.licence, lms_package: "premium" },
+  });
+  assert.deepEqual(standard.unsigned_licence_selection.modules, [
+    "lms-standard",
+  ]);
+  assert.notEqual(standard.approval_sha256, legacy.approval_sha256);
+  assert.equal(
+    planCustomerAcademyDraft(legacy.draft).approval_sha256,
+    legacy.approval_sha256,
+  );
+
+  const receipt = (plan) => ({
+    ...plan,
+    installation_id: plan.runtime.installation_id,
+  });
+  const request = {
+    version: 2,
+    action_id: randomUUID(),
+    draft_request_id: entry.request_id,
+    action: "initial-licensed",
+    preceding_licence_sha256: null,
+    agreement_reference: entry.support.agreement_reference,
+    release_commit: entry.licence.release_commit,
+    limits: entry.licence.limits,
+    issued_at: "2026-11-20T00:00:00.000Z",
+    starts_at: "2026-11-23T00:00:00.000Z",
+    expires_at: "2026-12-21T00:00:00.000Z",
+    grace_until: "2026-12-28T00:00:00.000Z",
+  };
+  assert.throws(
+    () => planLicenceAction(receipt(standard), request),
+    /match the approved Academy LMS package/,
+  );
+  assert.throws(
+    () =>
+      planLicenceAction(receipt(premium), {
+        ...request,
+        lms_package: "standard",
+      }),
+    /match the approved Academy LMS package/,
+  );
+  assert.deepEqual(
+    planLicenceAction(receipt(standard), {
+      ...request,
+      lms_package: "standard",
+    }).terms.modules,
+    ["lms-standard"],
+  );
+  assert.deepEqual(planLicenceAction(receipt(legacy), request).terms.modules, [
+    "lms",
+  ]);
 });
 
 async function vendorFixture(t, edition) {

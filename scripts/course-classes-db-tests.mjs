@@ -35,10 +35,12 @@ for (const edition of [
       edition,
       installationId: installation,
     });
-    const result = (endpoint) => z.fromJSONSchema(
-      api.paths["/rest/v1/rpc/" + endpoint].post.responses["200"]
-        .content["application/json"].schema,
-    );
+    const result = (endpoint) =>
+      z.fromJSONSchema(
+        api.paths["/rest/v1/rpc/" + endpoint].post.responses["200"].content[
+          "application/json"
+        ].schema,
+      );
     const classOptions = result("course_class_options");
     const classAssignment = result("set_course_class");
     const terms = {
@@ -192,7 +194,19 @@ for (const edition of [
       await sql(
         `update private.company_premium_settings set enabled=false where organisation_id=${q(orgA)}`,
       );
-      await assert.rejects(read(admin, runA), /42501/);
+      const standard = await read(admin, runA);
+      assert.equal(standard.can_edit, true);
+      assert.match(standard.current.name, /^New group [12]$/);
+      await assert.rejects(read(client, runA), /42501/);
+      const revised = await save(
+        admin,
+        runA,
+        null,
+        "Standard class",
+        standard.version,
+      );
+      assert.equal(revised.version, standard.version + 1);
+      assert.equal(revised.current.name, "Standard class");
     } else {
       await sql(`update private.installation_verified_licence set expires_at=now()-interval '1 hour'
         where installation_id=${q(installation)}`);

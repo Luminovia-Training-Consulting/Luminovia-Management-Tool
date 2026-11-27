@@ -178,7 +178,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await templateCard
         .getByRole("button", {name: "Aus Vorlage erstellen", exact: true})
         .click();
-    dialog = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+    dialog = page.getByRole("dialog", {name: "Kurs- und Auftragsassistent starten", exact: true});
     await expect(
         dialog.getByLabel("Kursvorlage", {exact: true}).locator("option:checked"),
     ).toHaveText(title);

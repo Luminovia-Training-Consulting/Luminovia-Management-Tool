@@ -298,6 +298,72 @@ const withdrawn = await request(
 );
 assert.equal(withdrawn.status, 200);
 await json(await download(learner), 403, "document_unavailable");
+const renewTerms = (changes) =>
+  sql(
+    `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...terms, ...changes }))}::jsonb)`,
+  );
+const capabilities = () =>
+  request(
+    "/rest/v1/rpc/installation_capabilities",
+    null,
+    undefined,
+    "GET",
+  ).then((res) => json(res, 200));
+const workspace = (who) =>
+  request(
+    `/rest/v1/rpc/course_workspace?p_run_id=${run}`,
+    who,
+    undefined,
+    "GET",
+  );
+const grades = () =>
+  request(
+    `/rest/v1/rpc/course_gradebook?p_run_id=${run}`,
+    admin,
+    undefined,
+    "GET",
+  );
+renewTerms({ issued_at: day(-1.9), modules: ["lms-standard"] });
+assert.equal((await capabilities()).academy_standard_only, true);
+const standardCourse = await json(await workspace(learner), 200);
+assert.equal(standardCourse.lms_enabled, false);
+assert.equal(standardCourse.access.learner, true);
+assert.equal((await json(await workspace(outside), 403)).code, "42501");
+assert.equal((await json(await grades(), 403)).code, "42501");
+renewTerms({ issued_at: day(-1.8) });
+assert.equal((await capabilities()).academy_standard_only, undefined);
+assert.equal((await json(await workspace(learner), 200)).lms_enabled, true);
+assert.equal((await grades()).status, 200);
+renewTerms({
+  issued_at: day(-1.7),
+  starts_at: day(-1.6),
+  expires_at: day(-0.5),
+  grace_until: day(1),
+  modules: ["lms-standard"],
+});
+assert.equal((await capabilities()).licence_status, "grace");
+assert.equal((await json(await workspace(learner), 200)).lms_enabled, false);
+const graceWrite = await request(
+  "/rest/v1/rpc/academy_learning_action",
+  learner,
+  {
+    p_run_id: run,
+    p_action: "feedback",
+    p_payload: { rating: 4, comment: "Fictional feedback" },
+    p_expected_version: 0,
+  },
+);
+assert.equal((await json(graceWrite, 403)).code, "42501");
+renewTerms({
+  issued_at: day(-1.5),
+  starts_at: day(-1.4),
+  expires_at: day(-1.3),
+  grace_until: day(-1.2),
+  modules: ["lms-standard"],
+});
+assert.equal((await capabilities()).licence_status, "expired");
+assert.equal((await json(await workspace(learner), 403)).code, "42501");
+
 console.log(
   JSON.stringify({
     edition,
@@ -321,6 +387,8 @@ console.log(
       "raw_storage_denied",
       "altered_storage_denied",
       "same_token_revoked",
+      "native_package_downgrade_and_reactivation",
+      "native_standard_grace_and_expiry",
     ],
   }),
 );

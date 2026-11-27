@@ -119,6 +119,17 @@ function planRecordedTransition(receipt, request, previous) {
       );
   }
 
+  const approvedPackage = receipt.draft.licence.lms_package;
+  if (
+    !previous &&
+    approvedPackage &&
+    (request.lms_package ?? "premium") !== approvedPackage
+  ) {
+    throw new Error(
+      "The first licence must match the approved Academy LMS package.",
+    );
+  }
+
   if (adopting !== (request.existing_licence_sha256 !== null))
     throw new Error(
       "An existing envelope hash is required only when registering a licence.",

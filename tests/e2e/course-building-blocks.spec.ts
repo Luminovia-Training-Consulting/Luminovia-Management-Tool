@@ -143,7 +143,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .getByRole("button", {name: "Aus Vorlage erstellen", exact: true})
         .click();
     const runDialog = page.getByRole("dialog", {
-        name: "Kurs anlegen",
+        name: "Kurs- und Auftragsassistent starten",
         exact: true,
     });
     await expect(
@@ -154,8 +154,9 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .getByLabel("Erster Unterrichtstag", {exact: true})
         .fill("2037-07-06");
     await runDialog
-        .getByRole("button", {name: "10 Werktagstermine erzeugen", exact: true})
+        .getByRole("button", {name: "Terminvorschau erstellen", exact: true})
         .click();
+    await runDialog.getByRole("button", {name: "Termine übernehmen", exact: true}).click();
     await expect(runDialog.getByLabel(/^Beginn \d+$/)).toHaveCount(10);
     await expect(runDialog.getByLabel(/^Ende \d+$/)).toHaveCount(10);
     const venue = `Fictional Course online classroom ${tag}`;
@@ -332,11 +333,17 @@ test("Company portal authors a template and saves an unpublished run", async ({p
     await page.locator("article").filter({
         has: page.getByRole("heading", {name: editedTitle, exact: true}),
     }).getByRole("button", {name: "Aus Vorlage erstellen", exact: true}).click();
-    const run = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+    const run = page.getByRole("dialog", {name: "Neuen Kursentwurf starten", exact: true});
     await expect(run.getByLabel("Organisation", {exact: true})).toHaveValue(organisationId);
     await expect(run.getByRole("button", {name: /Kurskatalog anzeigen|Auftrag für die Stellenbörse erstellen/})).toHaveCount(0);
     await run.getByLabel("Beginn 1", {exact: true}).fill("2037-07-06T09:00");
     await run.getByLabel("Ende 1", {exact: true}).fill("2037-07-06T16:00");
+    await run.getByRole("button", {name: "Zwischenstand speichern", exact: true}).click();
+    await expect(run.getByText("Entwurf auf dem Server gespeichert.")).toBeVisible();
+    await page.reload();
+    await expect(run.getByLabel("Beginn 1", {exact: true})).toHaveValue("2037-07-06T09:00");
+    await expect(run.getByLabel("Ende 1", {exact: true})).toHaveValue("2037-07-06T16:00");
+
     await run.getByRole("button", {name: "Entwurf speichern", exact: true}).click();
     await expect(run).toBeHidden({timeout: 20000});
     await expect(

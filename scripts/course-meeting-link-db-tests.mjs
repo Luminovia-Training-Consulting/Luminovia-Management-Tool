@@ -168,8 +168,9 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
   );
 
   await toggle(false, 1);
-  await assert.rejects(workspace(learner), /unavailable/i);
-  for (const who of [manager, teacher, client]) {
+  const learnerStandard = await workspace(learner);
+  assert.equal(learnerStandard.access.learner, true);
+  for (const who of [manager, teacher, client, learner]) {
     const standard = await workspace(who);
     assert.equal(standard.lms_enabled, false);
     assert.equal(standard.meeting_link, null);

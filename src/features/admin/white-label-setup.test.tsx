@@ -123,6 +123,7 @@ it("blocks the setup route for management before reading companies", async () =>
 
 it("saves company settings and restores them after reopening without a download", async () => {
   const { user, submit } = await openDraft();
+  expect(screen.getByLabelText("LMS package")).toHaveValue("premium");
   await user.selectOptions(screen.getByLabelText("Default appearance"), "dark");
   await user.click(submit);
   expect(await screen.findByText("Settings saved.")).toBeVisible();
@@ -141,6 +142,8 @@ it("saves company settings and restores them after reopening without a download"
       }),
     }),
   });
+  const sent = fake.rpc.mock.calls.find(([, args]) => args.p_settings)?.[1];
+  expect(sent.p_settings.licence).not.toHaveProperty("lms_package");
   const toggle = screen.getByRole("switch");
   await user.click(toggle);
   await user.click(toggle);
@@ -150,6 +153,40 @@ it("saves company settings and restores them after reopening without a download"
   expect(screen.getByLabelText("Data region")).toHaveValue("eu-central");
   expect(screen.getByLabelText("Default appearance")).toHaveValue("dark");
   expect(fake.saveBlob).not.toHaveBeenCalled();
+});
+
+it("persists the Standard package and can explicitly switch it to Premium without changing hosting", async () => {
+  const { user, submit } = await openDraft();
+  await user.selectOptions(screen.getByLabelText("LMS package"), "standard");
+  await user.selectOptions(
+    screen.getByLabelText("Operating model"),
+    "customer-managed",
+  );
+  await user.click(submit);
+  expect(await screen.findByText("Settings saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenLastCalledWith("academy_customer_setup", {
+    p_organisation_id: company.id,
+    p_expected_revision: 0,
+    p_settings: expect.objectContaining({
+      licence: expect.objectContaining({ lms_package: "standard" }),
+      target: expect.objectContaining({ edition: "customer-managed" }),
+    }),
+  });
+  const toggle = screen.getByRole("switch");
+  await user.click(toggle);
+  await user.click(toggle);
+  expect(await screen.findByLabelText("LMS package")).toHaveValue("standard");
+  await user.selectOptions(screen.getByLabelText("LMS package"), "premium");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  expect(await screen.findByText("Settings saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenLastCalledWith("academy_customer_setup", {
+    p_organisation_id: company.id,
+    p_expected_revision: 1,
+    p_settings: expect.objectContaining({
+      licence: expect.objectContaining({ lms_package: "premium" }),
+      target: expect.objectContaining({ edition: "customer-managed" }),
+    }),
+  });
 });
 
 it("shows server membership and version errors without claiming to save", async () => {
