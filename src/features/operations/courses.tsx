@@ -99,6 +99,16 @@ import {
 import { BuildingBlockReference, CourseRunOfferLink } from "./building-blocks";
 import { CourseSessionBulkEdit } from "./course-session-bulk-edit";
 import { CourseSchedulePlanner } from "./course-schedule-planner";
+import {
+  CourseCreatorDraftLibrary,
+  CourseCreatorDraftSaveBar,
+} from "./course-creator-drafts";
+import {
+  courseCreatorDraftId,
+  courseCreatorDraftsQuery,
+  useCourseCreatorDraftSaver,
+  type CourseCreatorDraft,
+} from "./course-creator-drafts-api";
 import { CourseSeriesForm } from "./course-series";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
@@ -365,6 +375,8 @@ function RunForm({
   organisations,
   initialTemplateId,
   initialSchedule,
+  creator,
+  reloadCreator,
   companyOnly,
   focusTarget,
   canPrepareOffer,
@@ -377,6 +389,8 @@ function RunForm({
   organisations: PlanningOrganisation[];
   initialTemplateId?: string;
   initialSchedule?: ReturnType<typeof calendarCourseSchedule>;
+  creator?: { id: string; saved?: CourseCreatorDraft };
+  reloadCreator?: () => void;
   companyOnly: boolean;
   focusTarget?: "schedule" | "organisation";
   canPrepareOffer: boolean;
@@ -389,15 +403,21 @@ function RunForm({
   onBusy: (busy: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("operations");
-  const draftOnly = Boolean(initialTemplateId) && !original;
+  const creatorText = useTranslation("courseCreator").t;
+  const draftOnly = Boolean(initialTemplateId) && !original && !creator;
   const { session } = useAuth();
   const actor = session!.user.id;
+  const draftSaver = useCourseCreatorDraftSaver(
+    actor,
+    creator?.id,
+    creator?.saved?.revision,
+  );
   const online = useOnline();
   const client = useQueryClient();
   const topics = useQuery(topicsQuery);
   const content = useForm<TemplateValues>({
     resolver: zodResolver(templateSchema),
-    defaultValues: {
+    defaultValues: creator?.saved?.payload?.content ?? {
       title: "",
       description: "",
       syllabus: "",
@@ -434,7 +454,7 @@ function RunForm({
     formState: { errors, isDirty },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
-    defaultValues: {
+    defaultValues: creator?.saved?.payload?.run ?? {
       template_id: original?.template_id ?? initialTemplateId ?? "",
       organisation_id:
         original?.organisation_id ??
@@ -467,6 +487,13 @@ function RunForm({
     },
   });
   const editedSessions = useWatch({ control, name: "sessions" }) ?? [];
+  // Only the creator observes the complete unsaved form. Normal course editing
+  // continues to subscribe to the specific fields needed for its existing UI.
+  const creatorRunValues = useWatch({ control, disabled: !creator });
+  const creatorContentValues = useWatch({
+    control: content.control,
+    disabled: !creator,
+  });
   const editedSessionCount = editedSessions.filter(
     (entry) => entry.starts_at || entry.ends_at,
   ).length;
@@ -647,6 +674,46 @@ function RunForm({
         setTimeError(true);
         throw new Error("time");
       }
+      if (creator) {
+        const {
+          template_id,
+          organisation_id,
+          time_zone,
+          delivery_type,
+          venue,
+        } = values;
+        const fields = intent.content;
+        const receipt = await draftSaver.write(
+          { run: getValues(), content: content.getValues() },
+          {
+            run: {
+              template_id,
+              organisation_id,
+              time_zone,
+              delivery_type,
+              venue,
+              sessions,
+            },
+            content: fields
+              ? {
+                  title: fields.title,
+                  description: fields.description,
+                  syllabus: fields.syllabus,
+                  prerequisites: fields.prerequisites,
+                  topic_ids: fields.topic_ids,
+                }
+              : null,
+            next_action: intent.offer ? "offer" : "course",
+          },
+        );
+        if (!receipt?.course_run_id) throw new Error("missing course receipt");
+        return {
+          kind: "run",
+          offerRun:
+            receipt.next_action === "offer" ? receipt.course_run_id : undefined,
+          savedRun: receipt.course_run_id,
+        } as const;
+      }
       let templateId = values.template_id;
       if (!templateId && intent.content) {
         const value = JSON.stringify([intent.content, values.organisation_id]);
@@ -783,6 +850,7 @@ function RunForm({
           </ul>
         </Notice>
       )}
+      {creator && <h3>{creatorText("information")}</h3>}
       <div className="course-run-source-fields">
         {(!canEditCourseDetails || !canEditCompany) && (
           <dl className="course-run-retained-details">
@@ -948,6 +1016,7 @@ function RunForm({
           </div>
         )}
       </div>
+      {creator && <h3>{creatorText("schedule")}</h3>}
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
         <input id="run-venue" {...register("venue")} />
       </Field>
@@ -1115,8 +1184,29 @@ function RunForm({
           </label>
         </fieldset>
       )}
+      {creator && (
+        <>
+          <h3>{creatorText("review")}</h3>
+          {canPrepareOffer && (
+            <p className="muted">{creatorText("offerHint")}</p>
+          )}
+          <CourseCreatorDraftSaveBar
+            snapshot={{
+              run: {
+                ...getValues(),
+                ...creatorRunValues,
+                sessions: getValues("sessions"),
+              },
+              content: { ...content.getValues(), ...creatorContentValues },
+            }}
+            saver={draftSaver}
+            busy={save.isPending}
+            onReload={() => reloadCreator?.()}
+          />
+        </>
+      )}
       <div className="form-actions">
-        {needsContent && (
+        {needsContent && !creator && (
           <Button
             type="button"
             variant="secondary"
@@ -1138,7 +1228,10 @@ function RunForm({
             original && focusTarget !== "organisation" ? "default" : "secondary"
           }
           disabled={
-            !online || save.isPending || (needsContent && !topics.isSuccess)
+            !online ||
+            save.isPending ||
+            draftSaver.status === "conflict" ||
+            (needsContent && !topics.isSuccess)
           }
         >
           {t(original ? "save" : "saveRunDraft")}
@@ -1156,6 +1249,7 @@ function RunForm({
                 !online ||
                 !activeOrganisation ||
                 save.isPending ||
+                draftSaver.status === "conflict" ||
                 (needsContent && !topics.isSuccess)
               }
               onClick={submitRun(true)}
@@ -1304,6 +1398,26 @@ export function CoursesPage() {
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
+  const creatorText = useTranslation("courseCreator").t;
+  const creatorRoute = params.get("creator");
+  const requestedCreatorId = courseCreatorDraftId.safeParse(creatorRoute).data;
+  const creatorId = manage ? requestedCreatorId : undefined;
+  const creatorRead = useQuery({
+    ...courseCreatorDraftsQuery(actor, creatorId),
+    enabled: Boolean(creatorId) && online,
+    retry: false,
+  });
+  const creatorRecord = creatorRead.data?.[0];
+  const creatorFresh = params.get("startCreator") === "1";
+  const [creatorEpoch, setCreatorEpoch] = useState(0);
+  useEffect(() => {
+    if (manage && creatorRoute === "new") {
+      setParams(
+        { creator: crypto.randomUUID(), startCreator: "1" },
+        { replace: true },
+      );
+    }
+  }, [creatorRoute, manage, setParams]);
   const calendarPlan =
     manage && runEdit === undefined
       ? calendarCourseSchedule(
@@ -1457,6 +1571,17 @@ export function CoursesPage() {
       !template.building_block_id &&
       !template.building_block_source_id);
   const navigate = useNavigate();
+  const startCreator = () =>
+    setCourseView({ creator: crypto.randomUUID(), startCreator: "1" });
+  const openCreator = (id: string) => setCourseView({ creator: id });
+  const continueCreator = (draft: CourseCreatorDraft) => {
+    if (!draft.course_run_id) return;
+    setCourseView(
+      draft.next_action === "offer" && canPrepareOffer
+        ? { offer: draft.course_run_id }
+        : { run: draft.course_run_id },
+    );
+  };
   const detail = runs.data?.find((run) => run.id === params.get("run"));
   const offerRunId = canPrepareOffer ? params.get("offer") : null;
   const workspaceEntitlement = useQuery({
@@ -2011,6 +2136,14 @@ export function CoursesPage() {
           </div>
         }
       />
+      {manage && tab === "runs" && (
+        <CourseCreatorDraftLibrary
+          actor={actor}
+          onStart={startCreator}
+          onOpen={openCreator}
+          onContinue={continueCreator}
+        />
+      )}
       <section className="panel course-toolbar" aria-label={t("catalogue")}>
         <div className="course-toolbar-header">
           <div
@@ -2534,6 +2667,56 @@ export function CoursesPage() {
             setMessage(t("saved"));
           }}
         />
+      </Dialog>
+      <Dialog
+        open={Boolean(creatorId)}
+        onOpenChange={(open) => !open && !runSaving && setCourseView({}, true)}
+        closeDisabled={runSaving}
+        title={creatorText("start")}
+        description={creatorText("offerHint")}
+      >
+        {creatorId &&
+          (!online && !creatorRecord && !creatorFresh ? (
+            <Notice kind="error">{creatorText("offline")}</Notice>
+          ) : creatorRead.isPending && online ? (
+            <Loading />
+          ) : creatorRead.isError ? (
+            <ErrorState retry={() => void creatorRead.refetch()} />
+          ) : creatorRecord?.state === "created" ? (
+            <Button
+              type="button"
+              onClick={() => continueCreator(creatorRecord)}
+            >
+              {creatorText(
+                creatorRecord.next_action === "offer"
+                  ? "continueOffer"
+                  : "openCourse",
+              )}
+            </Button>
+          ) : creatorRecord?.state === "editing" || creatorFresh ? (
+            <RunForm
+              key={`${creatorId}:${creatorEpoch}`}
+              creator={{ id: creatorId, saved: creatorRecord }}
+              reloadCreator={() => {
+                void creatorRead.refetch().then((result) => {
+                  if (result.isSuccess) setCreatorEpoch((epoch) => epoch + 1);
+                });
+              }}
+              templates={templates.data ?? []}
+              organisations={planningOrganisations}
+              companyOnly={false}
+              canPrepareOffer={canPrepareOffer}
+              canReadBlockPlanning
+              onBusy={setRunSaving}
+              onDone={(_result, offer, run) => {
+                if (run) setSavedRun(run);
+                setCourseView(offer ? { offer } : {});
+                if (!offer) setMessage(t("courseDraftCreated"));
+              }}
+            />
+          ) : (
+            <Notice kind="error">{creatorText("error")}</Notice>
+          ))}
       </Dialog>
       <Dialog
         open={

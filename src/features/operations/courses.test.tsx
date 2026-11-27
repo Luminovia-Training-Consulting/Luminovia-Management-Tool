@@ -279,6 +279,105 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it("recovers a server-saved creator draft and confirms the course with its recorded revision", async () => {
+  const draftId = "c3490000-0000-4000-8000-000000000001";
+  let payload: unknown = null;
+  let revision = 0;
+  let created = false;
+  const receipt = () => ({
+    id: draftId,
+    title: "Fictional creator draft",
+    revision,
+    updated_at: "2030-01-01T00:00:00Z",
+    state: created ? "created" : "editing",
+    course_run_id: created ? runId : null,
+    next_action: created ? "course" : null,
+    payload: created ? null : payload,
+  });
+  const sharedRpc = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation(
+    (name: string, args: Record<string, unknown>) => {
+      if (name === "course_creator_drafts") {
+        return {
+          abortSignal: async () => ({
+            data: revision ? [receipt()] : [],
+            error: null,
+          }),
+        };
+      }
+      if (name === "course_creator_draft_action") {
+        expect(args.p_draft_id).toBe(draftId);
+        expect(args.p_expected_revision).toBe(revision);
+        revision += 1;
+        if (args.p_action === "save") payload = args.p_payload;
+        if (args.p_action === "create_course") created = true;
+        return Promise.resolve({ data: receipt(), error: null });
+      }
+      return sharedRpc(name, args);
+    },
+  );
+  const path = `/courses?creator=${draftId}&startCreator=1`;
+  const client = renderCourses({ path });
+  const dialog = await screen.findByRole("dialog", {
+    name: "Kurs- und Auftragsassistent starten",
+  });
+  await userEvent.selectOptions(
+    await within(dialog).findByLabelText("Kursvorlage"),
+    templateId,
+  );
+  interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Zwischenstand speichern" }),
+  );
+  await waitFor(() =>
+    expect(within(dialog).getByRole("status")).toHaveTextContent(
+      "Entwurf auf dem Server gespeichert.",
+    ),
+  );
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_course_run",
+    expect.anything(),
+  );
+  cleanup();
+  client.clear();
+
+  renderCourses({ path });
+  const recovered = await screen.findByRole("dialog", {
+    name: "Kurs- und Auftragsassistent starten",
+  });
+  await waitFor(() =>
+    expect(
+      within(recovered).getByLabelText("Beginn 1", { exact: true }),
+    ).toHaveValue("2030-04-01T09:00"),
+  );
+  expect(within(recovered).getByLabelText("Kursvorlage")).toHaveValue(
+    templateId,
+  );
+  await userEvent.click(
+    within(recovered).getByRole("button", { name: "Entwurf speichern" }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith("course_creator_draft_action", {
+      p_action: "create_course",
+      p_draft_id: draftId,
+      p_expected_revision: expect.any(Number),
+      p_payload: expect.objectContaining({
+        run: expect.objectContaining({
+          template_id: templateId,
+          sessions: [
+            {
+              starts_at: "2030-04-01T07:00:00.000Z",
+              ends_at: "2030-04-01T08:00:00.000Z",
+            },
+          ],
+        }),
+        next_action: "course",
+      }),
+    }),
+  );
+  expect(created).toBe(true);
+});
+
 const calendarPlanPath =
   "/courses?planFrom=2030-03-30T09%3A00&planUntil=2030-03-30T09%3A30&planZone=Australia%2FBrisbane";
 
