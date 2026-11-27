@@ -228,6 +228,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   training_assignment_compensation: "GET",
   training_control_center: "GET",
   training_escalation_detail: "GET",
+  training_operational_presets: "GET",
   training_escalation_assignees: "GET",
   training_delivery_view: "GET",
   training_offer_delivery: "GET",

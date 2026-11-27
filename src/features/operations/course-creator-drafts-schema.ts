@@ -1,5 +1,6 @@
 /** Draft receipt and snapshot contract for the course creator. */
 import { z } from "zod";
+import { operationalPresetSelection } from "./operational-preset-schema.ts";
 import { validZone } from "../../lib/dates.ts";
 
 const text = z.string();
@@ -11,6 +12,7 @@ export const courseCreatorSnapshotSchema = z.object({
     delivery_type: z.enum(["online", "onsite"]),
     venue: text,
     teaching_language: z.enum(["", "de", "en"]).optional(),
+    operational_preset: operationalPresetSelection.nullish(),
     archived: z.boolean(),
     sessions: z
       .array(

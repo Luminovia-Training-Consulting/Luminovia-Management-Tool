@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { operationalPresetCommand } from "./operational-preset-schema.ts";
 
 export const courseSeriesClasses = z.array(
   z.strictObject({ id: z.uuid(), name: z.string() }),
@@ -19,6 +20,7 @@ export const courseSeriesRequest = z.strictObject({
         delivery_type: z.enum(["online", "onsite"]),
         venue: z.string().max(500),
         class_id: z.uuid().nullable().optional(),
+        operational_preset: operationalPresetCommand.optional(),
         sessions: z.array(seriesSession).min(1).max(60),
       }),
     )

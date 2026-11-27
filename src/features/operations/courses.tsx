@@ -127,6 +127,14 @@ const CourseReuseForm = lazy(() =>
   })),
 );
 
+import { operationalPresetSelection } from "./operational-preset-schema";
+
+const OperationalPresetPicker = lazy(() =>
+  import("./operational-presets").then(({ OperationalPresetPicker }) => ({
+    default: OperationalPresetPicker,
+  })),
+);
+
 const CourseOfferForm = lazy(() =>
   import("../admin/admin").then(({ CourseOfferForm }) => ({
     default: CourseOfferForm,
@@ -160,6 +168,7 @@ type TemplateValues = z.infer<typeof templateSchema>;
 type PlanningOrganisation = Pick<Organisation, "id" | "name"> &
   Partial<Pick<Organisation, "archived_at">>;
 const newCourseSchema = runSchema.extend({
+  operational_preset: operationalPresetSelection.nullish(),
   template_id: z.union([z.uuid(), z.literal("")]),
 });
 
@@ -466,7 +475,7 @@ function RunForm({
     handleSubmit,
     setValue,
     setFocus,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, dirtyFields },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
     defaultValues: creator?.saved?.payload?.run ?? {
@@ -533,6 +542,12 @@ function RunForm({
   const selectedTemplateId = useWatch({ control, name: "template_id" });
   const zone = useWatch({ control, name: "time_zone" });
   const selectedOrganisationId = useWatch({ control, name: "organisation_id" });
+  const adoptedPreset = useWatch({ control, name: "operational_preset" });
+  const legacyDelivery = useWatch({ control, name: "delivery_type" });
+  const matchingPreset =
+    adoptedPreset?.organisation_id === selectedOrganisationId
+      ? adoptedPreset
+      : undefined;
   const activeOrganisation = organisations.some(
     (org) => org.id === selectedOrganisationId && !org.archived_at,
   );
@@ -700,6 +715,10 @@ function RunForm({
           venue,
         } = values;
         const fields = intent.content;
+        const adoption =
+          values.operational_preset?.organisation_id === organisation_id
+            ? values.operational_preset
+            : null;
         const receipt = await draftSaver.write(
           { run: getValues(), content: content.getValues() },
           {
@@ -711,6 +730,15 @@ function RunForm({
               teaching_language,
               venue,
               sessions,
+              ...(adoption
+                ? {
+                    operational_preset: {
+                      id: adoption.id,
+                      revision: adoption.revision,
+                      apply_delivery: adoption.apply_delivery,
+                    },
+                  }
+                : {}),
             },
             content: fields
               ? {
@@ -1021,6 +1049,47 @@ function RunForm({
             </select>
           </Field>
         )}
+        {creator && activeOrganisation && selectedOrganisationId && (
+          <Suspense fallback={null}>
+            <OperationalPresetPicker
+              key={selectedOrganisationId}
+              actor={actor}
+              organisation={selectedOrganisationId}
+              applied={matchingPreset}
+              dirtyZone={Boolean(dirtyFields.time_zone || initialSchedule)}
+              dirtyDelivery={Boolean(
+                dirtyFields.delivery_type || dirtyFields.venue,
+              )}
+              disabled={save.isPending}
+              onApply={(preset, inheritZone, inheritDelivery) => {
+                const config = preset.config;
+                if (config.time_zone && inheritZone)
+                  changeZone(config.time_zone);
+                if (config.delivery && inheritDelivery)
+                  setValue(
+                    "delivery_type",
+                    config.delivery.mode === "onsite" ? "onsite" : "online",
+                    { shouldDirty: true },
+                  );
+                setValue(
+                  "operational_preset",
+                  {
+                    id: preset.id,
+                    revision: preset.revision,
+                    organisation_id: selectedOrganisationId,
+                    apply_delivery: Boolean(config.delivery && inheritDelivery),
+                    starts_at: config.starts_at,
+                    ends_at: config.ends_at,
+                  },
+                  { shouldDirty: true },
+                );
+              }}
+              onClear={() =>
+                setValue("operational_preset", null, { shouldDirty: true })
+              }
+            />
+          </Suspense>
+        )}
         {needsContent &&
           (topics.isPending ? (
             <Loading />
@@ -1057,7 +1126,23 @@ function RunForm({
               </select>
             </Field>
             <Field id="run-delivery" label={t("delivery")}>
-              <select id="run-delivery" {...register("delivery_type")}>
+              <select
+                id="run-delivery"
+                {...register("delivery_type", {
+                  onChange: (event) => {
+                    if (
+                      matchingPreset &&
+                      event.target.value !== legacyDelivery
+                    ) {
+                      setValue(
+                        "operational_preset",
+                        { ...matchingPreset, apply_delivery: false },
+                        { shouldDirty: true },
+                      );
+                    }
+                  },
+                })}
+              >
                 <option value="online">{t("online")}</option>
                 <option value="onsite">{t("onsite")}</option>
               </select>
@@ -1067,7 +1152,18 @@ function RunForm({
       </div>
       {creator && <h3>{creatorText("schedule")}</h3>}
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
-        <input id="run-venue" {...register("venue")} />
+        <input
+          id="run-venue"
+          {...register("venue", {
+            onChange: () =>
+              matchingPreset?.apply_delivery &&
+              setValue(
+                "operational_preset",
+                { ...matchingPreset, apply_delivery: false },
+                { shouldDirty: true },
+              ),
+          })}
+        />
       </Field>
       <fieldset className="operations-topic-field" ref={schedule} tabIndex={-1}>
         <legend>{t("sessions")}</legend>
@@ -1076,6 +1172,8 @@ function RunForm({
             <CourseSchedulePlanner
               zone={zone}
               suggestedDays={selectedBlock?.duration_days}
+              suggestedStart={matchingPreset?.starts_at ?? undefined}
+              suggestedEnd={matchingPreset?.ends_at ?? undefined}
               editedSessionCount={editedSessionCount}
               disabled={!online || save.isPending}
               onApply={replace}
@@ -1245,6 +1343,7 @@ function RunForm({
                 run: {
                   ...getValues(),
                   ...creatorRunValues,
+                  operational_preset: getValues("operational_preset"),
                   sessions: getValues("sessions"),
                 },
                 content: { ...content.getValues(), ...creatorContentValues },

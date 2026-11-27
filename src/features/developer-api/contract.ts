@@ -337,6 +337,11 @@ import {
   offerDraftSnapshot,
 } from "../admin/offer-creator-draft-schema.ts";
 
+import {
+  operationalPreset,
+  operationalPresetPayload,
+} from "../operations/operational-preset-schema.ts";
+
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
 const version = { type: "integer", minimum: 0 };
@@ -2593,6 +2598,27 @@ const nativePaths = {
     },
     z.toJSONSchema(trainingOfferCompensationSchema.nullable()),
     ["p_expected_version", "p_payload"],
+  ),
+  "/rest/v1/rpc/training_operational_presets": rpc(
+    "listTrainingOperationalPresets",
+    "Courses",
+    "List operational course presets for a company",
+    "Requires internal course and company management. Presets can supply non-secret schedule, contact and delivery defaults.",
+    { p_organisation_id: uuid },
+    z.toJSONSchema(z.array(operationalPreset)),
+  ),
+  "/rest/v1/rpc/save_training_operational_preset": rpc(
+    "saveTrainingOperationalPreset",
+    "Courses",
+    "Save or archive an operational course preset",
+    "Requires internal course and company management and the expected preset revision. Existing courses retain the defaults they adopted.",
+    {
+      p_organisation_id: uuid,
+      p_preset_id: nullableUuid,
+      p_expected_revision: version,
+      p_payload: z.toJSONSchema(operationalPresetPayload),
+    },
+    z.toJSONSchema(operationalPreset),
   ),
   "/rest/v1/rpc/training_commercial_presets": rpc(
     "trainingCommercialPresets",

@@ -9,6 +9,7 @@ node scripts/assignment-finance-export-db-tests.mjs
 node scripts/course-creator-db-tests.mjs
 node scripts/offer-creator-drafts-db-tests.mjs
 node scripts/training-commercial-db-tests.mjs
+node scripts/training-operational-presets-db-tests.mjs
 node scripts/training-delivery-db-tests.mjs
 node scripts/training-control-db-tests.mjs
 node scripts/lecturer-matching-db-tests.mjs
