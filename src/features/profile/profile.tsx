@@ -13,6 +13,7 @@ import { OwnContactVisibility } from "./contact-visibility";
 
 import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
+import { PersonRatingButton } from "../people/person-rating";
 import { OwnProfileDetails } from "../people/profile-details";
 import { DisplayNameEditor } from "./display-name-editor";
 import { AccountSettings } from "./account-settings";
@@ -243,6 +244,14 @@ export function ProfilePage() {
     return (
       <>
         <PageHeading title={t("profile")} description={session!.user.email} />
+        {participantOnly && (
+          <div className="page-actions">
+            <PersonRatingButton
+              actor={session!.user.id}
+              person={session!.user.id}
+            />
+          </div>
+        )}
         <p className="public-user-id">
           <strong>{t("luminoviaUserId")}:</strong>{" "}
           <code>{profile.data.luminovia_user_id}</code>
@@ -373,6 +382,12 @@ export function ProfilePage() {
             </div>
             {edit.isError && <Notice kind="error">{t("error")}</Notice>}
           </section>
+        </div>
+        <div className="page-actions">
+          <PersonRatingButton
+            actor={session!.user.id}
+            person={session!.user.id}
+          />
         </div>
         <OwnProfileDetails />
         {portalInternalEdition && hasTeachingRole(roles.data) && (

@@ -3747,6 +3747,50 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/person_rating": rpc(
+    "native_person_rating",
+    "People",
+    "Read a personal star rating",
+    "Reads the caller's rating of a currently accessible person. The own profile returns at most 30 recent received ratings without reviewer names.",
+    { p_person_id: uuid },
+    {
+      anyOf: [
+        { type: "null" },
+        {
+          type: "object",
+          required: ["stars", "comment"],
+          properties: {
+            stars: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+            comment: { ...text, maxLength: 2000 },
+            received: {
+              type: "array",
+              maxItems: 30,
+              items: object({
+                id: uuid,
+                stars: { type: "integer", minimum: 1, maximum: 5 },
+                comment: text,
+              }),
+            },
+          },
+        },
+      ],
+    },
+  ),
+  "/rest/v1/rpc/save_person_rating": rpc(
+    "native_save_person_rating",
+    "People",
+    "Give or update a personal star rating",
+    "Requires an active account and access to the other person's profile or chat contact. Each reviewer may maintain one rating per recipient.",
+    {
+      p_person_id: uuid,
+      p_stars: { type: "integer", minimum: 1, maximum: 5 },
+      p_comment: { ...text, maxLength: 2000 },
+    },
+    object({
+      stars: { type: "integer", minimum: 1, maximum: 5 },
+      comment: { ...text, maxLength: 2000 },
+    }),
+  ),
   "/rest/v1/rpc/assignment_removal_appeals": rpc(
     "native_assignment_removal_appeals",
     "Jobs",

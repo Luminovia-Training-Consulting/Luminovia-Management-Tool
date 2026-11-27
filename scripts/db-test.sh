@@ -15,6 +15,7 @@ node scripts/training-control-db-tests.mjs
 node scripts/lecturer-matching-db-tests.mjs
 node scripts/assignment-removal-appeals-db-tests.mjs
 node scripts/delivery-data-boundaries-db-tests.mjs
+node scripts/person-rating-db-tests.mjs
 node scripts/chat-retention-db-tests.mjs
 node scripts/job-publication-window-db-tests.mjs
 node scripts/training-course-reuse-db-tests.mjs

@@ -207,6 +207,7 @@ async function probeRestGates(sql, names) {
         language plpgsql security invoker set search_path='' as $probe$
         begin
             perform set_config('request.path',path,true);
+            perform set_config('request.method','POST',true);
             perform public.require_portal_access();
             return true;
         exception when insufficient_privilege then return false;

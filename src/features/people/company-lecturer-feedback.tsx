@@ -1,5 +1,6 @@
 /** Read-only lecturer discovery for company accounts. Booking-scoped profile
  * history, private documents and course feedback stay in their original views. */
+import { PersonRatingButton } from "./person-rating";
 import { useId, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -211,6 +212,13 @@ export function CompanyLecturerFeedback({
         <ErrorState retry={() => void query.refetch()} />
       ) : (
         <div className="section-stack">
+          <div className="page-actions">
+            <PersonRatingButton
+              actor={actor}
+              person={lecturer}
+              name={query.data.lecturer.display_name}
+            />
+          </div>
           <section className="panel space-y-3">
             <h2>{t("companyFeedbackQualifications")}</h2>
             <p>
