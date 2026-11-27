@@ -3,7 +3,7 @@
  * preview explains cent rounding; PostgreSQL owns binding prices, version checks and accepted
  * snapshots.
  */
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -28,6 +28,12 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
+
+const TrainingCompensationPanel = lazy(() =>
+  import("./training-commercial").then((module) => ({
+    default: module.TrainingCompensationPanel,
+  })),
+);
 
 const maximumGross = 9_999_999_999.99;
 
@@ -437,6 +443,15 @@ export function JobPricingPanel({ job }: { job: Job }) {
         <Button variant="secondary" onClick={() => setEditing(true)}>
           {t("configurePrice")}
         </Button>
+      )}
+      {fullFinance && (
+        <Suspense fallback={null}>
+          <TrainingCompensationPanel
+            actor={actor}
+            jobId={job.id}
+            zone={job.time_zone}
+          />
+        </Suspense>
       )}
       <Dialog
         open={editing}

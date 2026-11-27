@@ -19,6 +19,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { CourseCommissionField, RoleFeePreview } from "../commercial/pricing";
+import { TrainingCoursePreset } from "../commercial/training-course-preset";
+import {
+  presetBaseTotal,
+  type CommercialPreset,
+} from "../commercial/training-commercial-api";
 import {
   commissionAccessQuery,
   commissionKeys,
@@ -100,12 +105,16 @@ function JobForm({
   const lifeText = useTranslation("jobLifecycle").t;
   const briefingText = useTranslation("jobBriefing").t;
   const { t: priceText } = useTranslation("platform");
+  const { t: trainingPriceText } = useTranslation("trainingCommercial");
   const { session } = useAuth();
   const actor = session!.user.id;
   const pricing = useQuery(commissionAccessQuery(actor));
   const fullFinance = Boolean(pricing.data?.can_manage_gross);
   const scopedPricing = Boolean(pricing.data?.can_manage_own_course_pricing);
   const [commission, setCommission] = useState("");
+  const [appliedPreset, setAppliedPreset] = useState<CommercialPreset | null>(
+    null,
+  );
   const [internalOnly, setInternalOnly] = useState(
     Boolean(courseRun?.company_only_course),
   );
@@ -204,7 +213,13 @@ function JobForm({
   const create = useMutation({
     mutationFn: async (values: Values) => {
       requireOnline();
-      if (Number.isNaN(percent)) throw new Error("invalid_price");
+      if (
+        Number.isNaN(percent) ||
+        (appliedPreset &&
+          !internalOnly &&
+          appliedPreset.currency !== values.currency)
+      )
+        throw new Error("invalid_price");
       setDone(false);
       setPublishedDraft(false);
       setCreatedId(null);
@@ -276,8 +291,26 @@ function JobForm({
           courseRun.course_run_id,
           payload,
           commissionArg,
+          !internalOnly && appliedPreset
+            ? [appliedPreset.id, appliedPreset.revision]
+            : null,
         ]);
         const retryId = retry.forInput(signature);
+        if (appliedPreset && !internalOnly && fullFinance) {
+          const { data, error } = await db().rpc(
+            "create_training_offer_from_preset",
+            {
+              p_course_run_id: courseRun.course_run_id,
+              p_payload: payload,
+              p_platform_percent: percent,
+              p_client_id: retryId,
+              p_preset_id: appliedPreset.id,
+              p_preset_revision: appliedPreset.revision,
+            },
+          );
+          if (error || !data) throw error ?? new Error("unconfirmed");
+          return courseRecordId.parse(data);
+        }
         const { data, error } = await db().rpc("create_course_run_job", {
           p_course_run_id: courseRun.course_run_id,
           p_payload: payload,
@@ -619,6 +652,53 @@ function JobForm({
         )}
         {!internalOnly && (
           <>
+            {fullFinance && courseRun?.organisation_id && (
+              <>
+                <TrainingCoursePreset
+                  actor={actor}
+                  organisationId={courseRun.organisation_id}
+                  applied={appliedPreset}
+                  disabled={create.isPending}
+                  onApply={(selected) => {
+                    setAppliedPreset(selected);
+                    if (!selected) return;
+                    setValue("currency", selected.currency, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    const initialTotal = presetBaseTotal(
+                      selected,
+                      courseRun.sessions,
+                      courseRun.time_zone,
+                    );
+                    if (
+                      selected.base_rate &&
+                      selected.rate_unit &&
+                      initialTotal !== null
+                    ) {
+                      setValue("amount", Number(selected.base_rate), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setValue("rate_unit", selected.rate_unit, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setValue("total_amount", initialTotal, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                />
+                {appliedPreset &&
+                  watchedCurrency !== appliedPreset.currency && (
+                    <Notice kind="error">
+                      {trainingPriceText("changedCurrency")}
+                    </Notice>
+                  )}
+              </>
+            )}
             {(fullFinance || scopedPricing) && (
               <CourseCommissionField
                 id="job-course-commission"

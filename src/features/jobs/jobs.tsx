@@ -26,7 +26,7 @@ import {
   topicsQuery,
   userRolesQuery,
 } from "../../lib/queries";
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -46,6 +46,12 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+
+const TrainingAssignmentCompensation = lazy(() =>
+  import("../commercial/training-commercial").then((module) => ({
+    default: module.TrainingAssignmentCompensation,
+  })),
+);
 
 /** Return from a job detail view to the job list. */
 function BackLink({
@@ -277,6 +283,16 @@ export function JobDetail() {
             <JobPricingPanel job={job} />
           </div>
         )}
+        {!companyDispatchOnly &&
+          teaching &&
+          ownClaim?.status === "confirmed" && (
+            <Suspense fallback={null}>
+              <TrainingAssignmentCompensation
+                actor={session!.user.id}
+                claimId={ownClaim.id}
+              />
+            </Suspense>
+          )}
         {!companyDispatchOnly &&
           teaching &&
           ownClaim?.status === "confirmed" && (

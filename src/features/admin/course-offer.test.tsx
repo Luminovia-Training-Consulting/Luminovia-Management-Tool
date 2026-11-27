@@ -465,3 +465,70 @@ it("publishes the saved draft using its ID and version without creating another 
     }),
   );
 });
+
+it("copies customer pricing only on explicit application and submits the exact preset revision", async () => {
+  const user = userEvent.setup();
+  const presetId = "070f8ac2-a4d3-4da8-ad77-864ac187780e";
+  const previous = mock.rpc.getMockImplementation()!;
+  mock.rpc.mockImplementation(
+    async (name: string, args?: Record<string, unknown>) => {
+      if (name === "training_commercial_presets")
+        return {
+          data: [
+            {
+              id: presetId,
+              name: "Fiktive Kundenvorlage",
+              currency: "CHF",
+              revision: 3,
+              base_rate: "50.01",
+              rate_unit: "per_teaching_unit",
+              configuration: { unit_minutes: 45, components: [] },
+            },
+          ],
+          error: null,
+        };
+      if (name === "create_training_offer_from_preset")
+        return { data: "f4f59e7e-30c4-4599-80c3-f53341f45eb4", error: null };
+      return previous(name, args);
+    },
+  );
+  setup();
+  await screen.findByRole("heading", { name: "Auftrag aus diesem Kurs" });
+  const total = screen.getByLabelText("Voller Auftragspreis gesamt");
+  await user.clear(total);
+  await user.type(total, "550");
+  await user.click(screen.getByText("Kundenvorlagen", { exact: true }));
+  const choice = await screen.findByRole("option", {
+    name: "Fiktive Kundenvorlage (CHF)",
+  });
+  await user.selectOptions(screen.getByLabelText("Vorlage wählen"), choice);
+  expect(total).toHaveValue(550);
+  await user.click(
+    screen.getByRole("button", { name: "Kundenvorlage übernehmen" }),
+  );
+  expect(total).toHaveValue(400.08);
+  expect(screen.getByLabelText("Währung")).toHaveValue("CHF");
+  expect(screen.getByLabelText("Einheit")).toHaveValue("per_teaching_unit");
+  await user.click(
+    screen.getByRole("button", { name: "Als Entwurf speichern" }),
+  );
+  await waitFor(() =>
+    expect(mock.rpc).toHaveBeenCalledWith(
+      "create_training_offer_from_preset",
+      expect.objectContaining({
+        p_course_run_id: source.course_run_id,
+        p_preset_id: presetId,
+        p_preset_revision: 3,
+        p_payload: expect.objectContaining({
+          currency: "CHF",
+          gross_amount: 50.01,
+          gross_total_amount: 400.08,
+          status: "draft",
+        }),
+      }),
+    ),
+  );
+  expect(
+    mock.rpc.mock.calls.some(([name]) => name === "create_course_run_job"),
+  ).toBe(false);
+});
