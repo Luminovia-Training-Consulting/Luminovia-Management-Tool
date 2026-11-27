@@ -14,6 +14,7 @@ export const h5pPlaybackCommand = z.toJSONSchema(
       z.strictObject({
         title: z.string().min(1).max(200),
         sha256: z.hash("sha256"),
+        practice: z.boolean().optional(),
       }),
     ),
     command("withdraw", z.strictObject({})),

@@ -406,7 +406,10 @@ test("Premium exam switching and scanned bytes follow real access across two com
     await checked(company.auth.signInWithPassword({email: f.client.email, password: process.env.E2E_PASSWORD!}));
     const register = (requester: ReturnType<typeof api>, target = f) =>
         requester.rpc("course_session_register", {p_run_id: target.run, p_session_id: target.session});
-    expect((await register(company)).error?.code).toBe("42501");
+    const standardRegister = await checked(register(company), {requireData: true});
+    expect(standardRegister.rows).toEqual([]);
+    expect(standardRegister.evidence).toEqual([]);
+    expect((await register(company, other)).error?.code).toBe("42501");
     for (const target of [f, other]) await togglePremium(target, true, 0);
     const learner = await linkWorkspaceLearner(f);
     await linkWorkspaceLearner(other);
@@ -1774,77 +1777,132 @@ for (const premium of [true, false]) {
 }
 
 test.describe("separate HTTPS H5P player", () => {
-    test("native workspace publishes, plays and withdraws a scanned H5P activity", async ({baseURL}, info) => {
-        test.setTimeout(120_000);
-        const runtime = process.env.E2E_H5P_CONTENT_HOST;
-        const sample = process.env.E2E_H5P_SAMPLE;
-        const certificatePin = process.env.E2E_H5P_CERTIFICATE_PIN;
-        if (!runtime || !sample) throw new Error("The native H5P journey requires the isolated test origin and verified TrueFalse sample.");
-        const browser = await chromium.launch({args: [
-            "--no-proxy-server",
-            certificatePin ? "--ignore-certificate-errors-spki-list=" + certificatePin : "--ignore-certificate-errors",
-            "--host-resolver-rules=MAP *." + new URL("https://" + runtime).hostname + " 127.0.0.1",
-        ]});
-        const session = {
-            baseURL, viewport: info.project.use.viewport,
-            isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
-            ignoreHTTPSErrors: !certificatePin,
-        };
-        try {
-            const context = await browser.newContext(session);
-            const page = await context.newPage();
-            const f = await fixture();
-            await linkWorkspaceLearner(f);
-            await checked(f.adminClient.rpc("manage_course_enrolment", {
-                p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
-            }));
-            const workspace = `/courses/${f.run}/workspace#course-materials`;
-            const player = (target: Page) =>
-                target.getByRole("region", {name: "Interaktive H5P-Aktivitäten"});
-            await adminLogin(page, f.manager);
-            await page.goto(workspace);
-            const staff = player(page);
-            await staff.getByText("H5P-Aktivität veröffentlichen", {exact: true}).press("Enter");
-            await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample);
-            const publish = staff.getByRole("button", {name: "H5P-Aktivität veröffentlichen"});
-            await expect(publish).toBeEnabled();
-            await publish.press("Enter");
-            await expect(staff.getByRole("button", {name: "Aktivität öffnen"})).toBeVisible({timeout: 45_000});
-            const scope = await checked(f.adminClient.rpc("course_h5p_packages", {p_run_id: f.run}, {get: true}));
-            expect(scope.packages).toHaveLength(1);
-            const version = scope.packages[0].id;
-            const scan = await checked(f.service.from("document_versions").select("scanner_version,status").eq("id", version).single());
-            expect(scan).toMatchObject({status: "clean", scanner_version: expect.stringMatching(/^ClamAV /)});
+    for (const premium of [true, false]) {
+        test(`native workspace publishes, plays and withdraws a scanned H5P activity (${premium ? "Premium" : "Standard"})`, async ({baseURL}, info) => {
+            test.setTimeout(120_000);
+            const runtime = process.env.E2E_H5P_CONTENT_HOST;
+            const sample = process.env.E2E_H5P_SAMPLE;
+            const certificatePin = process.env.E2E_H5P_CERTIFICATE_PIN;
+            if (!runtime || !sample) throw new Error("The native H5P journey requires the isolated test origin and verified TrueFalse sample.");
+            const browser = await chromium.launch({args: [
+                "--no-proxy-server",
+                certificatePin ? "--ignore-certificate-errors-spki-list=" + certificatePin : "--ignore-certificate-errors",
+                "--host-resolver-rules=MAP *." + new URL("https://" + runtime).hostname + " 127.0.0.1",
+            ]});
+            const session = {
+                baseURL, viewport: info.project.use.viewport,
+                isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
+                ignoreHTTPSErrors: !certificatePin,
+            };
+            try {
+                const context = await browser.newContext(session);
+                const page = await context.newPage();
+                const f = await fixture({premium});
+                await linkWorkspaceLearner(f);
+                await checked(f.adminClient.rpc("manage_course_enrolment", {
+                    p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+                }));
+                const workspace = `/courses/${f.run}/workspace#course-materials`;
+                const player = (target: Page) =>
+                    target.getByRole("region", {name: "Interaktive H5P-Aktivitäten"});
+                const openPractice = async (target: Page) => {
+                    if (!premium) await target.getByText("Unbenotete H5P-Übungen", {exact: true}).click();
+                };
+                await adminLogin(page, f.manager);
+                await page.goto(workspace);
+                await openPractice(page);
+                const staff = player(page);
+                await staff.getByText("H5P-Aktivität veröffentlichen", {exact: true}).press("Enter");
+                await staff.getByLabel("H5P-Paket auswählen").setInputFiles(sample);
+                const publish = staff.getByRole("button", {name: "H5P-Aktivität veröffentlichen"});
+                await expect(publish).toBeEnabled();
+                await publish.press("Enter");
+                await expect(staff.getByRole("button", {name: "Aktivität öffnen"})).toBeVisible({timeout: 45_000});
+                const scope = await checked(f.adminClient.rpc("course_h5p_packages", {p_run_id: f.run}, {get: true}));
+                expect(scope.packages).toHaveLength(1);
+                expect(scope.packages[0].practice).toBe(premium ? undefined : true);
+                const version = scope.packages[0].id;
+                const scan = await checked(f.service.from("document_versions").select("scanner_version,status").eq("id", version).single());
+                expect(scan).toMatchObject({status: "clean", scanner_version: expect.stringMatching(/^ClamAV /)});
 
-            const learnerContext = await browser.newContext(session);
-            const participant = await learnerContext.newPage();
-            await login(participant, f.learner.email, /\/learning$/);
-            await participant.goto(workspace);
-            const activity = player(participant);
-            await activity.getByRole("button", {name: "Aktivität öffnen"}).press("Enter");
-            const iframe = activity.locator('iframe[title="True/False Question"]');
-            await expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
-            expect(new URL((await iframe.getAttribute("src"))!).origin).not.toBe(baseURL);
-            const frame = iframe.contentFrame();
-            await expect(frame.getByText("Oslo is the capital of Norway.", {exact: true})).toBeVisible();
-            await expect(frame.getByRole("img", {name: "The Oslo Opera House"})).toBeVisible();
-            await frame.getByText("Yes", {exact: true}).click();
-            await frame.getByRole("button", {name: "Check"}).click();
-            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
-            await participant.reload();
-            await expect(activity.getByText("Abgeschlossen")).toBeVisible();
-            await expect(staff.getByText("Abgeschlossen")).toHaveCount(0);
+                const learnerContext = await browser.newContext(session);
+                const participant = await learnerContext.newPage();
+                await login(participant, f.learner.email, /\/learning$/);
+                await participant.goto(workspace);
+                await openPractice(participant);
+                const activity = player(participant);
+                await activity.getByRole("button", {name: "Aktivität öffnen"}).press("Enter");
+                const iframe = activity.locator('iframe[title="True/False Question"]');
+                await expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
+                expect(new URL((await iframe.getAttribute("src"))!).origin).not.toBe(baseURL);
+                const frame = iframe.contentFrame();
+                await expect(frame.getByText("Oslo is the capital of Norway.", {exact: true})).toBeVisible();
+                await expect(frame.getByRole("img", {name: "The Oslo Opera House"})).toBeVisible();
+                await frame.getByText("Yes", {exact: true}).click();
+                await frame.getByRole("button", {name: "Check"}).click();
+                await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+                await participant.reload();
+                await openPractice(participant);
+                await expect(activity.getByText("Abgeschlossen")).toBeVisible();
+                await expect(staff.getByText("Abgeschlossen")).toHaveCount(0);
 
-            await staff.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
-            const dialog = page.getByRole("dialog", {name: "H5P-Freigabe zurückziehen"});
-            await dialog.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
-            await expect(staff.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
-            await participant.reload();
-            await expect(activity.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
-        } finally {
-            await browser.close();
-        }
+                await staff.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+                const dialog = page.getByRole("dialog", {name: "H5P-Freigabe zurückziehen"});
+                await dialog.getByRole("button", {name: "H5P-Freigabe zurückziehen"}).press("Enter");
+                await expect(staff.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+                await participant.reload();
+                await openPractice(participant);
+                await expect(activity.getByText("Es stehen keine H5P-Aktivitäten zur Verfügung.")).toBeVisible();
+            } finally {
+                await browser.close();
+            }
+        });
+    }
+});
+
+test("Standard LTI offers a scoped basic tool without grade or roster configuration", async ({page, browser, baseURL}, info) => {
+    const f = await fixture({premium: false});
+    await linkWorkspaceLearner(f);
+    await checked(f.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: f.run, p_user_id: f.learner.id, p_status: "enrolled",
+    }));
+    const workspace = `/courses/${f.run}/workspace#course-lti`;
+    const panel = (target: Page) => target.getByRole("region", {name: "Externe Lernwerkzeuge"});
+    const openTools = (target: Page) =>
+        target.locator("summary").filter({hasText: /^Externe Lernwerkzeuge$/}).click();
+    await adminLogin(page, f.manager);
+    await page.goto(workspace);
+    await openTools(page);
+    await panel(page).getByRole("button", {name: "Lernwerkzeug registrieren"}).press("Enter");
+    const title = "Fictional Standard LTI worksheet";
+    for (const [label, value] of [
+        ["Name des Lernwerkzeugs", title],
+        ["LTI-Client-ID", "fictional-standard-client"],
+        ["Anmelde-URL des Werkzeugs", "https://lti.example.invalid/login"],
+        ["Registrierte Rückgabe-URL", "https://lti.example.invalid/return"],
+        ["Ziel-URL des Kurslinks", "https://lti.example.invalid/worksheet"],
+    ]) await panel(page).getByLabel(label).fill(value);
+    await panel(page).getByLabel("Für diesen Kurs freigeben").check();
+    await panel(page).getByRole("button", {name: "Registrierung speichern"}).press("Enter");
+    await expect(panel(page).getByRole("heading", {name: title})).toBeVisible();
+    await expect(panel(page).getByText("LTI-Advantage-Dienste", {exact: true})).toHaveCount(0);
+    await expect(panel(page).getByText("Externe Bewertungen (AGS)", {exact: true})).toHaveCount(0);
+
+    const learnerContext = await browser.newContext({
+        baseURL, viewport: info.project.use.viewport,
+        isMobile: info.project.use.isMobile, hasTouch: info.project.use.hasTouch,
     });
+    try {
+        const learnerPage = await learnerContext.newPage();
+        await login(learnerPage, f.learner.email, /\/learning$/);
+        await learnerPage.goto(workspace);
+        await openTools(learnerPage);
+        await expect(panel(learnerPage).getByRole("heading", {name: title})).toBeVisible();
+        await expect(panel(learnerPage).getByRole("button", {name: "Externes Lernwerkzeug öffnen"})).toBeEnabled();
+        await expect(panel(learnerPage).getByRole("button", {name: "Registrierung bearbeiten"})).toHaveCount(0);
+    } finally {
+        await learnerContext.close();
+    }
 });
 
 /** Follow one fictional enrolment from curriculum publication to its released evidence and reports. */

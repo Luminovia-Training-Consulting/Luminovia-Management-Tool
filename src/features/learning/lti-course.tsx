@@ -487,9 +487,11 @@ function ToolDeepLinkSetup({ tool, saved }: { tool: Tool; saved: () => void }) {
 export function CourseLtiTools({
   actor,
   course,
+  allowAdvantage = true,
 }: {
   actor: string;
   course: string;
+  allowAdvantage?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const online = useOnline();
@@ -529,7 +531,7 @@ export function CourseLtiTools({
               {t("ltiAdd")}
             </Button>
           )}
-          {tools.data.can_manage && (
+          {tools.data.can_manage && allowAdvantage && (
             <DynamicToolRegistration
               course={course}
               refresh={() => void tools.refetch()}
@@ -638,12 +640,14 @@ export function CourseLtiTools({
                     >
                       {t("ltiEdit")}
                     </Button>
-                    <ToolAdvantageForm
-                      key={tool.version}
-                      tool={tool}
-                      saved={() => void tools.refetch()}
-                    />
-                    {tool.tool_public_key && (
+                    {allowAdvantage && (
+                      <ToolAdvantageForm
+                        key={tool.version}
+                        tool={tool}
+                        saved={() => void tools.refetch()}
+                      />
+                    )}
+                    {allowAdvantage && tool.tool_public_key && (
                       <ToolDeepLinkSetup
                         key={`selector-${tool.version}`}
                         tool={tool}
@@ -652,21 +656,22 @@ export function CourseLtiTools({
                     )}
                   </>
                 )}
-                {(tool.view_grades ||
-                  (tools.data?.can_manage && tool.tool_public_key)) && (
-                  <LtiGrades
-                    key={`ags-${tool.version}`}
-                    deployment={tool.id}
-                    version={tool.version}
-                    enabled={tool.ags_enabled === true}
-                    canConfigure={
-                      tools.data?.can_manage === true &&
-                      Boolean(tool.tool_public_key)
-                    }
-                    actor={actor}
-                    saved={() => void tools.refetch()}
-                  />
-                )}
+                {allowAdvantage &&
+                  (tool.view_grades ||
+                    (tools.data?.can_manage && tool.tool_public_key)) && (
+                    <LtiGrades
+                      key={`ags-${tool.version}`}
+                      deployment={tool.id}
+                      version={tool.version}
+                      enabled={tool.ags_enabled === true}
+                      canConfigure={
+                        tools.data?.can_manage === true &&
+                        Boolean(tool.tool_public_key)
+                      }
+                      actor={actor}
+                      saved={() => void tools.refetch()}
+                    />
+                  )}
               </li>
             ))}
           </ul>

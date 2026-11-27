@@ -1991,6 +1991,8 @@ function StandardCourseWorkspace({
 }) {
   const { t } = useTranslation("learning");
   const [scormOpen, setScormOpen] = useState(false);
+  const [h5pOpen, setH5pOpen] = useState(false);
+  const [ltiOpen, setLtiOpen] = useState(false);
   return (
     <div className="section-stack">
       <PageHeading
@@ -2048,7 +2050,40 @@ function StandardCourseWorkspace({
             )}
           </details>
         )}
+        {(course.access.staff || course.access.learner) && (
+          <details onToggle={(event) => setH5pOpen(event.currentTarget.open)}>
+            <summary>{t("standardH5pMaterials")}</summary>
+            {h5pOpen && (
+              <Suspense fallback={<Loading />}>
+                <CourseH5pPlayback
+                  key={course.id}
+                  actor={actor}
+                  course={course.id}
+                  allowAssessment={false}
+                />
+              </Suspense>
+            )}
+          </details>
+        )}
       </div>
+      {(course.access.staff || course.access.learner) && (
+        <details
+          id="course-lti"
+          onToggle={(event) => setLtiOpen(event.currentTarget.open)}
+        >
+          <summary>{t("ltiTools")}</summary>
+          {ltiOpen && (
+            <Suspense fallback={<Loading />}>
+              <CourseLtiTools
+                key={course.id}
+                actor={actor}
+                course={course.id}
+                allowAdvantage={false}
+              />
+            </Suspense>
+          )}
+        </details>
+      )}
       {(course.access.staff || course.access.learner) && (
         <CourseAuthoring
           actor={actor}

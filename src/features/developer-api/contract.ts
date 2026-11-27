@@ -5489,19 +5489,19 @@ const nativePaths = {
   },
   "/rest/v1/rpc/course_h5p_packages": rpc(
     "readCourseH5pPackages",
-    "Premium LMS",
+    "Standard LMS",
     "List published H5P activities",
-    "Current authorised learners and staff can list clean H5P packages and their own progress.",
+    "Current authorised learners and staff can list clean H5P packages and their own progress. Internal Standard exposes packages published as ungraded practice.",
     course,
     readH5pPackages,
   ),
   "/rest/v1/rpc/course_h5p_action": {
     post: {
       operationId: "writeCourseH5pPackage",
-      tags: ["Premium LMS"],
+      tags: ["Standard LMS"],
       summary: "Publish or withdraw H5P and persist learner progress",
       description:
-        "Current staff publish the exact scanned H5P package version. Enrolled learners retain completion and best reported playback score.",
+        "Current staff publish the exact validated H5P version. An ungraded practice publication accepts completion without a score. Publishing assessed activities and saving scores require Premium in the internal portal.",
       requestBody: { required: true, content: json(h5pPlaybackCommand) },
       responses: {
         "200": {

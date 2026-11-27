@@ -85,11 +85,11 @@ for (const edition of [
       );
     const digest = "ab".repeat(32);
     const clientId = randomUUID();
-    const reserve = (who, hash = digest) =>
+    const reserve = (who, hash = digest, requestId = clientId) =>
       actor(
         who,
         gate("reserve_course_h5p_package", "POST") +
-          `select public.reserve_course_h5p_package(${q(run)},'fictional-activity.h5p',420,${q(clientId)},${q(hash)})`,
+          `select public.reserve_course_h5p_package(${q(run)},'fictional-activity.h5p',420,${q(requestId)},${q(hash)})`,
       ).then(JSON.parse);
     const read = (who) =>
       actor(
@@ -109,17 +109,17 @@ for (const edition of [
         gate("course_h5p_upload_status", "POST") +
           `select public.course_h5p_upload_status(${q(run)},${q(document)},${q(version)})`,
       ).then(JSON.parse);
-    const download = (who) =>
+    const download = (who, target = version) =>
       actor(
         who,
         gate("course_h5p_download", "POST") +
-          `select public.course_h5p_download(${q(run)},${q(version)})`,
+          `select public.course_h5p_download(${q(run)},${q(target)})`,
       ).then(JSON.parse);
-    const command = (who, action, payload) =>
+    const command = (who, action, payload, target = version) =>
       actor(
         who,
         gate("course_h5p_action", "POST") +
-          `select public.course_h5p_action(${q(run)},${q(version)},${q(action)},${q(JSON.stringify(payload))})`,
+          `select public.course_h5p_action(${q(run)},${q(target)},${q(action)},${q(JSON.stringify(payload))})`,
       );
     const publication = { title: "Fictional activity", sha256: digest };
     assert.equal((await status(admin)).sha256, digest);
@@ -196,6 +196,49 @@ for (const edition of [
       completion[0],
     );
 
+    const toggle = (enabled, expected) =>
+      actor(admin, `select public.set_company_premium(${q(company)},${enabled},${expected},${q(randomUUID())})`);
+    if (edition === "internal") {
+      await toggle(false, 1);
+      assert.deepEqual((await read(learner)).packages, []);
+      await assert.rejects(download(learner), /42501/);
+      await assert.rejects(command(learner, "progress", { completed: true, score: 1 }), /42501/);
+      await assert.rejects(exportCompletion(admin), /42501/);
+    }
+    const practice = await reserve(admin, digest, randomUUID());
+    await sql(`
+      update public.document_versions set status='clean', sha256=${q(digest)},
+        scanner_version=(select scanner_version from public.document_versions where id=${q(version)})
+        where id=${q(practice.version_id)};
+      update public.documents set status='clean', current_version_id=${q(practice.version_id)}
+        where id=${q(practice.document_id)};
+    `);
+    const practiceCommand = (who, action, data) =>
+      command(who, action, data, practice.version_id);
+    const practicePublication = { title: "Fictional practice", sha256: digest, practice: true };
+    if (edition === "internal") {
+      await assert.rejects(practiceCommand(admin, "publish", publication), /42501/);
+    }
+    assert.equal(await practiceCommand(admin, "publish", practicePublication), "t");
+    assert.equal((await download(learner, practice.version_id)).version_id, practice.version_id);
+    await assert.rejects(download(absentTeacher, practice.version_id), /42501/);
+    await assert.rejects(practiceCommand(learner, "progress", { completed: true, score: 1 }), /42501/);
+    await practiceCommand(learner, "progress", { completed: true, score: null });
+    assert.deepEqual((await read(learner)).packages.find(({id}) => id === practice.version_id), {
+      id: practice.version_id, title: practicePublication.title, sha256: digest,
+      practice: true, progress: {completed: true, score: null},
+    });
+    if (edition === "internal") {
+      await toggle(true, 2);
+      assert.deepEqual((await read(learner)).packages.find(({id}) => id === version).progress, {
+        completed: true, score: 0.8,
+      });
+    }
+    await assert.rejects(practiceCommand(admin, "publish", { ...practicePublication, practice: false }), /PT409/);
+    assert.deepEqual((await exportCompletion(admin)).statements.filter(
+      (entry) => entry.object.id.includes("/h5p/"),
+    ), completion);
+
     if (edition !== "internal") {
       await sql(
         `update private.installation_verified_licence set expires_at=now()-interval '1 second' where installation_id=${q(installation)}`,
@@ -203,6 +246,7 @@ for (const edition of [
       assert.equal((await read(admin)).can_publish, false);
       assert.equal((await read(learner)).can_complete, false);
       assert.equal((await download(learner)).version_id, version);
+      assert.equal((await download(learner, practice.version_id)).version_id, practice.version_id);
       await assert.rejects(
         command(learner, "progress", { completed: true, score: 1 }),
         /42501/,
@@ -217,6 +261,7 @@ for (const edition of [
         `update private.installation_verified_licence set expires_at=now()+interval '1 day',grace_until=now()+interval '2 days' where installation_id=${q(installation)}`,
       );
     }
+    assert.equal(await practiceCommand(admin, "withdraw", {}), "t");
     assert.equal(await command(admin, "withdraw", {}), "t");
     assert.equal(await command(admin, "withdraw", {}), "t");
     assert.deepEqual((await read(learner)).packages, []);

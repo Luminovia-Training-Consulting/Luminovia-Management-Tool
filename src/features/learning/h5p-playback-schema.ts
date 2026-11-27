@@ -11,6 +11,7 @@ const h5pPackage = z.strictObject({
   title: z.string().min(1).max(200),
   sha256: z.hash("sha256"),
   progress: h5pProgress.nullable(),
+  practice: z.literal(true).optional(),
 });
 export const h5pCatalogue = z.strictObject({
   can_publish: z.boolean(),

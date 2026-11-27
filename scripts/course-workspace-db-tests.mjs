@@ -1281,6 +1281,12 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             invoke(who, session, "consume_lti_launch", [
                 q(ready.login_hint), q(ready.message_hint), q(browser), q(clientId), q(destination), q(nonce), q(state),
             ]);
+        const toggle = async (enabled) => {
+            const {version} = (await rpc(admin, "company_premium_settings", []))
+                .find(({organisation_id}) => organisation_id === org);
+            await rpc(admin, "set_company_premium", [q(org), String(enabled), String(version), q(randomUUID())]);
+        };
+        await toggle(false);
         await assert.rejects(register(learner, learnerSession), /42501/);
         await assert.rejects(register(admin, managerSession, 0, "https://other-invalid.example@fixture.example.invalid/login"), /22023/);
         assert.equal(await register(admin, managerSession), 1);
@@ -1310,6 +1316,11 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await assert.rejects(finish(learner, learnerSession, next, { nonce: "fresh-nonce" }), /PT409/);
         const fresh = await finish(learner, learnerSession, next, {nonce: "fresh-nonce", state: "fresh-state"});
         assert.equal(fresh.subject, launched.subject);
+        assert.equal(fresh.ags_enabled, undefined);
+        assert.equal(fresh.nrps_enabled, undefined);
+        await assert.rejects(invoke(teacher, teacherSession, "prepare_lti_placement", [
+            q(deployment), q(proof), "null", q("https://fixture-portal.example.invalid"),
+        ]), /42501/);
         // An explicitly enabled roster uses the launch pseudonym and never
         // returns account UUIDs, customer data or private contact information.
         const {publicKey} = generateKeyPairSync("rsa", {modulusLength: 2048});
@@ -1333,6 +1344,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             toolRpc("lti_course_memberships", [
                 q(id), q(token), role ? q(role) : "null", after ? q(after) : "null", limit,
             ]);
+        await assert.rejects(configure(admin, managerSession, 1, key, true), /42501/);
+        await toggle(true);
         await assert.rejects(configure(learner, learnerSession, 1, key, true), /42501/);
         await assert.rejects(configure(admin, managerSession, 1, {...key, d: "private-parameter"}, true), /22023/);
         assert.equal(await configure(admin, managerSession, 1, key, true), 2);
@@ -1591,6 +1604,15 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await sql(`delete from auth.sessions where id=${q(managerSession)}`);
         await assert.rejects(registerDynamic(strandedGrant),/42501/);
 
+        const beforeDowngrade = await start(learner, learnerSession);
+        await toggle(false);
+        assert.deepEqual((await invoke(learner, learnerSession, "course_lti_tools", [q(run)])).tools, []);
+        await assert.rejects(start(learner, learnerSession), /42501/);
+        await assert.rejects(finish(learner, learnerSession, beforeDowngrade, {
+            nonce: "downgraded-nonce", state: "downgraded-state",
+        }), /42501/);
+        await assert.rejects(readLedger(teacher, teacherSession), /42501/);
+        await toggle(true);
         const staleSession = await start(learner, learnerSession);
         await sql(`delete from auth.sessions where id=${q(learnerSession)}`);
         await assert.rejects(finish(learner, learnerSession, staleSession), /42501/);

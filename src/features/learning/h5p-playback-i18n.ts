@@ -12,6 +12,7 @@ registerLearningTranslations({
     "Es stehen keine H5P-Aktivitäten zur Verfügung.",
     "No H5P activities are available.",
   ],
+  h5pRuntimePractice: ["Unbenotete Übung", "Ungraded practice"],
   h5pRuntimeCompleted: ["Abgeschlossen", "Completed"],
   h5pRuntimeOpen: ["Aktivität öffnen", "Open activity"],
   h5pRuntimeClose: ["Aktivität schließen", "Close activity"],

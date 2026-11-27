@@ -39,7 +39,7 @@ export function ltiCoursePaths(academy: boolean) {
         operationId: "readCourseLtiTools",
         summary: "Read the authorised course's LTI placements",
         description:
-          "Current course actors receive active placements, while course managers can also inspect manual registration details. Only a current learner or instructor may launch.",
+          "Current course actors receive active placements, while course managers can also inspect manual registration details. Only a current learner or instructor may launch. In the internal portal, Standard exposes manual resource links without Advantage configuration, selected placements or attached grading records.",
         tags: ["LTI 1.3"],
         security,
         ...(academy ? { "x-portal-licence": "active-or-grace" } : {}),
@@ -269,7 +269,7 @@ export function ltiCoursePaths(academy: boolean) {
         operationId: "saveCourseLtiTool",
         summary: "Register or revise one course LTI deployment",
         description:
-          "A current course manager saves a versioned placement from out-of-band registration details. The deployment is scoped to the course. Login, redirect and target must be HTTPS, and changing OAuth client ID requires a new deployment.",
+          "A current course manager saves a versioned placement from out-of-band registration details. In the internal portal, Standard supports basic manual deployments. The deployment is scoped to the course. Login, redirect and target must be HTTPS, and changing OAuth client ID requires a new deployment.",
         tags: ["LTI 1.3"],
         security,
         ...(academy ? { "x-portal-licence": "active" } : {}),

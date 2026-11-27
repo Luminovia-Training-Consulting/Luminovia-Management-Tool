@@ -20,6 +20,7 @@ import "./i18n";
 type Launch = {
   id: string;
   title: string;
+  practice: boolean;
   session: string;
   url: URL;
   assets: H5pPlayback["assets"];
@@ -144,9 +145,11 @@ function RuntimeFrame({
 export function CourseH5pPlayback({
   actor,
   course,
+  allowAssessment = true,
 }: {
   actor: string;
   course: string;
+  allowAssessment?: boolean;
 }) {
   const { t } = useTranslation("learning");
   const formId = useId();
@@ -162,6 +165,7 @@ export function CourseH5pPlayback({
   const [launch, setLaunch] = useState<Launch | null>(null);
   const [withdraw, setWithdraw] = useState<CourseH5pPackage | null>(null);
   const [fileKey, setFileKey] = useState(0);
+  const [practice, setPractice] = useState(false);
   const packages = useQuery({
     queryKey: key,
     enabled: online,
@@ -196,6 +200,7 @@ export function CourseH5pPlayback({
       await courseH5pAction(course, version, "publish", {
         title: selection.playback.title,
         sha256: selection.playback.sha256,
+        ...(practice || !allowAssessment ? { practice: true } : {}),
       });
     },
     onSuccess: async () => {
@@ -233,6 +238,7 @@ export function CourseH5pPlayback({
       return {
         id: item.id,
         title: item.title,
+        practice: item.practice === true,
         session,
         url,
         assets: prepared.assets,
@@ -280,6 +286,19 @@ export function CourseH5pPlayback({
               {reviewed && (
                 <>
                   <p className="preserve-text">{reviewed.playback.title}</p>
+                  {allowAssessment && (
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={practice}
+                        disabled={publish.isPending}
+                        onChange={(event) =>
+                          setPractice(event.currentTarget.checked)
+                        }
+                      />
+                      {t("h5pRuntimePractice")}
+                    </label>
+                  )}
                   <Button
                     type="button"
                     disabled={!host || publish.isPending}
@@ -343,7 +362,15 @@ export function CourseH5pPlayback({
                 launch={launch}
                 onProgress={
                   packages.data.can_complete
-                    ? (data) => progress.mutate({ id: launch.id, data })
+                    ? (data) => {
+                        if (!launch.practice || data.completed)
+                          progress.mutate({
+                            id: launch.id,
+                            data: launch.practice
+                              ? { completed: true, score: null }
+                              : data,
+                          });
+                      }
                     : undefined
                 }
               />
