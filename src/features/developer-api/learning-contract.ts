@@ -502,10 +502,15 @@ export const internalWorkspaceResult = {
       access: record({
         ...workspaceFields.access.properties,
         lms_enabled: { const: false },
-        learner: { const: false },
       }),
       meeting_link: { type: "null" },
-      resources: { ...workspaceFields.resources, maxItems: 0 },
+      learner_status: nullable({ enum: ["enrolled", "completed"] }),
+      resources: itemList(
+        record({
+          ...workspaceFields.resources.items.properties,
+          category: { const: "material" },
+        }),
+      ),
       roster: { ...workspaceFields.roster, maxItems: 0 },
       exams: record({
         required: { const: false },

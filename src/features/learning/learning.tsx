@@ -2007,8 +2007,20 @@ function StandardCourseWorkspace({
           </div>
         }
       />
+      {course.learner_status && (
+        <Notice>
+          {t(
+            course.learner_status === "completed"
+              ? "standardCourseCompleted"
+              : "standardCourseInProgress",
+          )}
+        </Notice>
+      )}
       <div id="course-overview">
         <CourseBasics course={course} writable={internal} />
+      </div>
+      <div id="course-materials">
+        <Resources course={course} actor={actor} />
       </div>
       {(course.access.staff || course.access.learner) && (
         <CourseAuthoring
@@ -2022,7 +2034,13 @@ function StandardCourseWorkspace({
         />
       )}
       {(course.access.manager || course.access.client) && (
-        <CourseEnrolmentsPanel course={course} actor={actor} academy={false} />
+        <div id="course-enrolments">
+          <CourseEnrolmentsPanel
+            course={course}
+            actor={actor}
+            academy={false}
+          />
+        </div>
       )}
       {course.access.learner && (
         <CourseWithdrawal course={course} actor={actor} />

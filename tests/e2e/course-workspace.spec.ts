@@ -616,23 +616,22 @@ test("Premium exam switching and scanned bytes follow real access across two com
             releaseRead();
             await page.context().setOffline(false);
         }
-        await expect(page.getByRole("alert").getByRole("button", {name: "Erneut versuchen"})).toBeVisible({timeout: 30_000});
+        await expect(page.getByText("Kurs in Bearbeitung", {exact: true})).toBeVisible({timeout: 30_000});
         await page.unroute(workspaceRequest);
         await expect(examRegion(page)).toHaveCount(0);
         expect((await requestPaper(published.id)).status()).toBe(403);
         expect((await learner.rpc("course_chat_messages", {p_room_id: roomA})).error?.code).toBe("42501");
-        expect((await register(company)).error?.code).toBe("42501");
+        expect((await register(company)).error).toBeNull();
         await companyPage.reload();
         await expect(companyPage.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
-        await expect(companyPage.getByRole("status")).toContainText(
-            "Das Lernmodul dieses Unternehmens ist derzeit deaktiviert.",
-        );
-        await expect(companyAttendance).toHaveCount(0);
+        await expect(companyAttendance).toBeVisible();
+        await companyAttendance.getByLabel("Kurstermin", {exact: true}).selectOption(f.session);
+        await expect(companyAttendance.getByText("Anwesend: 1", {exact: true})).toBeVisible();
         await expect(examRegion(companyPage)).toHaveCount(0);
 
         await page.goto("/learning");
         await expect(page.getByRole("heading", {name: other.title, exact: true})).toBeVisible();
-        await expect(page.getByRole("heading", {name: f.title, exact: true})).toHaveCount(0);
+        await expect(page.getByRole("heading", {name: f.title, exact: true})).toBeVisible();
         await page.getByRole("link", {name: other.title, exact: true}).click();
         await expect(page.getByRole("heading", {name: other.title, exact: true})).toBeVisible();
         await page.goto(`/courses/${other.run}/workspace#course-chat`);

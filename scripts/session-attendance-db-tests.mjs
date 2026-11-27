@@ -204,6 +204,7 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
     const legacy = await rpc(admin, "course_document_access", [q("attendance"), q(run)]);
     assert.equal(legacy.sessions.length, 3);
     console.log("PASS internal exact-session export preserves the existing course report and denies non-staff access");
+    const expectedStandardVersion = (await register(company)).rows[0].version;
     const toggle = actor(admin, `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});select pg_sleep(0.7)`);
     let holdsPremiumLock = false;
     for (let index = 0; index < 30 && !holdsPremiumLock; index++) {
@@ -212,12 +213,16 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
         if (!holdsPremiumLock) await new Promise((resolve) => setTimeout(resolve, 20));
     }
     assert.equal(holdsPremiumLock, true);
-    const lateSave = save(teacher,"present",4,{reason:"Concurrent edit"});
+    const lateSave = save(teacher,"present",expectedStandardVersion,{reason:"Concurrent edit"});
     await Promise.all([toggle, lateSave]);
     const standardRegister = await register(company);
     assert.deepEqual(standardRegister.evidence, []);
-    await assert.rejects(exportSession(company),/42501/);
-    await assert.rejects(save(teacher,"present",4,{reason:"Retest"}),/PT409/);
+    const standardReport = await exportSession(company);
+    assert.deepEqual(standardReport.sessions.map((record) => record.id), [session]);
+    assert.equal(standardReport.roster[0].sessions[0].status, "present");
+    assert.doesNotMatch(JSON.stringify(standardReport), /Concurrent edit|Roster\.pdf|Paper register confirmed/);
+    for (const who of [participant, outsider]) await assert.rejects(exportSession(who), /42501/);
+    await assert.rejects(save(teacher,"present",expectedStandardVersion,{reason:"Retest"}),/PT409/);
     await assert.rejects(rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
 });
 

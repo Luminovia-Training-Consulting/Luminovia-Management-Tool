@@ -276,6 +276,15 @@ export function CourseSeriesForm({
               >
                 {t("open", { number: index + 1 })}
               </Link>
+              {!academic && (
+                <Link
+                  className="text-link"
+                  to={`/courses?editRun=${encodeURIComponent(run)}`}
+                  onClick={onOpen}
+                >
+                  {t("editDraft", { number: index + 1 })}
+                </Link>
+              )}
               {!academic && canPrepareOffer && (
                 <Button asChild variant="secondary">
                   <Link to={`/courses?offer=${encodeURIComponent(run)}`}>

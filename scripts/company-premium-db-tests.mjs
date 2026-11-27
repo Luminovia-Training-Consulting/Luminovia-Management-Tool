@@ -538,7 +538,17 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(await sql(`select count(*) from public.audit_events where action='course.chat_inspected'
                 and resource_id=${q(runA)} and details->>'attachment_version_id'=${q(attachedVersion)}`), "1");
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
-            await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
+            assert.equal(
+                (await rpc(participant, "course_document_access", ["resource", learnerResource])).id,
+                learnerResourceVersion,
+            );
+            assert.equal(standard.resources[0].id, learnerResource);
+            assert.deepEqual(standard.share_options, []);
+            const managerWorkspace = await rpc(admin, "course_workspace", [runA]);
+            assert.ok(managerWorkspace.share_options.some((item) => item.id === learnerResourceVersion));
+            assert.ok(!managerWorkspace.share_options.some((item) => item.id === examPaperVersion));
+            assertLmsResponse("course_workspace", managerWorkspace);
+            await assert.rejects(rpc(client, "course_document_access", ["resource", learnerResource]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);
             await assert.rejects(
                 rpc(participant, "course_workspace_action", [runA, "quiz_submit", {answer: "fictional"}, 0]),
@@ -590,7 +600,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 assert.equal(workspace.title, "Fictional retained LMS course");
                 assert.deepEqual(workspace.sessions.map(({id}) => id), [sessionA]);
                 assert.equal(workspace.sessions[0].can_verify, false);
-                assert.deepEqual(workspace.resources, []);
+                assert.deepEqual(
+                    workspace.resources.map(({ id }) => id),
+                    who === client ? [] : [learnerResource],
+                );
                 assert.deepEqual(workspace.exams.documents, []);
                 assert.deepEqual(workspace.roster, []);
                 assert.deepEqual(workspace.preparation, []);
@@ -664,7 +677,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         },
     );
 
-    await check("Retained attendance reads exact recorded rows while operational access stays closed", async () => {
+    await check("Retained attendance inspection preserves scope while Standard retains the register", async () => {
         const reason = "Fictional archived register review";
         const inspection = [companyA, runA, reason];
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", inspection), /42501/);
@@ -731,7 +744,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         await assert.rejects(access(admin, [companyB, runB, ...exactExam.slice(2)]), /42501/);
         await assert.rejects(access(admin, [companyA, runA, "material", ...exactExam.slice(3)]), /42501/);
         await assert.rejects(access(admin, [...exactExam.slice(0, 4), examPaperVersion, reason]), /42501/);
-        await assert.rejects(rpc(admin, "course_document_access", ["resource", learnerResource]), /42501/);
+        assert.equal(
+            (await rpc(admin, "course_document_access", ["resource", learnerResource])).id,
+            learnerResourceVersion,
+        );
 
         await sql(`update private.course_exam_documents set removed_at=now() where id=${q(examKeyId)};
           update public.document_versions set status='quarantined' where id=${q(examPaperVersion)};`);

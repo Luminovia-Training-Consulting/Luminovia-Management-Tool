@@ -77,6 +77,7 @@ function ResourceShareFields({
   onAudience,
   onCategory,
   disabled,
+  standard,
 }: {
   idPrefix: string;
   audience: string;
@@ -84,6 +85,7 @@ function ResourceShareFields({
   onAudience: (value: string) => void;
   onCategory: (value: string) => void;
   disabled: boolean;
+  standard: boolean;
 }) {
   const { t } = useTranslation("learning");
   const audienceId = idPrefix + "-audience";
@@ -112,7 +114,7 @@ function ResourceShareFields({
           onChange={(event) => onCategory(event.target.value)}
         >
           <option value="material">{t("material")}</option>
-          <option value="report">{t("report")}</option>
+          {!standard && <option value="report">{t("report")}</option>}
         </select>
       </Field>
     </>
@@ -224,6 +226,7 @@ export function Resources({
       void refresh();
     },
   });
+  const standard = !course.lms_enabled && !academy;
   const canUpload =
     academyCanUpload ||
     (!readOnly &&
@@ -248,7 +251,7 @@ export function Resources({
                 id={resource.id}
                 name={resource.name}
               />
-              {(!readOnly || academy) && (
+              {(!readOnly || academy) && !standard && (
                 <Button
                   variant="ghost"
                   disabled={!online || save.isPending || resource.acknowledged}
@@ -308,6 +311,7 @@ export function Resources({
             />
           </Field>
           <ResourceShareFields
+            standard={standard}
             idPrefix="upload-resource"
             audience={audience}
             category={category}
@@ -375,6 +379,7 @@ export function Resources({
                 </select>
               </Field>
               <ResourceShareFields
+                standard={standard}
                 idPrefix="resource"
                 audience={reviewedAudience}
                 category={reviewedCategory}

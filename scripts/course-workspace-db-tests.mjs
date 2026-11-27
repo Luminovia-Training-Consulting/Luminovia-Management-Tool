@@ -518,7 +518,10 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await assert.rejects(download(client, staffLink), /42501/);
         await sql(`update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`);
         await rpc(admin, "set_company_premium", [q(org), "false", "1", q(randomUUID())]);
-        await assert.rejects(share(teacher, lecturerFile, "staff"), /42501/);
+        assert.equal(await share(teacher, lecturerFile, "all"), lecturerLink);
+        assert.equal((await download(learner, lecturerLink)).id, lecturerFile.version);
+        await assert.rejects(download(client, clientReport), /42501/);
+        await assert.rejects(share(learner, lecturerFile, "staff"), /42501/);
         await assert.rejects(remove(client, companyLink), /42501/);
         await rpc(admin, "set_company_premium", [q(org), "true", "2", q(randomUUID())]);
 

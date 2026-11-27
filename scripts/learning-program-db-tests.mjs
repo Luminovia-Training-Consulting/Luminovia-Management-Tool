@@ -272,6 +272,7 @@ await Promise.all(
         const workspace = JSON.parse(await invoke(learner, "course_workspace", q(first), "GET"));
         assert.equal(workspace.lms_enabled, false);
         assert.equal(workspace.access.learner, true);
+        assert.equal(workspace.learner_status, "enrolled");
         await invoke(learner, "course_content_studio", q(first), "GET");
         await assert.rejects(invoke(otherLearner, "course_content_studio", q(first), "GET"), /42501/);
         await assert.rejects(invoke(learner, "course_exam_state", q(first), "GET"), /42501/);

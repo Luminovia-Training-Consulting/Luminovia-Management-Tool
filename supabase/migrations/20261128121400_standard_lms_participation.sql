@@ -176,6 +176,15 @@ select pg_temp.standard_lms_replace('private.course_withdrawal_window(uuid)',
 select pg_temp.standard_lms_replace('private.course_withdrawal_window(uuid)',
   $old$context->>'lms_enabled'$old$, $new$context->>'standard_enabled'$new$, 1);
 
+select pg_temp.standard_lms_replace('private.standard_course_workspace(uuid,jsonb)',
+  $old$'settings_version', 0,$old$,
+  $new$'settings_version', 0,
+    'learner_status', case when (p_context->>'learner')::boolean then (
+      select enrolment.status from public.course_enrolments enrolment
+      where enrolment.course_run_id = run.id and enrolment.user_id = auth.uid()
+        and enrolment.status in ('enrolled', 'completed')
+    ) end,$new$, 1);
+
 -- A completed enrolment provides basic programme progress. An existing formal
 -- receipt remains authoritative for courses with a receipt history, including
 -- revocation. No receipt is created or returned for a basic completion.
@@ -206,6 +215,12 @@ select pg_temp.standard_lms_replace('private.course_session_register(uuid,uuid)'
 select pg_temp.standard_lms_replace(
   'private.save_course_session_attendance(uuid,uuid,uuid,text,timestamptz,timestamptz,text,text,integer)',
   'private.lock_course_premium(p_run_id)', 'private.lock_standard_lms_course(p_run_id)', 1);
+select pg_temp.standard_lms_replace(
+  'private.save_course_session_attendance_before_premium_lock(uuid,uuid,uuid,text,timestamptz,timestamptz,text,text,integer)',
+  'private.course_workspace_context(p_run_id)', 'private.course_workspace_context_for_package(p_run_id, true)', 1);
+select pg_temp.standard_lms_replace(
+  'private.save_course_session_attendance_before_premium_lock(uuid,uuid,uuid,text,timestamptz,timestamptz,text,text,integer)',
+  $old$context->>'lms_enabled'$old$, $new$context->>'standard_enabled'$new$, 1);
 select pg_temp.standard_lms_replace('private.import_course_session_attendance(uuid,uuid,jsonb)',
   'private.lock_course_premium(p_run_id)', 'private.lock_standard_lms_course(p_run_id)', 1);
 

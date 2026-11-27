@@ -626,6 +626,8 @@ const pairs: Record<string, [string, string]> = {
     "Das Lernmodul dieses Unternehmens ist derzeit deaktiviert. Kursstammdaten und Termine bleiben verfügbar; Lerninhalte, Teilnehmendenfunktionen und Materialien sind gesperrt.",
     "This company's learning module is currently OFF. Base course details and sessions remain available; learning content, participant features and materials are blocked.",
   ],
+  standardCourseCompleted: ["Kurs abgeschlossen", "Course completed"],
+  standardCourseInProgress: ["Kurs in Bearbeitung", "Course in progress"],
   premiumOffCourseBadge: ["Standard-LMS", "Standard LMS"],
   workspaceDisabledTitle: [
     "Lernarbeitsbereich deaktiviert",
