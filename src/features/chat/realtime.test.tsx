@@ -4,7 +4,11 @@
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { useChatRealtime } from "./realtime";
 import { chatKeys } from "./api";
 
@@ -45,6 +49,7 @@ vi.mock("../../lib/supabase", () => ({
   }),
 }));
 const clients: QueryClient[] = [];
+const keepInFlight = { cancelRefetch: false };
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
@@ -105,8 +110,8 @@ it("coalesces twenty committed message notifications into one authorised message
   expect(invalidate).not.toHaveBeenCalled();
   await advance();
   expect(invalidate.mock.calls).toEqual([
-    [{ queryKey: chatKeys.messages("actor-a", "room-a") }],
-    [{ queryKey: chatKeys.rooms("actor-a") }],
+    [{ queryKey: chatKeys.messages("actor-a", "room-a") }, keepInFlight],
+    [{ queryKey: chatKeys.rooms("actor-a") }, keepInFlight],
   ]);
   expect(
     client.getQueryData([...chatKeys.messages("actor-a", "room-a"), ""]),
@@ -123,6 +128,46 @@ it("uses a bounded batching window so a continuous stream cannot postpone refres
   }
   expect(invalidate.mock.calls.length).toBeGreaterThan(0);
 });
+it.each(["realtime", "already running"])(
+  "finishes a slow %s history refresh and follows it with an authorized refetch",
+  async (source) => {
+    const { client, invalidate } = setup();
+    invalidate.mockRestore();
+    const messages = [...chatKeys.messages("actor-a", "room-a"), ""];
+    client.setQueryData(messages, "initial");
+    const replies: ((value: string) => void)[] = [];
+    const signals: AbortSignal[] = [];
+    const observer = new QueryObserver(client, {
+      queryKey: messages,
+      refetchOnMount: false,
+      queryFn: ({ signal }) => {
+        signals.push(signal);
+        return new Promise<string>((resolve) => replies.push(resolve));
+      },
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      if (source === "already running") void observer.refetch();
+      const events = source === "realtime" ? 5 : 1;
+      for (let i = 0; i < events; i++) {
+        emit(state.channels[0]);
+        await advance();
+      }
+      expect(replies).toHaveLength(1);
+      expect(signals[0].aborted).toBe(false);
+      replies[0]("first");
+      await advance();
+      expect(client.getQueryData(messages)).toBe("first");
+      expect(replies).toHaveLength(2);
+      replies[1]("latest");
+      await advance();
+      expect(client.getQueryData(messages)).toBe("latest");
+      expect(replies).toHaveLength(2);
+    } finally {
+      unsubscribe();
+    }
+  },
+);
 it("refreshes the current history after a personal visibility change from another session", async () => {
   const { invalidate } = setup();
   emit(state.channels[0], "chat_members:UPDATE", {
@@ -130,8 +175,8 @@ it("refreshes the current history after a personal visibility change from anothe
   });
   await advance();
   expect(invalidate.mock.calls).toEqual([
-    [{ queryKey: chatKeys.messages("actor-a", "room-a") }],
-    [{ queryKey: chatKeys.rooms("actor-a") }],
+    [{ queryKey: chatKeys.messages("actor-a", "room-a") }, keepInFlight],
+    [{ queryKey: chatKeys.rooms("actor-a") }, keepInFlight],
   ]);
 });
 it("revalidates saved history only when membership visibility changes or the connection was interrupted", async () => {
@@ -148,7 +193,10 @@ it("revalidates saved history only when membership visibility changes or the con
   act(() => channel.status("SUBSCRIBED"));
   emit(channel, "chat_members:UPDATE", { new: member });
   await advance();
-  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+  expect(invalidate.mock.calls).toEqual([
+    [messages, keepInFlight],
+    [rooms, keepInFlight],
+  ]);
 
   invalidate.mockClear();
   for (let i = 0; i < 20; i++)
@@ -156,20 +204,26 @@ it("revalidates saved history only when membership visibility changes or the con
       new: { ...member, last_read_message_id: `fictional-${i}` },
     });
   await advance();
-  expect(invalidate.mock.calls).toEqual([[rooms]]);
+  expect(invalidate.mock.calls).toEqual([[rooms, keepInFlight]]);
 
   invalidate.mockClear();
   emit(channel, "chat_members:UPDATE", {
     new: { ...member, hidden_generation: 3 },
   });
   await advance();
-  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+  expect(invalidate.mock.calls).toEqual([
+    [messages, keepInFlight],
+    [rooms, keepInFlight],
+  ]);
 
   invalidate.mockClear();
   act(() => channel.status("CHANNEL_ERROR"));
   act(() => channel.status("SUBSCRIBED"));
   await advance();
-  expect(invalidate.mock.calls).toEqual([[messages], [rooms]]);
+  expect(invalidate.mock.calls).toEqual([
+    [messages, keepInFlight],
+    [rooms, keepInFlight],
+  ]);
 });
 it("removes revoked private rows synchronously and cancels queued or late message refreshes", async () => {
   const { client, invalidate } = setup();
@@ -215,8 +269,8 @@ it("cancels old actor/room timers and ignores old channel callbacks after cleanu
   emit(current);
   await advance();
   expect(invalidate.mock.calls).toEqual([
-    [{ queryKey: chatKeys.messages("actor-b", "room-b") }],
-    [{ queryKey: chatKeys.rooms("actor-b") }],
+    [{ queryKey: chatKeys.messages("actor-b", "room-b") }, keepInFlight],
+    [{ queryKey: chatKeys.rooms("actor-b") }, keepInFlight],
   ]);
   emit(current);
   view.unmount();

@@ -132,6 +132,7 @@ function renderCourses({
   changeCandidates = [] as ChangeCandidate[],
   path = "/courses",
   coldStart = false,
+  coldDirectories = false,
 } = {}) {
   const client = new QueryClient({
     defaultOptions: {
@@ -147,19 +148,19 @@ function renderCourses({
     building_blocks: blocks,
     topics,
   };
-  for (const [name, value] of [
-    ["templates", templates],
-    ["organisations", organisations],
-  ] as const)
-    client.setQueryData(["operations", name, actor], value);
-  for (const { id } of organisations)
-    client.setQueryData(
-      ["operations", "templates", actor, id],
-      templates.filter((item) => item.owner_organisation_id === id),
-    );
+  if (!coldDirectories) {
+    client.setQueryData(["operations", "templates", actor], templates);
+    client.setQueryData(["operations", "organisations", actor], organisations);
+    for (const { id } of organisations)
+      client.setQueryData(
+        ["operations", "templates", actor, id],
+        templates.filter((item) => item.owner_organisation_id === id),
+      );
+    client.setQueryData(["topics"], topics);
+  }
   if (blocks.length)
     client.setQueryData(buildingBlockPlanningQuery(actor).queryKey, blocks);
-  if (!coldStart) {
+  if (!coldStart && !coldDirectories) {
     client.setQueryData(
       runsQuery(
         actor,
@@ -168,11 +169,12 @@ function renderCourses({
       ).queryKey,
       runs,
     );
+  }
+  if (!coldStart) {
     client.setQueryData(["permissions", actor], permissions);
   }
   client.setQueryData(["user-roles", actor], roles);
   client.setQueryData(["client-organisations", actor], organisations);
-  client.setQueryData(["topics"], topics);
   for (const run of runs)
     for (const job of run.jobs ?? [])
       client.setQueryData(["job-lifecycle", actor, job.id], lifecycle);
@@ -273,6 +275,8 @@ beforeEach(async () => {
           error: null,
         }),
       }),
+      then: (resolve: (result: { data: unknown[]; error: null }) => unknown) =>
+        Promise.resolve({ data: rows, error: null }).then(resolve),
     };
     return query;
   });
@@ -2235,6 +2239,42 @@ it("loads the active course tab without fetching the other catalogue", async () 
   expect(
     await screen.findByRole("button", { name: "Kurs ansehen" }),
   ).toBeVisible();
+  expect(state.from).toHaveBeenCalledWith("course_runs");
+});
+
+it("opens a company template without fetching course pages, taxonomy or the organisation directory", async () => {
+  const source = { ...template, owner_organisation_id: companyId };
+  const client = renderCourses({
+    path: `/courses?tab=templates&company=${companyId}&template=${source.id}`,
+    coldDirectories: true,
+    permissions: [],
+    roles: ["client"],
+    organisations: [organisation],
+    templates: [source],
+    runs: [{ ...run, organisation_id: companyId }],
+  });
+
+  const details = await screen.findByRole("dialog", { name: source.title });
+  expect(within(details).getByText(source.syllabus)).toBeVisible();
+  expect(state.from.mock.calls.map(([table]) => table)).toEqual([
+    "course_templates",
+  ]);
+  expect(
+    client.getQueryData(["operations", "templates", actor]),
+  ).toBeUndefined();
+  expect(
+    client.getQueryData(["operations", "templates", actor, companyId]),
+  ).toEqual([source]);
+
+  await userEvent.keyboard("{Escape}");
+  await userEvent.click(
+    screen.getByRole("button", { name: /^Durchführungen$/ }),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Kurs ansehen" }),
+  ).toBeVisible();
+  expect(state.from).toHaveBeenCalledWith("topics");
+  expect(state.from).toHaveBeenCalledWith("organisations");
   expect(state.from).toHaveBeenCalledWith("course_runs");
 });
 
