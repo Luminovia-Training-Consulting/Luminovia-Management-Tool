@@ -1413,7 +1413,12 @@ export function CoursesPage() {
   useEffect(() => {
     if (manage && creatorRoute === "new") {
       setParams(
-        { creator: crypto.randomUUID(), startCreator: "1" },
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.set("creator", crypto.randomUUID());
+          next.set("startCreator", "1");
+          return next;
+        },
         { replace: true },
       );
     }
@@ -2697,6 +2702,7 @@ export function CoursesPage() {
             <RunForm
               key={`${creatorId}:${creatorEpoch}`}
               creator={{ id: creatorId, saved: creatorRecord }}
+              initialSchedule={calendarPlan}
               reloadCreator={() => {
                 void creatorRead.refetch().then((result) => {
                   if (result.isSuccess) setCreatorEpoch((epoch) => epoch + 1);
@@ -2720,7 +2726,8 @@ export function CoursesPage() {
       </Dialog>
       <Dialog
         open={
-          mayOpenRunEditor && (runEdit !== undefined || Boolean(calendarPlan))
+          mayOpenRunEditor &&
+          (runEdit !== undefined || Boolean(calendarPlan && !creatorRoute))
         }
         onOpenChange={(open) => {
           if (!open && !runSaving) {

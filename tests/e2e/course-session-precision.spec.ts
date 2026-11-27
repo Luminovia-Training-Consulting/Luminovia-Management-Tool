@@ -102,7 +102,7 @@ test("retained course editing preserves exact timestamps and reviewed schedule c
         await page.getByText("Kurs aus dem Kalender planen", {exact: true}).press("Enter");
         await page.getByLabel("Unterrichtstag", {exact: true}).fill("2030-11-03");
         await page.getByRole("button", {name: "Kursentwurf öffnen", exact: true}).click();
-        const calendarDraft = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+        const calendarDraft = page.getByRole("dialog", {name: "Kurs- und Auftragsassistent starten", exact: true});
         await expect(calendarDraft.getByLabel("Zeitzone", {exact: true})).toHaveValue("Australia/Brisbane");
         await expect(calendarDraft.getByLabel("Beginn 1", {exact: true})).toHaveValue("2030-11-03T09:00");
         await expect(calendarDraft.getByLabel("Ende 1", {exact: true})).toHaveValue("2030-11-03T17:00");

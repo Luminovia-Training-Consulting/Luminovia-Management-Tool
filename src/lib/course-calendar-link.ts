@@ -9,6 +9,7 @@ type CalendarCourseSchedule = {
 
 export function calendarCourseHref(schedule: CalendarCourseSchedule) {
   return `/courses?${new URLSearchParams({
+    creator: "new",
     planFrom: schedule.starts_at,
     planUntil: schedule.ends_at,
     planZone: schedule.time_zone,

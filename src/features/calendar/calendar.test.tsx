@@ -1498,6 +1498,7 @@ it("opens a course draft from a selected calendar slot without saving a calendar
   );
   expect(current.pathname).toBe("/courses");
   expect(Object.fromEntries(current.searchParams)).toEqual({
+    creator: "new",
     planFrom: "2030-03-30T09:00",
     planUntil: "2030-03-30T09:30",
     planZone: "Australia/Brisbane",
