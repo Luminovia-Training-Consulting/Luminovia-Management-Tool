@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
@@ -7,10 +7,6 @@ import { PersonRatingButton } from "./person-rating";
 
 const state = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
-vi.mock("../../lib/online", () => ({
-  requireOnline: () => {},
-  useOnline: () => true,
-}));
 
 function mount(person: string) {
   const client = new QueryClient({
@@ -31,7 +27,10 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.rpc.mockReset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 it("saves an independent star rating with an optional comment and reloads it for editing", async () => {
   let saved = { stars: null as number | null, comment: "" };
@@ -96,4 +95,37 @@ it("shows received comments on the own profile without a rating form", async () 
   expect(await screen.findByText("Fictional feedback.")).toBeVisible();
   expect(screen.getByText("5 Sterne")).toBeVisible();
   expect(screen.queryByRole("radio")).toBeNull();
+});
+
+it("keeps a rating draft when the connection drops and blocks any offline save", async () => {
+  let online = true;
+  vi.spyOn(window.navigator, "onLine", "get").mockImplementation(() => online);
+  state.rpc.mockReturnValue({
+    abortSignal: async () => ({
+      data: { stars: null, comment: "" },
+      error: null,
+    }),
+  });
+  mount("recipient");
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("button", { name: "Fictional contact bewerten" }),
+  );
+  await user.click(await screen.findByRole("radio", { name: "4 Sterne" }));
+  const comment = screen.getByRole("textbox", { name: /Kommentar/ });
+  await user.type(comment, "Entwurf bleibt erhalten.");
+  const submit = screen.getByRole("button", { name: "Bewertung speichern" });
+  online = false;
+  act(() => window.dispatchEvent(new Event("offline")));
+  expect(submit).toBeDisabled();
+  expect(comment).toHaveValue("Entwurf bleibt erhalten.");
+  expect(screen.getByRole("radio", { name: "4 Sterne" })).toBeChecked();
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_person_rating",
+    expect.anything(),
+  );
+  online = true;
+  act(() => window.dispatchEvent(new Event("online")));
+  expect(submit).toBeEnabled();
+  expect(comment).toHaveValue("Entwurf bleibt erhalten.");
 });

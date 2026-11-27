@@ -41,7 +41,7 @@ it("shows the inherited duration and saves an override only after confirmation",
   await user.click(
     screen.getByRole("button", { name: "Löschfrist für diesen Chat" }),
   );
-  expect(await screen.findByText("Aktuell gilt Nach 7 Tagen.")).toBeVisible();
+  expect(await screen.findByText("Aktuelle Einstellung: Nach 7 Tagen.")).toBeVisible();
   await user.selectOptions(screen.getByRole("combobox"), "8");
   const save = screen.getByRole("button", { name: "Löschfrist speichern" });
   expect(save).toBeDisabled();
@@ -66,7 +66,7 @@ it("shows read-only room policies and scopes global writes explicitly", async ()
   await user.click(
     screen.getByRole("button", { name: "Löschfrist für diesen Chat" }),
   );
-  expect(await screen.findByText("Aktuell gilt Nach 14 Tagen.")).toBeVisible();
+  expect(await screen.findByText("Aktuelle Einstellung: Nach 14 Tagen.")).toBeVisible();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
 
   cleanup();

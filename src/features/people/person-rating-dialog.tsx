@@ -9,6 +9,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import "./person-rating-i18n";
+import "./person-rating-dialog.css";
 
 const stars = [1, 2, 3, 4, 5] as const;
 const scoreSchema = z.int().min(1).max(5);
@@ -86,7 +87,7 @@ export function PersonRatingDialog({
       description={t(own ? "receivedHelp" : "editHelp")}
       closeDisabled={save.isPending}
     >
-      {!online ? (
+      {!online && (own || !rating.data) ? (
         <Notice>{t("offline")}</Notice>
       ) : rating.isPending ? (
         <Loading />
@@ -115,6 +116,7 @@ export function PersonRatingDialog({
           initial={rating.data}
           save={(score, comment) => save.mutate({ score, comment })}
           pending={save.isPending}
+          online={online}
           failed={save.isError}
           saved={save.isSuccess}
           resetStatus={save.reset}
@@ -128,6 +130,7 @@ function RatingForm({
   initial,
   save,
   pending,
+  online,
   failed,
   saved,
   resetStatus,
@@ -135,6 +138,7 @@ function RatingForm({
   initial: Rating;
   save: (score: number, comment: string) => void;
   pending: boolean;
+  online: boolean;
   failed: boolean;
   saved: boolean;
   resetStatus: () => void;
@@ -148,15 +152,16 @@ function RatingForm({
       className="section-stack"
       onSubmit={(event) => {
         event.preventDefault();
-        if (score !== null) save(score, comment.trim());
+        if (online && !pending && score !== null) save(score, comment.trim());
       }}
     >
-      <fieldset disabled={pending}>
+      <fieldset className="person-rating-fieldset" disabled={pending}>
         <legend>{t("scoreLabel")}</legend>
-        <div className="form-actions">
+        <div className="person-rating-stars">
           {stars.map((value) => (
-            <label className="checkbox-label" key={value}>
+            <label className="person-rating-star" key={value}>
               <input
+                className="sr-only"
                 type="radio"
                 name={id}
                 value={value}
@@ -173,7 +178,7 @@ function RatingForm({
                 fill={(score ?? 0) >= value ? "currentColor" : "none"}
                 aria-hidden="true"
               />
-              <span>{value}</span>
+              <span aria-hidden="true">{value}</span>
             </label>
           ))}
         </div>
@@ -190,9 +195,10 @@ function RatingForm({
           }}
         />
       </Field>
+      {!online && <Notice>{t("offlineDraft")}</Notice>}
       {failed && <Notice kind="error">{t("failed")}</Notice>}
       {saved && <Notice>{t("saved")}</Notice>}
-      <Button type="submit" disabled={score === null || pending}>
+      <Button type="submit" disabled={score === null || pending || !online}>
         {t("save")}
       </Button>
     </form>

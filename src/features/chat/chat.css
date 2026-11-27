@@ -777,6 +777,30 @@
   margin-top: 12px;
 }
 
+.chat-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-contact-item > .button {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+@media (max-width: 460px) {
+  .chat-contact-item > .chat-contact-button > svg {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .chat-contact-item {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
 .chat-contact-button {
   display: flex;
   align-items: center;
@@ -790,6 +814,7 @@
   text-align: left;
   font-size: 13px;
   min-height: 60px;
+  min-width: 0;
 }
 
 .chat-contact-button:hover {
@@ -799,6 +824,8 @@
 
 .chat-contact-button > span:nth-child(2) {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .chat-contact-avatar {

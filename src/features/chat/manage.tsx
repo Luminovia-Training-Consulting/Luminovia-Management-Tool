@@ -93,7 +93,7 @@ export function ContactPicker({
       ) : (
         <ul className="chat-contact-list">
           {filtered.map((contact, index) => (
-            <li key={contact.id}>
+            <li key={contact.id} className="chat-contact-item">
               <button
                 type="button"
                 className="chat-contact-button"
@@ -115,6 +115,7 @@ export function ContactPicker({
               <PersonRatingButton
                 actor={actor}
                 person={contact.id}
+                compact
                 name={contactName(contact, t("unnamed"))}
               />
             </li>

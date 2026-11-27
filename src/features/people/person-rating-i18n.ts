@@ -6,6 +6,8 @@ i18n.addResourceBundle("de", "personRating", {
   editHelp:
     "Wähle 1 bis 5 Sterne. Deinen Kommentar sieht die bewertete Person ohne deinen Namen. Du kannst deine Bewertung später ändern.",
   offline: "Verbinde dich mit dem Portal, um Bewertungen zu öffnen.",
+  offlineDraft:
+    "Du bist offline. Dein Entwurf bleibt im geöffneten Dialog erhalten.",
   unavailable: "Für diese Person ist keine Bewertung möglich.",
   empty: "Du hast noch keine Bewertungen erhalten.",
   scoreLabel: "Sterne auswählen",
@@ -22,6 +24,7 @@ i18n.addResourceBundle("en", "personRating", {
   editHelp:
     "Choose 1 to 5 stars. The recipient sees your comment without your name. You can edit your rating later.",
   offline: "Reconnect to the portal to open ratings.",
+  offlineDraft: "You are offline. Your draft stays in this open dialog.",
   unavailable: "You cannot rate this person.",
   empty: "You have not received any ratings yet.",
   scoreLabel: "Choose a star rating",

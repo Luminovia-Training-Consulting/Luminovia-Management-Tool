@@ -2066,6 +2066,28 @@ legend {
     --dialog-inline-padding: 20px;
   }
 
+  .dialog-header {
+    row-gap: 4px;
+  }
+
+  .dialog-header > div {
+    display: contents;
+  }
+
+  .dialog-header h2 {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+
+  .dialog-header p {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .dialog-header .dialog-close {
+    grid-area: 1 / 2;
+  }
+
   .session-form-row {
     grid-template-columns: 1fr 40px;
     gap: 6px;

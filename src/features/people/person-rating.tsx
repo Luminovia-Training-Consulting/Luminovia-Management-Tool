@@ -7,11 +7,13 @@ import i18n from "../../lib/i18n";
 
 i18n.addResourceBundle("de", "personRating", {
   rate: "Person bewerten",
+  rateShort: "Bewerten",
   rateName: "{{name}} bewerten",
   receivedTitle: "Erhaltene Bewertungen",
 });
 i18n.addResourceBundle("en", "personRating", {
   rate: "Rate person",
+  rateShort: "Rate",
   rateName: "Rate {{name}}",
   receivedTitle: "Ratings received",
 });
@@ -25,10 +27,12 @@ export function PersonRatingButton({
   actor,
   person,
   name,
+  compact,
 }: {
   actor: string;
   person: string;
   name?: string;
+  compact?: boolean;
 }) {
   const { t } = useTranslation("personRating");
   const [open, setOpen] = useState(false);
@@ -44,7 +48,7 @@ export function PersonRatingButton({
         aria-label={own ? undefined : t("rateName", { name })}
       >
         <Star size={16} aria-hidden="true" />
-        {t(own ? "receivedTitle" : "rate")}
+        {t(own ? "receivedTitle" : compact ? "rateShort" : "rate")}
       </Button>
       {open && (
         <Suspense fallback={null}>

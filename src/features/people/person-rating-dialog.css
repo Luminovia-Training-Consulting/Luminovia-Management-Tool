@@ -1,0 +1,36 @@
+.person-rating-fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.person-rating-stars {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-block-start: 8px;
+}
+
+.person-rating-star {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.person-rating-star:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--blue-soft);
+}
+
+.person-rating-star:has(input:focus-visible) {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}

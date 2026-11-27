@@ -9,7 +9,10 @@ const pairs = {
   hours8: ["Nach 8 Stunden", "After 8 hours"],
   hours168: ["Nach 7 Tagen", "After 7 days"],
   hours336: ["Nach 14 Tagen", "After 14 days"],
-  effective: ["Aktuell gilt {{period}}.", "Currently applied: {{period}}."],
+  effective: [
+    "Aktuelle Einstellung: {{period}}.",
+    "Currently applied: {{period}}.",
+  ],
   description: [
     "Die Frist gilt für den bisherigen und den neuen Nachrichtenverlauf. Eine Einstellung im Chat hat Vorrang vor der globalen Einstellung.",
     "Retention applies to existing and new message history. A chat override takes precedence over the global setting.",

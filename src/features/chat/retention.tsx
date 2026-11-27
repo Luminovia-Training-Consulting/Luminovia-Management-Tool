@@ -173,7 +173,7 @@ function RetentionDialog({
                   </select>
                 </Field>
                 {choice !== undefined && choice !== initial.hours && (
-                  <label>
+                  <label className="checkbox-label">
                     <input
                       type="checkbox"
                       checked={confirmed}
