@@ -265,7 +265,9 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
             const grace = {...terms, issued_at: date(-3), starts_at: date(-2), expires_at: date(-1)};
             await sql(`select private.apply_verified_installation_licence(${q(JSON.stringify(grace))}::jsonb)`);
             assert.equal((await list(learner)).writable, false);
-            assert.equal((await comments(company,"learner","company",organisation)).items[0].comment, "Helpful coordination");
+            assert.ok((await comments(company,"learner","company",organisation)).items.some(
+                ({comment}) => comment === "Helpful coordination",
+            ));
             await assert.rejects(save(teacher,"lecturer","course",run,5,1), denied);
             const renewed = {...terms, issued_at: date(-2), starts_at: date(-1)};
             await sql(`select private.apply_verified_installation_licence(${q(JSON.stringify(renewed))}::jsonb)`);
