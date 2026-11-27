@@ -155,6 +155,13 @@ async function fixture({
             terms_version: 1,
         }),
     );
+    await checked(service.from("assignment_sessions").insert({
+        claim_id: claim,
+        lecturer_id: teacher.id,
+        starts_at: new Date(sessionEnd - 3600000).toISOString(),
+        ends_at: new Date(sessionEnd).toISOString(),
+        course_session_id: session,
+    }));
     await checked(
         service
             .from("client_organisation_memberships")
@@ -251,7 +258,7 @@ test("the course menu groups tools and displays only the chosen section", async 
 });
 
 test("completed course evaluations and lecturer restrictions follow current roles", async ({page, browser}, info) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
     const f = await fixture();
     await linkWorkspaceLearner(f);
     await checked(f.adminClient.rpc("manage_course_enrolment", {
@@ -279,7 +286,7 @@ test("completed course evaluations and lecturer restrictions follow current role
     await learner.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
     await expect(learner.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
     await expect(learner.getByText(/5 von 5 · 1 Bewertung/)).toBeVisible();
-    await expect(learner.getByRole("button", {name: /^Kommentare/})).toHaveCount(0);
+    await expect(learner.getByRole("button", {name: /^Einzelbewertungen/})).toHaveCount(0);
 
     const viewport = page.viewportSize() ?? undefined;
     const teacherContext = await browser.newContext({viewport, isMobile: info.project.name.includes("mobile")});
@@ -290,15 +297,32 @@ test("completed course evaluations and lecturer restrictions follow current role
         await login(teacher, f.teacher.email);
         await teacher.goto(workspace);
         const teacherReviews = review(teacher);
-        await teacherReviews.getByRole("button", {name: /^Kommentare/}).click();
+        await teacherReviews.getByRole("button", {name: /^Einzelbewertungen/}).click();
         await expect(teacherReviews.getByText("Fictional clear and practical instruction", {exact: true})).toBeVisible();
         await teacherReviews.getByLabel("Wen oder was bewertest du?").selectOption(`lecturer/course/${f.run}`);
         await teacherReviews.getByLabel("Anspruch des Kurses").selectOption("4");
         await teacherReviews.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
         await expect(teacherReviews.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
+        await teacherReviews.getByLabel("Wen oder was bewertest du?").selectOption(`lecturer/participant/${f.learner.id}`);
+        await teacherReviews.getByLabel("Punktzahl").selectOption("4");
+        await teacherReviews.getByLabel("Kommentar (optional)").fill("Fictional individual lab feedback");
+        await teacherReviews.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
+        await expect(teacherReviews.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
         expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
+        await page.reload();
+        await learner.getByRole("button", {name: /^Einzelbewertungen.*Teilnehmende Person/}).click();
+        await expect(learner.getByText("Fictional individual lab feedback", {exact: true})).toBeVisible();
+
         await login(company, f.client.email);
+        await company.goto(workspace);
+        const companyReviews = review(company);
+        await companyReviews.getByRole("button", {name: /^Einzelbewertungen.*Teilnehmende Person/}).click();
+        await expect(companyReviews.getByText("Fictional individual lab feedback", {exact: true})).toBeVisible();
+        await companyReviews.getByLabel("Wen oder was bewertest du?").selectOption(`company/lecturer/${f.teacher.id}`);
+        await companyReviews.getByLabel("Punktzahl").selectOption("3");
+        await companyReviews.getByRole("button", {name: "Bewertung speichern", exact: true}).click();
+        await expect(companyReviews.getByText("Bewertung gespeichert.", {exact: true})).toBeVisible();
         await company.goto("/client");
         await company.getByText("Dozentensperren", {exact: true}).click();
         const block = company.getByRole("button", {name: "Sperren Fictional course workspace teacher", exact: true});
@@ -319,6 +343,37 @@ test("completed course evaluations and lecturer restrictions follow current role
         await teacherContext.close();
         await companyContext.close();
     }
+});
+
+test("signed-in company opens an unbooked lecturer's anonymized reviews", async ({page}) => {
+    const booked = await fixture();
+    await linkWorkspaceLearner(booked);
+    await checked(booked.adminClient.rpc("manage_course_enrolment", {
+        p_course_run_id: booked.run, p_user_id: booked.learner.id, p_status: "enrolled",
+    }));
+    const learnerAccess = api(process.env.SUPABASE_ANON_KEY!);
+    await checked(learnerAccess.auth.signInWithPassword({
+        email: booked.learner.email, password: process.env.E2E_PASSWORD!,
+    }));
+    await checked(learnerAccess.rpc("save_course_evaluation", {
+        p_run_id: booked.run, p_rater_role: "learner", p_subject_kind: "lecturer",
+        p_subject_id: booked.teacher.id, p_score: 5, p_expected_version: 0,
+        p_comment: "Fictional sensitive note retained in the booked course",
+    }));
+    const lecturerName = `Fictional rated lecturer ${booked.token}`;
+    await checked(booked.service.from("profiles").update({display_name: lecturerName}).eq("id", booked.teacher.id));
+    const unbooked = await fixture({premium: false});
+    await login(page, unbooked.client.email);
+    await page.goto("/people");
+    await expect(page.getByRole("heading", {name: "Dozierende und Bewertungen"})).toBeVisible();
+    await page.getByRole("searchbox", {name: "Person suchen"}).fill(lecturerName);
+    await page.getByRole("button", {name: "Person suchen", exact: true}).click();
+    await page.locator(`a[href="/people/${booked.teacher.id}?lecturers=feedback"]`).click();
+    await expect(page.getByRole("heading", {name: "Bestätigte Qualifikationen"})).toBeVisible();
+    await expect(page.getByText(/5 von 5.*Kursteilnehmende/)).toBeVisible();
+    await expect(page.getByText("Fictional sensitive note retained in the booked course")).toHaveCount(0);
+    await expect(page.getByText(booked.title)).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test("Premium exam switching and scanned bytes follow real access across two companies", async ({

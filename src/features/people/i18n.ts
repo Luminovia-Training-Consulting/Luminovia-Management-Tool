@@ -6,6 +6,18 @@ import i18n, { accountIdentifierLabels } from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
+  companyFeedbackDirectory: "Dozierende und Bewertungen",
+  companyFeedbackHelp:
+    "Bestätigte Qualifikationen, Unterrichtserfahrung und einzelne anonymisierte Bewertungen ansehen.",
+  companyFeedbackBooked: "Profile bereits gebuchter Dozierender",
+  companyFeedbackView: "Bewertungen und Qualifikationen ansehen",
+  companyFeedbackQualifications: "Bestätigte Qualifikationen",
+  companyFeedbackNoQualifications:
+    "Noch keine gültigen bestätigten Qualifikationen.",
+  companyFeedbackHours: "{{hours}} bestätigte Unterrichtsstunden bei Luminovia",
+  companyFeedbackRater: "Unternehmen",
+  companyFeedbackPrevious: "Vorherige Seite",
+  companyFeedbackNext: "Nächste Seite",
   people: "Dozierende",
   directoryHelp:
     "Themen, Erfahrungen und Bewertungen kennenlernen. Private Kontaktdaten und Honorare bleiben geschützt.",
@@ -96,6 +108,17 @@ const de = {
   loading: "Wird geladen …",
 };
 const en: typeof de = {
+  companyFeedbackDirectory: "Lecturers and reviews",
+  companyFeedbackHelp:
+    "See verified qualifications, teaching experience and individual anonymized reviews.",
+  companyFeedbackBooked: "Profiles of previously booked lecturers",
+  companyFeedbackView: "View reviews and qualifications",
+  companyFeedbackQualifications: "Verified qualifications",
+  companyFeedbackNoQualifications: "No current verified qualifications.",
+  companyFeedbackHours: "{{hours}} confirmed teaching hours at Luminovia",
+  companyFeedbackRater: "Company",
+  companyFeedbackPrevious: "Previous page",
+  companyFeedbackNext: "Next page",
   people: "Lecturers",
   directoryHelp:
     "Discover topics, experience and reviews. Private contact details and fees stay protected.",

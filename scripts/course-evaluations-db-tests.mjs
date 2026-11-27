@@ -13,15 +13,15 @@ const value = (entry) => entry === null ? "null" : typeof entry === "string" ? q
 
 for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) {
     await withTestDatabase("course_evaluations", async ({sql, actor}) => {
-        const [admin, manager, teacher, colleague, foreignTeacher, learner, peerLearner, withdrawn, company, foreignCompany] =
-            Array.from({length: 10}, randomUUID);
+        const [admin, manager, teacher, colleague, foreignTeacher, learner, peerLearner, withdrawn, company, foreignCompany, legacyLearner] =
+            Array.from({length: 11}, randomUUID);
         const [organisation, foreignOrganisation, template, run, futureRun, foreignRun, classId, foreignClass, lateSession] =
             Array.from({length: 9}, randomUUID);
         const identities = [
             [admin,"admin","Fictional admin"], [manager,"management","Fictional manager"],
             [teacher,"lecturer","Fictional instructor A"], [colleague,"lecturer","Fictional instructor B"],
             [foreignTeacher,"lecturer","Fictional outsider"], [learner,"participant","Fictional learner A"],
-            [peerLearner,"participant","Fictional learner B"], [withdrawn,"participant","Fictional withdrawn learner"],
+            [peerLearner,"participant","Fictional learner B"], [withdrawn,"participant","Fictional withdrawn learner"], [legacyLearner,"participant","Fictional legacy learner"],
             [company,"client","Fictional contact"], [foreignCompany,"client","Fictional foreign contact"],
         ];
         const now = Date.now();
@@ -74,6 +74,8 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
                 values(${q(job)},${q(course)},'Fictional teaching','Fictional training','online','filled',100,'EUR','fixed_total',100,'Fictional course');
               insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)
                 values(${q(claim)},${q(job)},${q(instructor)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional course',1);
+              insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+                select ${q(claim)},${q(instructor)},starts_at,ends_at from public.course_sessions where course_run_id=${q(course)};
               ${edition === "internal" ? "" :
                 `insert into private.academy_course_instructors(course_id,instructor_id,claim_id,assigned_by,request_id)
                   values (${q(course)},${q(instructor)},${q(claim)},${q(admin)},${q(randomUUID())});`}
@@ -91,6 +93,9 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
                 values(${q(run)},${q(person)},${q(status)},${q(admin)});
             `);
         }
+
+        await sql(`insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)
+          values(${q(run)},${q(legacyLearner)},'completed',${q(admin)})`);
 
         const command = (name, args) => `select to_jsonb(public.${name}(${args.map(value).join(",")}))`;
         const rpc = (who, name, ...args) => actor(who, gate(name) + command(name, args)).then(JSON.parse);
@@ -115,7 +120,7 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(list(learner, foreignRun), denied);
         assert.equal((await list(learner)).targets.length, 3, "A currently enrolled learner can review after the last session");
         assert.equal((await list(company)).targets.length, 2);
-        assert.deepEqual(new Set((await list(teacher)).targets.map(({subject_id}) => subject_id)), new Set([run, organisation, classId]));
+        assert.deepEqual(new Set((await list(teacher)).targets.map(({subject_id}) => subject_id)), new Set([run, organisation, classId, learner, peerLearner, legacyLearner]));
         await assert.rejects(save(learner, "company", "lecturer", teacher), denied);
         await assert.rejects(save(learner, "learner", "lecturer", foreignTeacher), denied);
         await assert.rejects(save(company, "company", "company", organisation), denied);
@@ -148,6 +153,17 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
         await assert.rejects(save(learner, "learner", "lecturer", teacher, 5, 0, "Strong teaching"), /PT409/);
         assert.equal((await list(learner)).mine.find(({subject_id}) => subject_id === teacher).version, 2);
 
+        await save(teacher, "lecturer", "participant", learner, 4, 0, "Private individual feedback");
+        await save(teacher, "lecturer", "participant", legacyLearner, 5);
+        await assert.rejects(save(teacher, "lecturer", "participant", withdrawn), denied);
+        await assert.rejects(save(learner, "learner", "participant", peerLearner), denied);
+        await assert.rejects(comments(peerLearner,"lecturer","participant",learner), denied);
+        await assert.rejects(comments(colleague,"lecturer","participant",learner), denied);
+        await assert.rejects(comments(foreignCompany,"lecturer","participant",learner), denied);
+        const recipient = await comments(learner,"lecturer","participant",learner);
+        assert.deepEqual(recipient.items.map(({score, comment}) => [score,comment]), [[4, "Private individual feedback"]]);
+        assert.equal((await list(learner)).summaries.filter(({subject_kind}) => subject_kind === "participant").length, 1);
+
         const learnerView = await list(peerLearner);
         assert.deepEqual(learnerView.summaries.find(({rater_role}) => rater_role === "learner"), {
             rater_role:"learner",subject_kind:"lecturer",subject_id:teacher,label:"Fictional instructor A",
@@ -163,20 +179,24 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
 
         const teacherProse = await comments(teacher,"learner","lecturer",teacher);
         assert.deepEqual(new Set(teacherProse.items.map(({comment}) => comment)), new Set(["Strong teaching","Clear slides"]));
-        assert.deepEqual(Object.keys(teacherProse.items[0]).sort(), ["comment", "id"]);
+        assert.deepEqual(Object.keys(teacherProse.items[0]).sort(), ["comment", "id", "score"]);
         assert.deepEqual((await comments(teacher,"company","lecturer",teacher)).items.map(({comment}) => comment), ["Good delivery"]);
-        assert.deepEqual((await comments(colleague,"lecturer","class",classId)).items.map(({comment}) => comment), ["Ready for the next lab"]);
+        assert.deepEqual((await comments(colleague,"lecturer","class",classId)).items.map(({comment}) => comment).sort(), ["", "Ready for the next lab"]);
         await assert.rejects(comments(colleague,"learner","lecturer",teacher), denied);
         await assert.rejects(comments(teacher,"learner","company",organisation), denied);
         const companyView = await list(company);
         assert.deepEqual(companyView.summaries.map(({rater_role,subject_kind,can_read_comments}) => [rater_role,subject_kind,can_read_comments]),
-            [["learner","company",true], ["lecturer","class",true]]);
-        assert.deepEqual((await comments(company,"lecturer","class",classId)).items.map(({comment}) => comment), ["Ready for the next lab"]);
+            [["company","lecturer",true], ["learner","company",true], ["learner","lecturer",true],
+             ["lecturer","class",true], ["lecturer","company",true], ["lecturer","course",true],
+             ["lecturer","participant",true], ["lecturer","participant",true]]);
+        assert.deepEqual((await comments(company,"lecturer","class",classId)).items.map(({comment}) => comment).sort(), ["", "Ready for the next lab"]);
         assert.equal((await comments(company,"learner","company",organisation)).items[0].comment, "Helpful coordination");
-        await assert.rejects(comments(company,"lecturer","company",organisation), denied);
-        assert.equal((await list(manager)).summaries.length, 6);
+        assert.equal((await comments(company,"lecturer","company",organisation)).items[0].comment, "Prepared course environment");
+        assert.equal((await comments(company,"lecturer","participant",learner)).items[0].comment, "Private individual feedback");
+        assert.deepEqual((await comments(company,"lecturer","participant",legacyLearner)).items.map(({score,comment}) => [score,comment]), [[5,""]]);
+        assert.equal((await list(manager)).summaries.length, 8);
         assert.equal((await comments(admin,"learner","company",organisation)).items[0].comment, "Helpful coordination");
-        assert.equal(await sql("select count(*) from private.course_evaluation_revisions"), "9");
+        assert.equal(await sql("select count(*) from private.course_evaluation_revisions"), "11");
         assert.equal(await sql("select count(*) from public.audit_events where action='course.evaluation_saved'"), "0");
         await assert.rejects(actor(admin, "select * from private.course_evaluation_revisions"), denied);
         console.log(`PASS ${edition} completed-run evaluation roles, version conflicts, author privacy and recipient-directed feedback`);
@@ -203,6 +223,33 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
               insert into private.course_evaluations(run_id,user_id,rater_role,subject_kind,subject_id,score,comment)
                 select ${q(run)},user_id,'learner','lecturer',${q(teacher)},4,'Fictional paged remark' from many_evaluators;
             `);
+            const topic = randomUUID(), expired = randomUUID(), declared = randomUUID();
+            await sql(`insert into public.topics(id,label_de,label_en,kind) values
+                (${q(topic)},'Aktuell','Current','topic'),(${q(expired)},'Abgelaufen','Expired','topic'),
+                (${q(declared)},'Selbst','Declared','topic');
+              insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values
+                (${q(teacher)},${q(topic)},true,null),(${q(teacher)},${q(expired)},true,now()-interval '1 day'),
+                (${q(teacher)},${q(declared)},false,null);`);
+            const discover = await rpc(foreignCompany, "company_lecturer_feedback", null, "Fictional instructor A", null);
+            assert.deepEqual(discover, {lecturers:[{id:teacher,display_name:"Fictional instructor A"}],next:null});
+            const firstCompanyPage = await rpc(foreignCompany, "company_lecturer_feedback", teacher, "", null);
+            assert.deepEqual(firstCompanyPage.qualifications, [{id:topic,label_de:"Aktuell",label_en:"Current"}]);
+            assert.equal(firstCompanyPage.lecturer.teaching_minutes, 0);
+            await rpc(teacher, "save_profile_topic_preferences", false, 0);
+            assert.deepEqual((await rpc(foreignCompany, "company_lecturer_feedback", teacher)).qualifications, []);
+            await rpc(teacher, "save_profile_topic_preferences", true, 1);
+            assert.equal(firstCompanyPage.reviews.length, 25);
+            assert.deepEqual(Object.keys(firstCompanyPage.reviews[0]).sort(), ["id","rater_role","score"]);
+            const nextCompanyPage = await rpc(foreignCompany,"company_lecturer_feedback",teacher,"",firstCompanyPage.next);
+            assert.equal(nextCompanyPage.reviews.length,3);
+            assert.equal(nextCompanyPage.next,null);
+            assert.equal(new Set([...firstCompanyPage.reviews,...nextCompanyPage.reviews].map(({id}) => id)).size,28);
+            assert.equal(JSON.stringify(firstCompanyPage).includes("Private individual feedback"), false);
+            assert.equal(JSON.stringify(firstCompanyPage).includes(learner), false);
+            await assert.rejects(rpc(teacher, "company_lecturer_feedback", teacher), denied);
+            await assert.rejects(rpc(learner, "company_lecturer_feedback", teacher), denied);
+            await assert.rejects(rpc(foreignCompany, "company_lecturer_feedback", learner), denied);
+
             const first = await comments(teacher,"learner","lecturer",teacher);
             const second = await comments(teacher,"learner","lecturer",teacher,first.next);
             assert.equal(first.items.length, 25);
@@ -214,6 +261,7 @@ for (const edition of ["internal", "customer-managed", "customer-self-hosted"]) 
             await assert.rejects(save(teacher,"lecturer","course",run,5,1), denied);
             await rpc(admin, "set_company_premium", organisation, true, 2, randomUUID());
         } else {
+            await assert.rejects(rpc(foreignCompany, "company_lecturer_feedback", teacher), denied);
             const grace = {...terms, issued_at: date(-3), starts_at: date(-2), expires_at: date(-1)};
             await sql(`select private.apply_verified_installation_licence(${q(JSON.stringify(grace))}::jsonb)`);
             assert.equal((await list(learner)).writable, false);

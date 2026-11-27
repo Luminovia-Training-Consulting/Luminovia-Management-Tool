@@ -1,4 +1,9 @@
+/** Reviewed OpenAPI contracts for course-scoped and company lecturer feedback. */
 import { z } from "zod";
+import {
+  companyLecturerDirectory,
+  companyLecturerProfile,
+} from "../people/company-lecturer-feedback-schema.ts";
 import {
   courseEvaluationComments,
   courseEvaluations,
@@ -97,16 +102,16 @@ export function courseEvaluationPaths(academy: boolean) {
       academy,
       summary: "Read scoped course evaluation targets and results",
       description:
-        "The course's last session must have ended. Current enrolled learners may rate the assigned instructors and their course company. Current company contacts may rate assigned instructors. Assigned instructors may rate the course difficulty, company and assigned school class. Aggregates and own entries follow the caller's current course authority. Other evaluators' names and IDs are never returned.",
+        "The course's last session must have ended. Current enrolled learners may rate the assigned instructors and their course company. Current company contacts may rate assigned instructors. Assigned instructors may rate the course difficulty, company assigned school class and individual enrolled participants. Aggregates and own entries follow the caller's current course authority. Other evaluators' names and IDs are never returned.",
       request: z.strictObject(byRun),
       result: courseEvaluations,
     }),
     "/rest/v1/rpc/course_evaluation_comments": operation({
       id: "readCourseEvaluationComments",
       academy,
-      summary: "Read a page of permitted feedback comments",
+      summary: "Read a page of permitted individual evaluations",
       description:
-        "Read up to 25 comments for an exact completed course, author role and subject. A company contact can read learner feedback about their company. An instructor can read feedback about them and instructor feedback on the course, company and class in the same course. Current management can review all allowed categories in scope. Pass the previous next cursor to continue. The response has no author identities.",
+        "Read up to 25 scores and optional comments for an exact completed course, author role and subject. A company contact can read reviews of its courses, lecturers, participants and organisation in that course. A participant can read feedback addressed to them. Instructors and management retain their scoped reads. Pass the previous next cursor to continue. The response has no author identities.",
       request: z.strictObject({
         ...bySubject,
         p_after: z.uuid().nullable().optional(),
@@ -130,3 +135,21 @@ export function courseEvaluationPaths(academy: boolean) {
     }),
   };
 }
+
+/** Company profile reads intentionally exclude course, reviewer and evidence identifiers. */
+export const companyLecturerFeedbackPaths = {
+  "/rest/v1/rpc/company_lecturer_feedback": operation({
+    id: "readCompanyLecturerFeedback",
+    academy: false,
+    summary:
+      "Browse lecturers and read company-visible individual reviews and qualifications",
+    description:
+      "An active signed-in company contact with a current organisation membership can browse lecturer names and open their current verified qualifications, confirmed teaching minutes and individual anonymized scores. No booking is required. Omit p_user_id to search names. Supply p_user_id for the lecturer's results and pass the corresponding next cursor to paginate. Source organisations, course identifiers, comments, reviewer identities and qualification files are omitted.",
+    request: z.strictObject({
+      p_user_id: z.uuid().nullable().optional(),
+      p_search: z.string().max(100).optional(),
+      p_after: z.uuid().nullable().optional(),
+    }),
+    result: z.union([companyLecturerDirectory, companyLecturerProfile]),
+  }),
+};

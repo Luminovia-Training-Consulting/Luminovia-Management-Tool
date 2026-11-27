@@ -100,6 +100,7 @@ function EvaluationForm({
   );
 }
 
+/** Load one page of individually authorized scores and optional comments. */
 function EvaluationComments({
   actor,
   courseId,
@@ -142,12 +143,13 @@ function EvaluationComments({
     <div className="space-y-3 pt-2">
       {list.data.items.length ? (
         <ul className="space-y-2">
-          {list.data.items.map(({ id, comment }) => (
+          {list.data.items.map(({ id, comment, score }) => (
             <li
               key={id}
               className="whitespace-pre-wrap [overflow-wrap:anywhere]"
             >
-              {comment}
+              <strong>{score}/5</strong>
+              {comment && <p>{comment}</p>}
             </li>
           ))}
         </ul>

@@ -4,7 +4,7 @@
  */
 import { callRpc } from "../../lib/rpc";
 import { memo, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
@@ -16,7 +16,12 @@ import { LoadMore } from "../../components/load-more";
 import { PersonContact } from "./person-contact";
 import { LuminoviaTeachingTime } from "./luminovia-teaching-time";
 import { useAuth } from "../auth/auth-context";
-import { topicsQuery } from "../../lib/queries";
+import { topicsQuery, userRolesQuery } from "../../lib/queries";
+import { portalInternalEdition } from "../../lib/installation-brand";
+import {
+  CompanyLecturerDirectory,
+  CompanyLecturerFeedback,
+} from "./company-lecturer-feedback";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -113,8 +118,42 @@ const PeopleDirectoryResults = memo(function PeopleDirectoryResults({
   );
 });
 
-/** Read only confirmed filters and cancel earlier directory requests. */
+/** Company-only accounts enter the directory of shareable lecturer information. */
 export function PeopleDirectory() {
+  const actor = useAuth().session!.user.id;
+  const [params] = useSearchParams();
+  const roles = useQuery({
+    ...userRolesQuery(actor),
+    enabled: portalInternalEdition,
+  });
+  if (portalInternalEdition && roles.isPending) return <Loading />;
+  const company = roles.data?.includes("client");
+  const staff = roles.data?.some((role) =>
+    ["management", "owner", "admin", "lecturer", "senior_lecturer"].includes(
+      role,
+    ),
+  );
+  const view = params.get("lecturers");
+  if (
+    portalInternalEdition &&
+    company &&
+    (view === "feedback" || (!staff && view !== "booked"))
+  ) {
+    return <CompanyLecturerDirectory actor={actor} />;
+  }
+  return (
+    <BookedPeopleDirectory
+      showCompanyDirectory={portalInternalEdition && company === true}
+    />
+  );
+}
+
+/** Read only confirmed filters and cancel earlier directory requests. */
+function BookedPeopleDirectory({
+  showCompanyDirectory,
+}: {
+  showCompanyDirectory: boolean;
+}) {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -133,6 +172,13 @@ export function PeopleDirectory() {
   return (
     <>
       <PageHeading title={t("people")} description={t("directoryHelp")} />
+      {showCompanyDirectory && (
+        <Button asChild variant="secondary">
+          <Link to="/people?lecturers=feedback">
+            {t("companyFeedbackDirectory")}
+          </Link>
+        </Button>
+      )}
       <div className="panel people-filters">
         <Field id="people-search" label={t("search")}>
           <input
@@ -238,13 +284,27 @@ function ModerateReview({ review }: { review: CourseReview }) {
   );
 }
 
-/** Combine permitted profile details, courses and reviews and request actual authorized DMs. */
+/** Keep a shareable lecturer view independent of the existing full profile. */
 export function PersonProfile() {
   const { id = "" } = useParams();
+  const [params] = useSearchParams();
+  const actor = useAuth().session!.user.id;
+  if (portalInternalEdition && params.get("lecturers") === "feedback") {
+    return <CompanyLecturerFeedback key={id} actor={actor} lecturer={id} />;
+  }
+  return <BookedPersonProfile id={id} />;
+}
+
+/** Combine permitted profile details, courses and reviews and request actual authorized DMs. */
+function BookedPersonProfile({ id }: { id: string }) {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
   const actor = session!.user.id;
   const person = useQuery(personQuery(actor, id));
+  const roles = useQuery({
+    ...userRolesQuery(actor),
+    enabled: portalInternalEdition,
+  });
   const courses = useQuery({
     ...profileCoursesQuery(actor, id),
     enabled: person.isSuccess,
@@ -286,6 +346,15 @@ export function PersonProfile() {
       <Avatar userId={id} name={details.display_name} size="large" />
       <div className="page-actions people-profile-actions">
         <PersonManagementActions id={id} name={details.display_name} />
+        {portalInternalEdition &&
+          id !== actor &&
+          roles.data?.includes("client") && (
+            <Button asChild variant="secondary">
+              <Link to={`/people/${id}?lecturers=feedback`}>
+                {t("companyFeedbackView")}
+              </Link>
+            </Button>
+          )}
         <Button asChild variant="ghost">
           <Link to="/people">{t("back")}</Link>
         </Button>

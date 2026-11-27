@@ -6,6 +6,7 @@ export const evaluationKind = z.enum([
   "company",
   "course",
   "class",
+  "participant",
 ]);
 export const evaluationScore = z.number().int().min(1).max(5);
 export const evaluationTarget = z.object({
@@ -33,7 +34,13 @@ export const courseEvaluations = z.object({
 });
 export const courseEvaluationComments = z.object({
   items: z
-    .array(z.object({ id: z.uuid(), comment: z.string().max(2000) }))
+    .array(
+      z.object({
+        id: z.uuid(),
+        score: evaluationScore,
+        comment: z.string().max(2000),
+      }),
+    )
     .max(25),
   next: z.uuid().nullable(),
 });

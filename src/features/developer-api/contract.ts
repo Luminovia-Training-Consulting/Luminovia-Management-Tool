@@ -95,7 +95,10 @@ import { portfolioPaths } from "./portfolio-contract.ts";
 import { ltiCoursePaths } from "./lti-contract.ts";
 import { manualTextExamPaths } from "./manual-text-exam-contract.ts";
 import { courseBuildingBlockPaths } from "./course-building-block-contract.ts";
-import { courseEvaluationPaths } from "./course-evaluation-contract.ts";
+import {
+  companyLecturerFeedbackPaths,
+  courseEvaluationPaths,
+} from "./course-evaluation-contract.ts";
 import { companyClassFeedbackPaths } from "./company-class-feedback-contract.ts";
 import { learningAnalyticsPaths } from "./learning-analytics-contract.ts";
 import {
@@ -1788,6 +1791,7 @@ const nativePaths = {
   ...ltiCoursePaths(false),
   ...manualTextExamPaths(false),
   ...courseEvaluationPaths(false),
+  ...companyLecturerFeedbackPaths,
   ...companyClassFeedbackPaths,
   ...learningAnalyticsPaths(false),
   ...timedExamPaths(false),

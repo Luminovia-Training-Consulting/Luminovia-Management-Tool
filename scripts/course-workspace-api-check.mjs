@@ -108,6 +108,9 @@ await withApiFixture(
           from public.notifications
           where user_id in (${users.map(q).join(",")});
           delete
+          from public.assignment_sessions
+          where claim_id = ${q(claim)};
+          delete
           from public.job_claims
           where id = ${q(claim)};
           delete
@@ -147,7 +150,10 @@ await withApiFixture(
             insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
             values (${q(job)}, ${q(run)}, 'Fictional workspace job', 'Fictional workspace academy', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms');
             insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
-            values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms', 1);`,
+            values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms', 1);
+            insert into public.assignment_sessions(claim_id, lecturer_id, starts_at, ends_at, course_session_id)
+            select ${q(claim)}, ${q(teacher.id)}, starts_at, ends_at, id
+            from public.course_sessions where id = ${q(session)};`,
         );
         const setPremium = async (organisation, enabled, version) => {
             const result = await checked(admin.client.rpc("set_company_premium", {
@@ -458,7 +464,21 @@ await withApiFixture(
         const teacherComments = await documentedRpc(teacher.client, "course_evaluation_comments", commentRead);
         assert.deepEqual(teacherComments.items.map(({comment}) => comment), [instructorComment]);
         await documentedRpc(learner.client, "course_evaluation_comments", commentRead, 403, "42501");
-        assert.equal((await documentedRpc(admin.client, "course_evaluations", evaluationRead)).summaries.length, 4);
+        const accountFeedback = "Fictional feedback for one enrolled participant";
+        await writeEvaluation(teacher, "lecturer", "participant", learner.id, 4, accountFeedback);
+        const individual = {
+            ...evaluationRead, p_rater_role: "lecturer", p_subject_kind: "participant", p_subject_id: learner.id,
+        };
+        for (const recipient of [client, learner]) {
+            const result = await documentedRpc(recipient.client, "course_evaluation_comments", individual);
+            assert.deepEqual(result.items.map(({score, comment}) => [score, comment]), [[4, accountFeedback]]);
+        }
+        await documentedRpc(peer.client, "course_evaluation_comments", individual, 403, "42501");
+        assert.equal((await documentedRpc(admin.client, "course_evaluations", evaluationRead)).summaries.length, 5);
+        const externalProfile = await documentedRpc(client.client, "company_lecturer_feedback", {p_user_id: teacher.id});
+        assert.deepEqual(externalProfile.reviews.map(({score}) => score).sort(), [4, 5]);
+        assert.ok(externalProfile.reviews.every((item) => !Object.hasOwn(item, "comment") && !Object.hasOwn(item, "run_id")));
+        await documentedRpc(learner.client, "company_lecturer_feedback", {p_user_id: teacher.id}, 403, "42501");
         await action(teacher, "completion_revoke", {
             id: completion,
             reason: "Fictional verification correction",

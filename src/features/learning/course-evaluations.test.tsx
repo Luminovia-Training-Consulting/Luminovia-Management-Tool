@@ -161,11 +161,13 @@ it("shows translated read-only results and requests the next scoped comment page
           : result(
               params.p_after
                 ? {
-                    items: [{ id: second, comment: "Zweiter Hinweis" }],
+                    items: [
+                      { id: second, score: 4, comment: "Zweiter Hinweis" },
+                    ],
                     next: null,
                   }
                 : {
-                    items: [{ id: first, comment: "Erster Hinweis" }],
+                    items: [{ id: first, score: 5, comment: "Erster Hinweis" }],
                     next: first,
                   },
             ),
@@ -178,7 +180,9 @@ it("shows translated read-only results and requests the next scoped comment page
     screen.queryByRole("button", { name: "Bewertung speichern" }),
   ).not.toBeInTheDocument();
   await user.click(
-    screen.getByRole("button", { name: /Kommentare.*Fictional instructor/ }),
+    screen.getByRole("button", {
+      name: /Einzelbewertungen.*Fictional instructor/,
+    }),
   );
   expect(await screen.findByText("Erster Hinweis")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Nächste Seite" }));
