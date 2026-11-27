@@ -27,6 +27,7 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
     session + "," + claim + "," + q(lecturer) + ",current_date - interval '2 days', current_date - interval '2 days' + interval '1 hour');"
   );
   const date = await sql("select current_date::text");
+  await sql("update public.profiles set time_zone='Pacific/Kiritimati' where id=" + q(finance));
   const report = (who, staff = false) =>
     actor(who, "select public.lecturer_expense_report(" + staff + ", current_date-7,current_date)").then(json);
   const reserve = (who, hash, key = id()) =>
@@ -35,6 +36,11 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
     actor(who, "select public.expense_receipt_download(" + q(expense) + "," + q(version) + ")").then(json);
   const action = (who, args) =>
     actor(who, "select public.lecturer_expense_action(" + [
+      q(args.action), args.expense ? q(args.expense) : "null", args.revision ?? 0,
+      q(JSON.stringify(args.payload)), args.key ?? id(),
+    ].join(",") + ")").then(json);
+  const actionAcrossUtcBoundary = (who, args) =>
+    actor(who, "set local time zone 'Etc/GMT+12'; select public.lecturer_expense_action(" + [
       q(args.action), args.expense ? q(args.expense) : "null", args.revision ?? 0,
       q(JSON.stringify(args.payload)), args.key ?? id(),
     ].join(",") + ")").then(json);
@@ -103,16 +109,20 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
   ]);
   const reimbursable = {
     action: "reimburse", expense: first.id, revision: 4, key: id(),
-    payload: { paid_on: date, reference: "Fictional bank record" },
+    payload: {
+      paid_on: await sql("select (statement_timestamp() at time zone 'Pacific/Kiritimati')::date::text"),
+      reference: "Fictional bank record",
+    },
   };
-  const paid = await action(finance, reimbursable);
+  const paid = await actionAcrossUtcBoundary(finance, reimbursable);
   assert.equal(paid.state, "reimbursed");
-  assert.deepEqual(await action(finance, reimbursable), paid);
+  assert.deepEqual(await actionAcrossUtcBoundary(finance, reimbursable), paid);
   await assert.rejects(action(finance, { ...reimbursable, key: id(), revision: 5 }), code("22023"));
   assert.deepEqual((await report(lecturer)).totals, [
     { currency: "EUR", submitted: "120.50", approved: "42.12", paid: "42.12", outstanding: "0" },
   ]);
-  const journal = (name) => actor(finance, "select public." + name + "(current_date-1,current_date)").then(json);
+  const paidOn = q(reimbursable.payload.paid_on) + "::date";
+  const journal = (name) => actor(finance, "select public." + name + "(" + paidOn + " - 1," + paidOn + ")").then(json);
   assert.deepEqual((await journal("accounting_settlement_journal")).items, []);
   const posted = await journal("accounting_settlement_with_expenses");
   assert.equal(posted.items[0].kind, "expense_reimbursement");
@@ -137,7 +147,7 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
   assert.deepEqual(reconciled.expenses, [{ currency: "EUR", approved: "42.12", paid: "42.12", outstanding: "0.00" }]);
   await assert.rejects(actor(lecturer, "select public.assignment_finance_reconciliation(" + claim + ")"), code("42501"));
   const exported = await actor(finance,
-    "select public.assignment_finance_export(current_date-7,current_date)").then(json);
+    "select public.assignment_finance_export(" + paidOn + " - 7," + paidOn + ")").then(json);
   assert.deepEqual(exported.assignments.find((entry) => entry.claim_id === claim.slice(1,-1)).finance, reconciled);
   const confirmation = await actor(lecturer, "select public.assignment_confirmation(" + claim + ")").then(json);
   assert.equal(confirmation.data.assignment_version, 1);

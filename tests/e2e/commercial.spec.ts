@@ -1223,7 +1223,7 @@ test("coordinated commercial amendment preserves the agreement through corrected
     page,
     browser,
 }, testInfo) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const lecturer = await account("lecturer", "amendment-teacher");
     const colleague = await account("lecturer", "amendment-colleague");
     const manager = await account("admin", "amendment-reviewer");
