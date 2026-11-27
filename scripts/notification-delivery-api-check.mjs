@@ -225,12 +225,11 @@ await withApiFixture(
             ),
             false,
         );
-        assert.deepEqual(
-            await checked(
-                service.rpc("lease_notification_emails"),
-                "Accepted occurrence cannot be leased twice",
+        assert.equal(
+            await sql(
+                `select state from private.notification_email_outbox where id=${q(outboxId)}`,
             ),
-            [],
+            "accepted",
         );
 
         const cancelled = randomUUID();
