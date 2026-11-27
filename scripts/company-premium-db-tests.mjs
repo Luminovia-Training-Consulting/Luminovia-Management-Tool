@@ -483,7 +483,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
-        "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
+        "A OFF keeps Standard enrolment and workspace while scoped Premium actions are unavailable",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
                 (item) => item.organisation_id === companyA,
@@ -498,7 +498,11 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(client, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(client, "course_chat_messages", [roomA, null, null, 50]), /42501/);
-            await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
+            const standard = await rpc(participant, "course_workspace", [runA]);
+            assert.equal(standard.access.learner, true);
+            assert.equal(standard.lms_enabled, false);
+            assert.equal(standard.quiz, null);
+            assert.equal(standard.completion, null);
             await assert.rejects(rpc(participant, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
             await assert.rejects(rpc(participant, "send_course_chat_message", [roomA, "blocked", randomUUID()]), /42501/);
@@ -534,15 +538,27 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(await sql(`select count(*) from public.audit_events where action='course.chat_inspected'
                 and resource_id=${q(runA)} and details->>'attachment_version_id'=${q(attachedVersion)}`), "1");
             await assert.rejects(rpc(participant, "course_document_access", ["exam", examPaperId]), /42501/);
-            await assert.rejects(rpc(participant, "course_document_access", ["resource", learnerResource]), /42501/);
+            assert.equal(
+                (await rpc(participant, "course_document_access", ["resource", learnerResource])).id,
+                learnerResourceVersion,
+            );
+            assert.equal(standard.resources[0].id, learnerResource);
+            assert.deepEqual(standard.share_options, []);
+            const managerWorkspace = await rpc(admin, "course_workspace", [runA]);
+            assert.ok(managerWorkspace.share_options.some((item) => item.id === learnerResourceVersion));
+            assert.ok(!managerWorkspace.share_options.some((item) => item.id === examPaperVersion));
+            assertLmsResponse("course_workspace", managerWorkspace);
+            await assert.rejects(rpc(client, "course_document_access", ["resource", learnerResource]), /42501/);
             await assert.rejects(rpc(participant, "course_document_access", ["completion", learnerCompletion]), /42501/);
             await assert.rejects(
                 rpc(participant, "course_workspace_action", [runA, "quiz_submit", {answer: "fictional"}, 0]),
                 /42501/,
             );
-            await assert.rejects(rpc(manager, "course_enrolments", [runA]), /42501/);
+            assert.ok((await rpc(manager, "course_enrolments", [runA])).some(
+                (row) => row.user_id === participant,
+            ));
             await assert.rejects(
-                rpc(manager, "manage_course_enrolment", [runA, participant, "removed"]),
+                rpc(client, "manage_course_enrolment", [runB, participant, "removed"]),
                 /42501/,
             );
             await assert.rejects(
@@ -576,7 +592,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(bWorkspace.lms_enabled, true);
             assert.equal(bWorkspace.access.learner, true);
             const visible = await rpc(participant, "my_course_workspaces");
-            assert.deepEqual(visible.map((course) => course.id), [runB]);
+            assert.deepEqual(new Set(visible.map((course) => course.id)), new Set([runA, runB]));
             for (const who of [manager, lecturer, client]) {
                 const workspace = await rpc(who, "course_workspace", [runA]);
                 assertLmsResponse("course_workspace", workspace);
@@ -584,7 +600,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 assert.equal(workspace.title, "Fictional retained LMS course");
                 assert.deepEqual(workspace.sessions.map(({id}) => id), [sessionA]);
                 assert.equal(workspace.sessions[0].can_verify, false);
-                assert.deepEqual(workspace.resources, []);
+                assert.deepEqual(
+                    workspace.resources.map(({ id }) => id),
+                    who === client ? [] : [learnerResource],
+                );
                 assert.deepEqual(workspace.exams.documents, []);
                 assert.deepEqual(workspace.roster, []);
                 assert.deepEqual(workspace.preparation, []);
@@ -658,7 +677,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         },
     );
 
-    await check("Retained attendance reads exact recorded rows while operational access stays closed", async () => {
+    await check("Retained attendance inspection preserves scope while Standard retains the register", async () => {
         const reason = "Fictional archived register review";
         const inspection = [companyA, runA, reason];
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", inspection), /42501/);
@@ -680,9 +699,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runB, reason]), /42501/);
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runA, "short"]), /22023/);
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [...inspection, "2026-06-01T00:00:00Z", null, null]), /22023/);
-        await assert.rejects(rpc(admin, "course_session_register", [runA, sessionA]), /42501/);
+        const register = await rpc(admin, "course_session_register", [runA, sessionA]);
+        assert.deepEqual(register.evidence, []);
         await assert.rejects(rpc(admin, "save_course_session_attendance", [
-            runA, sessionA, participant, "present", null, null, "", "Fictional forbidden edit", 1,
+            runA, sessionB, participant, "present", null, null, "", "Fictional cross-course edit", 1,
         ]), /42501/);
 
         const page = await rpc(admin, "inspect_retained_course_attendance", inspection);
@@ -724,7 +744,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         await assert.rejects(access(admin, [companyB, runB, ...exactExam.slice(2)]), /42501/);
         await assert.rejects(access(admin, [companyA, runA, "material", ...exactExam.slice(3)]), /42501/);
         await assert.rejects(access(admin, [...exactExam.slice(0, 4), examPaperVersion, reason]), /42501/);
-        await assert.rejects(rpc(admin, "course_document_access", ["resource", learnerResource]), /42501/);
+        assert.equal(
+            (await rpc(admin, "course_document_access", ["resource", learnerResource])).id,
+            learnerResourceVersion,
+        );
 
         await sql(`update private.course_exam_documents set removed_at=now() where id=${q(examKeyId)};
           update public.document_versions set status='quarantined' where id=${q(examPaperVersion)};`);

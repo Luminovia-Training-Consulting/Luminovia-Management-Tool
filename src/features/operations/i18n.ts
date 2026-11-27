@@ -389,6 +389,30 @@ const pairs: Record<string, [string, string]> = {
     "Weiteren Auftrag erstellen",
     "Create another assignment",
   ],
+  bulkSelect: ["Auswählen", "Select"],
+  bulkSelectCourse: [
+    "{{title}} ({{company}}) auswählen",
+    "Select {{title}} ({{company}})",
+  ],
+  bulkCoursesSelected: [
+    "{{count}} Kurse ausgewählt",
+    "{{count}} courses selected",
+  ],
+  bulkClearSelection: ["Auswahl aufheben", "Clear selection"],
+  bulkArchiveReview: ["Archivierung prüfen", "Review archive"],
+  bulkRestoreReview: ["Wiederherstellung prüfen", "Review restore"],
+  bulkReviewHelp: [
+    "Prüfe die ausgewählten Kurse. Wenn ein Kurs gesperrt oder der angezeigte Stand veraltet ist, wird die gesamte Aktion abgelehnt.",
+    "Review the selected courses. If any course is locked or has changed since review, the whole action is rejected.",
+  ],
+  bulkArchiveFailed: [
+    "Die Aktion konnte nicht gespeichert werden. Schließe die Vorschau und aktualisiere die Kursliste.",
+    "The change could not be saved. Close the preview and refresh the course list.",
+  ],
+  bulkArchiveConfirm: ["Änderung bestätigen", "Confirm change"],
+  courseTimeline: ["Kurszeitleiste", "Course timeline"],
+  courseTimelineCreated: ["Kurs angelegt", "Course created"],
+  courseTimelineArchived: ["Kurs archiviert", "Course archived"],
   createRunOffer: [
     "Auftrag für die Stellenbörse erstellen",
     "Create marketplace offer",
@@ -590,12 +614,12 @@ const pairs: Record<string, [string, string]> = {
   ],
   placementNoResults: ["Keine passenden Einträge.", "No matching results."],
   participantPlacementHelp: [
-    "Wähle ein Unternehmen mit Premium LMS und optional eine Klasse. Neue Unternehmensverknüpfungen müssen von der teilnehmenden Person angenommen werden.",
-    "Choose a company with Premium LMS and optionally a class. Participants must accept new company links.",
+    "Wähle ein aktives Unternehmen und optional eine Klasse. Neue Unternehmensverknüpfungen müssen von der teilnehmenden Person angenommen werden.",
+    "Choose an active company and optionally a class. Participants must accept new company links.",
   ],
   participantsHelp: [
-    "Nur Premium-Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
-    "Only Premium participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",
+    "Nur Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
+    "Only participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",
   ],
   participantUserId: accountIdentifierLabels,
   requestParticipantLink: ["Verknüpfung anfragen", "Request participant link"],

@@ -15,9 +15,11 @@ import type { ScormPackageReview as Review } from "./scorm-package";
 export function ScormPackageReview({
   actor,
   course,
+  allowRuntime = true,
 }: {
   actor: string;
   course: string;
+  allowRuntime?: boolean;
 }) {
   const { t, i18n } = useTranslation("learning");
   const id = useId();
@@ -28,7 +30,7 @@ export function ScormPackageReview({
   const [busy, setBusy] = useState(false);
   const [useRuntime, setUseRuntime] = useState(false);
   const runtimeAvailable =
-    scormRuntimeAddress("", new URL(location.href)) !== null;
+    allowRuntime && scormRuntimeAddress("", new URL(location.href)) !== null;
   const [report, setReport] = useState<Review>();
   const [error, setError] = useState<string>();
   const active = useRef<AbortController>(null);

@@ -20,6 +20,21 @@ const messages = {
     "Up to 60 dates in YYYY-MM-DD format, for example holidays. These dates are skipped.",
   ],
   run: ["Durchlauf {{number}}", "Run {{number}}"],
+  runScheduleOverrides: [
+    "Terminmuster für diesen Durchlauf",
+    "Schedule pattern for this run",
+  ],
+  runScheduleOverridesHelp: [
+    "Leere Felder übernehmen das gemeinsame Terminmuster. Zeitzone, Unterrichtswoche und Ausnahmen gelten für alle Durchläufe.",
+    "Empty fields use the shared pattern. Time zone, teaching week and excluded dates apply to all runs.",
+  ],
+  runTeachingDays: [
+    "Abweichende Anzahl Unterrichtstage",
+    "Custom number of teaching days",
+  ],
+  runStart: ["Abweichender Tagesbeginn", "Custom daily start"],
+  runEnd: ["Abweichendes Tagesende", "Custom daily end"],
+  editDraft: ["Entwurf {{number}} bearbeiten", "Edit draft {{number}}"],
   firstDay: ["Erster möglicher Unterrichtstag", "First possible teaching day"],
   repeatStartDates: ["Starttage wiederholen", "Repeat start dates"],
   repeatStartDatesHint: [

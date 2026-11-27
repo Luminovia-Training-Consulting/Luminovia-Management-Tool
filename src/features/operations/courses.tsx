@@ -1,4 +1,5 @@
 import { LoadMore } from "../../components/load-more";
+import { CourseTimeline } from "../../components/course-timeline";
 import { SessionScroll } from "../../components/session-scroll";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
@@ -1750,6 +1751,12 @@ export function CoursesPage() {
     );
   };
   const detail = runs.data?.find((run) => run.id === params.get("run"));
+  const editId = params.get("editRun");
+  const editedRun =
+    runEdit !== undefined
+      ? runEdit
+      : runs.data?.find((run) => run.id === editId && !run.archived_at);
+
   const offerRunId = canPrepareOffer ? params.get("offer") : null;
   const workspaceEntitlement = useQuery({
     ...courseWorkspaceEntitlementQuery(actor, detail?.id ?? ""),
@@ -1800,6 +1807,36 @@ export function CoursesPage() {
   const [copyTitle, setCopyTitle] = useState("");
   const [message, setMessage] = useState("");
   const [savedRun, setSavedRun] = useState<string>();
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkPreview, setBulkPreview] = useState<{
+    archive: boolean;
+    items: { run: CourseRun; title: string }[];
+  }>();
+  const bulkRuns = (runs.data ?? []).filter((run) => bulkSelected.has(run.id));
+  const bulkArchive = useMutation({
+    mutationFn: async (preview: NonNullable<typeof bulkPreview>) => {
+      requireOnline();
+      const { data, error } = await db().rpc("archive_course_runs", {
+        p_items: preview.items.map(({ run }) => ({
+          id: run.id,
+          published: run.published,
+          archived_at: run.archived_at,
+          organisation_id: run.organisation_id,
+        })),
+        p_archive: preview.archive,
+      });
+      if (error) throw error;
+      if (data !== preview.items.length)
+        throw new Error("invalid_archive_receipt");
+    },
+    onSuccess: async () => {
+      setBulkPreview(undefined);
+      setBulkSelected(new Set());
+      await client.invalidateQueries({ queryKey: ["operations"] });
+      await client.invalidateQueries({ queryKey: ["course-workspaces"] });
+      setMessage(t("archiveSaved"));
+    },
+  });
   const archiveRun = useMutation({
     mutationFn: async ({
       run,
@@ -2512,6 +2549,44 @@ export function CoursesPage() {
           {t(archiveRun.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
+      {manage && tab === "runs" && bulkRuns.length > 0 && (
+        <div className="page-actions">
+          <span aria-live="polite">
+            {t("bulkCoursesSelected", { count: bulkRuns.length })}
+          </span>
+          {[true, false].map((archive) => (
+            <Button
+              key={String(archive)}
+              type="button"
+              variant="secondary"
+              disabled={
+                !online ||
+                bulkRuns.length < 2 ||
+                bulkRuns.some((run) => Boolean(run.archived_at) === archive)
+              }
+              onClick={() => {
+                bulkArchive.reset();
+                setBulkPreview({
+                  archive,
+                  items: bulkRuns.map((run) => ({
+                    run,
+                    title: findTemplate(run)?.title ?? t("courses"),
+                  })),
+                });
+              }}
+            >
+              {t(archive ? "bulkArchiveReview" : "bulkRestoreReview")}
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => setBulkSelected(new Set())}
+          >
+            {t("bulkClearSelection")}
+          </Button>
+        </div>
+      )}
       {tab === "runs" && filteredRuns.length === 0 ? (
         <div className="empty-state">
           {t(
@@ -2535,6 +2610,32 @@ export function CoursesPage() {
               organisationName(run.organisation_id) ?? t("noCustomer");
             return (
               <article className="panel operations-course" key={run.id}>
+                {manage && (
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={bulkSelected.has(run.id)}
+                      disabled={
+                        !bulkSelected.has(run.id) && bulkSelected.size >= 50
+                      }
+                      aria-label={t("bulkSelectCourse", {
+                        title: template?.title ?? t("courses"),
+                        company: customer,
+                      })}
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked;
+                        setBulkSelected((current) => {
+                          const next = new Set(current);
+                          if (checked) next.add(run.id);
+                          else next.delete(run.id);
+                          return next;
+                        });
+                      }}
+                    />
+                    {t("bulkSelect")}
+                  </label>
+                )}
+
                 <div className="section-heading">
                   <BookOpen className="blue" />
                   <div className="tags course-run-badges">
@@ -2934,19 +3035,20 @@ export function CoursesPage() {
       <Dialog
         open={
           mayOpenRunEditor &&
-          (runEdit !== undefined || Boolean(calendarPlan && !creatorRoute))
+          (editedRun !== undefined || Boolean(calendarPlan && !creatorRoute))
         }
         onOpenChange={(open) => {
           if (!open && !runSaving) {
             setRunEdit(undefined);
-            if (calendarPlan) setCourseView({}, true);
+            if (editId) setCourseView({ run: editId }, true);
+            else if (calendarPlan) setCourseView({}, true);
           }
         }}
         closeDisabled={runSaving}
-        title={t(runEdit ? "edit" : "newCourse")}
+        title={t(editedRun ? "edit" : "newCourse")}
         description={
-          runEdit
-            ? (findTemplate(runEdit)?.title ?? t("courseRecordUnavailable"))
+          editedRun
+            ? (findTemplate(editedRun)?.title ?? t("courseRecordUnavailable"))
             : t(
                 initialTemplateId && !calendarPlan
                   ? "courseDraftFromTemplateHint"
@@ -2956,10 +3058,10 @@ export function CoursesPage() {
       >
         <RunForm
           key={
-            runEdit?.id ??
+            editedRun?.id ??
             `new:${calendarPlan ? `${calendarPlan.starts_at}/${calendarPlan.ends_at}/${calendarPlan.time_zone}` : (initialTemplateId ?? "default")}`
           }
-          original={runEdit ?? undefined}
+          original={editedRun ?? undefined}
           templates={manage ? (templates.data ?? []) : visibleTemplates}
           organisations={planningOrganisations}
           initialTemplateId={calendarPlan ? undefined : initialTemplateId}
@@ -2972,12 +3074,14 @@ export function CoursesPage() {
           onDone={(result, offerRun, savedId) => {
             setRunEdit(undefined);
             setSavedRun(savedId);
+            if (editId && !offerRun)
+              setCourseView({ run: savedId ?? editId }, true);
             if (offerRun) {
               navigate(`/courses?offer=${encodeURIComponent(offerRun)}`);
               return;
             }
-            setTab(result === "template" ? "templates" : "runs");
-            if (initialTemplateId && !calendarPlan && !runEdit) {
+            if (!editId) setTab(result === "template" ? "templates" : "runs");
+            if (initialTemplateId && !calendarPlan && !editedRun) {
               setSearch("");
               setPhase("all");
               setMessage(t("courseDraftCreated"));
@@ -3081,7 +3185,7 @@ export function CoursesPage() {
                 await client.invalidateQueries({ queryKey: ["operations"] });
                 setCopy(undefined);
                 setMessage(t("copied"));
-                setCourseView({ run: runId });
+                setCourseView({ editRun: runId });
               }}
             />
           </Suspense>
@@ -3129,6 +3233,49 @@ export function CoursesPage() {
         )}
       </Dialog>
       <Dialog
+        open={Boolean(bulkPreview)}
+        title={t(
+          bulkPreview?.archive ? "bulkArchiveReview" : "bulkRestoreReview",
+        )}
+        description={t("bulkReviewHelp")}
+        onOpenChange={(open) => {
+          if (!open && !bulkArchive.isPending) setBulkPreview(undefined);
+        }}
+      >
+        {bulkPreview && (
+          <>
+            <ul>
+              {bulkPreview.items.map(({ run, title }) => (
+                <li key={run.id}>
+                  {title} ·{" "}
+                  {organisationName(run.organisation_id) ?? t("noCustomer")}
+                  {run.course_sessions[0] && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      {dateTime(
+                        run.course_sessions[0].starts_at,
+                        i18n.language,
+                        run.time_zone,
+                      )}
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {bulkArchive.isError && (
+              <Notice kind="error">{t("bulkArchiveFailed")}</Notice>
+            )}
+            <Button
+              disabled={!online || bulkArchive.isPending || bulkArchive.isError}
+              onClick={() => bulkArchive.mutate(bulkPreview)}
+            >
+              {t("bulkArchiveConfirm")}
+            </Button>
+          </>
+        )}
+      </Dialog>
+      <Dialog
         open={Boolean(detail) && !offerRunId}
         onOpenChange={(open) => {
           if (!open) setCourseView({}, true);
@@ -3140,6 +3287,15 @@ export function CoursesPage() {
       >
         {detail && (
           <>
+            <p className="badge">
+              {t(
+                courseRunStatus(detail) === "archived"
+                  ? "archive"
+                  : courseRunStatus(detail) === "published"
+                    ? "published"
+                    : "draft",
+              )}
+            </p>
             <div className="page-actions course-record-actions">
               {manage && (
                 <Button
@@ -3226,30 +3382,34 @@ export function CoursesPage() {
             <p className="preserve-text">
               {findTemplate(detail)?.prerequisites || "—"}
             </p>
-            <h3>{t("sessions")}</h3>
-            <SessionScroll label={t("sessions")}>
-              <ol className="session-list">
-                {[...detail.course_sessions]
-                  .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-                  .map((s) => (
-                    <li key={s.id}>
-                      <CalendarDays size={18} />
-                      <div>
-                        <strong>
-                          {dateTime(
-                            s.starts_at,
-                            i18n.language,
-                            detail.time_zone,
-                          )}
-                        </strong>
-                        <span>
-                          {dateTime(s.ends_at, i18n.language, detail.time_zone)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-              </ol>
-            </SessionScroll>
+            <h3>{t("courseTimeline")}</h3>
+            <CourseTimeline
+              sessions={detail.course_sessions}
+              milestones={[
+                ...(detail.created_at
+                  ? [
+                      {
+                        id: "created",
+                        label: t("courseTimelineCreated"),
+                        at: detail.created_at,
+                      },
+                    ]
+                  : []),
+                ...(detail.archived_at
+                  ? [
+                      {
+                        id: "archived",
+                        label: t("courseTimelineArchived"),
+                        at: detail.archived_at,
+                      },
+                    ]
+                  : []),
+              ]}
+              label={t("courseTimeline")}
+              language={i18n.language}
+              zone={detail.time_zone}
+              className="session-list"
+            />
             <p>
               {detail.time_zone} · {detail.venue}
             </p>

@@ -219,7 +219,64 @@ for (const edition of [
       await sql(`update private.installation_verified_licence set grace_until=now()-interval '1 second'
         where installation_id=${q(installation)}`);
     } else {
+      const toggle = (enabled, expected) =>
+        actor(admin, `select public.set_company_premium(${q(company)},${enabled},${expected},${q(randomUUID())})`);
+      const catalogue = (who) => actor(
+        who,
+        gate("course_scorm_packages", "GET") + `select public.course_scorm_packages(${q(run)})`,
+      ).then(JSON.parse);
+      const download = (who, target) => actor(
+        who,
+        gate("course_scorm_download", "GET") + `select public.course_scorm_download(${q(run)},${q(target)})`,
+      ).then(JSON.parse);
+      await toggle(false, 1);
+      await assert.rejects(read(learner), /42501/);
+      await assert.rejects(save(learner, session, 2, cmi), /42501/);
+      await assert.rejects(exportCompletion(admin), /42501/);
+      await assert.rejects(download(learner, version), /42501/);
+      await assert.rejects(command(admin, "withdraw", {}), /42501/);
+      assert.deepEqual((await catalogue(learner)).packages, []);
+
+      const { version_id: staticVersion } = JSON.parse(await actor(
+        admin,
+        gate("reserve_course_scorm_package", "POST") +
+          `select public.reserve_course_scorm_package(${q(run)},'fixture-static.zip',418,${q(randomUUID())},${q(digest)})`,
+      ));
+      await sql(`
+        update public.document_versions set status='clean', sha256=${q(digest)}, scanner_version='ClamAV fixture'
+          where id=${q(staticVersion)};
+        update public.documents set status='clean', current_version_id=${q(staticVersion)}
+          where id=(select document_id from public.document_versions where id=${q(staticVersion)});
+      `);
+      const staticCommand = (who, action, payload) =>
+        actor(
+          who,
+          gate("course_scorm_action", "POST") +
+            `select public.course_scorm_action(${q(run)},${q(staticVersion)},${q(action)},${q(JSON.stringify(payload))})`,
+        );
+      const publication = {
+        sha256: digest,
+        title: "Fixture static",
+        lessons: [{ id: "reading", title: "Fictional reading" }],
+      };
+      await assert.rejects(staticCommand(admin, "publish", { ...publication, playback: "runtime" }), /42501/);
+      await assert.rejects(staticCommand(absentTeacher, "publish", publication), /42501/);
+      await staticCommand(admin, "publish", publication);
+      await assert.rejects(download(absentTeacher, staticVersion), /42501/);
+      assert.equal((await download(learner, staticVersion)).version_id, staticVersion);
+      await staticCommand(learner, "complete", { item_id: "reading" });
+      await staticCommand(learner, "complete", { item_id: "reading" });
+      assert.deepEqual((await catalogue(learner)).packages.map(({ id, completed }) => ({ id, completed })), [
+        { id: staticVersion, completed: ["reading"] },
+      ]);
+
+      await toggle(true, 2);
+      assert.equal((await read(learner)).revision, 2);
+      assert.deepEqual((await exportCompletion(admin)).statements.filter(
+        (entry) => entry.object.id.includes("/scorm/"),
+      ), completion);
       await command(admin, "withdraw", {});
+      console.log("PASS internal Standard SCORM static reservation, publication, exact playback and ungraded progress with Premium off.");
     }
     await assert.rejects(read(learner), /42501/);
     console.log(

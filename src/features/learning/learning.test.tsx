@@ -855,7 +855,7 @@ describe("connected course workspace", () => {
     fake.workspace.resources = [
       {
         id: "retained-resource",
-        name: "Fictional retained resource",
+        name: "Fictional published material",
         version_id: "retained-version",
         version: 1,
         sha256: "a".repeat(64),
@@ -884,18 +884,14 @@ describe("connected course workspace", () => {
     ];
     setup();
     expect(
-      await screen.findByText(
-        /Lernmodul dieses Unternehmens ist derzeit deaktiviert/,
-      ),
+      await screen.findByRole("button", { name: "Modul hinzufügen" }),
     ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Fictional course" }),
     ).toBeVisible();
     expect(screen.getByText("Shared safe description")).toBeVisible();
     expect(screen.getByText("Linux practice")).toBeVisible();
-    expect(
-      screen.queryByText("Fictional retained resource"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Fictional published material")).toBeVisible();
     expect(
       screen.queryByText("Fictional retained checklist"),
     ).not.toBeInTheDocument();

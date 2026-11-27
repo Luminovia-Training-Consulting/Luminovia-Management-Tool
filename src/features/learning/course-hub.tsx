@@ -232,7 +232,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
         <Suspense fallback={<Loading />}>
           <MaterialLibrary
             actor={actor}
-            courses={query.data.filter((course) => course.lms_enabled)}
+            courses={query.data}
             readOnly={academy === "grace"}
             academy={academy === "active"}
             canBrowseCatalogue={canBrowseCatalogue}

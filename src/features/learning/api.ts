@@ -102,6 +102,7 @@ export interface CourseWorkspace {
     lms_enabled: boolean;
   };
   settings_version: number;
+  learner_status?: "enrolled" | "completed" | null;
   meeting_link?: {
     url: string | null;
     version: number;

@@ -425,7 +425,12 @@ test("global calendar reveals published events and opens the precise published c
     await expect(
         dialog.getByText("Fictional published course detail", {exact: true}),
     ).toBeVisible();
-    await expect(dialog.locator(".session-list li")).toHaveCount(1);
+    const timeline = dialog.getByRole("region", {name: "Kurszeitleiste"});
+    await expect(timeline.getByRole("listitem")).toHaveCount(2);
+    await expect(timeline.getByText("Kurs angelegt", {exact: true})).toBeVisible();
+    const session = timeline.getByRole("listitem").filter({hasNotText: "Kurs angelegt"});
+    await expect(session).toHaveCount(1);
+    expect(new Date((await session.locator("time").getAttribute("datetime"))!).toISOString()).toBe(interval.ends_at);
 });
 
 test("browser history preserves a personal draft until explicitly discarded", async ({

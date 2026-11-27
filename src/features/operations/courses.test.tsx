@@ -2476,3 +2476,63 @@ it("shows all company and internal course statuses with distinct company and cre
     screen.getByRole("heading", { name: internalTemplate.title }),
   ).toBeVisible();
 });
+
+it("previews a keyboard-selected course batch before submitting the reviewed states", async () => {
+  const otherTemplate = {
+    ...template,
+    id: "second-template",
+    title: "Second course",
+  };
+  const other = {
+    ...run,
+    id: "c2000000-0000-4000-8000-000000000002",
+    template_id: otherTemplate.id,
+    organisation_id: companyId,
+    published: true,
+    course_sessions: [],
+  };
+  const bulkCalls = () =>
+    state.rpc.mock.calls.filter(([name]) => name === "archive_course_runs");
+  state.rpc.mockImplementation(async (name) =>
+    name === "archive_course_runs"
+      ? { data: 2, error: null }
+      : { data: [], error: null },
+  );
+  renderCourses({
+    organisations: [organisation],
+    templates: [template, otherTemplate],
+    runs: [run, other],
+  });
+  const user = userEvent.setup();
+  for (const title of [template.title, otherTemplate.title]) {
+    const checkbox = screen.getByRole("checkbox", {
+      name: new RegExp(title),
+    });
+    checkbox.focus();
+    await user.keyboard(" ");
+    expect(checkbox).toBeChecked();
+  }
+  const review = screen.getByRole("button", { name: "Archivierung prüfen" });
+  review.focus();
+  await user.keyboard("{Enter}");
+  const preview = within(
+    await screen.findByRole("dialog", { name: "Archivierung prüfen" }),
+  );
+  expect(preview.getByRole("list")).toHaveTextContent(template.title);
+  expect(preview.getByRole("list")).toHaveTextContent(organisation.name);
+  expect(bulkCalls()).toHaveLength(0);
+  preview.getByRole("button", { name: "Änderung bestätigen" }).focus();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+  expect(bulkCalls()[0][1]).toEqual({
+    p_archive: true,
+    p_items: expect.arrayContaining(
+      [run, other].map(({ id, published, archived_at, organisation_id }) => ({
+        id,
+        published,
+        archived_at,
+        organisation_id,
+      })),
+    ),
+  });
+});

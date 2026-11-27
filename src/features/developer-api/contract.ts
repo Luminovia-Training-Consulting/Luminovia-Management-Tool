@@ -487,7 +487,7 @@ const workspaceAction = {
       "courseWorkspaceAction",
       "Premium LMS",
       "Apply a course workspace command",
-      "Requires current Premium, course scope and action-specific authority. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Assigned lecturers can withdraw their own material shares. Authorised company contacts can withdraw visible material and report shares in their course. Scoped course managers can withdraw course shares. Withdrawal keeps the original file. Attendance evidence remains protected. Quiz attempts are idempotent by request ID and return only the score and pass result. Staff can publish versioned grading policies, release a grade from the best current quiz attempt, and append reasoned corrections; participants receive only their own published grade.",
+      "Requires course scope and action-specific authority. Standard supports ordinary material sharing and removal. Assessments and formal evidence operations require Premium. For a versioned edit, submit the current version shown in the workspace. Resource sharing requires a clean personal material version, except that authorised staff may share material from the same course job. The server assigns immutable staff, company or lecturer ownership. Assigned lecturers can withdraw their own material shares. Authorised company contacts can withdraw visible material and report shares in their course. Scoped course managers can withdraw course shares. Withdrawal keeps the original file. Attendance evidence remains protected. Quiz attempts are idempotent by request ID and return only the score and pass result. Staff can publish versioned grading policies, release a grade from the best current quiz attempt, and append reasoned corrections; participants receive only their own published grade.",
       {},
       workspaceActionResult,
     ).post,
@@ -1750,7 +1750,7 @@ const nativePaths = {
     "readCourseClass",
     "Courses",
     "Read the school class of a course",
-    "Requires access to this Premium course. Course managers and scoped company contacts can also see their permitted class options and grouped courses.",
+    "Requires access to the course. Course managers and scoped company contacts can also see their permitted class options and grouped courses.",
     { p_course_id: uuid },
     z.toJSONSchema(courseClassOptions),
   ),
@@ -1760,7 +1760,7 @@ const nativePaths = {
         "setCourseClass",
         "Courses",
         "Assign a course to a school class",
-        "Requires current course management or an authorised company contact for this Premium course. Use the latest version. Supply an existing class ID or a new class name. Send null for both to clear the class. Enrolments and course access remain independent of the class assignment.",
+        "Requires current course management or an authorised company contact for this course. Use the latest version. Supply an existing class ID or a new class name. Send null for both to clear the class. Enrolments and course access remain independent of the class assignment.",
         {},
         z.toJSONSchema(courseClassOptions),
       ).post,
@@ -3037,6 +3037,29 @@ const nativePaths = {
     "Apply publication and archive state",
     "A run linked to a published or filled job cannot be archived through this operation. The retained publication field requires a schedule and does not list an internal course for lecturers. Publish or withdraw the linked offer through manage_job_offer.",
     { p_id: uuid, p_published: boolean, p_archived: boolean },
+  ),
+  "/rest/v1/rpc/archive_course_runs": rpc(
+    "archiveCourseRuns",
+    "Courses",
+    "Archive or restore reviewed courses",
+    "Internal course managers can archive or restore 2–50 reviewed runs in one transaction. The submitted publication, archive and company values must still match. The current publication flag is preserved.",
+    {
+      p_items: {
+        type: "array",
+        minItems: 2,
+        maxItems: 50,
+        items: object({
+          id: uuid,
+          published: boolean,
+          archived_at: {
+            anyOf: [{ type: "string", format: "date-time" }, { type: "null" }],
+          },
+          organisation_id: { anyOf: [uuid, { type: "null" }] },
+        }),
+      },
+      p_archive: boolean,
+    },
+    { type: "integer", minimum: 2, maximum: 50 },
   ),
   "/rest/v1/rpc/duplicate_course_run": rpc(
     "duplicateCourseRun",
@@ -5284,17 +5307,17 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/my_course_workspaces": rpc(
     "myCourseWorkspaces",
-    "Premium LMS",
+    "Standard LMS",
     "List my current course workspaces",
-    "Returns at most 200 nonarchived courses in scope. A verified participant-only account sees its enrolled or completed courses only while the owning company has Premium enabled. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
+    "Returns at most 200 nonarchived courses in scope. A verified participant sees its enrolled or completed courses in an active company. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
     {},
     myWorkspacesResult,
   ),
   "/rest/v1/rpc/course_workspace": rpc(
     "readCourseWorkspace",
-    "Premium LMS",
+    "Standard LMS",
     "Read an authorised course workspace",
-    "Returns the actor-scoped course. With Premium disabled, course managers, assigned lecturers and authorised company contacts receive course details and scheduled sessions. Active Premium enables scoped learning materials, participant workflows and meeting links. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
+    "Returns the actor-scoped course. With Premium disabled, authorised staff, company contacts and enrolled learners receive Standard course details, scheduled sessions and eligible material shares. Learners also receive their own enrolment status. Active Premium enables the existing additional workspace projections. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     internalWorkspaceResult,
   ),
@@ -5438,19 +5461,19 @@ const nativePaths = {
   },
   "/rest/v1/rpc/course_scorm_packages": rpc(
     "readCourseScormPackages",
-    "Premium LMS",
+    "Standard LMS",
     "List published SCORM packages",
-    "Current authorised learners and staff can list clean packages and their own lesson completion.",
+    "Current authorised learners and staff can list clean static packages and their own lesson completion. Interactive packages require Premium in the internal portal.",
     course,
     readScormPackages,
   ),
   "/rest/v1/rpc/course_scorm_action": {
     post: {
       operationId: "writeCourseScormPackage",
-      tags: ["Premium LMS"],
+      tags: ["Standard LMS"],
       summary: "Publish, withdraw or complete a SCORM package lesson",
       description:
-        "Current staff publish the exact scanned package version. Current learners record their own completion.",
+        "Current staff publish the exact validated package version. Current learners record their own static lesson progress. Interactive publication and runtime evidence require Premium in the internal portal.",
       requestBody: { required: true, content: json(scormCourseCommand) },
       responses: {
         "200": {
@@ -5687,9 +5710,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/course_enrolments": rpc(
     "courseEnrolments",
-    "Premium LMS",
+    "Standard LMS",
     "Read a course enrolment roster",
-    "Requires current Premium and course-management authority or a current contact of the exact company. The response retains removed entries. A participant cannot request these records.",
+    "Requires course-management authority or a current contact of the exact company. The response retains removed entries. A participant cannot request these records.",
     { p_course_run_id: uuid },
     courseEnrolmentsResult,
   ),
@@ -5697,9 +5720,9 @@ const nativePaths = {
     post: {
       ...rpc(
         "courseEnrolmentCandidates",
-        "Premium LMS",
+        "Standard LMS",
         "Find participants eligible for course enrolment",
-        "Requires current Premium and course-management authority or a current contact of the exact company. Searches display names or Luminovia User IDs literally within active accepted company associations. Excludes current enrolled and completed entries. Returns at most 100 matches.",
+        "Requires course-management authority or a current contact of the exact company. Searches display names or Luminovia User IDs literally within active accepted company associations. Excludes current enrolled and completed entries. Returns at most 100 matches.",
         {},
         courseEnrolmentCandidatesResult,
       ).post,
@@ -5717,7 +5740,7 @@ const nativePaths = {
   },
   "/rest/v1/rpc/course_withdrawal_window": rpc(
     "courseWithdrawalWindow",
-    "Premium LMS",
+    "Standard LMS",
     "Check the deadline for my course withdrawal",
     "Only a current participant of the course can request this projection. The server checks the current enrolment and deadline using its clock. A subsequent withdrawal still rechecks authority and the deadline in PostgreSQL.",
     { p_course_run_id: uuid },
@@ -5725,24 +5748,24 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/manage_course_enrolment": voidRpc(
     "manageCourseEnrolment",
-    "Premium LMS",
+    "Standard LMS",
     "Set a participant's course enrolment status",
-    "Requires current Premium, course-management authority or a current company contact, and an active participant-only association with the same company. Status completed requires a course with ended sessions. The server updates scoped participant chat membership.",
+    "Requires course-management authority or a current company contact, plus an active participant-only association with the same company. Status completed requires a course with ended sessions. The server updates scoped participant chat membership.",
     { p_course_run_id: uuid, p_user_id: uuid, p_status: enrolmentState },
   ),
   "/rest/v1/rpc/cancel_own_course_enrolment": voidRpc(
     "cancelOwnCourseEnrolment",
-    "Premium LMS",
+    "Standard LMS",
     "Cancel my own enrolment",
-    "A currently enrolled participant can withdraw at least seven days before the first scheduled session while the company has Premium enabled. The membership with the company and other course enrolments remain intact.",
+    "A currently enrolled participant can withdraw at least seven days before the first scheduled session. The membership with the company and other course enrolments remain intact.",
     { p_course_run_id: uuid },
   ),
   "/rest/v1/rpc/course_workspace_action": workspaceAction,
   "/rest/v1/rpc/import_course_session_attendance": rpc(
     "importCourseSessionAttendance",
-    "Premium LMS",
+    "Standard LMS",
     "Apply a reviewed session register import",
-    "Checks current Premium, session authority, enrolment and the expected version of every row. One invalid or stale row rolls back the entire command.",
+    "Checks session authority, enrolment and the expected version of every row. One invalid or stale row rolls back the entire command.",
     {
       ...course,
       p_session_id: uuid,
@@ -5774,17 +5797,17 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/course_session_register": rpc(
     "courseSessionRegister",
-    "Premium LMS",
+    "Standard LMS",
     "Read an exact course session attendance register",
-    "Requires current Premium and this course's management, teaching or company contact access. Returns enrolled or completed participants for the requested session, with current versions, retained PDF evidence and correction history. Historical verification receipts have only state and minutes. Register receipts include the recorded status, arrival, departure and note. Learners cannot call this staff and company register.",
+    "Requires this course's management, teaching or company contact access. Returns enrolled or completed participants for the requested session, with current versions and correction history. Retained PDF evidence requires Premium in the internal portal. Historical verification receipts have only state and minutes. Register receipts include the recorded status, arrival, departure and note. Learners cannot call this staff and company register.",
     { ...course, p_session_id: uuid },
     z.toJSONSchema(attendanceRegisterSchema),
   ),
   "/rest/v1/rpc/save_course_session_attendance": rpc(
     "saveCourseSessionAttendance",
-    "Premium LMS",
+    "Standard LMS",
     "Mark or correct one participant's session attendance",
-    "Requires current Premium and this course's management, teaching or company contact access. The session must have started and the participant must be currently enrolled. Submit the register row version; corrections after version zero need a 3–500 character reason. Present rows may carry arrival and departure instants; absent and excused rows must not. An active completion must be revoked before correction. Minutes are calculated by the server.",
+    "Requires this course's management, teaching or company contact access. The session must have started and the participant must be currently enrolled. Submit the register row version; corrections after version zero need a 3–500 character reason. Present rows may carry arrival and departure instants; absent and excused rows must not. An active completion must be revoked before correction. Minutes are calculated by the server.",
     {
       ...course,
       p_session_id: uuid,
@@ -5833,25 +5856,29 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_access": rpc(
     "companyParticipantAccess",
-    "Premium LMS",
+    "Standard LMS",
     "Check company participant management",
     "Company contacts may inspect their own organisation. Authorised staff may inspect managed companies.",
     organisation,
-    object({ organisation_id: uuid, premium_enabled: boolean }),
+    object({
+      organisation_id: uuid,
+      premium_enabled: boolean,
+      standard_enabled: boolean,
+    }),
   ),
   "/rest/v1/rpc/company_participants": rpc(
     "companyParticipants",
-    "Premium LMS",
+    "Standard LMS",
     "List current participants",
-    "Requires Premium and current participant management rights for the requested company. References belong to this company membership and can be null.",
+    "Requires current participant management rights for the active company. References belong to this company membership and can be null.",
     organisation,
     z.toJSONSchema(companyParticipantsSchema),
   ),
   "/rest/v1/rpc/company_participant_overview": rpc(
     "companyParticipantOverview",
-    "Premium LMS",
+    "Standard LMS",
     "Read one participant's company course and attendance summary",
-    "Requires current participant management rights, current Premium and an active participant membership in the requested company. Returns only that company's enrolments and confirmed attendance counts. Notes and other participants are excluded.",
+    "Requires current participant management rights and an active participant membership in the requested company. Returns only that company's enrolments and confirmed attendance counts. Notes and other participants are excluded.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5863,9 +5890,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_history": rpc(
     "companyParticipantHistory",
-    "Premium LMS",
+    "Standard LMS",
     "Read the company's participant invitation and action history",
-    "Requires current participant management rights and active internal Premium for the exact company. Request receipts use the same event kind across all delivery and matching outcomes. The history records consent separately and exposes timestamps, event kinds and opaque entry IDs. For older entries, send both cursor fields from the last entry in the current page.",
+    "Requires current internal participant management rights for the active company. Request receipts use the same event kind across all delivery and matching outcomes. The history records consent separately and exposes timestamps, event kinds and opaque entry IDs. For older entries, send both cursor fields from the last entry in the current page.",
     {
       ...organisation,
       p_before_at: nullableDateTime,
@@ -5877,9 +5904,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_assignable_courses": rpc(
     "companyParticipantAssignableCourses",
-    "Premium LMS",
+    "Standard LMS",
     "Find published upcoming courses that a company participant can join",
-    "Requires current internal participant management rights, active company Premium and an active company participant membership. Filters titles by literal search text. The result excludes currently enrolled and completed courses and is ordered by first start time and course ID.",
+    "Requires current internal participant management rights and an active company participant membership. Filters titles by literal search text. The result excludes currently enrolled and completed courses and is ordered by first start time and course ID.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5896,7 +5923,7 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/assign_company_participant_courses": rpc(
     "assignCompanyParticipantCourses",
-    "Premium LMS",
+    "Standard LMS",
     "Enrol one active company participant in multiple whole courses",
     "Applies the selection in one transaction. Courses must still belong to the company and remain eligible. An unavailable course returns HTTP 409 and rolls back the selection. Already enrolled or completed courses stay unchanged, including on retry. Each selected ID appears once in the receipt.",
     {
@@ -5914,9 +5941,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/set_company_participant_reference": rpc(
     "setCompanyParticipantReference",
-    "Premium LMS",
+    "Standard LMS",
     "Set or clear a company-owned participant reference",
-    "Requires current participant management rights, Premium and an active company participant membership. Submit the observed membership version. Send null to clear the reference. An outdated version or a duplicate reference for that company returns HTTP 409.",
+    "Requires current participant management rights and an active company participant membership. Submit the observed membership version. Send null to clear the reference. An outdated version or a duplicate reference for that company returns HTTP 409.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5931,9 +5958,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/set_company_participant_class": voidRpc(
     "setCompanyParticipantClass",
-    "Premium LMS",
+    "Standard LMS",
     "Set or clear one company participant's class",
-    "Requires current company participant management, Premium and an active membership. The class must belong to the specified company. Send the current membership version and null to clear the class. A stale version returns HTTP 409. Existing course enrolments keep their own lifecycle.",
+    "Requires current company participant management and an active membership. The class must belong to the specified company. Send the current membership version and null to clear the class. A stale version returns HTTP 409. Existing course enrolments keep their own lifecycle.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5943,17 +5970,17 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/my_company_participant_invitations": rpc(
     "myCompanyParticipantInvitations",
-    "Premium LMS",
+    "Standard LMS",
     "List my pending company invitations",
-    "Requires a verified participant-only account. Expired invitations and companies with Premium disabled are excluded. Source distinguishes invitations requested through email from association requests made using Luminovia User ID.",
+    "Requires a verified participant-only account. Expired invitations and archived companies are excluded. Source distinguishes invitations requested through email from association requests made using Luminovia User ID.",
     {},
     participantInvitesResult,
   ),
   "/rest/v1/rpc/accept_company_participant_invitation": rpc(
     "acceptCompanyParticipantInvitation",
-    "Premium LMS",
+    "Standard LMS",
     "Accept my invitation to one company",
-    "Requires a verified participant-only account and a current, unexpired invitation for the specified company while Premium is enabled. Send the invitation's version and retain the request ID for retries; acceptance does not create a course enrolment.",
+    "Requires a verified participant-only account and a current, unexpired invitation for the specified company while the company remains active. Send the invitation's version and retain the request ID for retries; acceptance does not create a course enrolment.",
     {
       ...organisation,
       p_expected_version: { ...version, minimum: 1 },
@@ -5967,9 +5994,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/remove_company_participant": rpc(
     "removeCompanyParticipant",
-    "Premium LMS",
+    "Standard LMS",
     "Remove an association from one company",
-    "Requires current company participant management and Premium. Send the current membership version and retain the request ID for retries. Open enrolments for that company are withdrawn, with other companies' associations and retained evidence preserved.",
+    "Requires current management rights for the active company. Send the current membership version and retain the request ID for retries. Open enrolments for that company are withdrawn, with other companies' associations and retained evidence preserved.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5985,9 +6012,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/request_company_participant_link": rpc(
     "requestParticipantLink",
-    "Premium LMS",
+    "Standard LMS",
     "Request participant association",
-    "Requires Premium and scoped company authority. An opaque acknowledgement does not confirm that an ID exists or membership was granted. The participant must accept.",
+    "Requires scoped authority for the active company. An opaque acknowledgement does not confirm that an ID exists or membership was granted. The participant must accept.",
     {
       ...organisation,
       p_luminovia_user_id: { ...text, minLength: 1, maxLength: 32 },

@@ -197,9 +197,11 @@ test("opens the standard course workspace from an assignment when Premium is off
         await expect(page).toHaveURL(new RegExp(`/courses/${run}/workspace$`));
         await expect(page.getByRole("heading", {name: title, exact: true})).toBeVisible();
         await expect(page.getByText(description, {exact: true})).toBeVisible();
-        await expect(page.getByText(/Lernmodul dieses Unternehmens ist derzeit deaktiviert/)).toBeVisible();
+        await expect(page.getByRole("button", {name: "Modul hinzufügen"})).toBeVisible();
         await expect(page.locator(".course-workspace-sessions li")).toHaveCount(1);
-        await expect(page.locator("#course-materials, #course-enrolments, #course-exam")).toHaveCount(0);
+        await expect(page.locator("#course-materials")).toBeVisible();
+        await expect(page.locator("#course-enrolments")).toBeVisible();
+        await expect(page.locator("#course-exam")).toHaveCount(0);
     } finally {
         await service.from("jobs").delete().eq("id", job);
         await service.from("course_sessions").delete().eq("id", session);
