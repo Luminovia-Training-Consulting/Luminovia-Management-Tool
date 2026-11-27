@@ -415,8 +415,11 @@ try {
     assert.ok(offer, "Published offer remains available through the scoped lecturer API");
     assert.equal(offer.customer_name, "", "Customer identity stays hidden before its reveal window");
     assert.equal("course_run_id" in offer, false, "Hidden customer linkage is omitted from the REST projection");
-    assert.equal(Number(offer.amount), 0);
-    assert.equal(Number(offer.total_amount), 0);
+    const expectedCommissionNet = Math.round(
+        100.01 * (defaultPolicy.regular_lecturer_percent ?? 50),
+    ) / 100;
+    assert.equal(Number(offer.amount), expectedCommissionNet);
+    assert.equal(Number(offer.total_amount), expectedCommissionNet);
     assert.ok(
         !Object.keys(offer).some((k) => /gross|platform|commission/.test(k)),
     );
