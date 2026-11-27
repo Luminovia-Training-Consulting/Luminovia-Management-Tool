@@ -806,8 +806,10 @@ it("resumes an unpublished company draft started from an authorised company temp
   expect(
     await screen.findByText("Durchführung als Entwurf gespeichert."),
   ).toBeVisible();
-  expect(screen.getByTestId("course-route")).toHaveTextContent(
-    `/courses?company=${companyId}`,
+  await waitFor(() =>
+    expect(screen.getByTestId("course-route")).toHaveTextContent(
+      `/courses?company=${companyId}`,
+    ),
   );
   expect(state.rpc).toHaveBeenCalledWith("course_creator_draft_action", {
     p_action: "create_course",
