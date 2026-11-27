@@ -1,4 +1,4 @@
-/** Actual Auth/REST proof: the unchanged 1000-row API limit is not a catalogue. */
+/** Native Auth/REST proof for actor-scoped catalogue paging and customer privacy. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
@@ -27,6 +27,7 @@ await withApiFixture(
             peer = await actor("discovery-peer", "lecturer"),
             learner = await actor("discovery-learner", "participant");
         const customer = `Fictional discovery ${suffix}`,
+            catalogue = `Fictional literal %_ ${suffix}`,
             ids = Array.from({length: 1057}, randomUUID).sort(),
             created = "2040-01-01T00:00:00Z",
             view = randomUUID();
@@ -52,7 +53,7 @@ await withApiFixture(
                 service.from("jobs").insert(
                     part.map((id) => ({
                         id,
-                        title: `Fictional literal %_ ${id}`,
+                        title: `${catalogue} ${id}`,
                         customer_name: customer,
                         description: "Fictional authoritative discovery",
                         delivery_type: "online",
@@ -81,14 +82,18 @@ await withApiFixture(
                 "Seed own exact sessions",
             );
         }
+        assert.deepEqual(await checked(
+            teacher.client.from("jobs").select("id,customer_name").in("id", ids.slice(0, 2)),
+            "Prevent lecturer access to raw customer rows",
+        ), []);
         const old = await checked(
-            teacher.client
+            admin.client
                 .from("jobs")
                 .select("id")
                 .eq("customer_name", customer)
                 .order("created_at", {ascending: false})
                 .order("id", {ascending: false}),
-            "Reproduce old unpaged request",
+            "Reproduce the authorized admin Data API limit",
         );
         assert.equal(
             old.length,
@@ -99,7 +104,7 @@ await withApiFixture(
             !old.some((row) => row.id === ids[0]),
             "The old catalogue omits a legitimate authorized deep link",
         );
-        const filters = {customer, sort: "newest"},
+        const filters = {q: catalogue, sort: "newest"},
             found = [];
         let cursor = null;
         do {
@@ -118,6 +123,9 @@ await withApiFixture(
                     (item) => !("gross_amount" in item) && !("platform_percent" in item),
                 ),
             );
+            assert.ok(page.items.every(({customer_name, customer_hidden}) =>
+                customer_name === "" && customer_hidden === true,
+            ));
             found.push(...page.items.map((item) => item.id));
             cursor = page.next_cursor;
             assert.equal(page.has_more, Boolean(cursor));
@@ -131,6 +139,17 @@ await withApiFixture(
         verifyResponse("job_detail", detail);
         assert.equal(detail.id, ids[0]);
         assert.equal(detail.job_sessions.length, 1);
+        assert.equal(detail.customer_name, "");
+        assert.equal(detail.customer_reveal_at, null);
+        assert.equal((await checked(teacher.client.rpc("job_discovery", {
+            p_filters: {customer},
+        }))).items.length, 0);
+        assert.equal((await checked(teacher.client.rpc("job_discovery", {
+            p_filters: {q: customer},
+        }))).items.length, 0);
+        assert.equal((await checked(admin.client.rpc("job_discovery", {
+            p_filters: {customer}, p_limit: 3,
+        }))).items.length, 3);
         assert.ok(
             (
                 verifyResponse("job_dashboard", await checked(
@@ -142,8 +161,7 @@ await withApiFixture(
         const combined = await checked(
             teacher.client.rpc("job_discovery", {
                 p_filters: {
-                    customer,
-                    q: "%_",
+                    q: catalogue,
                     currency: "EUR",
                     unit: "per_hour",
                     min_rate: 25,
@@ -166,7 +184,7 @@ await withApiFixture(
             (
                 await checked(
                     teacher.client.rpc("job_discovery", {
-                        p_filters: {customer, q: "%X_"},
+                        p_filters: {q: catalogue.replace("%_", "%X_")},
                     }),
                     "No wildcard interpretation",
                 )
@@ -250,7 +268,7 @@ await withApiFixture(
         );
         assert.equal(persisted[0].version, 2);
         verifyResponse("saved_job_views", persisted);
-        assert.equal(persisted[0].filters.customer, customer);
+        assert.equal(persisted[0].filters.q, catalogue);
         const removed = await teacher.client.rpc("remove_job_view", {
             p_id: view,
             p_expected_version: 2,

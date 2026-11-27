@@ -84,6 +84,24 @@ await withApiFixture(
                 );
         });
         await passwordOnly(manager.client);
+        const getPolicy = () => checked(manager.client.rpc("assignment_customer_settings"));
+        const initialPolicy = await getPolicy();
+        assert.equal(initialPolicy.mode, "scheduled");
+        assert.equal(initialPolicy.lead_hours, 168);
+        const savePolicy = (mode, revision, who = manager) =>
+            who.client.rpc("save_assignment_customer_settings", {
+                p_mode: mode,
+                p_lead_hours: initialPolicy.lead_hours,
+                p_expected_revision: revision,
+            });
+        defer(async () => {
+            // Restore only our fixture's unfinished settings transition.
+            await sql(`update private.assignment_customer_policy
+                set mode='scheduled', revision=revision+1
+                where mode='on_confirmation' and revision=${initialPolicy.revision + 1}`);
+        });
+        assert.equal((await teacher.client.rpc("assignment_customer_settings")).error?.code, "42501");
+        assert.equal((await savePolicy("on_confirmation", initialPolicy.revision, teacher)).error?.code, "42501");
         // Existing atomic job creation is unchanged; optional information is added to its detail page.
         const create = async (day) => {
             const id = await checked(
@@ -195,12 +213,9 @@ await withApiFixture(
         );
         assert.equal((await save(details, 1, request)).error?.code, "22023");
         const beforeClaim = await read();
-        assert.equal(beforeClaim.reference_url, details.reference_url);
-        assert.equal(
-            beforeClaim.reference_description,
-            details.reference_description,
-        );
-        assert.equal(beforeClaim.has_contact, true);
+        assert.equal(beforeClaim.reference_url, "");
+        assert.equal(beforeClaim.reference_description, "");
+        assert.equal(beforeClaim.has_contact, false);
         assert.equal(beforeClaim.contact_visible, false);
         for (const key of [
             "contact_name",
@@ -209,12 +224,9 @@ await withApiFixture(
             "contact_description",
         ])
             assert.equal(beforeClaim[key], "");
-        assert.ok(
-            !JSON.stringify(
-                await checked(
-                    teacher.client.from("jobs").select("*").eq("id", job).single(),
-                ),
-            ).includes(details.contact_email),
+        assert.deepEqual(
+            await checked(teacher.client.from("jobs").select("*").eq("id", job)),
+            [],
         );
         for (const patch of [
             {reference_url: "javascript:alert(1)"},
@@ -240,7 +252,7 @@ await withApiFixture(
             );
         assert.equal((await read(manager)).version, 1);
         await checked(save({...details, contact_visibility: "offer_viewers"}, 1));
-        assert.equal((await read(peer)).contact_email, details.contact_email);
+        assert.equal((await read(peer)).contact_email, "");
         await checked(save(details, 2));
         const race = await Promise.all(
             ["First", "Second"].map((reference_label) =>
@@ -263,7 +275,13 @@ await withApiFixture(
             }),
         );
         assert.equal(claimed.status, "confirmed");
+        assert.equal((await read()).contact_email, "");
+        assert.equal((await read()).reference_url, "");
+        const policy = await checked(savePolicy("on_confirmation", initialPolicy.revision));
+        assert.equal(policy.revision, initialPolicy.revision + 1);
+        assert.equal((await savePolicy("management_only", initialPolicy.revision)).error?.code, "40001");
         assert.equal((await read()).contact_email, details.contact_email);
+        assert.equal((await read()).reference_url, details.reference_url);
         const snapshot = () =>
             checked(
                 service
@@ -306,6 +324,7 @@ await withApiFixture(
         assert.equal((await read()).contact_visible, false);
         assert.equal((await read()).contact_email, "");
         assert.deepEqual(await snapshot(), accepted);
+        await checked(savePolicy("scheduled", policy.revision));
         const archived = await create("12");
         const lifecycle = await checked(
             manager.client.rpc("job_lifecycle", {p_job_id: archived}),
@@ -332,7 +351,7 @@ await withApiFixture(
         );
         assert.equal((await save(details, 5)).error?.code, "42501");
         console.log(
-            "PASS actual Auth/password-only authentication/REST optional job briefing: exact references, strict validation, hidden/publicly consented contacts, claim/cancellation revocation, immutable accepted fees, retries/CAS races, archive and current-role boundaries.",
+            "PASS actual Auth/password-only authentication/REST optional job briefing: exact references, strict validation, policy-scoped contacts and references, claim/cancellation revocation, immutable accepted fees, retries/CAS races, archive and current-role boundaries.",
         );
     },
 );
