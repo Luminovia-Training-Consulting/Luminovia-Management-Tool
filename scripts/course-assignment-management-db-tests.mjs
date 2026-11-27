@@ -6,10 +6,15 @@ import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 await withTestDatabase(
   "course_assignment_management",
   async ({ actor, sql }) => {
-    const [admin, manager, former, replacement, peer] = Array.from(
-      { length: 5 },
-      randomUUID,
-    );
+    const [
+      admin,
+      manager,
+      former,
+      replacement,
+      peer,
+      companyLecturer,
+      foreignCompanyLecturer,
+    ] = Array.from({ length: 7 }, randomUUID);
     const company = randomUUID(),
       otherCompany = randomUUID();
     const selected = randomUUID(),
@@ -22,11 +27,17 @@ await withTestDatabase(
       [former, "lecturer"],
       [replacement, "lecturer"],
       [peer, "lecturer"],
+      [companyLecturer, "lecturer"],
+      [foreignCompanyLecturer, "lecturer"],
     ];
     await sql(`
     insert into auth.users(id,email) values ${roles.map(([id]) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
     insert into public.user_roles(user_id,role) values ${roles.map(([id, role]) => `(${q(id)},${q(role)})`).join(",")};
     insert into public.organisations(id,name) values (${q(company)}, 'Fictional College'), (${q(otherCompany)}, 'Fictional Studio');
+    insert into public.user_roles(user_id,role) values
+      (${q(companyLecturer)},'client'),(${q(foreignCompanyLecturer)},'client');
+    insert into public.client_organisation_memberships(organisation_id,user_id) values
+      (${q(company)},${q(companyLecturer)}),(${q(otherCompany)},${q(foreignCompanyLecturer)});
     insert into public.organisation_contacts(id,organisation_id,name,created_at,archived_at) values
       (${q(selected)},${q(company)},'Selected coordinator','2025-01-01',null),
       (${q(newest)},${q(company)},'Newest coordinator','2025-02-01',null),
@@ -149,6 +160,14 @@ await withTestDatabase(
       "PASS contact precedence, read-back, authored reference and pre-claim privacy",
     );
 
+    assert.equal(
+      (await rpc(companyLecturer, "job_detail", job)).customer_name,
+      "Fictional College",
+    );
+    assert.equal(
+      (await rpc(foreignCompanyLecturer, "job_detail", job)).customer_name,
+      "",
+    );
     const marketplace = await rpc(peer, "job_detail", job);
     assert.equal(marketplace.customer_name, "");
     assert.equal(marketplace.customer_reveal_at, null);

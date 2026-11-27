@@ -40,11 +40,11 @@ await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
         console.log("PASS " + name);
     };
     await check(
-        "Current assignment exposes a real nonarchived course and shared count, but no implicit first contact",
+        "Current assignment exposes a real course, shared count and its default company contact",
         async () => {
             const d = (await day()).sessions[0];
             assert.equal(d.course_run_id, run);
-            assert.equal(d.course_contact, null);
+            assert.equal(d.course_contact?.name, "Explicit course contact");
             assert.deepEqual(d.shared_preparation, {done: 1, total: 2});
             assert.equal(d.preparation.contact_ready, false);
             assert.equal((await day(peer)).sessions.length, 0);
@@ -52,7 +52,7 @@ await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
         },
     );
     await check(
-        "Only the explicitly selected same-organisation active contact is projected, without notes or private fields",
+        "A selected same-organisation active contact takes precedence without notes or private fields",
         async () => {
             await sql(
                 `insert into private.course_workspace_settings(run_id,contact_id)values(${q(run)},${q(contact)})`,
@@ -66,7 +66,7 @@ await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
             await sql(
                 `update private.course_workspace_settings set contact_id=${q(foreignContact)} where run_id=${q(run)}`,
             );
-            assert.equal((await day()).sessions[0].course_contact, null);
+            assert.equal((await day()).sessions[0].course_contact?.email, "course@example.invalid");
             await sql(
                 `update private.course_workspace_settings set contact_id=${q(contact)} where run_id=${q(run)};update public.organisation_contacts set archived_at=now() where id=${q(contact)}`,
             );

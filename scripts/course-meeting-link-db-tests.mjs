@@ -47,6 +47,8 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
       values (${q(job)},${q(run)},'Fictional teaching assignment','Fictional customer','online','filled',100,'EUR','fixed_total',100,'Fictional terms');
     insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)
       values (${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional terms',1);
+    insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+      select ${q(claim)},${q(teacher)},starts_at,ends_at from public.course_sessions where id=${q(session)};
   `);
   const toggle = (enabled, version, organisation = company) =>
     actor(
@@ -130,6 +132,20 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
     can_edit: false,
   });
   assert.equal((await workspace(client)).meeting_link.url, firstUrl);
+  await actor(
+    manager,
+    "select public.save_assignment_customer_settings('management_only',168,0)",
+  );
+  assert.equal((await workspace(teacher)).meeting_link, null);
+  assert.equal((await workspace(teacher)).venue, "");
+  assert.equal((await workspace(learner)).meeting_link.url, firstUrl);
+  assert.equal((await workspace(client)).meeting_link.url, firstUrl);
+  await assert.rejects(save(teacher, secondUrl, 1), /unavailable/i);
+  await actor(
+    manager,
+    "select public.save_assignment_customer_settings('scheduled',168,1)",
+  );
+  assert.equal((await workspace(teacher)).meeting_link.url, firstUrl);
   assert.equal((await workspace(learner)).venue, venue);
   assert.deepEqual(
     (await workspace(learner)).sessions.map(({ id }) => id),
@@ -140,7 +156,10 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
       firstUrl,
     ),
   );
-  await assert.rejects(save(manager, secondUrl, 0), /PT409: Course meeting link changed/i);
+  await assert.rejects(
+    save(manager, secondUrl, 0),
+    /PT409: Course meeting link changed/i,
+  );
   assert.equal((await save(manager, firstUrl, 1)).version, 1);
   assert.equal((await save(manager, secondUrl, 1)).version, 2);
   assert.equal((await workspace(learner)).meeting_link.url, secondUrl);
@@ -155,7 +174,10 @@ await withTestDatabase("course_meeting_link", async ({ actor, sql }) => {
     assert.equal(standard.lms_enabled, false);
     assert.equal(standard.meeting_link, null);
     assert.equal(standard.venue, "");
-    assert.deepEqual(standard.sessions.map(({ id }) => id), [session]);
+    assert.deepEqual(
+      standard.sessions.map(({ id }) => id),
+      [session],
+    );
   }
   await assert.rejects(save(teacher, firstUrl, 2), /premium/i);
   await assert.rejects(save(client, firstUrl, 2), /premium/i);

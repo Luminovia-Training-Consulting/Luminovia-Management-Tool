@@ -327,7 +327,9 @@ await withTestDatabase("workbench_test", async ({sql, actor}) => {
             assert.deepEqual(await suggestions(client), [customer]);
             assert.deepEqual(await suggestions(admin), [visible, customer, hidden]);
             await sql(`insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,currency,rate_unit,total_amount,terms,terms_version)
-                values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',100,'EUR','fixed_total',100,'Fictional teaching terms',1)`);
+                values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',100,'EUR','fixed_total',100,'Fictional teaching terms',1);
+                insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+                values(${q(claim)},${q(owner)},now()+interval '3 days',now()+interval '3 days 1 hour')`);
             assert.deepEqual(await suggestions(owner), [visible]);
             assert.deepEqual(await suggestions(owner, "suggestion B"), []);
             await sql(

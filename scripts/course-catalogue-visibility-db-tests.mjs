@@ -85,7 +85,8 @@ await withTestDatabase("scoped_course_catalogue", async ({ actor, sql }) => {
     [],
     "Neither an offer draft nor the legacy published flag grants a preview",
   );
-  const inCompanyPicker = () => sql(`
+  const inCompanyPicker = () =>
+    sql(`
     select count(*) from private.company_participant_upcoming_courses(${q(orgA)}, array[${q(assigned)}]::uuid[], now())
   `);
   assert.equal(await inCompanyPicker(), "0");
@@ -116,6 +117,13 @@ await withTestDatabase("scoped_course_catalogue", async ({ actor, sql }) => {
     `claim_job(${q(offer)},${q(randomUUID())},${quote.terms_version})`,
   );
   assert.equal(accepted.status, "confirmed");
+  assert.deepEqual(await runs(winner), []);
+  assert.deepEqual(await sessions(winner), []);
+  assert.deepEqual(await hub(winner), [assigned]);
+  await rpc(
+    admin,
+    "save_assignment_customer_settings('on_confirmation',168,0)",
+  );
   assert.deepEqual(await runs(winner), [assigned]);
   assert.deepEqual(await sessions(winner), [assigned]);
   assert.deepEqual(await hub(winner), [assigned]);

@@ -56,6 +56,9 @@ await withTestDatabase(
             (await read(peer)).map((x) => x.id),
             [f.foreign],
         );
+        const [preparing] = await read(peer);
+        assert.equal(preparing.organisation_id, null);
+        assert.equal(preparing.organisation_name, "");
         assert.deepEqual(await read(admin), []);
         assert.deepEqual(
             JSON.parse(

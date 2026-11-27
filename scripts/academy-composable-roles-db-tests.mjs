@@ -195,6 +195,28 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       (await workspace(combined, teachingCourse)).access.teacher,
       true,
     );
+    // Academy direct scheduling is authorized by its licence and current
+    // instructor assignment even when the marketplace uses management-only disclosure.
+    await sql(
+      "update private.assignment_customer_policy set mode='management_only'",
+    );
+    const meetingUrl = "https://academy.example.invalid/workshop";
+    assert.equal(
+      (
+        await rpc(
+          combined,
+          "set_course_meeting_link",
+          teachingCourse,
+          meetingUrl,
+          0,
+        )
+      ).url,
+      meetingUrl,
+    );
+    assert.equal(
+      (await workspace(combined, teachingCourse)).meeting_link.url,
+      meetingUrl,
+    );
     assert.equal(
       (await workspace(combined, companyCourse)).access.client,
       true,

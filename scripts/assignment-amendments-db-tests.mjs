@@ -283,6 +283,19 @@ await withTestDatabase(
     await assert.rejects(current(companyChange, otherClient), /42501/);
     await advance(companyChange, "submit", client);
     await assert.rejects(advance(companyChange, "accept", client), /42501/);
+    const hidden = await current(companyChange, lecturer);
+    assert.equal(hidden.awaits_location_disclosure, true);
+    assert.equal(hidden.proposed.location_hidden, true);
+    assert.equal(hidden.proposed.location, "");
+    await assert.rejects(advance(companyChange, "accept", lecturer), /42501/);
+    await actor(
+      admin,
+      "select public.save_assignment_customer_settings('on_confirmation',168,0)",
+    );
+    assert.equal(
+      (await current(companyChange, lecturer)).proposed.location,
+      "Fictional company venue",
+    );
     await advance(companyChange, "accept", lecturer);
     await advance(companyChange, "accept", admin);
     await advance(companyChange, "apply", admin);

@@ -36,7 +36,14 @@ export async function seedCalendarMetadata(sql, teacher, peer) {
  ('${foreign}','Foreign assignment','Hidden foreign customer','online','filled',30,30,'EUR','fixed_total','PRIVATE TERMS','${run}');
  insert into public.job_requirements(job_id,topic_id) values('${linked}','${requiredTopic}');
  insert into public.job_claims(job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
- values('${linked}','${teacher}','${randomUUID()}',10,10,'EUR','fixed_total','PRIVATE TERMS',1),('${manual}','${teacher}','${randomUUID()}',20,20,'EUR','fixed_total','PRIVATE TERMS',1),('${foreign}','${peer}','${randomUUID()}',30,30,'EUR','fixed_total','PRIVATE TERMS',1);`);
+ values('${linked}','${teacher}','${randomUUID()}',10,10,'EUR','fixed_total','PRIVATE TERMS',1),('${manual}','${teacher}','${randomUUID()}',20,20,'EUR','fixed_total','PRIVATE TERMS',1),('${foreign}','${peer}','${randomUUID()}',30,30,'EUR','fixed_total','PRIVATE TERMS',1);
+ insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+ select claim.id,claim.lecturer_id,slot.starts_at,slot.starts_at+interval '1 hour'
+ from public.job_claims claim join (values
+   ('${linked}'::uuid,now()+interval '3 days'),
+   ('${manual}'::uuid,now()+interval '4 days'),
+   ('${foreign}'::uuid,now()+interval '20 days')
+ ) slot(job_id,starts_at) on slot.job_id=claim.job_id;`);
     return ids;
 }
 

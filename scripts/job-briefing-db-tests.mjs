@@ -184,12 +184,9 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
             assert.equal(saved.can_edit, true);
             assert.equal(saved.contact_email, payload.contact_email);
             const peerView = await get(job, peer, "aal1");
-            assert.equal(peerView.reference_url, payload.reference_url);
-            assert.equal(
-                peerView.reference_description,
-                payload.reference_description,
-            );
-            assert.equal(peerView.has_contact, true);
+            assert.equal(peerView.reference_url, "");
+            assert.equal(peerView.reference_description, "");
+            assert.equal(peerView.has_contact, false);
             assert.equal(peerView.contact_visible, false);
             for (const key of [
                 "contact_name",
@@ -213,19 +210,17 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
     );
 
     await check(
-        "Explicit offer-viewer release and clearing work without importing internal organisation contacts or notes",
+        "The installation policy masks offer-viewer contacts and clearing works without importing internal notes",
         async () => {
             const job = await create();
             const released = {...payload, contact_visibility: "offer_viewers"};
             await save(job, released);
             const peerView = await get(job, peer, "aal1");
-            assert.equal(peerView.contact_visible, true);
-            assert.equal(peerView.contact_name, payload.contact_name);
-            assert.equal(peerView.contact_email, payload.contact_email);
-            assert.equal(
-                (await get(job, teacher, "aal1")).contact_description,
-                payload.contact_description,
-            );
+            assert.equal(peerView.contact_visible, false);
+            assert.equal(peerView.contact_name, "");
+            assert.equal(peerView.contact_email, "");
+            assert.equal((await get(job, teacher, "aal1")).contact_description, "");
+            assert.equal((await get(job)).contact_description, payload.contact_description);
             await save(job, {}, 1);
             const cleared = await get(job, peer, "aal1");
             assert.equal(cleared.version, 2);
@@ -466,6 +461,8 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
                 ),
             );
             assert.equal(claim.status, "confirmed");
+            assert.equal((await get(job, teacher, "aal1")).contact_email, "");
+            await actor(admin, "select public.save_assignment_customer_settings('on_confirmation',168,0)");
             assert.equal(
                 (await get(job, teacher, "aal1")).contact_email,
                 payload.contact_email,
@@ -503,7 +500,8 @@ await withTestDatabase("job_briefing", async ({sql, actor}) => {
             const cancelled = await get(job, teacher, "aal1");
             assert.equal(cancelled.contact_visible, false);
             assert.equal(cancelled.contact_email, "");
-            assert.equal(cancelled.reference_url, payload.reference_url);
+            assert.equal(cancelled.reference_url, "");
+            await actor(admin, "select public.save_assignment_customer_settings('scheduled',168,1)");
         },
     );
 

@@ -37,18 +37,21 @@ await withTestDatabase("job_text_sort", async ({sql, actor}) => {
             aal,
         ).then(JSON.parse);
 
-    async function all(sort) {
+    async function all(sort, who = lecturer) {
         let cursor = null;
         const items = [];
         do {
-            const p = await page(lecturer, sort, cursor);
+            const p = await page(who, sort, cursor);
             items.push(...p.items);
             cursor = p.next_cursor;
         } while (cursor);
         return items;
     }
 
-    let rows = await all("customer_asc");
+    const concealed = await all("customer_asc");
+    assert.deepEqual(concealed.map((row) => row.customer_name), ["", "", "", ""]);
+    assert.deepEqual(concealed.map((row) => row.id), [jobs[0], jobs[1], jobs[2], jobs[4]].sort());
+    let rows = await all("customer_asc", manager);
     assert.deepEqual(
         rows.map((v) => v.customer_name),
         ["Fictional Alpha", "Fictional Alpha", "Fictional Zebra", "Fictional Zero"],

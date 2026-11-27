@@ -115,7 +115,6 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             );
             let p = await rpc(teacher, {
                 q: "Exact%_Alias",
-                customer: "[same]",
                 topic_ids: [topic],
                 delivery: "online",
                 currency: "EUR",
@@ -135,6 +134,8 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
                 [id],
             );
             assert.equal((await rpc(teacher, {q: "Exact%XAlias"})).items.length, 0);
+            assert.equal((await rpc(teacher, {customer: "[same]"})).items.length, 0);
+            assert.equal((await rpc(teacher, {q: "Fictional [same] academy"})).items.length, 0);
             assert.equal(
                 (
                     await rpc(teacher, {
