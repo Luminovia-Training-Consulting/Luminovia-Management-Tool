@@ -87,10 +87,12 @@ test("personal cards and teaching preparation persist in the real account across
         version = randomUUID(),
         resource = randomUUID(),
         suffix = randomUUID().slice(0, 8);
+    // Keep the fixture inside the profile's current local day even when CI
+    // reaches this late serial test near midnight in Europe/Berlin.
     const starts = DateTime.now()
         .setZone("Europe/Berlin")
-        .plus({minutes: 30})
-        .set({second: 0, millisecond: 0});
+        .startOf("day")
+        .plus({hours: 12});
     await checked(
         service
             .from("organisations")
