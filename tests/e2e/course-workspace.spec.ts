@@ -160,7 +160,6 @@ async function fixture({
         lecturer_id: teacher.id,
         starts_at: new Date(sessionEnd - 3600000).toISOString(),
         ends_at: new Date(sessionEnd).toISOString(),
-        course_session_id: session,
     }));
     await checked(
         service

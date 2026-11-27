@@ -151,8 +151,8 @@ await withApiFixture(
             values (${q(job)}, ${q(run)}, 'Fictional workspace job', 'Fictional workspace academy', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms');
             insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
             values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms', 1);
-            insert into public.assignment_sessions(claim_id, lecturer_id, starts_at, ends_at, course_session_id)
-            select ${q(claim)}, ${q(teacher.id)}, starts_at, ends_at, id
+            insert into public.assignment_sessions(claim_id, lecturer_id, starts_at, ends_at)
+            select ${q(claim)}, ${q(teacher.id)}, starts_at, ends_at
             from public.course_sessions where id = ${q(session)};`,
         );
         const setPremium = async (organisation, enabled, version) => {
