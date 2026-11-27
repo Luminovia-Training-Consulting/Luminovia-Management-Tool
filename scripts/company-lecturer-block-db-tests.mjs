@@ -120,7 +120,7 @@ for (const edition of [
       call(who, write, `${q(company)},${q(target)},${wanted},${version}`);
     const discoverJobs = (filters) =>
       call(teacher, "job_discovery", q(JSON.stringify({
-        customer: "Fixture Company",
+        q: "Fixture offer",
         currency: "EUR",
         unit: "per_day",
         include_history: true,
@@ -567,7 +567,11 @@ for (const edition of [
       assert.equal(await actor(teacher, `select count(*) from public.jobs where id=${q(restrictedJob)}`), "0");
       assert.equal((await call(otherTeacher, "job_detail", q(restrictedJob))).id, restrictedJob);
       await assert.rejects(call(teacher, "job_detail", q(restrictedJob)), /42501/);
-      assert.ok(!(await discoverJobs({})).items.some(({id}) => id === restrictedJob));
+      assert.ok(
+        !(await discoverJobs({ q: "Fictional private teaching offer" })).items.some(
+          ({id}) => id === restrictedJob,
+        ),
+      );
       assert.equal((await call(teacher, "claim_job", `${q(restrictedJob)},${q(randomUUID())},1`)).status, "not_eligible");
       const detail = await call(otherTeacher, "job_detail", q(restrictedJob));
       assert.equal(detail.company_internal, true);
