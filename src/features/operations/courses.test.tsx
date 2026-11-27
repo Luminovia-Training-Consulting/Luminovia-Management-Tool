@@ -538,11 +538,138 @@ it("lists one template library and only shows the signed-in company's owned temp
 });
 
 it.each([
-  { permissions: [], roles: ["client"] },
-  { permissions: ["courses.manage", "jobs.manage"], roles: ["admin"] },
-])("creates a draft from the template shortcut ($roles)", async (access) => {
+  "/courses?tab=templates",
+  `/courses?tab=templates&template=${templateId}`,
+])(
+  "starts and restores the manager creator from an authorised template (%s)",
+  async (path) => {
+    let stored: unknown;
+    const sharedRpc = state.rpc.getMockImplementation()!;
+    state.rpc.mockImplementation(
+      (name: string, args: Record<string, unknown>) => {
+        if (name === "resource_comments")
+          return Promise.resolve({ data: [], error: null });
+        if (name === "course_creator_drafts")
+          return {
+            abortSignal: async () => ({
+              data: stored ? [stored] : [],
+              error: null,
+            }),
+          };
+        if (name === "course_creator_draft_action") {
+          stored = {
+            id: args.p_draft_id,
+            revision: 1,
+            title: template.title,
+            updated_at: "2030-01-01T00:00:00Z",
+            state: "editing",
+            course_run_id: null,
+            next_action: null,
+            payload: args.p_payload,
+          };
+          return Promise.resolve({ data: stored, error: null });
+        }
+        return sharedRpc(name, args);
+      },
+    );
+    const sourceTemplate = { ...template, owner_organisation_id: companyId };
+    const access = {
+      permissions: ["courses.manage", "jobs.manage"],
+      roles: ["admin"],
+      organisations: [organisation],
+      templates: [sourceTemplate],
+    };
+    const client = renderCourses({ ...access, path });
+    const source = path.includes("template=")
+      ? within(await screen.findByRole("dialog"))
+      : screen;
+    await userEvent.click(
+      source.getByRole("button", { name: "Aus Vorlage erstellen" }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", {
+        name: "Kurs- und Auftragsassistent starten",
+      }),
+    );
+    expect(await dialog.findByLabelText("Kursvorlage")).toHaveValue(templateId);
+    expect(dialog.getByLabelText("Organisation")).toHaveValue(companyId);
+    expect(
+      dialog.getByRole("button", { name: "Speichern und zum Auftrag" }),
+    ).toBeVisible();
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "course_creator_draft_action",
+      expect.anything(),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Zwischenstand speichern" }),
+    );
+    await dialog.findByText("Entwurf auf dem Server gespeichert.");
+    expect(state.rpc).toHaveBeenCalledWith(
+      "course_creator_draft_action",
+      expect.objectContaining({
+        p_action: "save",
+        p_payload: expect.objectContaining({
+          run: expect.objectContaining({
+            template_id: templateId,
+            organisation_id: companyId,
+          }),
+        }),
+      }),
+    );
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "save_course_run",
+      expect.anything(),
+    );
+    const savedPath = new URL(
+      screen.getByTestId("course-route").textContent!,
+      "https://portal.example.invalid",
+    );
+    expect(savedPath.searchParams.get("creatorTemplate")).toBe(templateId);
+    const creator = savedPath.searchParams.get("creator");
+    cleanup();
+    client.clear();
+
+    renderCourses({ ...access, path: `/courses?creator=${creator}` });
+    const resumed = within(
+      await screen.findByRole("dialog", {
+        name: "Kurs- und Auftragsassistent starten",
+      }),
+    );
+    expect(await resumed.findByLabelText("Kursvorlage")).toHaveValue(
+      templateId,
+    );
+    expect(resumed.getByLabelText("Organisation")).toHaveValue(companyId);
+  },
+);
+
+it("rejects a creator template source which is no longer active", async () => {
+  const sharedRpc = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name: string, args: Record<string, unknown>) =>
+    name === "course_creator_drafts"
+      ? { abortSignal: async () => ({ data: [], error: null }) }
+      : sharedRpc(name, args),
+  );
   renderCourses({
-    ...access,
+    templates: [{ ...template, archived_at: "2030-01-01T00:00:00Z" }],
+    path: `/courses?creator=${runId}&startCreator=1&creatorTemplate=${templateId}`,
+  });
+  const dialog = within(
+    await screen.findByRole("dialog", {
+      name: "Kurs- und Auftragsassistent starten",
+    }),
+  );
+  expect(await dialog.findByRole("alert")).toBeVisible();
+  expect(dialog.queryByLabelText("Kursvorlage")).not.toBeInTheDocument();
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "course_creator_draft_action",
+    expect.anything(),
+  );
+});
+
+it("keeps the company-only template shortcut in the restricted course draft workflow", async () => {
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
     organisations: [organisation],
     templates: [{ ...template, owner_organisation_id: companyId }],
   });

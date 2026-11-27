@@ -1425,6 +1425,7 @@ export function CoursesPage() {
   });
   const creatorRecord = creatorRead.data?.[0];
   const creatorFresh = params.get("startCreator") === "1";
+  const creatorTemplateParam = params.get("creatorTemplate");
   const [creatorEpoch, setCreatorEpoch] = useState(0);
   useEffect(() => {
     if (manage && creatorRoute === "new") {
@@ -1632,6 +1633,17 @@ export function CoursesPage() {
     editRun(run, "schedule");
   };
   const planRun = (templateId: string) => {
+    if (manage) {
+      // Keep the source in the URL until the first acknowledged save. Reload
+      // reapplies the authorised template; recovery uses the saved snapshot.
+      setCourseView({
+        tab: "templates",
+        creator: crypto.randomUUID(),
+        startCreator: "1",
+        creatorTemplate: templateId,
+      });
+      return;
+    }
     setInitialTemplateId(templateId);
     setTab(tab);
     editRun(null);
@@ -1840,6 +1852,18 @@ export function CoursesPage() {
   )
     return <Loading />;
   const findTemplate = (run: CourseRun) => templatesById.get(run.template_id);
+  const creatorTemplate =
+    manage && creatorId && creatorFresh && !creatorRecord
+      ? templates.data?.find(
+          (template) =>
+            template.id === creatorTemplateParam && !template.archived_at,
+        )
+      : undefined;
+  const creatorSourceUnavailable =
+    creatorFresh &&
+    creatorTemplateParam !== null &&
+    !creatorRecord &&
+    !creatorTemplate;
   const planningOrganisations = manage
     ? orgs.data
     : templateCompany
@@ -2689,7 +2713,13 @@ export function CoursesPage() {
       </Dialog>
       <Dialog
         open={Boolean(creatorId)}
-        onOpenChange={(open) => !open && !runSaving && setCourseView({}, true)}
+        onOpenChange={(open) => {
+          if (!open && !runSaving)
+            setCourseView(
+              tab === "templates" ? { tab: "templates" } : {},
+              true,
+            );
+        }}
         closeDisabled={runSaving}
         title={creatorText("start")}
         description={creatorText("offerHint")}
@@ -2712,10 +2742,13 @@ export function CoursesPage() {
                   : "openCourse",
               )}
             </Button>
+          ) : creatorSourceUnavailable ? (
+            <Notice kind="error">{t("courseRecordUnavailable")}</Notice>
           ) : creatorRecord?.state === "editing" || creatorFresh ? (
             <RunForm
               key={`${creatorId}:${creatorEpoch}`}
               creator={{ id: creatorId, saved: creatorRecord }}
+              initialTemplateId={creatorTemplate?.id}
               initialSchedule={calendarPlan}
               reloadCreator={() => {
                 void creatorRead.refetch().then((result) => {
