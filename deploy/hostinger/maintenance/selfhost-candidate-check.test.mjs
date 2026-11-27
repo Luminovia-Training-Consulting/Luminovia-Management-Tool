@@ -11,7 +11,7 @@ import {createServer} from "node:net";
 import {basename, join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
-import {adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, baselineFixtureMigrations, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
+import {acceptedBaselineMigrations, adaptCandidateApiFixture, adaptStagedCandidateApiFixture, allocateCandidatePorts, assertCandidateConfiguration, baselineFixtureMigrations, candidateApiSuites, candidateCommandFailure, candidateDatabaseCommand, candidateDatabaseMemoryDiagnostics, candidateDatabaseOptions, candidateServiceDiagnostics, checkCandidate, financialProbeReceipt, migrationWithHistory, ownershipLabel, stageCandidateSource,} from "./selfhost-candidate-check.mjs";
 
 test("only exact unaccepted migrations are deferred from the previous deployment baseline", () => {
     const old = "20261124055710_support_chf_currency.sql";
@@ -29,6 +29,10 @@ test("only exact unaccepted migrations are deferred from the previous deployment
     assert.deepEqual(baselineFixtureMigrations([old, unacceptedPredecessor]), [old]);
     assert.deepEqual(baselineFixtureMigrations([old, unacceptedPredecessor, unaccepted]), [old]);
     assert.deepEqual(baselineFixtureMigrations([old, broken, unaccepted]), [old]);
+    assert.deepEqual(
+        acceptedBaselineMigrations([old, unacceptedPredecessor, unaccepted]),
+        [old],
+    );
     assert.throws(
         () => baselineFixtureMigrations([old, broken, unknown]),
         /requires the exact final baseline migration/,

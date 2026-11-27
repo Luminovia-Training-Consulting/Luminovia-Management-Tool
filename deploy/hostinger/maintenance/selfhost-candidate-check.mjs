@@ -538,12 +538,18 @@ const unacceptedDiscoveryMigrations = new Set([
 ]);
 
 /** Build the last accepted baseline, excluding only migrations that never passed candidate acceptance. */
-export function baselineFixtureMigrations(migrations) {
+export function acceptedBaselineMigrations(migrations) {
     // These discovery migrations were pushed to main but have not passed a
     // complete acceptance run. Model the prior deployed schema without them,
     // then require candidate replay to apply the corrected forward migration.
-    if (migrations.some((name) => unacceptedDiscoveryMigrations.has(name)))
-        migrations = migrations.filter((name) => !unacceptedDiscoveryMigrations.has(name));
+    return migrations.some((name) => unacceptedDiscoveryMigrations.has(name))
+        ? migrations.filter((name) => !unacceptedDiscoveryMigrations.has(name))
+        : migrations;
+}
+
+/** Provision fictional records before the exact historical trigger that blocked service-role inserts. */
+export function baselineFixtureMigrations(migrations) {
+    migrations = acceptedBaselineMigrations(migrations);
     if (!migrations.includes(originalCourseOriginMigration) ||
         migrations.includes(repairedCourseOriginMigration))
         return migrations;
@@ -1021,7 +1027,7 @@ export async function checkCandidate({
                 assert.equal(hash(record.source), hash(sources.get(record.version)));
             return migrations;
         };
-        const baselineMigrations = readMigrationNames();
+        const baselineMigrations = acceptedBaselineMigrations(readMigrationNames());
         const fixtureMigrations = baselineFixtureMigrations(baselineMigrations);
         let migrations = await replay(fixtureMigrations);
         await sql("NOTIFY pgrst,'reload schema';");
