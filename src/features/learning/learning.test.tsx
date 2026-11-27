@@ -884,9 +884,7 @@ describe("connected course workspace", () => {
     ];
     setup();
     expect(
-      await screen.findByText(
-        /Lernmodul dieses Unternehmens ist derzeit deaktiviert/,
-      ),
+      await screen.findByRole("button", { name: "Modul hinzufügen" }),
     ).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Fictional course" }),

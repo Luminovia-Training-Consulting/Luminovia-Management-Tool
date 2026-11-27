@@ -5286,7 +5286,7 @@ const nativePaths = {
     "myCourseWorkspaces",
     "Premium LMS",
     "List my current course workspaces",
-    "Returns at most 200 nonarchived courses in scope. A verified participant-only account sees its enrolled or completed courses only while the owning company has Premium enabled. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
+    "Returns at most 200 nonarchived courses in scope. A verified participant sees its enrolled or completed courses in an active company. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
     {},
     myWorkspacesResult,
   ),
@@ -5294,7 +5294,7 @@ const nativePaths = {
     "readCourseWorkspace",
     "Premium LMS",
     "Read an authorised course workspace",
-    "Returns the actor-scoped course. With Premium disabled, course managers, assigned lecturers and authorised company contacts receive course details and scheduled sessions. Active Premium enables scoped learning materials, participant workflows and meeting links. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
+    "Returns the actor-scoped course. With Premium disabled, authorised staff, company contacts and enrolled learners receive Standard course details and scheduled sessions. Active Premium enables the existing additional workspace projections. Learners have no roster, staff audit history, quiz answer indices or exam answer keys.",
     course,
     internalWorkspaceResult,
   ),
@@ -5833,25 +5833,29 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_access": rpc(
     "companyParticipantAccess",
-    "Premium LMS",
+    "Standard LMS",
     "Check company participant management",
     "Company contacts may inspect their own organisation. Authorised staff may inspect managed companies.",
     organisation,
-    object({ organisation_id: uuid, premium_enabled: boolean }),
+    object({
+      organisation_id: uuid,
+      premium_enabled: boolean,
+      standard_enabled: boolean,
+    }),
   ),
   "/rest/v1/rpc/company_participants": rpc(
     "companyParticipants",
-    "Premium LMS",
+    "Standard LMS",
     "List current participants",
-    "Requires Premium and current participant management rights for the requested company. References belong to this company membership and can be null.",
+    "Requires current participant management rights for the active company. References belong to this company membership and can be null.",
     organisation,
     z.toJSONSchema(companyParticipantsSchema),
   ),
   "/rest/v1/rpc/company_participant_overview": rpc(
     "companyParticipantOverview",
-    "Premium LMS",
+    "Standard LMS",
     "Read one participant's company course and attendance summary",
-    "Requires current participant management rights, current Premium and an active participant membership in the requested company. Returns only that company's enrolments and confirmed attendance counts. Notes and other participants are excluded.",
+    "Requires current participant management rights and an active participant membership in the requested company. Returns only that company's enrolments and confirmed attendance counts. Notes and other participants are excluded.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5863,9 +5867,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_history": rpc(
     "companyParticipantHistory",
-    "Premium LMS",
+    "Standard LMS",
     "Read the company's participant invitation and action history",
-    "Requires current participant management rights and active internal Premium for the exact company. Request receipts use the same event kind across all delivery and matching outcomes. The history records consent separately and exposes timestamps, event kinds and opaque entry IDs. For older entries, send both cursor fields from the last entry in the current page.",
+    "Requires current internal participant management rights for the active company. Request receipts use the same event kind across all delivery and matching outcomes. The history records consent separately and exposes timestamps, event kinds and opaque entry IDs. For older entries, send both cursor fields from the last entry in the current page.",
     {
       ...organisation,
       p_before_at: nullableDateTime,
@@ -5877,9 +5881,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/company_participant_assignable_courses": rpc(
     "companyParticipantAssignableCourses",
-    "Premium LMS",
+    "Standard LMS",
     "Find published upcoming courses that a company participant can join",
-    "Requires current internal participant management rights, active company Premium and an active company participant membership. Filters titles by literal search text. The result excludes currently enrolled and completed courses and is ordered by first start time and course ID.",
+    "Requires current internal participant management rights and an active company participant membership. Filters titles by literal search text. The result excludes currently enrolled and completed courses and is ordered by first start time and course ID.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5896,7 +5900,7 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/assign_company_participant_courses": rpc(
     "assignCompanyParticipantCourses",
-    "Premium LMS",
+    "Standard LMS",
     "Enrol one active company participant in multiple whole courses",
     "Applies the selection in one transaction. Courses must still belong to the company and remain eligible. An unavailable course returns HTTP 409 and rolls back the selection. Already enrolled or completed courses stay unchanged, including on retry. Each selected ID appears once in the receipt.",
     {
@@ -5914,9 +5918,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/set_company_participant_reference": rpc(
     "setCompanyParticipantReference",
-    "Premium LMS",
+    "Standard LMS",
     "Set or clear a company-owned participant reference",
-    "Requires current participant management rights, Premium and an active company participant membership. Submit the observed membership version. Send null to clear the reference. An outdated version or a duplicate reference for that company returns HTTP 409.",
+    "Requires current participant management rights and an active company participant membership. Submit the observed membership version. Send null to clear the reference. An outdated version or a duplicate reference for that company returns HTTP 409.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5931,9 +5935,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/set_company_participant_class": voidRpc(
     "setCompanyParticipantClass",
-    "Premium LMS",
+    "Standard LMS",
     "Set or clear one company participant's class",
-    "Requires current company participant management, Premium and an active membership. The class must belong to the specified company. Send the current membership version and null to clear the class. A stale version returns HTTP 409. Existing course enrolments keep their own lifecycle.",
+    "Requires current company participant management and an active membership. The class must belong to the specified company. Send the current membership version and null to clear the class. A stale version returns HTTP 409. Existing course enrolments keep their own lifecycle.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5943,17 +5947,17 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/my_company_participant_invitations": rpc(
     "myCompanyParticipantInvitations",
-    "Premium LMS",
+    "Standard LMS",
     "List my pending company invitations",
-    "Requires a verified participant-only account. Expired invitations and companies with Premium disabled are excluded. Source distinguishes invitations requested through email from association requests made using Luminovia User ID.",
+    "Requires a verified participant-only account. Expired invitations and archived companies are excluded. Source distinguishes invitations requested through email from association requests made using Luminovia User ID.",
     {},
     participantInvitesResult,
   ),
   "/rest/v1/rpc/accept_company_participant_invitation": rpc(
     "acceptCompanyParticipantInvitation",
-    "Premium LMS",
+    "Standard LMS",
     "Accept my invitation to one company",
-    "Requires a verified participant-only account and a current, unexpired invitation for the specified company while Premium is enabled. Send the invitation's version and retain the request ID for retries; acceptance does not create a course enrolment.",
+    "Requires a verified participant-only account and a current, unexpired invitation for the specified company while the company remains active. Send the invitation's version and retain the request ID for retries; acceptance does not create a course enrolment.",
     {
       ...organisation,
       p_expected_version: { ...version, minimum: 1 },
@@ -5967,9 +5971,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/remove_company_participant": rpc(
     "removeCompanyParticipant",
-    "Premium LMS",
+    "Standard LMS",
     "Remove an association from one company",
-    "Requires current company participant management and Premium. Send the current membership version and retain the request ID for retries. Open enrolments for that company are withdrawn, with other companies' associations and retained evidence preserved.",
+    "Requires current management rights for the active company. Send the current membership version and retain the request ID for retries. Open enrolments for that company are withdrawn, with other companies' associations and retained evidence preserved.",
     {
       ...organisation,
       p_user_id: uuid,
@@ -5985,9 +5989,9 @@ const nativePaths = {
   ),
   "/rest/v1/rpc/request_company_participant_link": rpc(
     "requestParticipantLink",
-    "Premium LMS",
+    "Standard LMS",
     "Request participant association",
-    "Requires Premium and scoped company authority. An opaque acknowledgement does not confirm that an ID exists or membership was granted. The participant must accept.",
+    "Requires scoped authority for the active company. An opaque acknowledgement does not confirm that an ID exists or membership was granted. The participant must accept.",
     {
       ...organisation,
       p_luminovia_user_id: { ...text, minLength: 1, maxLength: 32 },

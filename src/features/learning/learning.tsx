@@ -1,5 +1,5 @@
 import { CourseCloseout } from "./course-closeout";
-import { SessionScroll } from "../../components/session-scroll";
+import { CourseTimeline } from "../../components/course-timeline";
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -1174,20 +1174,13 @@ function CourseBasics({
       {course.delivery_type !== "online" && course.venue && (
         <p>{course.venue}</p>
       )}
-      <SessionScroll label={i18n.t("translation:sessions")}>
-        <ol className="course-workspace-sessions">
-          {course.sessions.map((session) => (
-            <li key={session.id}>
-              <strong>
-                {dateTime(session.starts_at, i18n.language, course.time_zone)}
-              </strong>
-              <span>
-                {dateTime(session.ends_at, i18n.language, course.time_zone)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </SessionScroll>
+      <CourseTimeline
+        sessions={course.sessions}
+        label={i18n.t("translation:sessions")}
+        language={i18n.language}
+        zone={course.time_zone}
+        className="course-workspace-sessions"
+      />
       <Suspense fallback={null}>
         <TrainingDeliveryDisclosure
           course={course.id}
@@ -1979,9 +1972,11 @@ function CourseWorkspaceLayout({
 function StandardCourseWorkspace({
   course,
   internal,
+  actor,
 }: {
   course: CourseWorkspace;
   internal: boolean;
+  actor: string;
 }) {
   const { t } = useTranslation("learning");
   return (
@@ -2012,10 +2007,29 @@ function StandardCourseWorkspace({
           </div>
         }
       />
-      <Notice>{t("premiumOff")}</Notice>
       <div id="course-overview">
         <CourseBasics course={course} writable={internal} />
       </div>
+      {(course.access.staff || course.access.learner) && (
+        <CourseAuthoring
+          actor={actor}
+          courseId={course.id}
+          editable={course.access.staff}
+          manager={course.access.manager}
+          roster={course.roster}
+          resources={course.resources}
+          zone={course.time_zone}
+        />
+      )}
+      {(course.access.manager || course.access.client) && (
+        <CourseEnrolmentsPanel course={course} actor={actor} academy={false} />
+      )}
+      {course.access.learner && (
+        <CourseWithdrawal course={course} actor={actor} />
+      )}
+      {(course.access.staff || course.access.client) && (
+        <AttendancePanel course={course} actor={actor} />
+      )}
     </div>
   );
 }
@@ -2078,6 +2092,7 @@ function ConnectedCourseWorkspace({
     return (
       <StandardCourseWorkspace
         course={query.data}
+        actor={actor}
         internal={__PORTAL_INTERNAL_EDITION__ && !academy}
       />
     );

@@ -665,7 +665,7 @@ function ClientWorkspace({
                   showWebhooks={canManageWebhooks}
                 />
               )}
-              {premiumSetting?.enabled && (
+              {!organisation.archived_at && (
                 <CompanyParticipantsPanel
                   actor={actor}
                   organisationId={organisation.id}

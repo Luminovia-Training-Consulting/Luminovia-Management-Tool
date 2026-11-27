@@ -886,37 +886,41 @@ function LearnerProgram({
         </ol>
         {start.isError && <Notice kind="error">{t("startFailed")}</Notice>}
       </section>
-      {progress.completed_at && (
-        <article className="panel programme-panel programme-certificate">
-          <h3>{t("certificate")}</h3>
-          <p>{t("certificateIntro")}</p>
-          <p>
-            <strong>{program.title}</strong> · {program.learner_name}
-          </p>
-          <p>
-            {t("certificateDate", {
-              date: new Date(progress.completed_at).toLocaleDateString(
-                i18n.language,
-              ),
-            })}
-          </p>
-          <ul>
-            {progress.steps
-              .filter(
-                (step) => step.receipt_id && step.completion_credited !== false,
-              )
-              .map((step) => (
-                <li key={step.receipt_id}>
-                  {step.title} ·{" "}
-                  {t("certificateReference", { id: step.receipt_id })}
-                </li>
-              ))}
-          </ul>
-          <Button type="button" onClick={() => window.print()}>
-            {t("print")}
-          </Button>
-        </article>
-      )}
+      {progress.completed_at &&
+        progress.steps.filter(
+          (step) => step.receipt_id && step.completion_credited !== false,
+        ).length >= progress.total && (
+          <article className="panel programme-panel programme-certificate">
+            <h3>{t("certificate")}</h3>
+            <p>{t("certificateIntro")}</p>
+            <p>
+              <strong>{program.title}</strong> · {program.learner_name}
+            </p>
+            <p>
+              {t("certificateDate", {
+                date: new Date(progress.completed_at).toLocaleDateString(
+                  i18n.language,
+                ),
+              })}
+            </p>
+            <ul>
+              {progress.steps
+                .filter(
+                  (step) =>
+                    step.receipt_id && step.completion_credited !== false,
+                )
+                .map((step) => (
+                  <li key={step.receipt_id}>
+                    {step.title} ·{" "}
+                    {t("certificateReference", { id: step.receipt_id })}
+                  </li>
+                ))}
+            </ul>
+            <Button type="button" onClick={() => window.print()}>
+              {t("print")}
+            </Button>
+          </article>
+        )}
     </>
   );
 }

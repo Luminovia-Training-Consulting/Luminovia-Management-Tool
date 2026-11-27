@@ -1,4 +1,5 @@
 import { LoadMore } from "../../components/load-more";
+import { CourseTimeline } from "../../components/course-timeline";
 import { SessionScroll } from "../../components/session-scroll";
 import { PermanentDeleteAction } from "../deletions/deletions";
 /**
@@ -3226,30 +3227,34 @@ export function CoursesPage() {
             <p className="preserve-text">
               {findTemplate(detail)?.prerequisites || "—"}
             </p>
-            <h3>{t("sessions")}</h3>
-            <SessionScroll label={t("sessions")}>
-              <ol className="session-list">
-                {[...detail.course_sessions]
-                  .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-                  .map((s) => (
-                    <li key={s.id}>
-                      <CalendarDays size={18} />
-                      <div>
-                        <strong>
-                          {dateTime(
-                            s.starts_at,
-                            i18n.language,
-                            detail.time_zone,
-                          )}
-                        </strong>
-                        <span>
-                          {dateTime(s.ends_at, i18n.language, detail.time_zone)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-              </ol>
-            </SessionScroll>
+            <h3>{t("courseTimeline")}</h3>
+            <CourseTimeline
+              sessions={detail.course_sessions}
+              milestones={[
+                ...(detail.created_at
+                  ? [
+                      {
+                        id: "created",
+                        label: t("courseTimelineCreated"),
+                        at: detail.created_at,
+                      },
+                    ]
+                  : []),
+                ...(detail.archived_at
+                  ? [
+                      {
+                        id: "archived",
+                        label: t("courseTimelineArchived"),
+                        at: detail.archived_at,
+                      },
+                    ]
+                  : []),
+              ]}
+              label={t("courseTimeline")}
+              language={i18n.language}
+              zone={detail.time_zone}
+              className="session-list"
+            />
             <p>
               {detail.time_zone} · {detail.venue}
             </p>

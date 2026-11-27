@@ -18,7 +18,7 @@ import {
 } from "./company-participant-schema";
 import "./i18n";
 
-type ParticipantAccess = { organisation_id: string; premium_enabled: boolean };
+type ParticipantAccess = { organisation_id: string; standard_enabled: boolean };
 
 /** Give the caller only the participant directory and invitation controls for one selected company. */
 export function CompanyParticipantsPanel({
@@ -72,7 +72,7 @@ export function CompanyParticipantsPanel({
       if (error) throw error;
       return companyParticipantsSchema.parse(data ?? []);
     },
-    enabled: online && access.data?.premium_enabled === true,
+    enabled: online && access.data?.standard_enabled === true,
   });
   const requestLink = useMutation({
     mutationFn: async (value: string) => {
@@ -147,7 +147,7 @@ export function CompanyParticipantsPanel({
   if (!online) return null;
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
-  if (!access.data?.premium_enabled) return null;
+  if (!access.data?.standard_enabled) return null;
   if (participants.isPending) return <Loading />;
   if (participants.isError)
     return <ErrorState retry={() => void participants.refetch()} />;

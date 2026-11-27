@@ -556,7 +556,7 @@ export function AttendancePanel({
     "all",
   );
   const allowed =
-    course.lms_enabled &&
+    (!academy || course.lms_enabled) &&
     (course.access.manager || course.access.teacher || course.access.client);
   const query = useQuery({
     ...attendanceRegisterQuery(actor, course.id, session, Boolean(academy)),

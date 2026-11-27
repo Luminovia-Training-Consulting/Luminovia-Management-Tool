@@ -483,7 +483,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
     );
 
     await check(
-        "A OFF blocks participant roster/workspace and direct LMS actions while B ON still works",
+        "A OFF keeps Standard enrolment and workspace while scoped Premium actions are unavailable",
         async () => {
             const statusA = (await rpc(admin, "company_premium_settings")).find(
                 (item) => item.organisation_id === companyA,
@@ -498,7 +498,11 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(off.enabled, false);
             await assert.rejects(rpc(client, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(client, "course_chat_messages", [roomA, null, null, 50]), /42501/);
-            await assert.rejects(rpc(participant, "course_workspace", [runA]), /42501/);
+            const standard = await rpc(participant, "course_workspace", [runA]);
+            assert.equal(standard.access.learner, true);
+            assert.equal(standard.lms_enabled, false);
+            assert.equal(standard.quiz, null);
+            assert.equal(standard.completion, null);
             await assert.rejects(rpc(participant, "course_chat_rooms", [runA]), /42501/);
             await assert.rejects(rpc(participant, "course_chat_messages", [roomA, null, null, 50]), /42501/);
             await assert.rejects(rpc(participant, "send_course_chat_message", [roomA, "blocked", randomUUID()]), /42501/);
@@ -540,9 +544,11 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
                 rpc(participant, "course_workspace_action", [runA, "quiz_submit", {answer: "fictional"}, 0]),
                 /42501/,
             );
-            await assert.rejects(rpc(manager, "course_enrolments", [runA]), /42501/);
+            assert.ok((await rpc(manager, "course_enrolments", [runA])).some(
+                (row) => row.user_id === participant,
+            ));
             await assert.rejects(
-                rpc(manager, "manage_course_enrolment", [runA, participant, "removed"]),
+                rpc(client, "manage_course_enrolment", [runB, participant, "removed"]),
                 /42501/,
             );
             await assert.rejects(
@@ -576,7 +582,7 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
             assert.equal(bWorkspace.lms_enabled, true);
             assert.equal(bWorkspace.access.learner, true);
             const visible = await rpc(participant, "my_course_workspaces");
-            assert.deepEqual(visible.map((course) => course.id), [runB]);
+            assert.deepEqual(new Set(visible.map((course) => course.id)), new Set([runA, runB]));
             for (const who of [manager, lecturer, client]) {
                 const workspace = await rpc(who, "course_workspace", [runA]);
                 assertLmsResponse("course_workspace", workspace);
@@ -680,9 +686,10 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runB, reason]), /42501/);
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [companyA, runA, "short"]), /22023/);
         await assert.rejects(rpc(admin, "inspect_retained_course_attendance", [...inspection, "2026-06-01T00:00:00Z", null, null]), /22023/);
-        await assert.rejects(rpc(admin, "course_session_register", [runA, sessionA]), /42501/);
+        const register = await rpc(admin, "course_session_register", [runA, sessionA]);
+        assert.deepEqual(register.evidence, []);
         await assert.rejects(rpc(admin, "save_course_session_attendance", [
-            runA, sessionA, participant, "present", null, null, "", "Fictional forbidden edit", 1,
+            runA, sessionB, participant, "present", null, null, "", "Fictional cross-course edit", 1,
         ]), /42501/);
 
         const page = await rpc(admin, "inspect_retained_course_attendance", inspection);

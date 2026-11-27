@@ -389,6 +389,9 @@ const pairs: Record<string, [string, string]> = {
     "Weiteren Auftrag erstellen",
     "Create another assignment",
   ],
+  courseTimeline: ["Kurszeitleiste", "Course timeline"],
+  courseTimelineCreated: ["Kurs angelegt", "Course created"],
+  courseTimelineArchived: ["Kurs archiviert", "Course archived"],
   createRunOffer: [
     "Auftrag für die Stellenbörse erstellen",
     "Create marketplace offer",
@@ -590,12 +593,12 @@ const pairs: Record<string, [string, string]> = {
   ],
   placementNoResults: ["Keine passenden Einträge.", "No matching results."],
   participantPlacementHelp: [
-    "Wähle ein Unternehmen mit Premium LMS und optional eine Klasse. Neue Unternehmensverknüpfungen müssen von der teilnehmenden Person angenommen werden.",
-    "Choose a company with Premium LMS and optionally a class. Participants must accept new company links.",
+    "Wähle ein aktives Unternehmen und optional eine Klasse. Neue Unternehmensverknüpfungen müssen von der teilnehmenden Person angenommen werden.",
+    "Choose an active company and optionally a class. Participants must accept new company links.",
   ],
   participantsHelp: [
-    "Nur Premium-Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
-    "Only Premium participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",
+    "Nur Teilnehmende des ausgewählten Unternehmens. User-ID allein erteilt keinen Zugriff; Verknüpfungen werden erst nach persönlicher Annahme aktiv.",
+    "Only participants for the selected company. A User ID alone grants no access; links become active only after personal acceptance.",
   ],
   participantUserId: accountIdentifierLabels,
   requestParticipantLink: ["Verknüpfung anfragen", "Request participant link"],

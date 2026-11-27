@@ -198,7 +198,7 @@ it("groups current, next and past courses and preserves a direct scoped chat des
   const completed = screen.getByRole("region", {
     name: "Vergangene Kurse",
   });
-  expect(within(completed).getByText("Lernzugriff deaktiviert")).toBeVisible();
+  expect(within(completed).getByText("Standard-LMS")).toBeVisible();
   expect(
     within(completed).getByRole("link", { name: "Kurs öffnen" }),
   ).toHaveAttribute("href", "/courses/finished/workspace");

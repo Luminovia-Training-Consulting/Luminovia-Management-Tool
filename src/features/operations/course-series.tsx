@@ -227,6 +227,11 @@ export function CourseSeriesForm({
         sessions: courseSeriesSessions({
           ...schedule,
           firstDay,
+          days: value(`${key}-days`)
+            ? Number(value(`${key}-days`))
+            : schedule.days,
+          start: value(`${key}-start`) || schedule.start,
+          end: value(`${key}-end`) || schedule.end,
         }),
       })),
       p_request_id: null,
@@ -515,6 +520,35 @@ export function CourseSeriesForm({
                 </select>
               </Field>
             </div>
+            <details>
+              <summary>{t("runScheduleOverrides")}</summary>
+              <p>{t("runScheduleOverridesHelp")}</p>
+              <div className="form-row">
+                <Field id={id(`${key}-days`)} label={t("runTeachingDays")}>
+                  <input
+                    id={id(`${key}-days`)}
+                    name={`${key}-days`}
+                    type="number"
+                    min={1}
+                    max={60}
+                  />
+                </Field>
+                <Field id={id(`${key}-start`)} label={t("runStart")}>
+                  <input
+                    id={id(`${key}-start`)}
+                    name={`${key}-start`}
+                    type="time"
+                  />
+                </Field>
+                <Field id={id(`${key}-end`)} label={t("runEnd")}>
+                  <input
+                    id={id(`${key}-end`)}
+                    name={`${key}-end`}
+                    type="time"
+                  />
+                </Field>
+              </div>
+            </details>
             {runs.length > 2 && (
               <Button
                 variant="ghost"

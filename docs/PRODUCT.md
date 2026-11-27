@@ -1,5 +1,12 @@
 # Product
 
+The [LMS package matrix](LMS-PACKAGES.md) records the Standard and Premium
+boundaries, and the licence rules that apply to both Academy editions.
+Basic participant administration and programme progress are Standard.
+Published course content remains versioned and formal assessment receipts
+retain their own validity and revocation rules.
+
+
 Consolidated reference. Source and tests remain authoritative for current behavior.
 
 <a id="section-product-spec"></a>
@@ -16,7 +23,7 @@ The 16 November [smart operations extension](PRODUCT.md#section-smart-operations
 
 ## Product and operating model
 
-A private, bilingual German/English, responsive PWA for freelance lecturers, administrators/management and scoped company accounts. Verified participant-only accounts and enrolments are scoped to each enabled company’s Premium LMS. Historical records remain protected. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit
+A private, bilingual German/English, responsive PWA for freelance lecturers, administrators/management and scoped company accounts. Verified participant accounts and enrolments are scoped to their active company and individual course in Standard LMS. Historical records remain protected. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit
 individual company accounts and scoped memberships; see [Accounts and commission extension](PRODUCT.md#section-accounts-revenue-spec).
 
 The original brief names `portal.luminovia.org` as the production target. Later accepted development uses the self-hosted Supabase tooling in this repository; the initial managed-backend default is superseded for that environment. Production architecture, capacity, processor/location review and release approval remain separate gates. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.

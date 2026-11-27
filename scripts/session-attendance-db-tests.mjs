@@ -212,11 +212,12 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
         if (!holdsPremiumLock) await new Promise((resolve) => setTimeout(resolve, 20));
     }
     assert.equal(holdsPremiumLock, true);
-    const lateSave = assert.rejects(save(teacher,"present",4,{reason:"Concurrent edit"}), /42501/);
+    const lateSave = save(teacher,"present",4,{reason:"Concurrent edit"});
     await Promise.all([toggle, lateSave]);
-    await assert.rejects(register(company),/42501/);
+    const standardRegister = await register(company);
+    assert.deepEqual(standardRegister.evidence, []);
     await assert.rejects(exportSession(company),/42501/);
-    await assert.rejects(save(teacher,"present",4,{reason:"Retest"}),/42501/);
+    await assert.rejects(save(teacher,"present",4,{reason:"Retest"}),/PT409/);
     await assert.rejects(rpc(company,"course_document_access",[q("resource"),q(attached.resource_id)]),/42501/);
 });
 

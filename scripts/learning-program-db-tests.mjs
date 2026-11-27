@@ -136,11 +136,6 @@ await Promise.all(
         (${q(first)},${q(org)},${q(classB)},1);
 
     `);
-      if (internal)
-        await actor(
-          admin,
-          `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())});`,
-        );
       const gateway = (name, verb) => `
       set local request.path=${q("/rpc/" + name)};set local request.method=${q(verb)};
       set local request.headers='{}';select public.require_portal_access();
@@ -272,6 +267,22 @@ await Promise.all(
       console.log(
         `PASS ${edition} whole-programme enrolment creates one authorised starting course, roster scope and immutable rules`,
       );
+
+      if (internal) {
+        const workspace = JSON.parse(await invoke(learner, "course_workspace", q(first), "GET"));
+        assert.equal(workspace.lms_enabled, false);
+        assert.equal(workspace.access.learner, true);
+        await invoke(learner, "course_content_studio", q(first), "GET");
+        await assert.rejects(invoke(otherLearner, "course_content_studio", q(first), "GET"), /42501/);
+        await assert.rejects(invoke(learner, "course_exam_state", q(first), "GET"), /42501/);
+        await assert.rejects(invoke(learner, "course_gradebook", q(first), "GET"), /42501/);
+        await invoke(admin, "manage_course_enrolment", `${q(first)},${q(learner)},'completed'`);
+        const basic = await progress();
+        assert.equal(basic.steps[0].state, "completed");
+        assert.equal(basic.steps[0].receipt_id, null);
+        assert.equal(basic.steps[1].state, "ready");
+        await actor(admin, `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())});`);
+      }
 
       const complete = async (course, session) => {
         await invoke(
@@ -713,8 +724,8 @@ await Promise.all(
           admin,
           `select public.set_company_premium(${q(org)},false,1,${q(randomUUID())});`,
         );
-        await assert.rejects(view(company), /42501/);
-        await assert.rejects(classes(), /42501/);
+        assert.equal((await view(company)).detail.id, program);
+        assert.deepEqual(await classes(), [groupA(1, 0, 0)]);
         await assert.rejects(grades(admin, colleague), /42501/);
       }
       assert.equal(

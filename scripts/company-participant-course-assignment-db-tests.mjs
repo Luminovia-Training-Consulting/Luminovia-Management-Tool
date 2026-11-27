@@ -98,7 +98,6 @@ await withTestDatabase("company_participant_batch", async ({ sql, actor }) => {
 
   await assert.rejects(pick(), /42501/);
   await assert.rejects(assign(company, [first]), /42501/);
-  await setPremium(true, 0);
   const publicId = await sql(
     `select luminovia_user_id from public.profiles where id=${q(learner)}`,
   );
@@ -229,9 +228,13 @@ await withTestDatabase("company_participant_batch", async ({ sql, actor }) => {
     enrolled: [],
     unchanged: [first],
   });
+  await setPremium(true, 0);
   await setPremium(false, 1);
-  await assert.rejects(pick(), /42501/);
-  await assert.rejects(assign(company, [first]), /42501/);
+  assert.deepEqual(await assign(company, [first]), {
+    enrolled: [],
+    unchanged: [first],
+  });
+  await pick();
   for (const role of ["anon", "service_role"]) {
     for (const signature of [
       "public.company_participant_assignable_courses(uuid,uuid,text,integer,integer)",

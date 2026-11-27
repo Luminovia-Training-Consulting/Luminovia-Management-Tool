@@ -113,6 +113,10 @@ it.each([false, true])(
       "Practice room",
     );
     expect(getRun(3).getByLabelText("Class")).toHaveValue(group.id);
+    await user.click(getRun(3).getByText("Schedule pattern for this run"));
+    fireEvent.change(getRun(3).getByLabelText("Custom daily start"), {
+      target: { value: "10:30" },
+    });
     expect(reviewed).not.toHaveBeenCalled();
 
     const review = screen.getByRole("button", {
@@ -159,7 +163,7 @@ it.each([false, true])(
           class_id: group.id,
           sessions: [
             {
-              starts_at: "2030-05-09T09:00:00.000Z",
+              starts_at: "2030-05-09T10:30:00.000Z",
               ends_at: "2030-05-09T17:00:00.000Z",
             },
           ],

@@ -58,7 +58,8 @@ export function CourseEnrolmentsPanel({
   const [selection, setSelection] = useState("");
   const [change, setChange] = useState<Change | null>(null);
   const allowed =
-    course.lms_enabled && (course.access.manager || course.access.client);
+    (!academy || course.lms_enabled) &&
+    (course.access.manager || course.access.client);
   const enrolmentsKey = ["course-enrolments", actor, course.id];
   const candidatesKey = ["course-enrolment-candidates", actor, course.id];
   const enrolments = useQuery({
@@ -357,7 +358,8 @@ export function CourseWithdrawal({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
-  const allowed = course.lms_enabled && course.access.learner && !course.ended;
+  const allowed =
+    (!academy || course.lms_enabled) && course.access.learner && !course.ended;
   const windowKey = ["course-withdrawal-window", actor, course.id] as const;
   const availability = useQuery({
     queryKey: windowKey,

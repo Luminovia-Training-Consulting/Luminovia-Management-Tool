@@ -52,12 +52,6 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
   const key = randomUUID();
   const consentKey = randomUUID();
 
-  await assert.rejects(request(company, learnerId, key), /42501/);
-  await assert.rejects(history(company), /42501/);
-  await call(
-    admin,
-    `public.set_company_premium(${q(org)},true,0,${q(randomUUID())})`,
-  );
   await assert.rejects(request(outsider, learnerId, key), /42501/);
   await assert.rejects(history(outsider), /42501/);
   await assert.rejects(history(learner), /42501/);
@@ -468,11 +462,13 @@ await withTestDatabase("company_participant_link", async ({ sql, actor }) => {
     "PASS concurrent two-company links stay unique and require independent participant consent",
   );
 
+  await call(admin, `public.set_company_premium(${q(org)},true,0,${q(randomUUID())})`);
   await call(
     admin,
     `public.set_company_premium(${q(org)},false,1,${q(randomUUID())})`,
   );
-  await assert.rejects(history(company), /42501/);
+  assert.ok((await history(company)).items.length > 0);
+  await assert.rejects(history(outsider), /42501/);
   console.log(
     "PASS composable roles and bounded company history preserve opaque requests, prior consent and event-time organisation scope",
   );
