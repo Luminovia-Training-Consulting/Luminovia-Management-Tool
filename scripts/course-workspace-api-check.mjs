@@ -612,7 +612,9 @@ await withApiFixture(
         await documentedRpc(learner.client, "course_evaluations", evaluationRead, 403, "42501");
         assert.equal((await history(room)).error?.code, "42501");
         assert.equal((await send(teacher, room, "Fictional denied message")).error?.code, "42501");
-        assert.equal((await download(learner, "resource", resource)).status, 403);
+        const standardMaterial = await download(learner, "resource", resource);
+        assert.equal(standardMaterial.status, 200);
+        assert.deepEqual(new Uint8Array(await standardMaterial.arrayBuffer()), bytes);
         assert.equal((await download(learner, "course_chat_attachment", message, chatVersion)).status, 403);
         const inspection = {
             p_organisation_id: org,
