@@ -59,7 +59,10 @@ import {
   analyticsScopes,
 } from "../analytics/schema.ts";
 import { accountingPaths } from "./accounting-contract.ts";
-import { assignmentFinanceSchema } from "../commercial/assignment-finance-schema.ts";
+import {
+  assignmentFinanceExportSchema,
+  assignmentFinanceSchema,
+} from "../commercial/assignment-finance-schema.ts";
 import { settlementJournalSchema } from "../accounting/settlement-journal-schema.ts";
 import {
   expenseReportSchema,
@@ -2702,6 +2705,14 @@ const nativePaths = {
       p_request_id: uuid,
     },
     z.toJSONSchema(expenseResultSchema),
+  ),
+  "/rest/v1/rpc/assignment_finance_export": rpc(
+    "exportAssignmentSettlements",
+    "Finance",
+    "Export settlement across assignments for an inclusive period",
+    "Internal installation only. Requires finance.manage. Selects assignments by overlap with up to 93 inclusive calendar days in the caller's profile zone. Results use current settlement, retain original currencies and require separate gross finance authority for customer amounts.",
+    { p_from: date, p_through: date },
+    z.toJSONSchema(assignmentFinanceExportSchema),
   ),
   "/rest/v1/rpc/assignment_finance_reconciliation": rpc(
     "getAssignmentFinanceReconciliation",

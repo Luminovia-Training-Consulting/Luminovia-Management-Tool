@@ -756,6 +756,11 @@ Under Finance, **Auslagen / Expenses** provides assignment-linked requests and s
 
 In the Control Center, open **Kursbetrieb und Forderungen / Training operations and receivables** for the current period. Filter by company for course coverage and invoices, and by course topic for course coverage. Assigned and open hours count required teaching positions. A confirmed cover session replaces one of those positions. Weekly availability counts only shared time after confirmed teaching and shared absences. **Gesehen / Acknowledge** changes your view of the issue. The underlying course or invoice stays available from the issue link.
 
+In the Control Center, **Eskalieren / Escalate** turns a current course issue into an operations task. Select the responsible staff member, describe the next step, and set a deadline no later than the first session. Open the linked task to update its status. Its assignee, deadline and overdue state appear in the course issue queue.
+
+Finance can export settlement across assignments as CSV or JSON for an inclusive date range of up to 93 days in the signed-in profile's time zone. The export reports current settlement and preserves the original currency per row. It includes grouped customer receipts only when the existing settlement authority can attribute the corresponding amount to an individual assignment.
+
+
 The full target remains larger than this source. Remaining work includes broader module-specific bulk/recovery and saved filters, replacement amendments after invoicing, richer quality follow-up, global-event files/invitations, knowledge attachments, and general contract-renewal/retention administration. Computed readiness, open/emergency whole-block replacement, personal calendar subscriptions and teaching delivery already have connected workflows; consult their guides for limits.
 Existing management/course/resource lists retain their documented bounds. Already implemented time/statement/PDF/Push/calendar-source workflows are not relabelled as missing merely because their current full native/device/hosted gate is pending. The [complete feature map](PRODUCT.md#section-smart-operations-spec), [roadmap](FEATURES.md) and QA results separate source, tested, untested and external acceptance.
 

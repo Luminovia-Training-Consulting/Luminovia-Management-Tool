@@ -23,6 +23,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   accounting_settlement_journal: "GET",
   accounting_settlement_with_expenses: "GET",
   assignment_finance_reconciliation: "GET",
+  assignment_finance_export: "GET",
   admin_announcement: "GET",
   admin_announcements: "GET",
   admin_audit_events: "GET",
