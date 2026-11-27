@@ -11,6 +11,14 @@ const labels: Record<string, [string, string]> = {
   dailyEnd: ["Tägliches Ende", "Daily end"],
   bulkSchedule: ["Mehrere Termine bearbeiten", "Edit multiple sessions"],
   bulkScheduleSelect: ["Termine auswählen", "Select sessions"],
+  bulkScheduleSelected_one: [
+    "{{count}} Termin ausgewählt",
+    "{{count}} session selected",
+  ],
+  bulkScheduleSelected_other: [
+    "{{count}} Termine ausgewählt",
+    "{{count}} sessions selected",
+  ],
   bulkScheduleAll: ["Alle auswählen", "Select all"],
   bulkScheduleClear: ["Auswahl aufheben", "Clear selection"],
   bulkScheduleFilter: [

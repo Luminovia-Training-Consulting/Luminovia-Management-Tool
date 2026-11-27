@@ -16,7 +16,9 @@ test("restores a standalone offer after a reload and confirms it once", async ({
     throw new Error("Offer fixtures require the owned disposable portal");
   const manager = await actor("Fictional draft editor", "management");
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const title = "Fictional teaching offer " + randomUUID();
+  const title =
+    "Fictional long-running teaching offer for multiple departments " +
+    randomUUID();
   try {
     await login(page, manager.email);
     await page.getByLabel(/^(Sprache|Language)$/).selectOption("de");
@@ -44,8 +46,31 @@ test("restores a standalone offer after a reload and confirms it once", async ({
     const library = page.getByRole("dialog", {
       name: "Gespeicherte Angebotsentwürfe",
     });
-    await expect(library.getByText(title)).toBeVisible();
-    await library.getByRole("button", { name: "Weiterbearbeiten" }).click();
+    const draftRow = library.getByRole("listitem").filter({ hasText: title });
+    await expect(draftRow).toBeVisible();
+    const resumeDraft = draftRow.getByRole("button", {
+      name: "Weiterbearbeiten",
+    });
+    await expect
+      .poll(async () => {
+        const heading = await draftRow.getByText(title).boundingBox();
+        const action = await resumeDraft.boundingBox();
+        if (!heading || !action) return false;
+        return (
+          action.y >= heading.y + heading.height + 8 &&
+          action.height >= 44 &&
+          Math.abs(action.x - heading.x) <= 1
+        );
+      })
+      .toBe(true);
+    await expect
+      .poll(() =>
+        library.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      )
+      .toBe(true);
+    await resumeDraft.click();
     await expect(page.getByLabel("Titel", { exact: true })).toHaveValue(title);
     await expect(page.getByLabel("Beschreibung", { exact: true })).toHaveValue(
       "Recover the exact unsent description.",

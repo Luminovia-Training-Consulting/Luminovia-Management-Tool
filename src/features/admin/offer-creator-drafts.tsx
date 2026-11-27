@@ -17,6 +17,7 @@ import {
 } from "./offer-creator-draft-schema";
 import type { CourseRunJobDefaults } from "../operations/building-blocks-api";
 import "../operations/course-creator-drafts-i18n";
+import "./offer-draft-library.css";
 
 const draftKey = (actor: string, course: string | null) => [
   "training-offer-drafts",
@@ -273,13 +274,15 @@ export default function OfferCreatorDrafts({
       <Dialog
         open={open}
         onOpenChange={(next) => !pending && setOpen(next)}
+        closeDisabled={pending}
         title={t("offerLibrary")}
         description={t("offerLibraryDescription")}
       >
-        <div className="section-stack">
+        <div className="offer-draft-library">
           <Button
             type="button"
             variant="secondary"
+            disabled={pending || !online}
             onClick={() => {
               start();
               setOpen(false);
@@ -291,7 +294,7 @@ export default function OfferCreatorDrafts({
           {list.isError && <ErrorState retry={() => void list.refetch()} />}
           {list.data?.length === 0 && <p className="muted">{t("empty")}</p>}
           {!!list.data?.length && (
-            <ul className="session-list">
+            <ul className="offer-draft-list">
               {list.data.map((item) => (
                 <li key={item.id}>
                   <strong>{item.title || t("untitledOffer")}</strong>
@@ -302,11 +305,11 @@ export default function OfferCreatorDrafts({
                       </Link>
                     </Button>
                   ) : (
-                    <div className="form-actions">
+                    <div className="offer-draft-actions">
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={pending}
+                        disabled={pending || !online}
                         onClick={() => restore(item.id)}
                       >
                         {t("resume")}
@@ -314,18 +317,20 @@ export default function OfferCreatorDrafts({
                       <Button
                         type="button"
                         variant="ghost"
-                        disabled={pending}
+                        disabled={pending || !online}
+                        aria-label={t("duplicate")}
                         onClick={() => void update(item, "duplicate")}
                       >
-                        {t("duplicate")}
+                        {t("offerCopy")}
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
-                        disabled={pending}
+                        disabled={pending || !online}
+                        aria-label={t("discard")}
                         onClick={() => setConfirm(item)}
                       >
-                        {t("discard")}
+                        {t("offerDelete")}
                       </Button>
                     </div>
                   )}

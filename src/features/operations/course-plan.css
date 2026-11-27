@@ -51,3 +51,12 @@
   overflow-y: auto;
   padding-inline-start: 1.6rem;
 }
+
+.course-bulk-session-options .checkbox-label {
+  margin: 0;
+  min-block-size: 44px;
+}
+
+.course-bulk-session-status {
+  margin: 0;
+}

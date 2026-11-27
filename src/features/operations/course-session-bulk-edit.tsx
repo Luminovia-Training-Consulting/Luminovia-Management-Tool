@@ -33,6 +33,9 @@ export function CourseSessionBulkEdit({
   const [preview, setPreview] = useState<{ source: string; changes: Edit[] }>();
   const [error, setError] = useState(false);
   const eligible = entries.filter(({ row }) => row.starts_at && row.ends_at);
+  const selectedCount = eligible.filter(({ id }) =>
+    selected.includes(id),
+  ).length;
   const matching = eligible.filter(({ row }) => {
     const day = row.starts_at.slice(0, 10);
     return (
@@ -80,6 +83,8 @@ export function CourseSessionBulkEdit({
       .toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY);
   }
 
+  if (eligible.length === 0) return null;
+
   return (
     <details className="operations-schedule-planner">
       <summary>{t("bulkSchedule")}</summary>
@@ -90,6 +95,7 @@ export function CourseSessionBulkEdit({
             <Field id={`${id}-weekday`} label={t("bulkScheduleWeekday")}>
               <select
                 id={`${id}-weekday`}
+                disabled={disabled}
                 value={weekdayFilter}
                 onChange={(e) => setWeekdayFilter(e.target.value)}
               >
@@ -107,6 +113,7 @@ export function CourseSessionBulkEdit({
             <Field id={`${id}-from`} label={t("bulkScheduleFrom")}>
               <input
                 id={`${id}-from`}
+                disabled={disabled}
                 type="date"
                 value={firstDate}
                 onChange={(e) => setFirstDate(e.target.value)}
@@ -115,6 +122,7 @@ export function CourseSessionBulkEdit({
             <Field id={`${id}-through`} label={t("bulkScheduleThrough")}>
               <input
                 id={`${id}-through`}
+                disabled={disabled}
                 type="date"
                 value={lastDate}
                 onChange={(e) => setLastDate(e.target.value)}
@@ -126,7 +134,7 @@ export function CourseSessionBulkEdit({
             type="button"
             variant="secondary"
             size="sm"
-            disabled={!matching.length}
+            disabled={disabled || !matching.length}
             onClick={() => {
               setSelected(matching.map(({ id }) => id));
               setError(false);
@@ -140,6 +148,7 @@ export function CourseSessionBulkEdit({
             type="button"
             size="sm"
             variant="secondary"
+            disabled={disabled || selectedCount === eligible.length}
             onClick={() => {
               setSelected(eligible.map((entry) => entry.id));
               setError(false);
@@ -151,6 +160,7 @@ export function CourseSessionBulkEdit({
             type="button"
             size="sm"
             variant="ghost"
+            disabled={disabled || selectedCount === 0}
             onClick={() => {
               setSelected([]);
               setError(false);
@@ -159,7 +169,10 @@ export function CourseSessionBulkEdit({
             {t("bulkScheduleClear")}
           </Button>
         </div>
-        <fieldset className="course-planner-weekdays">
+        <fieldset
+          className="course-planner-weekdays course-bulk-session-options"
+          disabled={disabled}
+        >
           <legend>{t("bulkScheduleSelect")}</legend>
           {eligible.map(({ id: key, row }) => (
             <label key={key} className="checkbox-label">
@@ -179,6 +192,9 @@ export function CourseSessionBulkEdit({
             </label>
           ))}
         </fieldset>
+        <p className="course-bulk-session-status muted" role="status">
+          {t("bulkScheduleSelected", { count: selectedCount })}
+        </p>
         <div className="form-row">
           <Field
             id={`${id}-offset`}
@@ -187,6 +203,7 @@ export function CourseSessionBulkEdit({
           >
             <input
               id={`${id}-offset`}
+              disabled={disabled}
               type="number"
               min={-365}
               max={365}
@@ -197,6 +214,7 @@ export function CourseSessionBulkEdit({
           <Field id={`${id}-start`} label={t("bulkScheduleStart")}>
             <input
               id={`${id}-start`}
+              disabled={disabled}
               type="time"
               value={start}
               onChange={(e) => setStart(e.target.value)}
@@ -205,6 +223,7 @@ export function CourseSessionBulkEdit({
           <Field id={`${id}-end`} label={t("bulkScheduleEnd")}>
             <input
               id={`${id}-end`}
+              disabled={disabled}
               type="time"
               value={end}
               onChange={(e) => setEnd(e.target.value)}
@@ -215,9 +234,7 @@ export function CourseSessionBulkEdit({
           <Button
             type="button"
             variant="secondary"
-            disabled={
-              disabled || !eligible.some((entry) => selected.includes(entry.id))
-            }
+            disabled={disabled || selectedCount === 0}
             onClick={propose}
           >
             {t("bulkSchedulePreview")}

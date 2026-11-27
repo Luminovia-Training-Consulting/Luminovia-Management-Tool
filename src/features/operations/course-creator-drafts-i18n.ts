@@ -7,6 +7,8 @@ const labels = {
     "Setze einen eigenen Entwurf fort oder öffne den bereits angelegten Auftrag.",
     "Resume your own draft or open the confirmed assignment.",
   ],
+  offerCopy: ["Kopieren", "Duplicate"],
+  offerDelete: ["Löschen", "Delete"],
   newOfferDraft: ["Neuen Entwurf beginnen", "Start a new draft"],
   untitledOffer: ["Angebotsentwurf ohne Titel", "Untitled offer draft"],
   openAssignment: ["Auftrag ansehen", "View assignment"],

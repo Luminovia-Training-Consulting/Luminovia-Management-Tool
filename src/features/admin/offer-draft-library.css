@@ -1,0 +1,59 @@
+.offer-draft-library,
+.offer-draft-list {
+  display: grid;
+  gap: 12px;
+  min-inline-size: 0;
+}
+
+.offer-draft-library > .button {
+  justify-self: start;
+}
+
+.offer-draft-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offer-draft-list > li {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--line);
+  padding-block-start: 14px;
+}
+
+.offer-draft-list strong {
+  font-size: 0.875rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.offer-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+.offer-draft-library .button {
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .offer-draft-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    inline-size: 100%;
+  }
+
+  .offer-draft-actions > .button:first-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
