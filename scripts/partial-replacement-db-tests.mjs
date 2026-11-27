@@ -22,6 +22,10 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
     alreadyPast = randomUUID();
   const selected = randomUUID(),
     remaining = randomUUID();
+  const organisation = randomUUID(),
+    template = randomUUID(),
+    course = randomUUID(),
+    selectedCourseSlot = randomUUID();
   const identities = [
     [manager, "management"],
     [owner, "lecturer"],
@@ -39,9 +43,14 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
       identities
         .map(([id, role]) => "(" + q(id) + "," + q(role) + ")")
         .join(",") +
-      " on conflict do nothing;" +
-      "insert into public.jobs(id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms) values (" +
+      ` on conflict do nothing;
+      insert into public.organisations(id,name) values (${q(organisation)},'Fictional cover customer');
+      insert into public.course_templates(id,title) values (${q(template)},'Fictional cover curriculum');
+      insert into public.course_runs(id,template_id,organisation_id,time_zone) values (${q(course)},${q(template)},${q(organisation)},'Europe/Berlin');` +
+      "insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms) values (" +
       q(job) +
+      "," +
+      q(course) +
       ",'Fictional mixed date course','Fictional customer','online','filled',600.00,'EUR','fixed_total',600.00,'Fictional source contract terms');" +
       "insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version) values (" +
       q(claim) +
@@ -53,14 +62,16 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
       q(randomUUID()) +
       ",600.00,'EUR','fixed_total',600.00,'Fictional source contract terms',1);",
   );
-  for (const [slot, days] of [
-    [alreadyPast, -1],
-    [selected, 10],
-    [remaining, 12],
+  for (const [slot, courseSlot, days] of [
+    [alreadyPast, randomUUID(), -1],
+    [selected, selectedCourseSlot, 10],
+    [remaining, randomUUID(), 12],
   ]) {
     const start = "now() + interval " + q(days + " days");
     await sql(
-      "insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values (" +
+      `insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
+      values (${q(courseSlot)},${q(course)},${start},${start} + interval '3 hours');` +
+        "insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values (" +
         q(slot) +
         "," +
         q(claim) +
@@ -71,8 +82,10 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
         "," +
         start +
         " + interval '3 hours');" +
-        "insert into public.job_sessions(job_id,starts_at,ends_at) select " +
+        "insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at) select " +
         q(job) +
+        "," +
+        q(courseSlot) +
         ",starts_at,ends_at from public.assignment_sessions where id=" +
         q(slot) +
         ";",
@@ -187,6 +200,11 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
       q(result.claim_id),
   );
   assert.equal(cover, "220.42");
+  assert.equal(
+    await sql(`select j.course_run_id::text || '/' || s.course_session_id::text
+      from public.job_sessions s join public.jobs j on j.id=s.job_id where j.id=${q(result.job_id)}`),
+    `${course}/${selectedCourseSlot}`,
+  );
   assert.equal(
     await sql(
       "select count(*) from public.assignment_sessions s join public.assignment_sessions o on s.starts_at=o.starts_at and s.ends_at=o.ends_at where s.claim_id=" +
