@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node scripts/db-rpc-tests.mjs
+node scripts/lecturer-expenses-db-tests.mjs
 node scripts/company-lecturer-access-db-tests.mjs
 node scripts/sales-pipeline-retirement-db-tests.mjs
 node scripts/course-authoring-db-tests.mjs

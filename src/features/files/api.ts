@@ -270,6 +270,32 @@ export async function uploadPortfolioEvidence(file: File, clientId: string) {
   return document.current_version_id;
 }
 
+/** Use the dedicated expense upload reservation and require the scanned version. */
+export async function uploadExpenseReceipt(
+  file: File,
+  clientId: string,
+  actor: string,
+) {
+  if (file.size < 1 || file.size > learningSubmissionMaxBytes)
+    throw new Error("file_size");
+  const form = new FormData();
+  form.set("file", file);
+  form.set("client_id", clientId);
+  const document = await transferUpload(
+    form,
+    endpoint() + "?mode=expense-receipt",
+    undefined,
+    actor,
+  );
+  if (
+    document.kind !== "expense_receipt" ||
+    !document.current_version_id ||
+    document.owner_id !== actor
+  )
+    throw new Error("upload_failed");
+  return document;
+}
+
 async function transferUpload(
   form: FormData,
   path: string,
@@ -467,6 +493,20 @@ export async function saveOrganisationContract(
     signal,
   );
   saveBlob(blob, name);
+}
+
+/** Save an exact receipt through the expense-specific reader. */
+export async function saveExpenseReceipt(
+  expenseId: string,
+  versionId: string,
+  filename: string,
+) {
+  const blob = await downloadFile({
+    action: "expense_receipt_download",
+    expense_id: expenseId,
+    version_id: versionId,
+  });
+  saveBlob(blob, filename);
 }
 
 /** Download reviewed document bytes, then dispose the temporary browser URL. */

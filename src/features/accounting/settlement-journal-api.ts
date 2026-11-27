@@ -14,7 +14,7 @@ export async function readSettlementJournal(period: SettlementJournalPeriod) {
   requireOnline();
   const request = settlementJournalPeriodSchema.parse(period);
   const { data, error } = await db().rpc(
-    "accounting_settlement_journal",
+    "accounting_settlement_with_expenses",
     request,
   );
   if (error) throw error;

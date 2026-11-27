@@ -90,6 +90,7 @@ import "./platform-i18n";
 import "./commercial.css";
 
 const RevenueForecast = lazy(() => import("../analytics/revenue-forecast"));
+const ExpensesPanel = lazy(() => import("./expense-panel"));
 
 /** Refresh live invoice projections after a confirmed financial mutation. */
 async function refreshInvoiceViews(client: QueryClient, actor: string) {
@@ -1213,6 +1214,11 @@ export function FinancePage({
         }
       />
       <div className="section-stack finance-overview">
+        {online && (manager || canSubmit) && (
+          <Suspense fallback={<Loading />}>
+            <ExpensesPanel actor={actor} zone={zone} manager={manager} />
+          </Suspense>
+        )}
         {manager && (
           <Suspense fallback={<Loading />}>
             <RevenueForecast actor={actor} zone={zone} compact />

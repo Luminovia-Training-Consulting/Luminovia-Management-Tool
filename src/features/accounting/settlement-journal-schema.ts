@@ -5,6 +5,7 @@ export const settlementJournalKind = z.enum([
   "customer_credit",
   "customer_refund",
   "lecturer_repayment",
+  "expense_reimbursement",
 ]);
 const scope = z.enum(["customer", "lecturer"]);
 const date = z.iso.date();
@@ -53,7 +54,12 @@ export const settlementJournalSchema = z
     generated_at: instant,
     scopes: z.array(scope).min(1).max(2),
     items: z.array(entry).max(5000),
-    totals: z.array(totalRow).max(6),
+    totals: z
+      .array(totalRow)
+      .max(
+        settlementJournalKind.options.length *
+          accountingCurrency.options.length,
+      ),
   })
   .superRefine((report, context) => {
     const scopes = new Set(report.scopes);
@@ -76,15 +82,17 @@ export const settlementJournalSchema = z
       const reversal = item.reverses_id !== null;
       const amount = cents(item.amount);
       const identity = `${item.kind}:${item.id}:${reversal}`;
-      const lecturer = item.kind === "lecturer_repayment";
+      const repayment = item.kind === "lecturer_repayment";
+      const reimbursement = item.kind === "expense_reimbursement";
       const key = `${item.currency}:${item.kind}`;
       if (
         amount === null ||
         item.effective_on < report.from ||
         item.effective_on > report.to ||
-        !scopes.has(lecturer ? "lecturer" : "customer") ||
+        !scopes.has(repayment || reimbursement ? "lecturer" : "customer") ||
         identities.has(identity) ||
-        (reversal && (item.reverses_id === item.id) !== lecturer)
+        (reversal &&
+          (reimbursement || (item.reverses_id === item.id) !== repayment))
       )
         return inconsistent();
       identities.add(identity);

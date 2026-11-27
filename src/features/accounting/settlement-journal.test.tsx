@@ -225,7 +225,10 @@ it("refreshes authority for export and removes journal values when access is den
   await user.click(dialog.getByRole("button", { name: "Journal anzeigen" }));
   expect(await dialog.findByText("Gegenbuchung −10.01 AUD")).toBeVisible();
   expect(dialog.getByText("12.34 EUR")).toBeVisible();
-  expect(rpc).toHaveBeenLastCalledWith("accounting_settlement_journal", period);
+  expect(rpc).toHaveBeenLastCalledWith(
+    "accounting_settlement_with_expenses",
+    period,
+  );
 
   await user.selectOptions(dialog.getByLabelText("Buchungsstatus"), "reversed");
   expect(dialog.getByText(item.reference)).toBeVisible();
@@ -342,7 +345,10 @@ it("does not download a pending export after the dialog loses connectivity", asy
     target: { value: period.p_to },
   });
   await user.click(dialog.getByRole("button", { name: "Summen als CSV" }));
-  expect(rpc).toHaveBeenCalledWith("accounting_settlement_journal", period);
+  expect(rpc).toHaveBeenCalledWith(
+    "accounting_settlement_with_expenses",
+    period,
+  );
   act(() => {
     online.mockReturnValue(false);
     window.dispatchEvent(new Event("offline"));

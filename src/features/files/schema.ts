@@ -50,7 +50,11 @@ export const cleanUploadReceipt = z.strictObject({
   document: z.strictObject({
     ...metadataFields,
     kind: documentKind.or(
-      z.enum(["participant_submission", "portfolio_evidence"]),
+      z.enum([
+        "participant_submission",
+        "portfolio_evidence",
+        "expense_receipt",
+      ]),
     ),
     size_bytes: z
       .number()

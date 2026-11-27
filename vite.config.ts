@@ -317,14 +317,13 @@ export default defineConfig(({ mode }) => {
             "**/attendance-xlsx-*.js",
             // Private company contracts cannot be viewed or filed offline.
             "**/company-contracts-*.js",
-            // The Control Center training queue requires current server authority.
+            // Live training workflows fetch actor-scoped data on demand.
             "**/training-control-*.js",
-            // Course creation, venues and receipts require current data.
             "**/course-creator-drafts-*.js",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
-            "**/training-compensation-*.{js,css}",
-            "**/expenses-panel-*.{js,css}",
+            "**/training-commercial-*.{js,css}",
+            "**/expense-panel-*.{js,css}",
             // These private LMS workflows require a live session and load on entry.
             "**/portfolio-*.js",
             "**/peer-feedback-*.js",

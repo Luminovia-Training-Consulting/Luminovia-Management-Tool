@@ -139,9 +139,10 @@ Deno.serve(async (request: Request) => {
         const examSubmission = query === '?mode=exam-submission';
         const assignmentSubmission = query === assignmentSubmissionQuery;
         const portfolioUpload = query === '?mode=portfolio-evidence';
+        const expenseUpload = query === '?mode=expense-receipt';
         const archiveFormat = query === courseScormQuery ? "scorm" : query === courseH5pQuery ? "h5p" : null;
         const submissionIntake = query === courseSubmissionQuery || examSubmission || assignmentSubmission;
-        const scopedIntake = academyIntake || submissionIntake || portfolioUpload || archiveFormat !== null;
+        const scopedIntake = academyIntake || submissionIntake || portfolioUpload || expenseUpload || archiveFormat !== null;
         const multipart = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() === 'multipart/form-data';
         if (scopedIntake && !multipart) return json(400, {error: 'invalid_request'});
         if (scopedIntake) {
@@ -156,7 +157,7 @@ Deno.serve(async (request: Request) => {
         // Upload flow validates bounded actual bytes/formats before reserving a database-authorized version.
         if (multipart) {
             const form = await boundedFormData(request, (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE) + 16384);
-            if (portfolioUpload && (
+            if ((portfolioUpload || expenseUpload) && (
                 [...form.keys()].some((field) => field !== 'file' && field !== 'client_id') ||
                 form.getAll('file').length !== 1 || form.getAll('client_id').length !== 1
             )) return json(400, {error: 'invalid_request'});
@@ -207,8 +208,8 @@ Deno.serve(async (request: Request) => {
                 ? await user.rpc(archiveFormat === 'h5p' ? 'reserve_course_h5p_package' : 'reserve_course_scorm_package', {
                     p_run_id: archiveRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
                 })
-                : portfolioUpload
-                ? await user.rpc('reserve_learning_portfolio_evidence', {
+                : portfolioUpload || expenseUpload
+                ? await user.rpc(expenseUpload ? 'reserve_expense_receipt' : 'reserve_learning_portfolio_evidence', {
                     p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
                 })
                 : companyUpload
@@ -236,7 +237,7 @@ Deno.serve(async (request: Request) => {
                 : json(403, {error: 'upload_not_allowed'});
             const reservation = reserved.data as { document_id: string; version_id: string; object_path: string; status: string };
             if (!uuid(reservation.document_id) || !uuid(reservation.version_id)) return json(503, {error: 'upload_failed'});
-            if ((protectedUpload || companyUpload || portfolioUpload || archiveRun) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
+            if ((protectedUpload || companyUpload || portfolioUpload || expenseUpload || archiveRun) && reservation.object_path !== `${actor}/${reservation.document_id}/${reservation.version_id}`)
                 return json(503, {error: 'upload_failed'});
             // Course participants deliberately have no REST access to general document
             // tables. The scoped caller RPC reads only their reservation in this room.
@@ -261,12 +262,12 @@ Deno.serve(async (request: Request) => {
                 });
                 if (status.error || status.data?.document?.kind !== (archiveFormat === 'h5p' ? 'h5p_package' : 'scorm_package')) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
-            } : portfolioUpload ? async () => {
-                const status = await user.rpc('learning_portfolio_evidence_upload_status', {
+            } : portfolioUpload || expenseUpload ? async () => {
+                const status = await user.rpc(expenseUpload ? 'expense_receipt_upload_status' : 'learning_portfolio_evidence_upload_status', {
                     p_document_id: reservation.document_id,
                     p_version_id: reservation.version_id,
                 });
-                if (status.error || status.data?.document?.kind !== 'portfolio_evidence') throw new Error('access_denied');
+                if (status.error || status.data?.document?.kind !== (expenseUpload ? 'expense_receipt' : 'portfolio_evidence')) throw new Error('access_denied');
                 return status.data as {document: Document; sha256: string | null};
             } : companyUpload ? async () => {
                 const status = await user.rpc('organisation_contract_upload_status', {
@@ -572,6 +573,34 @@ Deno.serve(async (request: Request) => {
             const name = grant.mime_type === 'application/pdf' ? 'peer-attachment.pdf' : 'peer-attachment.txt';
             return new Response(webFileBytes(bytes), {headers: {...headers, 'Content-Type': grant.mime_type,
                 'Content-Disposition': downloadDisposition(name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
+        }
+        // Expense receipt access is bound to the exact expense and receipt version.
+        if (data.action === 'expense_receipt_download') {
+            const expense = data.expense_id, id = data.version_id;
+            if (!uuid(expense) || !uuid(id) || Object.keys(data).length !== 3) return json(400, {error: 'invalid_request'});
+            const authorize = () => user.rpc('expense_receipt_download', {p_expense_id: expense, p_version_id: id});
+            const before = await authorize();
+            const grant = before.data;
+            if (before.error || grant?.version_id !== id || !/^[a-f0-9]{64}$/.test(grant.sha256) ||
+                !['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(grant.mime_type) ||
+                !Number.isSafeInteger(grant.size_bytes) || grant.size_bytes < 1 || grant.size_bytes > academyMaterialMaxBytes)
+                throw new Error('access_denied');
+            const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
+            if (version.error || !version.data?.object_path) throw new Error('access_denied');
+            const file = await service.storage.from('portal-clean').download(version.data.object_path);
+            if (file.error || !file.data) throw new Error('access_denied');
+            const bytes = await readExpectedBytes(file.data, grant.size_bytes);
+            if (await sha256FileHex(bytes) !== grant.sha256) throw new Error('access_denied');
+            const after = await authorize();
+            if (after.error || after.data?.version_id !== id || after.data.sha256 !== grant.sha256)
+                throw new Error('access_denied');
+            const audit = await service.from('audit_events').insert({
+                actor_id: actor, action: 'expense.receipt_downloaded', resource_id: expense,
+                details: {version_id: id},
+            });
+            if (audit.error) return json(503, {error: 'download_unavailable'});
+            return new Response(webFileBytes(bytes), {headers: {...headers, 'Content-Type': grant.mime_type,
+                'Content-Disposition': downloadDisposition(grant.name), 'Content-Security-Policy': "default-src 'none'; sandbox"}});
         }
         if (data.action === 'course_scorm_download' || data.action === 'course_h5p_download') {
             const run = data.run_id, id = data.version_id;
