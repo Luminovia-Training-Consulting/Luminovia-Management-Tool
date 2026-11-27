@@ -130,7 +130,9 @@ await withTestDatabase("session_attendance", async ({sql, actor}) => {
       rows:[{user_id:participant,name:"Fictional Learner",present:1,absent:1,excused:0,minutes:30}],
     });
     assert.deepEqual(await summary(admin),classTotals);
-    assert.deepEqual((await summary(teacher)).rows,[{...classTotals.rows[0],absent:0}]);
+    const teacherTotals = await summary(teacher);
+    assert.equal(teacherTotals.class_name, null);
+    assert.deepEqual(teacherTotals.rows,[{...classTotals.rows[0],absent:0}]);
     assert.deepEqual((await summary(company,run,participant)).rows,[]);
     await assert.rejects(summary(participant),/42501/);
     await assert.rejects(summary(outsider),/42501/);

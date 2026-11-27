@@ -279,6 +279,40 @@ for (const edition of [
     assert.equal((await access(manager)).staff, true);
     if (edition === "internal") await assert.rejects(access(learner), denied);
     else assert.equal((await access(learner)).staff, false);
+    if (edition === "internal") {
+      const privateClass = randomUUID();
+      await sql(`insert into private.course_classes(id,organisation_id,name)
+        values (${q(privateClass)},${q(org)},'Hidden analytics cohort');
+        insert into private.course_class_assignments(course_id,organisation_id,class_id,version)
+        values (${q(upcoming)},${q(org)},${q(privateClass)},1)`);
+      const personal = await report(teacher, "personal", null);
+      assert.equal(personal.courses[0].organisation, "");
+      assert.equal(personal.courses[0].class_name, null);
+      assert.equal(
+        (
+          await report(
+            teacher,
+            "personal",
+            null,
+            "all",
+            "Hidden analytics cohort",
+          )
+        ).courses.length,
+        0,
+      );
+      const staff = await report(
+        manager,
+        "staff",
+        null,
+        "all",
+        "Hidden analytics cohort",
+      );
+      assert.equal(staff.courses[0].id, upcoming);
+      assert.equal(
+        staff.courses[0].organisation,
+        "Fictional analytics academy",
+      );
+    }
     assert.deepEqual(
       (await report(teacher, "personal", null)).courses.map(({ id }) => id),
       [upcoming],
