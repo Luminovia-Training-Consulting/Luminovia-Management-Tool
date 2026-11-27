@@ -292,13 +292,13 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
             teacherPage.getByText("Plattformanteil (%)", {exact: true}),
         ).toHaveCount(0);
         const teacherApi = await signedIn(lecturer);
-        const safeJob = await teacherApi
+        const concealedJob = await teacherApi
             .from("jobs")
-            .select("*")
+            .select("id")
             .eq("id", linked.job_id)
-            .single();
-        expect(safeJob.error).toBeNull();
-        expect(Number(safeJob.data!.total_amount)).toBe(0);
+            .maybeSingle();
+        expect(concealedJob.error).toBeNull();
+        expect(concealedJob.data).toBeNull();
         const ownQuotes = await teacherApi.rpc("job_offers");
         expect(ownQuotes.error).toBeNull();
         expect(
@@ -307,7 +307,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
                     .total_amount,
             ),
         ).toBe(310);
-        expect(JSON.stringify(safeJob.data)).not.toMatch(
+        expect(JSON.stringify(ownQuotes.data)).not.toMatch(
             /gross_amount|platform_percent|platform_total/,
         );
         expect(

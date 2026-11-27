@@ -340,9 +340,9 @@ test("long schedules scroll in the marketplace, course details and offer preview
         await login(page, process.env.E2E_ADMIN_EMAIL!);
         await page.goto(`/jobs/${job}`);
         await expect(page.getByRole("heading", {name: "Durchführungszeitraum"})).toBeVisible();
-        const checkSchedule = async (name: string) => {
+        const checkSchedule = async (name: string, expected = sessions.length) => {
             const schedule = page.getByRole("region", {name, exact: true});
-            await expect(schedule.getByRole("listitem")).toHaveCount(sessions.length);
+            await expect(schedule.getByRole("listitem")).toHaveCount(expected);
             expect(await schedule.evaluate(box => box.scrollHeight > box.clientHeight)).toBe(true);
             await schedule.focus();
             await schedule.press("End");
@@ -353,7 +353,8 @@ test("long schedules scroll in the marketplace, course details and offer preview
         await checkSchedule("Termine");
         await page.goto(`/courses?run=${run}`);
         await expect(page.getByRole("dialog")).toBeVisible();
-        await checkSchedule("Termine");
+        // The course timeline includes its creation milestone as well.
+        await checkSchedule("Kurszeitleiste", sessions.length + 1);
         await page.goto(`/admin?courseRun=${run}`);
         await checkSchedule("Geplante Kurstermine");
     } finally {

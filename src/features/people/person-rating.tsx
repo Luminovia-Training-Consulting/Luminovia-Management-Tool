@@ -9,12 +9,14 @@ i18n.addResourceBundle("de", "personRating", {
   rate: "Person bewerten",
   rateShort: "Bewerten",
   rateName: "Bewerten: {{name}}",
+  ratePersonName: "Person bewerten: {{name}}",
   receivedTitle: "Erhaltene Bewertungen",
 });
 i18n.addResourceBundle("en", "personRating", {
   rate: "Rate person",
   rateShort: "Rate",
   rateName: "Rate: {{name}}",
+  ratePersonName: "Rate person: {{name}}",
   receivedTitle: "Ratings received",
 });
 
@@ -45,7 +47,9 @@ export function PersonRatingButton({
         variant="secondary"
         size="sm"
         onClick={() => setOpen(true)}
-        aria-label={own ? undefined : t("rateName", { name })}
+        aria-label={
+          own ? undefined : t(compact ? "rateName" : "ratePersonName", { name })
+        }
       >
         <Star size={16} aria-hidden="true" />
         {t(own ? "receivedTitle" : compact ? "rateShort" : "rate")}

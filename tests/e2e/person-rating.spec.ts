@@ -12,7 +12,7 @@ test("the five ratings fit in one touch-friendly row and save after reconnecting
   await page.goto(`/people/${recipient.id}`);
   await page
     .getByRole("button", {
-      name: /Fictional rating recipient bewerten|Rate Fictional rating recipient/,
+      name: /^(Person bewerten: Fictional rating recipient|Rate person: Fictional rating recipient)$/,
     })
     .click();
 
@@ -80,14 +80,14 @@ test("chat contacts keep message and rating actions separate and restore focus",
     ),
   });
   const rate = contacts.getByRole("button", {
-    name: new RegExp(`^${recipient.name} bewerten$|^Rate ${recipient.name}$`),
+    name: new RegExp(`^(Bewerten: ${recipient.name}|Rate: ${recipient.name})$`),
   });
   await expect(start).toBeVisible();
   const boxes = await Promise.all([start.boundingBox(), rate.boundingBox()]);
   expect(boxes.every((box) => box && box.height >= 44)).toBe(true);
   await rate.click();
   const rating = page.getByRole("dialog", {
-    name: new RegExp(`^${recipient.name} bewerten$|^Rate ${recipient.name}$`),
+    name: new RegExp(`^(Bewerten: ${recipient.name}|Rate: ${recipient.name})$`),
   });
   await expect(rating.getByRole("radio")).toHaveCount(5);
   await page.keyboard.press("Escape");

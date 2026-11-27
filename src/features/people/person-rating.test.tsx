@@ -44,7 +44,7 @@ it("saves an independent star rating with an optional comment and reloads it for
   mount("recipient");
   const user = userEvent.setup();
   await user.click(
-    screen.getByRole("button", { name: "Bewerten: Fictional contact" }),
+    screen.getByRole("button", { name: "Person bewerten: Fictional contact" }),
   );
   const submit = await screen.findByRole("button", {
     name: "Bewertung speichern",
@@ -66,7 +66,7 @@ it("saves an independent star rating with an optional comment and reloads it for
   });
   await user.keyboard("{Escape}");
   await user.click(
-    screen.getByRole("button", { name: "Bewerten: Fictional contact" }),
+    screen.getByRole("button", { name: "Person bewerten: Fictional contact" }),
   );
   expect(await screen.findByRole("radio", { name: "4 Sterne" })).toBeChecked();
 });
@@ -109,7 +109,7 @@ it("keeps a rating draft when the connection drops and blocks any offline save",
   mount("recipient");
   const user = userEvent.setup();
   await user.click(
-    screen.getByRole("button", { name: "Bewerten: Fictional contact" }),
+    screen.getByRole("button", { name: "Person bewerten: Fictional contact" }),
   );
   await user.click(await screen.findByRole("radio", { name: "4 Sterne" }));
   const comment = screen.getByRole("textbox", { name: /Kommentar/ });
