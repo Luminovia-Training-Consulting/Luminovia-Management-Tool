@@ -20,6 +20,10 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["topics"],
     queryFn: async () => [],
   },
+  userRolesQuery: (id: string) => ({
+    queryKey: ["user-roles", id],
+    queryFn: async () => ["lecturer"],
+  }),
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "viewer" } } }),

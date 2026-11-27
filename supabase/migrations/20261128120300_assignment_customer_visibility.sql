@@ -59,7 +59,9 @@ grant execute on function private.assignment_customer_settings(),public.assignme
 -- The 168-hour default uses elapsed time, matching the withdrawal clock across DST.
 create function private.can_read_assignment_customer(p_job_id uuid)
 returns boolean language sql stable security definer set search_path='' as $$
-  select private.has_permission('jobs.manage') or (
+  select private.has_permission('jobs.manage')
+    or case when private.has_role(array['client']) then private.job_dispatch_company_actor(p_job_id) else false end
+    or (
     private.lecturer_actor() and not private.job_lecturer_blocked(p_job_id,auth.uid()) and exists (
       select 1 from public.job_claims claim
       cross join private.assignment_customer_policy policy
