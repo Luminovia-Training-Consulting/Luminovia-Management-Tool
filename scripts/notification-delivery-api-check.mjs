@@ -149,8 +149,13 @@ await withApiFixture(
              where notification_id = ${q(notification)}`,
         );
         assert.match(outboxId, /^[0-9a-f-]{36}$/);
+        await sql(
+            `update private.notification_email_outbox
+             set available_at = '1970-01-01T00:00:00Z'::timestamptz
+             where id = ${q(outboxId)}`,
+        );
         const leases = await checked(
-            service.rpc("lease_notification_emails", {p_limit: 100}),
+            service.rpc("lease_notification_emails", {p_limit: 1}),
             "Lease real committed email delivery through REST",
         );
         assert.equal(leases.length, 1);
@@ -238,11 +243,23 @@ await withApiFixture(
             }),
             "Insert second scoped delivery",
         );
+        const cancelledOutboxId = await sql(
+            `select id
+             from private.notification_email_outbox
+             where notification_id = ${q(cancelled)}`,
+        );
+        assert.match(cancelledOutboxId, /^[0-9a-f-]{36}$/);
+        await sql(
+            `update private.notification_email_outbox
+             set available_at = '1970-01-01T00:00:00Z'::timestamptz
+             where id = ${q(cancelledOutboxId)}`,
+        );
         const pending = await checked(
-            service.rpc("lease_notification_emails"),
+            service.rpc("lease_notification_emails", {p_limit: 1}),
             "Lease second scoped delivery",
         );
         assert.equal(pending.length, 1);
+        assert.equal(pending[0].id, cancelledOutboxId);
         await save(owner.client, {email_enabled: false});
         assert.equal(
             await checked(
