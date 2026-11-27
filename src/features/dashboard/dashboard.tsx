@@ -23,7 +23,7 @@ import { profileQuery, userRolesQuery } from "../../lib/queries";
 import { dashboardExpertiseCountQuery } from "./api";
 import { JobCard } from "../jobs/card";
 import { jobDashboardQuery } from "../jobs/discovery-api";
-import { ErrorState, Loading, TextLink } from "../../components/common";
+import { ErrorState, Loading, Notice, TextLink } from "../../components/common";
 import { dateTime, validZone } from "../../lib/dates";
 import {
   DashboardCalendarPreview,
@@ -31,6 +31,7 @@ import {
   DashboardWidgets,
 } from "./widgets";
 import { DashboardCustomization } from "./personal";
+import { notificationPreviewQuery } from "../notifications/api";
 import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
 import "./dashboard.css";
@@ -39,6 +40,7 @@ import "./dashboard.css";
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const dashboard = useTranslation("dashboard").t;
+  const inbox = useTranslation("inbox").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
@@ -53,6 +55,16 @@ export function Dashboard() {
     ...dashboardExpertiseCountQuery(session!.user.id),
     enabled: roles.isSuccess && teaching,
   });
+  const notifications = useQuery({
+    ...notificationPreviewQuery(session!.user.id),
+    enabled: roles.isSuccess && teaching,
+  });
+  const removals = notifications.data?.items.filter(
+    (item) =>
+      item.kind === "claim_cancelled" &&
+      item.assignment_removed &&
+      !item.read_at,
+  );
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   // Keep independent widgets usable while the authorized job summary loads.
@@ -81,6 +93,15 @@ export function Dashboard() {
           key={session!.user.id}
         />
       </header>
+      {teaching &&
+        removals?.map((item) => (
+          <Notice key={item.id} kind="error">
+            <strong>{inbox("lecturerRemoved")}</strong>
+            <p>{item.title}</p>
+            {item.removal_reason && <p>{item.removal_reason}</p>}
+            <Link to="/notifications">{inbox("open")}</Link>
+          </Notice>
+        ))}
       {staff && (jobSummary || (teaching && expertiseCount !== undefined)) && (
         <div className="dashboard-metrics">
           {[

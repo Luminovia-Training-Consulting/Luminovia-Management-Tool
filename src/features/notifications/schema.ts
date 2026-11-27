@@ -14,6 +14,8 @@ const notificationItemSchema = z.object({
   id: z.string().uuid(),
   kind: z.string(),
   assignment_replaced: z.literal(true).optional(),
+  assignment_removed: z.literal(true).optional(),
+  removal_reason: z.string().optional(),
   created_at: z.string().datetime({ offset: true }),
   read_at: z.string().datetime({ offset: true }).nullable(),
   // Server-resolved internal destinations only; malformed API data must never
