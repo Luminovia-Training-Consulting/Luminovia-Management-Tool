@@ -418,9 +418,9 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
       overdue: [],
     },
   };
-  fake.responses.work_tasks = {
-    assignees: [{ id: teacher, name: "Fiktive Verwaltung" }],
-  };
+  fake.responses.training_escalation_assignees = [
+    { id: teacher, name: "Fiktive Verwaltung" },
+  ];
   const rpc = fake.rpc.getMockImplementation()!;
   fake.rpc.mockImplementation((name: string, args: unknown) => {
     if (name === "escalate_training_issue") {

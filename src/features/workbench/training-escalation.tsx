@@ -2,7 +2,6 @@
 import { useId, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
@@ -13,11 +12,8 @@ import type { FinancePeriod } from "./finance-api";
 import {
   type TrainingIssue,
   trainingEscalationSchema,
+  trainingEscalationAssignees,
 } from "./training-control-schema";
-
-const assignees = z.object({
-  assignees: z.array(z.object({ id: z.uuid(), name: z.string() })),
-});
 
 export default function TrainingEscalation({
   actor,
@@ -49,10 +45,10 @@ export default function TrainingEscalation({
     queryKey: ["training-escalation-assignees", actor],
     queryFn: async ({ signal }) => {
       const { data, error } = await db()
-        .rpc("work_tasks", { p_limit: 1 })
+        .rpc("training_escalation_assignees", {}, { get: true })
         .abortSignal(signal);
       if (error) throw error;
-      return assignees.parse(data).assignees;
+      return trainingEscalationAssignees.parse(data);
     },
   });
   const due = deadline ? zonedInstant(deadline, zone) : null;

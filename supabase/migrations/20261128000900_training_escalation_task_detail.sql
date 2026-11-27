@@ -52,6 +52,25 @@ revoke all on function private.training_escalation_detail(uuid),public.training_
 grant execute on function private.training_escalation_detail(uuid),public.training_escalation_detail(uuid),
   private.set_training_escalation_state(uuid,text,integer),public.set_training_escalation_state(uuid,text,integer) to authenticated;
 
+-- The escalation form needs just the existing eligible staff projection.
+create function private.training_escalation_assignees() returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+begin
+  if not private.actor_active() or not private.has_permission('jobs.manage')
+    or not private.has_permission('courses.manage')
+    or not exists(select 1 from private.installation_identity where singleton and edition='internal')
+    then raise insufficient_privilege; end if;
+  return private.work_tasks(null,null,1,'')->'assignees';
+end;
+$$;
+create function public.training_escalation_assignees() returns jsonb
+language sql stable security invoker set search_path='' as $$
+  select private.training_escalation_assignees()
+$$;
+revoke all on function private.training_escalation_assignees(),public.training_escalation_assignees()
+  from public,anon,authenticated,service_role;
+grant execute on function private.training_escalation_assignees(),public.training_escalation_assignees() to authenticated;
+
 alter function private.notification_target(text,uuid) rename to notification_target_before_training_escalations;
 create function private.notification_target(p_kind text,p_resource uuid) returns jsonb
 language plpgsql stable security definer set search_path='' as $$

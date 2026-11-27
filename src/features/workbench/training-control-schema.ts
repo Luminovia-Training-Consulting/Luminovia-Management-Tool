@@ -12,6 +12,9 @@ export const trainingIssueCode = z.enum([
   "qualification",
   "preparation",
 ]);
+export const trainingEscalationAssignees = z.array(
+  z.object({ id: z.uuid(), name: z.string() }),
+);
 export const trainingEscalationSchema = z.object({
   id: z.uuid(),
   state: z.enum(["open", "doing", "done"]),

@@ -309,6 +309,7 @@ import {
 import {
   trainingControlSchema,
   trainingEscalationSchema,
+  trainingEscalationAssignees,
   trainingIssueCode,
 } from "../workbench/training-control-schema.ts";
 import {
@@ -2772,6 +2773,14 @@ const nativePaths = {
     },
     z.toJSONSchema(trainingEscalationSchema),
     ["p_organisation_id", "p_topic_id"],
+  ),
+  "/rest/v1/rpc/training_escalation_assignees": rpc(
+    "listTrainingEscalationAssignees",
+    "Operations",
+    "List staff available for a training escalation",
+    "Internal installation only. Requires jobs.manage and courses.manage. Uses the same eligible staff list as operations tasks.",
+    {},
+    z.toJSONSchema(trainingEscalationAssignees),
   ),
   "/rest/v1/rpc/training_escalation_detail": rpc(
     "readTrainingEscalationTask",

@@ -102,6 +102,20 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
   assert.equal(initial.capacity.absences.length, 1);
   assert.equal(JSON.stringify(initial.capacity).includes("private"), false);
 
+  const assignees = await actor(
+    fixture.admin,
+    "select public.training_escalation_assignees()",
+    "aal2",
+  ).then(JSON.parse);
+  assert.ok(assignees.some(({ id }) => id === fixture.second));
+  await assert.rejects(
+    actor(
+      fixture.lecturer,
+      "select public.training_escalation_assignees()",
+      "aal2",
+    ),
+    /permission|privilege/i,
+  );
   const escalate = (
     who,
     fingerprint = staffing.fingerprint,
