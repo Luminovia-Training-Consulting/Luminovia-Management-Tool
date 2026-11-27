@@ -20,12 +20,16 @@ type Mode = "count" | "range" | "dates";
 export function CourseSchedulePlanner({
   zone,
   suggestedDays,
+  suggestedStart,
+  suggestedEnd,
   editedSessionCount,
   disabled,
   onApply,
 }: {
   zone: string;
   suggestedDays?: number;
+  suggestedStart?: string;
+  suggestedEnd?: string;
   editedSessionCount: number;
   disabled: boolean;
   onApply: (rows: LocalTeachingSession[]) => void;
@@ -38,8 +42,10 @@ export function CourseSchedulePlanner({
   const [daysInput, setDaysInput] = useState<string>();
   const days = daysInput ?? String(suggestedDays ?? 1);
   const [dates, setDates] = useState("");
-  const [start, setStart] = useState("09:00");
-  const [end, setEnd] = useState("17:00");
+  const [editedStart, setStart] = useState<string>();
+  const [editedEnd, setEnd] = useState<string>();
+  const start = editedStart ?? suggestedStart ?? "09:00";
+  const end = editedEnd ?? suggestedEnd ?? "17:00";
   const [everyWeeks, setEveryWeeks] = useState("1");
   const [excludedDates, setExcludedDates] = useState("");
   const [selection, setSelection] = useState<TeachingWeekday[]>([

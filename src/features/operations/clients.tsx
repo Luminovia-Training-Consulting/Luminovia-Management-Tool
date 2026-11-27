@@ -3,7 +3,7 @@ import { PermanentDeleteAction } from "../deletions/deletions";
  * Customer directory with authorized contacts, internal notes and organization settings. Shared
  * metadata and private business fields keep their separate table permissions.
  */
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Link } from "react-router-dom";
@@ -65,6 +65,9 @@ const contactSchema = z.object({
   notes: z.string().max(4000),
   archived: z.boolean(),
 });
+
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
+const CompanyOperationalPresets = lazy(() => import("./operational-presets"));
 
 function organisationPayload(values: z.infer<typeof orgSchema>) {
   return {
@@ -491,6 +494,16 @@ function ClientWorkspace({
                 </div>
               )}
             </header>
+            {__PORTAL_INTERNAL_EDITION__ &&
+              canManageCourses &&
+              !organisation.archived_at && (
+                <Suspense fallback={null}>
+                  <CompanyOperationalPresets
+                    actor={actor}
+                    organisation={organisation.id}
+                  />
+                </Suspense>
+              )}
             <section className="company-detail-group company-contacts">
               <div className="section-heading">
                 <h3>{t("contacts")}</h3>

@@ -63,7 +63,10 @@ import {
   assignmentCustomerMode,
   assignmentCustomerSettingsSchema,
 } from "../admin/assignment-customer-settings-schema.ts";
-import { assignmentFinanceSchema } from "../commercial/assignment-finance-schema.ts";
+import {
+  assignmentFinanceExportSchema,
+  assignmentFinanceSchema,
+} from "../commercial/assignment-finance-schema.ts";
 import { settlementJournalSchema } from "../accounting/settlement-journal-schema.ts";
 import {
   expenseReportSchema,
@@ -255,6 +258,7 @@ import {
 } from "../readiness/course-start-schema.ts";
 import {
   courseCloseoutFollowupSchema,
+  trainingEscalationDetailSchema,
   courseCloseoutRequest,
   courseCloseoutResponse,
 } from "../learning/course-closeout-schema.ts";
@@ -311,6 +315,8 @@ import {
 } from "../training/delivery-schema.ts";
 import {
   trainingControlSchema,
+  trainingEscalationSchema,
+  trainingEscalationAssignees,
   trainingIssueCode,
 } from "../workbench/training-control-schema.ts";
 import {
@@ -337,6 +343,11 @@ import {
   offerDraftReceipt,
   offerDraftSnapshot,
 } from "../admin/offer-creator-draft-schema.ts";
+
+import {
+  operationalPreset,
+  operationalPresetPayload,
+} from "../operations/operational-preset-schema.ts";
 
 const uuid = { type: "string", format: "uuid" };
 const boolean = { type: "boolean" };
@@ -2576,18 +2587,25 @@ const nativePaths = {
   "/rest/v1/rpc/course_creator_draft_action": rpc(
     "mutateCourseCreatorDraft",
     "Courses",
-    "Save, duplicate, discard or create from a course draft",
-    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt.",
+    "Start from an enquiry, save, duplicate, discard or create from a course draft",
+    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt. To start from an enquiry, pass an authorised enquiry_id and version in p_payload with action start_enquiry and expected draft revision zero. Confirmation converts the originally reviewed enquiry atomically.",
     {
       p_action: {
         type: "string",
-        enum: ["save", "duplicate", "discard", "create_course"],
+        enum: [
+          "save",
+          "duplicate",
+          "discard",
+          "create_course",
+          "start_enquiry",
+        ],
       },
       p_draft_id: uuid,
       p_expected_revision: { type: "integer", minimum: 0 },
       p_payload: {
         anyOf: [
           z.toJSONSchema(courseCreatorSnapshotSchema),
+          object({ enquiry_id: uuid, version }),
           { type: "object" },
           { type: "null" },
         ],
@@ -2608,6 +2626,27 @@ const nativePaths = {
     },
     z.toJSONSchema(trainingOfferCompensationSchema.nullable()),
     ["p_expected_version", "p_payload"],
+  ),
+  "/rest/v1/rpc/training_operational_presets": rpc(
+    "listTrainingOperationalPresets",
+    "Courses",
+    "List operational course presets for a company",
+    "Requires internal course and company management. Presets can supply non-secret schedule, contact and delivery defaults.",
+    { p_organisation_id: uuid },
+    z.toJSONSchema(z.array(operationalPreset)),
+  ),
+  "/rest/v1/rpc/save_training_operational_preset": rpc(
+    "saveTrainingOperationalPreset",
+    "Courses",
+    "Save or archive an operational course preset",
+    "Requires internal course and company management and the expected preset revision. Existing courses retain the defaults they adopted.",
+    {
+      p_organisation_id: uuid,
+      p_preset_id: nullableUuid,
+      p_expected_revision: version,
+      p_payload: z.toJSONSchema(operationalPresetPayload),
+    },
+    z.toJSONSchema(operationalPreset),
   ),
   "/rest/v1/rpc/training_commercial_presets": rpc(
     "trainingCommercialPresets",
@@ -2730,6 +2769,14 @@ const nativePaths = {
     },
     z.toJSONSchema(expenseResultSchema),
   ),
+  "/rest/v1/rpc/assignment_finance_export": rpc(
+    "exportAssignmentSettlements",
+    "Finance",
+    "Export settlement across assignments for an inclusive period",
+    "Internal installation only. Requires finance.manage. Selects assignments by overlap with up to 93 inclusive calendar days in the caller's profile zone. Results use current settlement, retain original currencies and require separate gross finance authority for customer amounts.",
+    { p_from: date, p_through: date },
+    z.toJSONSchema(assignmentFinanceExportSchema),
+  ),
   "/rest/v1/rpc/assignment_finance_reconciliation": rpc(
     "getAssignmentFinanceReconciliation",
     "Finance",
@@ -2761,6 +2808,53 @@ const nativePaths = {
     },
     z.toJSONSchema(trainingControlSchema),
     ["p_organisation_id", "p_topic_id"],
+  ),
+  "/rest/v1/rpc/escalate_training_issue": rpc(
+    "escalateTrainingIssue",
+    "Operations",
+    "Assign a follow-up task for a current training issue",
+    "Internal installation only. Requires jobs.manage and courses.manage. Validates the issue from the reviewed period and accepts active operations staff. The deadline must be in the future and no later than the course start. Repeated requests return the current task.",
+    {
+      ...operationsPeriod,
+      p_run_id: uuid,
+      p_issue: z.toJSONSchema(trainingIssueCode),
+      p_fingerprint: { type: "string", pattern: "^[a-f0-9]{32}$" },
+      p_assignee_id: uuid,
+      p_due_at: { type: "string", format: "date-time" },
+      p_reason: { type: "string", minLength: 3, maxLength: 1000 },
+      p_organisation_id: nullableUuid,
+      p_topic_id: nullableUuid,
+    },
+    z.toJSONSchema(trainingEscalationSchema),
+    ["p_organisation_id", "p_topic_id"],
+  ),
+  "/rest/v1/rpc/training_escalation_assignees": rpc(
+    "listTrainingEscalationAssignees",
+    "Operations",
+    "List staff available for a training escalation",
+    "Internal installation only. Requires jobs.manage and courses.manage. Uses the same eligible staff list as operations tasks.",
+    {},
+    z.toJSONSchema(trainingEscalationAssignees),
+  ),
+  "/rest/v1/rpc/training_escalation_detail": rpc(
+    "readTrainingEscalationTask",
+    "Operations",
+    "Read an assigned escalation task",
+    "Uses the current shared workbench permissions on the internal installation.",
+    { p_task_id: uuid },
+    z.toJSONSchema(trainingEscalationDetailSchema),
+  ),
+  "/rest/v1/rpc/set_training_escalation_state": rpc(
+    "setTrainingEscalationTaskState",
+    "Operations",
+    "Change an escalation task's status",
+    "Requires current workbench access and the task's reviewed version. Exact retries return the committed state.",
+    {
+      p_task_id: uuid,
+      p_state: { enum: ["open", "doing", "done"] },
+      p_version: { ...version, minimum: 1 },
+    },
+    z.toJSONSchema(trainingEscalationDetailSchema),
   ),
   "/rest/v1/rpc/acknowledge_training_issue": rpc(
     "acknowledgeTrainingIssue",

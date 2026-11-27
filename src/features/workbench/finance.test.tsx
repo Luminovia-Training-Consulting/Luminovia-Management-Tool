@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -380,6 +381,12 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
     code: "staffing",
     fingerprint,
     acknowledged: false,
+    escalation: null as null | {
+      id: string;
+      state: string;
+      due_at: string;
+      assignee: string;
+    },
   };
   fake.responses.training_control_center = {
     time_zone: "UTC",
@@ -411,8 +418,20 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
       overdue: [],
     },
   };
+  fake.responses.training_escalation_assignees = [
+    { id: teacher, name: "Fiktive Verwaltung" },
+  ];
   const rpc = fake.rpc.getMockImplementation()!;
   fake.rpc.mockImplementation((name: string, args: unknown) => {
+    if (name === "escalate_training_issue") {
+      issue.escalation = {
+        id: job,
+        state: "open",
+        due_at: "2030-01-05T07:00:00Z",
+        assignee: "Fiktive Verwaltung",
+      };
+      return Promise.resolve({ data: issue.escalation, error: null });
+    }
     if (name === "acknowledge_training_issue") {
       issue.acknowledged = (args as { p_acknowledged: boolean }).p_acknowledged;
       return Promise.resolve({ data: true, error: null });
@@ -465,5 +484,32 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
       "acknowledge_training_issue",
       expect.objectContaining({ p_acknowledged: false }),
     ),
+  );
+  await user.click(
+    screen.getByRole("button", { name: /Fiktive Schulung eskalieren/ }),
+  );
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "Eskalieren" }),
+  );
+  const submit = await dialog.findByRole("button", { name: "Eskalieren" });
+  expect(submit).toBeDisabled();
+  const due = dialog.getByLabelText("Frist (UTC)");
+  fireEvent.change(due, { target: { value: "2030-01-05T07:00" } });
+  await user.type(
+    dialog.getByLabelText("Nächster Schritt"),
+    "Vertretung abstimmen",
+  );
+  await user.click(submit);
+  expect(
+    await screen.findByRole("link", { name: "Aufgabe ansehen" }),
+  ).toHaveAttribute("href", `/workbench?escalation=${job}`);
+  expect(fake.rpc).toHaveBeenCalledWith(
+    "escalate_training_issue",
+    expect.objectContaining({
+      p_run_id: job,
+      p_assignee_id: teacher,
+      p_organisation_id: job,
+      p_topic_id: job,
+    }),
   );
 });

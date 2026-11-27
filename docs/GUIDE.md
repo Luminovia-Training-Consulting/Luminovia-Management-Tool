@@ -319,6 +319,9 @@ When editing an unlocked course schedule in the portal or a dedicated Academy, c
 
 For separate drafts from the same template, open **Kursserie planen / Plan a course series**. Enter a first possible start date and use **Starttage wiederholen / Repeat start dates** to fill empty date slots and add more runs, up to 12. Each run keeps its own class, delivery mode and venue. Review the final teaching dates and room/class conflicts before saving the drafts.
 
+For a customer with recurring training arrangements, maintain named operational presets in its company record. The course creator and series planner let you explicitly adopt the current preset revision. Review its time zone, suggested teaching times, contact, structured venue and instructions before saving. A series can retain its own delivery choices per run. Meeting credentials are entered in the course.
+
+
 In the internal portal, **Kurse & Durchführungen / Courses & delivery** shows up to 24 matching runs or templates per page. Switch views above the filters. Search covers the whole accessible list. To import records, open the import dialog next to the create action in the selected view. Use the page controls to browse, or open a course directly from its existing link.
 
 Open `/learning` and choose a currently permitted course. `/courses/:id/workspace` assembles different authorised views for current course management, confirmed assigned lecturers, enrolled/completed learners and linked customer organisations. A link is not an access grant; cancellation/removal/suspension can make a previously available page or download unavailable.
@@ -760,6 +763,8 @@ The log records structured activity such as account creation, invitations, acces
 
 The shell's **Im Portal suchen / Search the portal** uses server-authorised cursor search across jobs, clean files, permitted wiki/forum/chat, people, courses, client/task and authorised commercial metadata. Enter at least two characters; load another page when available. Private drafts, message/task source access and commercial capabilities remain enforced, and the destination checks access again. A copied UUID, favourite or old notification never becomes a grant.
 
+In a linked customer enquiry, use **Kursentwurf aus Anfrage öffnen / Open course draft from enquiry**. This opens the recoverable course creator with the source company, time zone and suggested text. Review the text, add the dates, and save either to course planning or directly to the separate offer editor. Reopening the same enquiry revision resumes your draft. After planning a series, **Auftrag für Durchlauf vorbereiten / Prepare offer for run** opens the exact new run in the same offer editor.
+
 Open **Gespeicherte Angebotsentwürfe / Saved offer drafts** in a standalone or course-backed offer form to resume or duplicate an unfinished offer. **Zwischenstand speichern / Save progress** saves incomplete values without creating a public listing. The library links to the resulting assignment after the offer is confirmed.
 
 When copying a course, choose the schedule and content to reuse, then review the preview before saving. You can include an unpublished offer based on its base compensation and optionally its eligibility requirements. The copied offer needs its own terms and publication review.
@@ -769,6 +774,11 @@ In an eligible assignment, **Einzelne Termine vertreten / Replace selected sessi
 Under Finance, **Auslagen / Expenses** provides assignment-linked requests and scanned receipts. A lecturer can correct and resubmit a returned request. Finance records decisions, including partial approvals with a reason, and records a single reimbursement. Linked invoice and original-currency movement details are included in the authorised settlement view.
 
 In the Control Center, open **Kursbetrieb und Forderungen / Training operations and receivables** for the current period. Filter by company for course coverage and invoices, and by course topic for course coverage. Assigned and open hours count required teaching positions. A confirmed cover session replaces one of those positions. Weekly availability counts only shared time after confirmed teaching and shared absences. **Gesehen / Acknowledge** changes your view of the issue. The underlying course or invoice stays available from the issue link.
+
+In the Control Center, **Eskalieren / Escalate** turns a current course issue into an operations task. Select the responsible staff member, describe the next step, and set a deadline no later than the first session. Open the linked task to update its status. Its assignee, deadline and overdue state appear in the course issue queue.
+
+Finance can export settlement across assignments as CSV or JSON for an inclusive date range of up to 93 days in the signed-in profile's time zone. The export reports current settlement and preserves the original currency per row. It includes grouped customer receipts only when the existing settlement authority can attribute the corresponding amount to an individual assignment.
+
 
 The full target remains larger than this source. Remaining work includes broader module-specific bulk/recovery and saved filters, replacement amendments after invoicing, richer quality follow-up, global-event files/invitations, knowledge attachments, and general contract-renewal/retention administration. Computed readiness, open/emergency whole-block replacement, personal calendar subscriptions and teaching delivery already have connected workflows; consult their guides for limits.
 Existing management/course/resource lists retain their documented bounds. Already implemented time/statement/PDF/Push/calendar-source workflows are not relabelled as missing merely because their current full native/device/hosted gate is pending. The [complete feature map](PRODUCT.md#section-smart-operations-spec), [roadmap](FEATURES.md) and QA results separate source, tested, untested and external acceptance.

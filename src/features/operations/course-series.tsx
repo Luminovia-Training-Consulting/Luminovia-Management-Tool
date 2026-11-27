@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useId, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -23,6 +23,15 @@ import {
 import "./course-series-i18n";
 import { z } from "zod";
 
+import type { OperationalPreset } from "./operational-preset-schema";
+
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
+const OperationalPresetPicker = lazy(() =>
+  import("./operational-presets").then(({ OperationalPresetPicker }) => ({
+    default: OperationalPresetPicker,
+  })),
+);
+
 type ReviewedRequest = Omit<
   z.infer<typeof courseSeriesRequest>,
   "p_request_id"
@@ -37,6 +46,9 @@ export function CourseSeriesForm({
   defaultTemplate,
   defaultOrganisation = "",
   academic = false,
+  canPrepareOffer = false,
+  savedRuns,
+  onSaved,
   onOpen,
   onBusy,
 }: {
@@ -50,6 +62,9 @@ export function CourseSeriesForm({
   defaultTemplate?: string;
   defaultOrganisation?: string;
   academic?: boolean;
+  canPrepareOffer?: boolean;
+  savedRuns?: readonly string[];
+  onSaved?: (runs: string[]) => void;
   onOpen?: () => void;
   onBusy?: (busy: boolean) => void;
 }) {
@@ -63,8 +78,22 @@ export function CourseSeriesForm({
     { key: crypto.randomUUID(), firstDay: "" },
     { key: crypto.randomUUID(), firstDay: "" },
   ]);
-  const [start, setStart] = useState("09:00");
-  const [end, setEnd] = useState("17:00");
+  const [adoption, setAdoption] = useState<{
+    preset: OperationalPreset;
+    delivery: boolean;
+  }>();
+  const [deliveryOverrides, setDeliveryOverrides] = useState<
+    Record<string, "online" | "onsite">
+  >({});
+  const [zoneEdited, setZoneEdited] = useState(false);
+  const [startEdited, setStart] = useState<string>();
+  const [endEdited, setEnd] = useState<string>();
+  const start = startEdited ?? adoption?.preset.config.starts_at ?? "09:00";
+  const end = endEdited ?? adoption?.preset.config.ends_at ?? "17:00";
+  const deliveryDefault =
+    adoption?.delivery && adoption.preset.config.delivery?.mode === "onsite"
+      ? "onsite"
+      : "online";
   const [recurrence, setRecurrence] = useState<RecurrenceRule | null>(null);
   const focusRun = useRef<string>(undefined);
   const [zone, setZone] = useState(
@@ -122,6 +151,7 @@ export function CourseSeriesForm({
     onSettled: () => onBusy?.(false),
     onSuccess: (result) => {
       if (!result.run_ids.length) return;
+      onSaved?.(result.run_ids);
       void client.invalidateQueries({ queryKey: ["operations"] });
       void client.invalidateQueries({ queryKey: ["course-workspaces", actor] });
     },
@@ -176,9 +206,24 @@ export function CourseSeriesForm({
       p_template_id: value("template"),
       p_time_zone: zone,
       p_runs: runs.map(({ key, firstDay }) => ({
-        delivery_type: value(`${key}-delivery`),
+        delivery_type:
+          value(`${key}-delivery`) === "inherit"
+            ? deliveryDefault
+            : value(`${key}-delivery`),
         venue: value(`${key}-venue`).trim(),
         class_id: value(`${key}-class`) || null,
+        ...(adoption
+          ? {
+              operational_preset: {
+                id: adoption.preset.id,
+                revision: adoption.preset.revision,
+                apply_delivery:
+                  adoption.delivery &&
+                  !deliveryOverrides[key] &&
+                  !value(`${key}-venue`).trim(),
+              },
+            }
+          : {}),
         sessions: courseSeriesSessions({
           ...schedule,
           firstDay,
@@ -198,7 +243,7 @@ export function CourseSeriesForm({
     timeZone: "UTC",
   });
   const id = (name: string) => `${instanceId}-${name}`;
-  const results = plan.data?.run_ids;
+  const results = savedRuns?.length ? savedRuns : plan.data?.run_ids;
   const workload =
     reviewed && plan.data?.conflicts.length === 0
       ? courseSeriesWorkload(reviewed.p_runs)
@@ -226,6 +271,13 @@ export function CourseSeriesForm({
               >
                 {t("open", { number: index + 1 })}
               </Link>
+              {!academic && canPrepareOffer && (
+                <Button asChild variant="secondary">
+                  <Link to={`/courses?offer=${encodeURIComponent(run)}`}>
+                    {t("prepareOffer", { number: index + 1 })}
+                  </Link>
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -240,7 +292,10 @@ export function CourseSeriesForm({
             id={id("organisation")}
             required
             value={organisation}
-            onChange={(event) => setOrganisation(event.currentTarget.value)}
+            onChange={(event) => {
+              setOrganisation(event.currentTarget.value);
+              setAdoption(undefined);
+            }}
           >
             <option value="">{t("choose")}</option>
             {organisations.map((org) => (
@@ -250,6 +305,33 @@ export function CourseSeriesForm({
             ))}
           </select>
         </Field>
+        {__PORTAL_INTERNAL_EDITION__ && !academic && organisation && (
+          <Suspense fallback={null}>
+            <OperationalPresetPicker
+              key={organisation}
+              actor={actor}
+              organisation={organisation}
+              applied={adoption?.preset}
+              dirtyZone={zoneEdited || existingDates.length > 0}
+              dirtyDelivery={Object.keys(deliveryOverrides).length > 0}
+              disabled={plan.isPending}
+              onApply={(preset, inheritZone, inheritDelivery) => {
+                if (preset.config.time_zone && inheritZone)
+                  setZone(preset.config.time_zone);
+                const delivery = Boolean(
+                  preset.config.delivery && inheritDelivery,
+                );
+                if (delivery) setDeliveryOverrides({});
+                setAdoption({ preset, delivery });
+                change();
+              }}
+              onClear={() => {
+                setAdoption(undefined);
+                change();
+              }}
+            />
+          </Suspense>
+        )}
         <Field id={id("template")} label={t("template")}>
           <select
             key={organisation}
@@ -272,7 +354,10 @@ export function CourseSeriesForm({
               id={id("zone")}
               required
               value={zone}
-              onChange={(event) => setZone(event.currentTarget.value)}
+              onChange={(event) => {
+                setZoneEdited(true);
+                setZone(event.currentTarget.value);
+              }}
             >
               <TimeZoneOptions current={zone} />
             </select>
@@ -366,7 +451,44 @@ export function CourseSeriesForm({
                 />
               </Field>
               <Field id={id(`${key}-delivery`)} label={t("delivery")}>
-                <select id={id(`${key}-delivery`)} name={`${key}-delivery`}>
+                <select
+                  id={id(`${key}-delivery`)}
+                  name={`${key}-delivery`}
+                  value={
+                    deliveryOverrides[key] ??
+                    (adoption?.delivery ? "inherit" : "online")
+                  }
+                  onChange={(event) => {
+                    if (event.currentTarget.value === "inherit") {
+                      setDeliveryOverrides((previous) =>
+                        Object.fromEntries(
+                          Object.entries(previous).filter(
+                            ([runKey]) => runKey !== key,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    const explicit =
+                      event.currentTarget.value === "onsite"
+                        ? "onsite"
+                        : "online";
+                    setDeliveryOverrides((previous) => ({
+                      ...previous,
+                      [key]: explicit,
+                    }));
+                  }}
+                >
+                  {adoption?.delivery && (
+                    <option value="inherit">
+                      {i18n.language.startsWith("de")
+                        ? "Aus Kundenvorlage"
+                        : "From customer preset"}
+                      {adoption.preset.config.delivery?.mode === "hybrid"
+                        ? " · Hybrid"
+                        : ""}
+                    </option>
+                  )}
                   <option value="online">{t("online")}</option>
                   <option value="onsite">{t("onsite")}</option>
                 </select>

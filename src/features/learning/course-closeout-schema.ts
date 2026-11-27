@@ -41,3 +41,6 @@ export const courseCloseoutFollowupSchema = z.object({
   version: z.number().int().positive(),
   can_update: z.boolean(),
 });
+
+export const trainingEscalationDetailSchema =
+  courseCloseoutFollowupSchema.extend({ description: z.string() });

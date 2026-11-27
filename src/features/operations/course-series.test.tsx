@@ -81,6 +81,7 @@ it.each([false, true])(
             defaultOrganisation={organisation.id}
             defaultTemplate={template.id}
             academic={academic}
+            canPrepareOffer
           />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -197,6 +198,19 @@ it.each([false, true])(
         ? `/courses/${runIds[2]}/workspace`
         : `/courses?run=${runIds[2]}`,
     );
+    if (!academic) {
+      for (const [index, run] of runIds.entries()) {
+        expect(
+          screen.getByRole("link", {
+            name: `Prepare offer for run ${index + 1}`,
+          }),
+        ).toHaveAttribute("href", `/courses?offer=${run}`);
+      }
+    } else {
+      expect(
+        screen.queryByRole("link", { name: /prepare offer for run/i }),
+      ).toBeNull();
+    }
     client.clear();
   },
 );

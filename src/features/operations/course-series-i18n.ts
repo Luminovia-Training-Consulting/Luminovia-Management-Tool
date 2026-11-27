@@ -88,6 +88,10 @@ const messages = {
     "Die Durchläufe wurden als Entwürfe angelegt.",
     "The runs were created as drafts.",
   ],
+  prepareOffer: [
+    "Auftrag für Durchlauf {{number}} vorbereiten",
+    "Prepare offer for run {{number}}",
+  ],
   open: ["Durchlauf {{number}} öffnen", "Open run {{number}}"],
 } as const;
 

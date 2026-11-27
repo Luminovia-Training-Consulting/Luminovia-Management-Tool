@@ -1,5 +1,5 @@
 /** Read operating indicators and acknowledge current exceptions in the Control Center. */
-import { useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -8,18 +8,19 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { z } from "zod";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { dateTime, formatUtcDate, money } from "../../lib/dates";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { financePeriodSchema, type FinancePeriod } from "./finance-api";
-import { trainingControlSchema } from "./training-control-schema";
+import {
+  trainingControlSchema,
+  type TrainingIssue,
+} from "./training-control-schema";
 import "./training-control-i18n";
 
-type Overview = z.infer<typeof trainingControlSchema>;
-type Issue = NonNullable<Overview["operations"]>["issues"][number];
+const TrainingEscalation = lazy(() => import("./training-escalation"));
 const metrics = [
   "upcoming",
   "active",
@@ -39,8 +40,14 @@ export default function TrainingControl({
   const cache = useQueryClient();
   const online = useOnline();
   const filterId = useId();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [organisation, setOrganisation] = useState("");
   const [topic, setTopic] = useState("");
+  const [selectedIssue, setSelectedIssue] = useState<TrainingIssue>();
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const reportKey = ["training-control", actor, period.from, period.until];
   const queryKey = [...reportKey, organisation, topic];
@@ -63,7 +70,7 @@ export default function TrainingControl({
     },
   });
   const acknowledge = useMutation({
-    mutationFn: async (issue: Issue) => {
+    mutationFn: async (issue: TrainingIssue) => {
       requireOnline();
       const { error } = await db().rpc("acknowledge_training_issue", {
         p_run_id: issue.run_id,
@@ -88,7 +95,10 @@ export default function TrainingControl({
   const number = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
   const issues =
     operations?.issues.filter(
-      (issue) => showAcknowledged || !issue.acknowledged,
+      (issue) =>
+        showAcknowledged ||
+        !issue.acknowledged ||
+        Boolean(issue.escalation && issue.escalation.state !== "done"),
     ) ?? [];
   return (
     <div className="training-control-content">
@@ -198,25 +208,61 @@ export default function TrainingControl({
                             {t(issue.code)} ·{" "}
                             {dateTime(issue.starts_at, language, zone)}
                           </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          type="button"
-                          disabled={!online || acknowledge.isPending}
-                          aria-label={t(
-                            issue.acknowledged
-                              ? "undoIssue"
-                              : "acknowledgeIssue",
-                            {
-                              title: issue.title,
-                              code: t(issue.code),
-                            },
+                          {issue.escalation && (
+                            <p>
+                              <Link
+                                to={`/workbench?escalation=${issue.escalation.id}`}
+                              >
+                                {t("escalationTask")}
+                              </Link>
+                              {" · "}
+                              {issue.escalation.assignee}
+                              {" · "}
+                              {t(issue.escalation.state)}
+                              {issue.escalation.due_at &&
+                                ` · ${dateTime(issue.escalation.due_at, language, zone)}`}
+                              {issue.escalation.state !== "done" &&
+                                issue.escalation.due_at &&
+                                Date.parse(issue.escalation.due_at) < now &&
+                                ` · ${t("escalationOverdue")}`}
+                            </p>
                           )}
-                          onClick={() => acknowledge.mutate(issue)}
-                        >
-                          {t(issue.acknowledged ? "undo" : "acknowledge")}
-                        </Button>
+                        </div>
+                        <div className="form-actions">
+                          {!issue.escalation && (
+                            <Button
+                              size="sm"
+                              type="button"
+                              variant="secondary"
+                              disabled={!online}
+                              aria-label={t("escalateIssue", {
+                                title: issue.title,
+                                code: t(issue.code),
+                              })}
+                              onClick={() => setSelectedIssue(issue)}
+                            >
+                              {t("escalate")}
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            type="button"
+                            disabled={!online || acknowledge.isPending}
+                            aria-label={t(
+                              issue.acknowledged
+                                ? "undoIssue"
+                                : "acknowledgeIssue",
+                              {
+                                title: issue.title,
+                                code: t(issue.code),
+                              },
+                            )}
+                            onClick={() => acknowledge.mutate(issue)}
+                          >
+                            {t(issue.acknowledged ? "undo" : "acknowledge")}
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -321,6 +367,22 @@ export default function TrainingControl({
             </section>
           )}
         </>
+      )}
+      {selectedIssue && (
+        <Suspense fallback={<Loading />}>
+          <TrainingEscalation
+            actor={actor}
+            issue={selectedIssue}
+            period={period}
+            zone={zone}
+            organisation={organisation}
+            topic={topic}
+            close={() => setSelectedIssue(undefined)}
+            refresh={() =>
+              void cache.invalidateQueries({ queryKey: reportKey })
+            }
+          />
+        </Suspense>
       )}
     </div>
   );

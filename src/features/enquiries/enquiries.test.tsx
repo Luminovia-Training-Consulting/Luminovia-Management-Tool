@@ -1,15 +1,8 @@
 /** Component authority, consent/version and privacy regressions; actual SQL/HTTP are separate. */
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { EnquiriesPage } from "./enquiries";
@@ -36,7 +29,9 @@ vi.mock("../../lib/queries", () => ({
   permissionsQuery: (actor: string) => ({
     queryKey: ["permissions", actor],
     queryFn: async () =>
-      state.allowed ? ["organisations.manage", "courses.manage"] : [],
+      state.allowed
+        ? ["organisations.manage", "courses.manage", "jobs.manage"]
+        : [],
   }),
 }));
 vi.mock("../../lib/online", () => ({
@@ -97,6 +92,10 @@ function response(data: unknown, error: unknown = null) {
   });
 }
 
+function CreatorRoute() {
+  return <output>{useLocation().search}</output>;
+}
+
 function mount(path = `/enquiries/${id}`) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -108,6 +107,7 @@ function mount(path = `/enquiries/${id}`) {
         <Routes>
           <Route path="enquiries" element={<EnquiriesPage />} />
           <Route path="enquiries/:id" element={<EnquiriesPage />} />
+          <Route path="courses" element={<CreatorRoute />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -163,58 +163,55 @@ describe("private connected website enquiry management", () => {
       screen.getByText(/Portal versendet keine E-Mail/),
     ).toBeInTheDocument();
   });
-  it("prefills editable draft text, keeps the incoming message and links to the exact saved course", async () => {
+  it("opens the persisted course creator for the exact enquiry revision", async () => {
     const organisation = "44444444-4444-4444-8444-444444444444";
-    const run = "55555555-5555-4555-8555-555555555555";
+    const draft = "55555555-5555-4555-8555-555555555555";
     active = { ...enquiry, organisation_id: organisation };
     state.rpc.mockImplementation((name) => {
       if (name === "enquiry_context") return response(context);
       if (name === "enquiry_detail") return response(active);
-      if (name === "manage_enquiry") {
-        active = {
-          ...active,
-          status: "converted",
-          course_run_id: run,
-          version: 2,
-        };
-      }
-      return response(id);
+      if (name === "course_creator_draft_action")
+        return response({
+          id: draft,
+          state: "editing",
+          revision: 1,
+          title: active.payload.topic,
+          updated_at: active.updated_at,
+          course_run_id: null,
+          next_action: null,
+          from_enquiry: true,
+          payload: null,
+        });
+      throw new Error(name);
     });
     mount();
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Kursdurchlauf erstellen" }),
-    );
-    expect(screen.getByLabelText("Kurstitel")).toHaveValue(
-      enquiry.payload.topic,
-    );
-    const description = screen.getByLabelText("Kursbeschreibung");
-    expect(description).toHaveValue(enquiry.payload.message);
-    await user.clear(description);
-    await user.type(description, "Reviewed public course outline");
-    fireEvent.change(screen.getByLabelText("Beginn 1"), {
-      target: { value: "2030-02-04T09:00" },
-    });
-    fireEvent.change(screen.getByLabelText("Ende 1"), {
-      target: { value: "2030-02-04T10:00" },
-    });
-    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
-    expect(state.rpc).toHaveBeenCalledWith(
-      "manage_enquiry",
-      expect.objectContaining({
-        p_enquiry_id: id,
-        p_expected_version: 1,
-        p_payload: expect.objectContaining({
-          draft: {
-            title: enquiry.payload.topic,
-            description: "Reviewed public course outline",
-          },
-        }),
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Kursentwurf aus Anfrage öffnen",
       }),
     );
+    expect(await screen.findByText(`?creator=${draft}`)).toBeVisible();
+    expect(state.rpc).toHaveBeenCalledWith("course_creator_draft_action", {
+      p_action: "start_enquiry",
+      p_draft_id: expect.any(String),
+      p_expected_revision: 0,
+      p_payload: { enquiry_id: id, version: 1 },
+    });
+    expect(
+      state.rpc.mock.calls.some(([name]) => name === "manage_enquiry"),
+    ).toBe(false);
+  });
+
+  it("links a converted enquiry to the exact course and recoverable offer editor", async () => {
+    const run = "55555555-5555-4555-8555-555555555555";
+    active = { ...enquiry, status: "converted", course_run_id: run };
+    mount();
     expect(
       await screen.findByRole("link", { name: "Kursplanung öffnen" }),
     ).toHaveAttribute("href", `/courses?run=${run}`);
+    expect(
+      screen.getByRole("link", { name: "Lehrauftrag vorbereiten" }),
+    ).toHaveAttribute("href", `/courses?offer=${run}`);
     expect(screen.getByText(enquiry.payload.message)).toBeVisible();
   });
 

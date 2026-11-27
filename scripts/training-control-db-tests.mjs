@@ -102,6 +102,80 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
   assert.equal(initial.capacity.absences.length, 1);
   assert.equal(JSON.stringify(initial.capacity).includes("private"), false);
 
+  const assignees = await actor(
+    fixture.admin,
+    "select public.training_escalation_assignees()",
+    "aal2",
+  ).then(JSON.parse);
+  assert.ok(assignees.some(({ id }) => id === fixture.second));
+  await assert.rejects(
+    actor(
+      fixture.lecturer,
+      "select public.training_escalation_assignees()",
+      "aal2",
+    ),
+    /permission|privilege/i,
+  );
+  const escalate = (
+    who,
+    fingerprint = staffing.fingerprint,
+    assignee = fixture.second,
+  ) =>
+    actor(
+      fixture[who],
+      `select public.escalate_training_issue(
+      ${id("course")},'staffing',${quoteSql(fingerprint)},current_date-2,current_date+5,
+      ${quoteSql(assignee)},now()+interval '2 hours','Arrange a qualified substitute')`,
+      "aal2",
+    ).then(JSON.parse);
+  await assert.rejects(escalate("lecturer"), /permission|privilege/i);
+  await assert.rejects(escalate("admin", "a".repeat(32)), /issue has changed/i);
+  await assert.rejects(
+    escalate("admin", staffing.fingerprint, randomUUID()),
+    /Staff assignee/i,
+  );
+  const [task, replay] = await Promise.all([
+    escalate("admin"),
+    escalate("second"),
+  ]);
+  assert.deepEqual(task, replay);
+  assert.equal(task.state, "open");
+  assert.deepEqual(
+    (await fetch("second")).operations.issues.find(
+      (item) => item.code === "staffing",
+    ).escalation,
+    task,
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from private.training_control_escalations where run_id=${id("course")}`,
+    ),
+    "1",
+  );
+  const readTask = (who) =>
+    actor(
+      fixture[who],
+      `select public.training_escalation_detail(${quoteSql(task.id)})`,
+      "aal2",
+    ).then(JSON.parse);
+  assert.match((await readTask("second")).description, /qualified substitute/);
+  await assert.rejects(readTask("lecturer"), /permission|privilege/i);
+  const finish = () =>
+    actor(
+      fixture.second,
+      `select public.set_training_escalation_state(${quoteSql(task.id)},'done',1)`,
+      "aal2",
+    ).then(JSON.parse);
+  const finished = await finish();
+  assert.equal(finished.state, "done");
+  assert.deepEqual(await finish(), finished);
+  assert.equal(
+    (await fetch("second")).operations.issues.find(
+      (item) => item.code === "staffing",
+    ).escalation.state,
+    "done",
+  );
+
   const write = (value) =>
     actor(
       fixture.admin,

@@ -12,6 +12,15 @@ export const trainingIssueCode = z.enum([
   "qualification",
   "preparation",
 ]);
+export const trainingEscalationAssignees = z.array(
+  z.object({ id: z.uuid(), name: z.string() }),
+);
+export const trainingEscalationSchema = z.object({
+  id: z.uuid(),
+  state: z.enum(["open", "doing", "done"]),
+  due_at: z.iso.datetime({ offset: true }).nullable(),
+  assignee: z.string(),
+});
 export const trainingControlSchema = z.object({
   time_zone: z.string().refine(validZone),
   filters: z.object({
@@ -59,6 +68,7 @@ export const trainingControlSchema = z.object({
             code: trainingIssueCode,
             fingerprint: z.string().regex(/^[a-f0-9]{32}$/),
             acknowledged: z.boolean(),
+            escalation: trainingEscalationSchema.nullish(),
           }),
         )
         .max(500),
@@ -89,3 +99,7 @@ export const trainingControlSchema = z.object({
     })
     .nullable(),
 });
+
+export type TrainingIssue = NonNullable<
+  z.infer<typeof trainingControlSchema>["operations"]
+>["issues"][number];

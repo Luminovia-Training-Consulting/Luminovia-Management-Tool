@@ -127,6 +127,14 @@ const CourseReuseForm = lazy(() =>
   })),
 );
 
+import { operationalPresetSelection } from "./operational-preset-schema";
+
+const OperationalPresetPicker = lazy(() =>
+  import("./operational-presets").then(({ OperationalPresetPicker }) => ({
+    default: OperationalPresetPicker,
+  })),
+);
+
 const CourseOfferForm = lazy(() =>
   import("../admin/admin").then(({ CourseOfferForm }) => ({
     default: CourseOfferForm,
@@ -160,6 +168,7 @@ type TemplateValues = z.infer<typeof templateSchema>;
 type PlanningOrganisation = Pick<Organisation, "id" | "name"> &
   Partial<Pick<Organisation, "archived_at">>;
 const newCourseSchema = runSchema.extend({
+  operational_preset: operationalPresetSelection.nullish(),
   template_id: z.union([z.uuid(), z.literal("")]),
 });
 
@@ -466,7 +475,7 @@ function RunForm({
     handleSubmit,
     setValue,
     setFocus,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, dirtyFields },
   } = useForm<z.infer<typeof newCourseSchema>>({
     resolver: zodResolver(newCourseSchema),
     defaultValues: creator?.saved?.payload?.run ?? {
@@ -533,6 +542,12 @@ function RunForm({
   const selectedTemplateId = useWatch({ control, name: "template_id" });
   const zone = useWatch({ control, name: "time_zone" });
   const selectedOrganisationId = useWatch({ control, name: "organisation_id" });
+  const adoptedPreset = useWatch({ control, name: "operational_preset" });
+  const legacyDelivery = useWatch({ control, name: "delivery_type" });
+  const matchingPreset =
+    adoptedPreset?.organisation_id === selectedOrganisationId
+      ? adoptedPreset
+      : undefined;
   const activeOrganisation = organisations.some(
     (org) => org.id === selectedOrganisationId && !org.archived_at,
   );
@@ -700,6 +715,10 @@ function RunForm({
           venue,
         } = values;
         const fields = intent.content;
+        const adoption =
+          values.operational_preset?.organisation_id === organisation_id
+            ? values.operational_preset
+            : null;
         const receipt = await draftSaver.write(
           { run: getValues(), content: content.getValues() },
           {
@@ -711,6 +730,15 @@ function RunForm({
               teaching_language,
               venue,
               sessions,
+              ...(adoption
+                ? {
+                    operational_preset: {
+                      id: adoption.id,
+                      revision: adoption.revision,
+                      apply_delivery: adoption.apply_delivery,
+                    },
+                  }
+                : {}),
             },
             content: fields
               ? {
@@ -930,7 +958,7 @@ function RunForm({
               {...register("template_id", {
                 onChange: (event) => {
                   // Company planning is already bound to the selected company.
-                  if (companyOnly) return;
+                  if (companyOnly || creator?.saved?.from_enquiry) return;
                   const owner = templates.find(
                     ({ id }) => id === event.target.value,
                   )?.owner_organisation_id;
@@ -952,8 +980,12 @@ function RunForm({
               {templates
                 .filter(
                   (template) =>
-                    !template.archived_at ||
-                    template.id === original?.template_id,
+                    (!template.archived_at ||
+                      template.id === original?.template_id) &&
+                    (!creator?.saved?.from_enquiry ||
+                      !template.owner_organisation_id ||
+                      template.owner_organisation_id ===
+                        selectedOrganisationId),
                 )
                 .map((template) => (
                   <option value={template.id} key={template.id}>
@@ -963,7 +995,20 @@ function RunForm({
             </select>
           </Field>
         )}
-        {canEditCompany && (
+        {creator?.saved?.from_enquiry && needsContent && (
+          <p className="muted">{creatorText("enquirySourceReview")}</p>
+        )}
+        {creator?.saved?.from_enquiry && (
+          <div className="field">
+            <input type="hidden" {...register("organisation_id")} />
+            <strong>{t("organisation")}</strong>
+            <span>
+              {organisations.find(({ id }) => id === selectedOrganisationId)
+                ?.name ?? t("courseRecordUnavailable")}
+            </span>
+          </div>
+        )}
+        {canEditCompany && !creator?.saved?.from_enquiry && (
           <Field
             id="run-org"
             label={t("organisation")}
@@ -1004,6 +1049,47 @@ function RunForm({
             </select>
           </Field>
         )}
+        {creator && activeOrganisation && selectedOrganisationId && (
+          <Suspense fallback={null}>
+            <OperationalPresetPicker
+              key={selectedOrganisationId}
+              actor={actor}
+              organisation={selectedOrganisationId}
+              applied={matchingPreset}
+              dirtyZone={Boolean(dirtyFields.time_zone || initialSchedule)}
+              dirtyDelivery={Boolean(
+                dirtyFields.delivery_type || dirtyFields.venue,
+              )}
+              disabled={save.isPending}
+              onApply={(preset, inheritZone, inheritDelivery) => {
+                const config = preset.config;
+                if (config.time_zone && inheritZone)
+                  changeZone(config.time_zone);
+                if (config.delivery && inheritDelivery)
+                  setValue(
+                    "delivery_type",
+                    config.delivery.mode === "onsite" ? "onsite" : "online",
+                    { shouldDirty: true },
+                  );
+                setValue(
+                  "operational_preset",
+                  {
+                    id: preset.id,
+                    revision: preset.revision,
+                    organisation_id: selectedOrganisationId,
+                    apply_delivery: Boolean(config.delivery && inheritDelivery),
+                    starts_at: config.starts_at,
+                    ends_at: config.ends_at,
+                  },
+                  { shouldDirty: true },
+                );
+              }}
+              onClear={() =>
+                setValue("operational_preset", null, { shouldDirty: true })
+              }
+            />
+          </Suspense>
+        )}
         {needsContent &&
           (topics.isPending ? (
             <Loading />
@@ -1040,7 +1126,23 @@ function RunForm({
               </select>
             </Field>
             <Field id="run-delivery" label={t("delivery")}>
-              <select id="run-delivery" {...register("delivery_type")}>
+              <select
+                id="run-delivery"
+                {...register("delivery_type", {
+                  onChange: (event) => {
+                    if (
+                      matchingPreset &&
+                      event.target.value !== legacyDelivery
+                    ) {
+                      setValue(
+                        "operational_preset",
+                        { ...matchingPreset, apply_delivery: false },
+                        { shouldDirty: true },
+                      );
+                    }
+                  },
+                })}
+              >
                 <option value="online">{t("online")}</option>
                 <option value="onsite">{t("onsite")}</option>
               </select>
@@ -1050,7 +1152,18 @@ function RunForm({
       </div>
       {creator && <h3>{creatorText("schedule")}</h3>}
       <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
-        <input id="run-venue" {...register("venue")} />
+        <input
+          id="run-venue"
+          {...register("venue", {
+            onChange: () =>
+              matchingPreset?.apply_delivery &&
+              setValue(
+                "operational_preset",
+                { ...matchingPreset, apply_delivery: false },
+                { shouldDirty: true },
+              ),
+          })}
+        />
       </Field>
       <fieldset className="operations-topic-field" ref={schedule} tabIndex={-1}>
         <legend>{t("sessions")}</legend>
@@ -1059,6 +1172,8 @@ function RunForm({
             <CourseSchedulePlanner
               zone={zone}
               suggestedDays={selectedBlock?.duration_days}
+              suggestedStart={matchingPreset?.starts_at ?? undefined}
+              suggestedEnd={matchingPreset?.ends_at ?? undefined}
               editedSessionCount={editedSessionCount}
               disabled={!online || save.isPending}
               onApply={replace}
@@ -1228,6 +1343,7 @@ function RunForm({
                 run: {
                   ...getValues(),
                   ...creatorRunValues,
+                  operational_preset: getValues("operational_preset"),
                   sessions: getValues("sessions"),
                 },
                 content: { ...content.getValues(), ...creatorContentValues },
@@ -1322,15 +1438,25 @@ function RunForm({
       )}
       {(save.isError || timeError) && (
         <Notice kind="error">
-          {t(
-            timeError
-              ? "timeInvalid"
-              : save.error?.message === "course_locked" ||
-                  (save.error &&
-                    "code" in save.error &&
-                    save.error.code === "40001")
-                ? "linkedRunConflict"
-                : "error",
+          {creator?.saved?.from_enquiry &&
+          save.error &&
+          "code" in save.error &&
+          save.error.code === "PT409" ? (
+            <>
+              {creatorText("enquirySourceConflict")}{" "}
+              <Link to="/enquiries">{creatorText("backToEnquiries")}</Link>
+            </>
+          ) : (
+            t(
+              timeError
+                ? "timeInvalid"
+                : save.error?.message === "course_locked" ||
+                    (save.error &&
+                      "code" in save.error &&
+                      save.error.code === "40001")
+                  ? "linkedRunConflict"
+                  : "error",
+            )
           )}
         </Notice>
       )}
@@ -1428,6 +1554,7 @@ export function CoursesPage() {
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [seriesTemplate, setSeriesTemplate] = useState<Template | null>();
   const [seriesBusy, setSeriesBusy] = useState(false);
+  const [seriesResults, setSeriesResults] = useState<string[]>([]);
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
@@ -2675,10 +2802,13 @@ export function CoursesPage() {
         </div>
       )}
       <Dialog
-        open={mayOpenSeries && seriesTemplate !== undefined}
+        open={mayOpenSeries && seriesTemplate !== undefined && !offerRunId}
         closeDisabled={seriesBusy}
         onOpenChange={(open) => {
-          if (!open && !seriesBusy) setSeriesTemplate(undefined);
+          if (!open && !seriesBusy) {
+            setSeriesTemplate(undefined);
+            setSeriesResults([]);
+          }
         }}
         title={t("courseSeries:title")}
         description={t("courseSeries:intro")}
@@ -2695,6 +2825,9 @@ export function CoursesPage() {
               (template) => !template.archived_at,
             )}
             defaultTemplate={seriesTemplate?.id}
+            canPrepareOffer={canPrepareOffer}
+            savedRuns={seriesResults}
+            onSaved={setSeriesResults}
             defaultOrganisation={
               seriesTemplate?.owner_organisation_id ??
               (planningOrganisations.length === 1
@@ -2703,6 +2836,7 @@ export function CoursesPage() {
             }
             onOpen={() => {
               setSeriesTemplate(undefined);
+              setSeriesResults([]);
               setSearch("");
               setPhase("all");
             }}
@@ -2780,6 +2914,14 @@ export function CoursesPage() {
               canReadBlockPlanning
               onBusy={setRunSaving}
               onDone={(_result, offer, run) => {
+                if (creatorRecord?.from_enquiry) {
+                  void client.invalidateQueries({
+                    queryKey: ["enquiry-detail", actor],
+                  });
+                  void client.invalidateQueries({
+                    queryKey: ["enquiry-inbox", actor],
+                  });
+                }
                 if (run) setSavedRun(run);
                 setCourseView(offer ? { offer } : {});
                 if (!offer) setMessage(t("courseDraftCreated"));
@@ -2969,7 +3111,13 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(offerRunId)}
         onOpenChange={(open) => {
-          if (!open) setCourseView({ run: offerRunId ?? "" }, true);
+          if (!open)
+            setCourseView(
+              seriesTemplate !== undefined && seriesResults.length
+                ? {}
+                : { run: offerRunId ?? "" },
+              true,
+            );
         }}
         title={t("createRunOffer")}
         description={t("offerEditorDescription")}

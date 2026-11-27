@@ -3,7 +3,7 @@ import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Inbox, Mail } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
@@ -27,22 +27,26 @@ import {
   enquiryDetailQuery,
   enquiryError,
   enquiryInboxQuery,
-  enquirySessions,
   enquiryStatuses,
   manageEnquiry,
   nextEnquiryStatuses,
 } from "./api";
+import {
+  actOnCourseCreatorDraft,
+  draftKey,
+} from "../operations/course-creator-drafts-api";
 import "./i18n";
 import "./enquiries.css";
 
+type TriageAction = Exclude<EnquiryAction, "convert">;
+
 /** Keep operation identifiers out of user-visible bilingual labels. */
-function actionLabel(action: EnquiryAction) {
+function actionLabel(action: TriageAction) {
   return {
     status: "statusAction",
     assign: "assignAction",
     link_customer: "linkAction",
     create_customer: "createAction",
-    convert: "convertAction",
     note: "noteAction",
   }[action];
 }
@@ -171,7 +175,7 @@ function EnquiryForm({
 }: {
   enquiry: Enquiry;
   context: EnquiryContext;
-  action: EnquiryAction;
+  action: TriageAction;
   onDone: () => Promise<void>;
 }) {
   const { t } = useTranslation("enquiries");
@@ -184,28 +188,10 @@ function EnquiryForm({
   const [organisation, setOrganisation] = useState(
     enquiry.organisation_id ?? "",
   );
-  const [template, setTemplate] = useState("");
-  const [courseTitle, setCourseTitle] = useState(enquiry.payload.topic);
-  const [courseDescription, setCourseDescription] = useState(
-    enquiry.payload.message,
-  );
-  const [zone, setZone] = useState(enquiry.payload.time_zone);
-  const [delivery, setDelivery] = useState(
-    enquiry.payload.delivery_type === "onsite" ? "onsite" : "online",
-  );
-  const [venue, setVenue] = useState("");
-  const [sessions, setSessions] = useState([{ starts_at: "", ends_at: "" }]);
-  const [timeInvalid, setTimeInvalid] = useState(false);
   const retry = useRequestKey();
   const save = useMutation({
     mutationFn: async () => {
       requireOnline();
-      const times =
-        action === "convert" ? enquirySessions(sessions, zone) : null;
-      if (action === "convert" && !times) {
-        setTimeInvalid(true);
-        throw Error("invalid_schedule");
-      }
       const payload =
         action === "status"
           ? { status, reason }
@@ -215,21 +201,7 @@ function EnquiryForm({
               ? { user_id: assignee }
               : action === "link_customer"
                 ? { organisation_id: organisation }
-                : action === "convert"
-                  ? {
-                      template_id: template,
-                      ...(!template && {
-                        draft: {
-                          title: courseTitle.trim(),
-                          description: courseDescription,
-                        },
-                      }),
-                      time_zone: zone,
-                      delivery_type: delivery,
-                      venue,
-                      sessions: times,
-                    }
-                  : {};
+                : {};
       // An uncertain retry of unchanged decisions retains its identity. Changed
       // fields receive a fresh key, while the captured reviewed version stays fixed.
       const signature = JSON.stringify(payload);
@@ -244,18 +216,6 @@ function EnquiryForm({
     },
     onSuccess: onDone,
   });
-  const updateSession = (
-    index: number,
-    key: "starts_at" | "ends_at",
-    value: string,
-  ) => {
-    setSessions(
-      sessions.map((session, row) =>
-        row === index ? { ...session, [key]: value } : session,
-      ),
-    );
-    setTimeInvalid(false);
-  };
   return (
     <form
       onSubmit={(event) => {
@@ -327,148 +287,17 @@ function EnquiryForm({
           </select>
         </Field>
       )}
-      {action === "convert" && (
-        <>
-          <p className="muted">{t("convertHelp")}</p>
-          <Field id="enquiry-template" label={t("template")}>
-            <select
-              value={template}
-              disabled={save.isPending}
-              onChange={(event) => setTemplate(event.target.value)}
-            >
-              <option value="">{t("newTemplate")}</option>
-              {context.templates.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {!template && (
-            <>
-              <Field id="enquiry-course-title" label={t("courseTitle")}>
-                <input
-                  required
-                  maxLength={200}
-                  value={courseTitle}
-                  disabled={save.isPending}
-                  onChange={(event) => setCourseTitle(event.target.value)}
-                />
-              </Field>
-              <Field
-                id="enquiry-course-description"
-                label={t("courseDescription")}
-              >
-                <textarea
-                  maxLength={12000}
-                  rows={4}
-                  value={courseDescription}
-                  disabled={save.isPending}
-                  onChange={(event) => setCourseDescription(event.target.value)}
-                />
-              </Field>
-              <p className="muted">{t("courseDraftHelp")}</p>
-            </>
-          )}
-          <Field id="enquiry-zone" label={t("timeZone")}>
-            <input
-              required
-              maxLength={100}
-              value={zone}
-              disabled={save.isPending}
-              onChange={(event) => {
-                setZone(event.target.value);
-                setTimeInvalid(false);
-              }}
-            />
-          </Field>
-          <Field id="enquiry-delivery" label={t("delivery")}>
-            <select
-              value={delivery}
-              disabled={save.isPending}
-              onChange={(event) => setDelivery(event.target.value)}
-            >
-              <option value="online">{t("online")}</option>
-              <option value="onsite">{t("onsite")}</option>
-            </select>
-          </Field>
-          <Field id="enquiry-venue" label={t("venue")}>
-            <input
-              maxLength={500}
-              value={venue}
-              disabled={save.isPending}
-              onChange={(event) => setVenue(event.target.value)}
-            />
-          </Field>
-          <fieldset className="enquiry-sessions" disabled={save.isPending}>
-            <legend>{t("sessions")}</legend>
-            {sessions.map((session, index) => (
-              <div key={index} className="enquiry-session">
-                <Field
-                  id={`enquiry-start-${index}`}
-                  label={`${t("start")} ${index + 1}`}
-                >
-                  <input
-                    type="datetime-local"
-                    required
-                    value={session.starts_at}
-                    onChange={(event) =>
-                      updateSession(index, "starts_at", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field
-                  id={`enquiry-end-${index}`}
-                  label={`${t("end")} ${index + 1}`}
-                >
-                  <input
-                    type="datetime-local"
-                    required
-                    value={session.ends_at}
-                    onChange={(event) =>
-                      updateSession(index, "ends_at", event.target.value)
-                    }
-                  />
-                </Field>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={sessions.length === 1}
-                  aria-label={`${t("removeSession")} ${index + 1}`}
-                  onClick={() =>
-                    setSessions(sessions.filter((_, row) => row !== index))
-                  }
-                >
-                  {t("removeSession")}
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="secondary"
-              type="button"
-              disabled={sessions.length >= 60}
-              onClick={() =>
-                setSessions([...sessions, { starts_at: "", ends_at: "" }])
-              }
-            >
-              {t("addSession")}
-            </Button>
-          </fieldset>
-          {timeInvalid && <Notice kind="error">{t("timeInvalid")}</Notice>}
-        </>
-      )}
       <Button
         disabled={
           !online ||
           save.isPending ||
           ((action === "status" || action === "note") && !reason.trim()) ||
-          (action === "link_customer" && !organisation) ||
-          (action === "convert" && !template && !courseTitle.trim())
+          (action === "link_customer" && !organisation)
         }
       >
         {t("save")}
       </Button>
-      {save.isError && !timeInvalid && (
+      {save.isError && (
         <Notice kind="error">{t(enquiryError(save.error))}</Notice>
       )}
     </form>
@@ -480,20 +309,38 @@ function EnquiryDetail({
   actor,
   id,
   context,
+  canPrepareOffer,
 }: {
   actor: string;
   id: string;
   context: EnquiryContext;
+  canPrepareOffer: boolean;
 }) {
   const { t, i18n } = useTranslation("enquiries");
   const online = useOnline();
   const cache = useQueryClient();
   const detail = useQuery(enquiryDetailQuery(actor, id));
   const [editing, setEditing] = useState<{
-    action: EnquiryAction;
+    action: TriageAction;
     snapshot: Enquiry;
   } | null>(null);
   const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
+  const start = useMutation({
+    mutationFn: (version: number) =>
+      actOnCourseCreatorDraft("start_enquiry", crypto.randomUUID(), 0, {
+        enquiry_id: id,
+        version,
+      }),
+    onSuccess: (draft) => {
+      cache.setQueryData([...draftKey(actor), draft.id], [draft]);
+      void cache.invalidateQueries({
+        queryKey: [...draftKey(actor), ""],
+        exact: true,
+      });
+      void navigate(`/courses?creator=${encodeURIComponent(draft.id)}`);
+    },
+  });
   const refresh = async () => {
     await Promise.all([
       cache.invalidateQueries({ queryKey: ["enquiry-detail", actor, id] }),
@@ -518,18 +365,12 @@ function EnquiryDetail({
   if (detail.isPending) return <Loading />;
   const row = detail.data,
     value = row.payload;
-  const actions: EnquiryAction[] = [
+  const actions: TriageAction[] = [
     "assign",
     "note",
     ...(nextEnquiryStatuses(row.status).length ? ["status" as const] : []),
     ...(!row.course_run_id ? ["link_customer" as const] : []),
     ...(!row.organisation_id ? ["create_customer" as const] : []),
-    ...(row.organisation_id &&
-    !row.course_run_id &&
-    row.status !== "closed" &&
-    context.can_convert
-      ? ["convert" as const]
-      : []),
   ];
   return (
     <>
@@ -595,10 +436,22 @@ function EnquiryDetail({
           </dd>
         </dl>
         <div className="enquiry-actions">
+          {row.organisation_id &&
+            !row.course_run_id &&
+            row.status !== "closed" &&
+            context.can_convert && (
+              <Button
+                type="button"
+                disabled={!online || start.isPending}
+                onClick={() => start.mutate(row.version)}
+              >
+                {t("convertAction")}
+              </Button>
+            )}
           {actions.map((action) => (
             <Button
               key={action}
-              variant={action === "convert" ? "default" : "secondary"}
+              variant="secondary"
               disabled={!online}
               onClick={() => {
                 setSaved(false);
@@ -609,6 +462,18 @@ function EnquiryDetail({
             </Button>
           ))}
         </div>
+        {start.isError && (
+          <Notice kind="error">{t(enquiryError(start.error))}</Notice>
+        )}
+        {row.course_run_id && canPrepareOffer && (
+          <Link
+            className="text-link"
+            to={`/courses?offer=${encodeURIComponent(row.course_run_id)}`}
+          >
+            {t("continueOffer")}
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+        )}
         {row.course_run_id && (
           <Link
             className="text-link"
@@ -649,11 +514,7 @@ function EnquiryDetail({
         }}
         title={t(editing ? actionLabel(editing.action) : "title")}
         description={t(
-          editing?.action === "convert"
-            ? "convertHelp"
-            : editing?.action === "create_customer"
-              ? "createHelp"
-              : "description",
+          editing?.action === "create_customer" ? "createHelp" : "description",
         )}
       >
         {editing && (
@@ -675,7 +536,15 @@ function EnquiryDetail({
 }
 
 /** Load directory choices only inside the current capability-gated route boundary. */
-function AuthorisedEnquiries({ actor, id }: { actor: string; id?: string }) {
+function AuthorisedEnquiries({
+  actor,
+  id,
+  canPrepareOffer,
+}: {
+  actor: string;
+  id?: string;
+  canPrepareOffer: boolean;
+}) {
   const context = useQuery(enquiryContextQuery(actor));
   if (context.isError)
     return <ErrorState retry={() => void context.refetch()} />;
@@ -686,6 +555,7 @@ function AuthorisedEnquiries({ actor, id }: { actor: string; id?: string }) {
       actor={actor}
       id={id}
       context={context.data}
+      canPrepareOffer={canPrepareOffer}
     />
   ) : (
     <EnquiryList key={actor} actor={actor} />
@@ -708,5 +578,15 @@ export function EnquiriesPage() {
   if (permissions.isPending) return <Loading />;
   if (!permissions.data.includes("organisations.manage"))
     return <Notice kind="error">{t("denied")}</Notice>;
-  return <AuthorisedEnquiries key={actor} actor={actor} id={id} />;
+  return (
+    <AuthorisedEnquiries
+      key={actor}
+      actor={actor}
+      id={id}
+      canPrepareOffer={
+        permissions.data.includes("courses.manage") &&
+        permissions.data.includes("jobs.manage")
+      }
+    />
+  );
 }

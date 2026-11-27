@@ -115,31 +115,10 @@
   overflow-wrap: anywhere;
 }
 
-.enquiry-sessions {
-  padding: 16px;
-  margin: 20px 0;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.enquiry-session {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-  margin: 15px 0 24px;
-}
-
-.enquiry-session > .button {
-  grid-column: 1/-1;
-  justify-self: start;
-}
-
 @media (max-width: 650px) {
   .enquiry-filters,
   .enquiry-card,
-  .enquiry-original dl,
-  .enquiry-session {
+  .enquiry-original dl {
     grid-template-columns: 1fr;
   }
 }
