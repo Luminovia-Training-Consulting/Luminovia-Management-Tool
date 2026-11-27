@@ -71,17 +71,8 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
     await sql(
       `insert into public.course_sessions(id,course_run_id,starts_at,ends_at)
       values (${q(courseSlot)},${q(course)},${start},${start} + interval '3 hours');` +
-        "insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values (" +
-        q(slot) +
-        "," +
-        q(claim) +
-        "," +
-        q(owner) +
-        "," +
-        start +
-        "," +
-        start +
-        " + interval '3 hours');" +
+        `insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at)
+          select ${q(slot)},${q(claim)},${q(owner)},starts_at,ends_at from public.course_sessions where id=${q(courseSlot)};` +
         "insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at) select " +
         q(job) +
         "," +
@@ -231,7 +222,7 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
     "select public.training_control_center(current_date+9,current_date+14)",
     "aal2",
   ).then(json);
-  assert.equal(report.operations.assigned_minutes, 360);
+  assert.equal(report.operations.assigned_minutes, 360, JSON.stringify(report));
   assert.equal(report.operations.unassigned_minutes, 0);
   assert.equal(report.operations.partly_staffed, 0);
   const lifecycle = await actor(

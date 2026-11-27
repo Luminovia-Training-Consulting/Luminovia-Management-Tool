@@ -40,13 +40,20 @@ export const expenseReportQuery = (
     queryKey: [...expenseKey(actor), "report", staff, filters] as const,
     queryFn: async ({ signal }) => {
       // PostgREST GET serializes null as literal text; omit optional filters.
-      const present = Object.fromEntries(
-        Object.entries(filters).filter(([, value]) => value !== null),
-      );
       const { data, error } = await db()
         .rpc(
           "lecturer_expense_report",
-          { p_staff: staff, ...present },
+          {
+            p_staff: staff,
+            p_from: filters.p_from,
+            p_through: filters.p_through,
+            p_state: filters.p_state ?? undefined,
+            p_currency: filters.p_currency ?? undefined,
+            p_assignment: filters.p_assignment ?? undefined,
+            p_lecturer: filters.p_lecturer ?? undefined,
+            p_customer: filters.p_customer ?? undefined,
+            p_course: filters.p_course ?? undefined,
+          },
           { get: true },
         )
         .abortSignal(signal);
