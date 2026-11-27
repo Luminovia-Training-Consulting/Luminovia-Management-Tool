@@ -8,7 +8,6 @@ do $migration$
 declare
   definition text;
   old_check constant text := 'where private.can_read_job(job.id)';
-  scope_projection constant text := 'select job.id, job.title,';
 begin
   definition := pg_catalog.pg_get_functiondef(
     'private.job_discovery_candidates(jsonb)'::regprocedure
@@ -32,11 +31,6 @@ begin
       )
     )
   $replacement$);
-  if cardinality(string_to_array(definition, scope_projection)) <> 2 then
-    raise exception 'Unexpected job discovery scope projection';
-  end if;
-  definition := replace(definition, scope_projection,
-    'select job.id, job.title, job.status,');
   execute definition;
 end;
 $migration$;
