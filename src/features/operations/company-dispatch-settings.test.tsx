@@ -145,3 +145,33 @@ it("allows a company with an empty directory to create its first default contact
     },
   });
 });
+
+it("lets a company deliberately clear an inherited contact", async () => {
+  const directory = {
+    ...empty,
+    contact_id: contactId,
+    contacts: [
+      { id: contactId, name: "Fiktiver Kontakt", email: null, phone: null },
+    ],
+  };
+  fake.rpc.mockImplementation((procedure: string) =>
+    procedure === "company_class_directory"
+      ? { abortSignal: async () => ({ data: directory, error: null }) }
+      : Promise.resolve({
+          data: { ...directory, contact_id: null },
+          error: null,
+        }),
+  );
+
+  const user = await open();
+  const contact = await screen.findByLabelText("Standardkontakt für Aufträge");
+  expect(contact).toHaveValue(contactId);
+  await user.selectOptions(contact, "");
+  await user.click(screen.getByRole("button", { name: "Speichern" }));
+  expect(await screen.findByText("Gespeichert.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("save_company_dispatch_settings", {
+    p_organisation_id: first,
+    p_contact_id: null,
+  });
+  expect(contact).toHaveValue("");
+});
