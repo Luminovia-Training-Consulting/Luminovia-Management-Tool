@@ -59,6 +59,24 @@ import {
   analyticsScopes,
 } from "../analytics/schema.ts";
 import { accountingPaths } from "./accounting-contract.ts";
+import { settlementJournalSchema } from "../accounting/settlement-journal-schema.ts";
+import {
+  expenseReportSchema,
+  expenseOptionsSchema,
+  expenseInvoicesSchema,
+  expenseResultSchema,
+} from "../commercial/expense-schema.ts";
+import {
+  trainingAssignmentCompensationSchema,
+  trainingCommercialPresetSchema,
+  trainingOfferCompensationSchema,
+  trainingPlanSchema,
+} from "../commercial/training-commercial-types.ts";
+import {
+  courseCreatorIndexSchema,
+  courseCreatorReceiptSchema,
+  courseCreatorSnapshotSchema,
+} from "../operations/course-creator-drafts-schema.ts";
 import { deliveryEvidencePaths } from "./delivery-evidence-contract.ts";
 import { academyExplorerOpenApi, academyOpenApi } from "./academy-contract.ts";
 import {
@@ -2382,6 +2400,183 @@ const nativePaths = {
     "Requires jobs.manage. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Each queue contains up to 200 rows. Private tasks require the caller's existing access. The contract, qualification and course queues require their respective permissions. Average ratings are suppressed below three responses.",
     operationsPeriod,
     z.toJSONSchema(controlSchema),
+  ),
+  "/rest/v1/rpc/course_creator_drafts": rpc(
+    "listCourseCreatorDrafts",
+    "Courses",
+    "List or restore the caller's course drafts",
+    "Requires courses.manage on an internal installation. Pass a draft ID to restore its saved payload, or omit it to list draft receipts.",
+    { p_draft_id: { anyOf: [uuid, { type: "null" }] } },
+    z.toJSONSchema(courseCreatorIndexSchema),
+    ["p_draft_id"],
+  ),
+  "/rest/v1/rpc/course_creator_draft_action": rpc(
+    "mutateCourseCreatorDraft",
+    "Courses",
+    "Save, duplicate, discard or create from a course draft",
+    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt.",
+    {
+      p_action: {
+        type: "string",
+        enum: ["save", "duplicate", "discard", "create_course"],
+      },
+      p_draft_id: uuid,
+      p_expected_revision: { type: "integer", minimum: 0 },
+      p_payload: {
+        anyOf: [
+          z.toJSONSchema(courseCreatorSnapshotSchema),
+          { type: "object" },
+          { type: "null" },
+        ],
+      },
+    },
+    z.toJSONSchema(courseCreatorReceiptSchema),
+  ),
+  "/rest/v1/rpc/training_offer_compensation": rpc(
+    "trainingOfferCompensation",
+    "Finance",
+    "Read, preview or save a compensation plan",
+    "The authorised role sees the commercial projection. Saving uses the expected offer version. Accepted claim snapshots retain their original amounts.",
+    {
+      p_job_id: uuid,
+      p_action: { type: "string", enum: ["read", "preview", "save"] },
+      p_expected_version: { type: ["integer", "null"], minimum: 1 },
+      p_payload: z.toJSONSchema(trainingPlanSchema.nullable()),
+    },
+    z.toJSONSchema(trainingOfferCompensationSchema.nullable()),
+    ["p_expected_version", "p_payload"],
+  ),
+  "/rest/v1/rpc/training_commercial_presets": rpc(
+    "trainingCommercialPresets",
+    "Finance",
+    "List, save or archive named organisation presets",
+    "Requires gross finance authority. A preset edit uses its current revision. Applying the preset makes a separate copy for the new offer.",
+    {
+      p_organisation_id: uuid,
+      p_action: { type: "string", enum: ["list", "save", "archive"] },
+      p_preset_id: { anyOf: [uuid, { type: "null" }] },
+      p_expected_revision: { type: ["integer", "null"], minimum: 0 },
+      p_payload: z.toJSONSchema(
+        trainingCommercialPresetSchema
+          .omit({ id: true, revision: true })
+          .nullable(),
+      ),
+    },
+    z.toJSONSchema(
+      z.union([
+        z.array(trainingCommercialPresetSchema),
+        trainingCommercialPresetSchema,
+      ]),
+    ),
+    ["p_preset_id", "p_expected_revision", "p_payload"],
+  ),
+  "/rest/v1/rpc/training_assignment_compensation": rpc(
+    "getTrainingAssignmentCompensation",
+    "Finance",
+    "Read accepted compensation components",
+    "Returns a lecturer's own accepted payout in its original currency. Customer rates and platform margins are excluded.",
+    { p_claim_id: uuid },
+    z.toJSONSchema(trainingAssignmentCompensationSchema.nullable()),
+  ),
+  "/rest/v1/rpc/create_training_offer_from_preset": rpc(
+    "createTrainingOfferFromPreset",
+    "Courses",
+    "Create a course offer with reviewed preset components",
+    "The current preset revision and reviewed course are validated in the creation transaction. Repeat the same client ID with the same inputs to recover the receipt.",
+    {
+      p_course_run_id: uuid,
+      p_payload: { type: "object" },
+      p_platform_percent: {
+        type: ["number", "null"],
+        minimum: 0,
+        maximum: 100,
+      },
+      p_client_id: uuid,
+      p_preset_id: uuid,
+      p_preset_revision: { type: "integer", minimum: 1 },
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/lecturer_expense_options": rpc(
+    "getLecturerExpenseOptions",
+    "Finance",
+    "List own assignments eligible for expenses",
+    "Returns only the signed-in lecturer's eligible claim and session references.",
+    {},
+    z.toJSONSchema(expenseOptionsSchema),
+  ),
+  "/rest/v1/rpc/lecturer_expense_invoices": rpc(
+    "getLecturerExpenseInvoices",
+    "Finance",
+    "List eligible invoices for an expense",
+    "Returns invoices that cover this claim and currency for the currently authorised reviewer.",
+    { p_expense_id: uuid },
+    z.toJSONSchema(expenseInvoicesSchema),
+  ),
+  "/rest/v1/rpc/lecturer_expense_report": rpc(
+    "getLecturerExpenseReport",
+    "Finance",
+    "Read original-currency expense rows and totals",
+    "The report is own-scope by default in the personal Finance view. Staff review requires finance.manage. Dates are inclusive.",
+    {
+      p_staff: boolean,
+      p_from: { type: "string", format: "date" },
+      p_through: { type: "string", format: "date" },
+      p_state: {
+        type: "string",
+        enum: ["submitted", "correction", "approved", "rejected", "reimbursed"],
+      },
+      p_currency: text,
+      p_assignment: uuid,
+      p_lecturer: uuid,
+      p_customer: uuid,
+      p_course: uuid,
+    },
+    z.toJSONSchema(expenseReportSchema),
+    [
+      "p_state",
+      "p_currency",
+      "p_assignment",
+      "p_lecturer",
+      "p_customer",
+      "p_course",
+    ],
+  ),
+  "/rest/v1/rpc/lecturer_expense_action": rpc(
+    "reviewLecturerExpense",
+    "Finance",
+    "Submit, correct, approve, link or reimburse an expense",
+    "Actions enforce the current actor, revision and receipt association. An identical request ID returns the recorded outcome. Reimbursement can be recorded only once.",
+    {
+      p_action: {
+        type: "string",
+        enum: [
+          "submit",
+          "resubmit",
+          "correction",
+          "rejected",
+          "approve",
+          "link",
+          "reimburse",
+        ],
+      },
+      p_expense_id: { anyOf: [uuid, { type: "null" }] },
+      p_expected_revision: { type: "integer", minimum: 0 },
+      p_payload: { type: "object" },
+      p_request_id: uuid,
+    },
+    z.toJSONSchema(expenseResultSchema),
+  ),
+  "/rest/v1/rpc/accounting_settlement_with_expenses": rpc(
+    "getSettlementWithExpenses",
+    "Accounting",
+    "Read the settlement journal with reimbursements",
+    "Authorised original-currency ledger for an inclusive period. Includes recognised expense reimbursements in the lecturer scope.",
+    {
+      p_from: { type: "string", format: "date" },
+      p_to: { type: "string", format: "date" },
+    },
+    z.toJSONSchema(settlementJournalSchema),
   ),
   "/rest/v1/rpc/training_control_center": rpc(
     "getTrainingControlCenter",

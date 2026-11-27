@@ -319,11 +319,17 @@ export default defineConfig(({ mode }) => {
             "**/company-contracts-*.js",
             // Live training workflows fetch actor-scoped data on demand.
             "**/training-control-*.js",
+            // The management Control Center is live-only, like its underlying financial queues.
+            "**/control-center-*.{js,css}",
+            "**/delivery-schema-*.js",
+            "**/delivery-i18n-*.js",
             "**/course-creator-drafts-*.js",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
             "**/training-commercial-*.{js,css}",
             "**/training-course-preset-*.{js,css}",
+            "**/matching-preferences-*.js",
+            "**/offer-delivery-summary-*.js",
             "**/expense-panel-*.{js,css}",
             // These private LMS workflows require a live session and load on entry.
             "**/portfolio-*.js",

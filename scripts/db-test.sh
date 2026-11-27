@@ -9,6 +9,7 @@ node scripts/course-creator-db-tests.mjs
 node scripts/training-commercial-db-tests.mjs
 node scripts/training-delivery-db-tests.mjs
 node scripts/training-control-db-tests.mjs
+node scripts/lecturer-matching-db-tests.mjs
 node scripts/company-lecturer-access-db-tests.mjs
 node scripts/sales-pipeline-retirement-db-tests.mjs
 node scripts/course-authoring-db-tests.mjs

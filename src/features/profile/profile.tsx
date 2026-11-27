@@ -10,7 +10,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
 import { OwnContactVisibility } from "./contact-visibility";
-import { TeachingMatchingPreferences } from "../jobs/matching-preferences";
+
 import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
@@ -167,6 +167,14 @@ const teachingSubjects = new Set([
 const isTeachingSubject = (id: string) => teachingSubjects.has(id);
 
 /** Combine own profile, expertise, evidence and avatar under the current session. */
+const TeachingMatchingPreferences = lazy(() =>
+  import("../jobs/matching-preferences").then(
+    ({ TeachingMatchingPreferences }) => ({
+      default: TeachingMatchingPreferences,
+    }),
+  ),
+);
+
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { session } = useAuth();
@@ -368,7 +376,9 @@ export function ProfilePage() {
         </div>
         <OwnProfileDetails />
         {portalInternalEdition && hasTeachingRole(roles.data) && (
-          <TeachingMatchingPreferences actor={session!.user.id} />
+          <Suspense fallback={null}>
+            <TeachingMatchingPreferences actor={session!.user.id} />
+          </Suspense>
         )}
         <div className="profile-privacy-grid">
           <OwnContactVisibility actor={session!.user.id} />

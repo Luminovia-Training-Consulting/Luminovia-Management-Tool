@@ -2,53 +2,19 @@
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { validZone } from "../../lib/dates";
 import { requireOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 
-const text = z.string();
-const snapshotSchema = z.object({
-  run: z.object({
-    template_id: text,
-    organisation_id: text,
-    time_zone: text.refine(validZone),
-    delivery_type: z.enum(["online", "onsite"]),
-    venue: text,
-    archived: z.boolean(),
-    sessions: z
-      .array(
-        z.object({
-          starts_at: text,
-          ends_at: text,
-          source_session_id: text.optional(),
-        }),
-      )
-      .min(1)
-      .max(60),
-  }),
-  content: z.object({
-    title: text,
-    description: text,
-    syllabus: text,
-    prerequisites: text,
-    topic_ids: z.array(text),
-    archived: z.boolean(),
-  }),
-});
-export type CourseCreatorSnapshot = z.infer<typeof snapshotSchema>;
+import {
+  courseCreatorIndexSchema,
+  courseCreatorReceiptSchema,
+  type CourseCreatorSnapshot,
+} from "./course-creator-drafts-schema";
+export {
+  type CourseCreatorSnapshot,
+  type CourseCreatorDraft,
+} from "./course-creator-drafts-schema";
 
-const receiptSchema = z.object({
-  id: z.uuid(),
-  title: text,
-  revision: z.number().int().positive(),
-  updated_at: z.iso.datetime({ offset: true }),
-  state: z.enum(["editing", "created", "discarded"]),
-  course_run_id: z.uuid().nullable(),
-  next_action: z.enum(["course", "offer"]).nullable(),
-  payload: snapshotSchema.nullable(),
-});
-const indexSchema = z.array(receiptSchema);
-export type CourseCreatorDraft = z.infer<typeof receiptSchema>;
 type Action = "save" | "duplicate" | "discard" | "create_course";
 type SaveStatus =
   "unchanged" | "unsaved" | "saving" | "saved" | "conflict" | "error";
@@ -69,7 +35,7 @@ export function courseCreatorDraftsQuery(actor: string, id?: string) {
         })
         .abortSignal(signal);
       if (error) throw error;
-      return indexSchema.parse(data);
+      return courseCreatorIndexSchema.parse(data);
     },
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -90,7 +56,7 @@ export async function actOnCourseCreatorDraft(
     p_payload: payload,
   });
   if (error) throw error;
-  return receiptSchema.parse(data);
+  return courseCreatorReceiptSchema.parse(data);
 }
 
 /** Queue autosaves and final confirmation so only one revision is written at a time. */

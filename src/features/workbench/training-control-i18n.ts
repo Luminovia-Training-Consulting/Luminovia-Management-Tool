@@ -2,10 +2,6 @@
 import i18n from "../../lib/i18n";
 
 const labels = {
-  overview: [
-    "Kursbetrieb und Forderungen",
-    "Training operations and receivables",
-  ],
   sharedCapacity: [
     "Freie Zeit aus geteilten Verfügbarkeiten",
     "Free time from shared availability",

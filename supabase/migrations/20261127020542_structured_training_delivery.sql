@@ -427,6 +427,24 @@ begin
 end;
 $migration$;
 
+-- Preserve every previous readiness check while using the same structured
+-- completeness rule for published courses, the workspace and Control Center.
+do $migration$
+declare
+  definition text;
+  legacy constant text := $legacy$delivery_ok=case r.delivery_type when 'online' then meeting<>'' else length(trim(r.venue))>0 end$legacy$;
+begin
+  definition:=pg_catalog.pg_get_functiondef('private.readiness_snapshot_for_start(uuid,boolean)'::regprocedure);
+  if cardinality(string_to_array(definition,legacy))<>2 then
+    raise exception 'Cannot extend the expected delivery readiness check';
+  end if;
+  definition:=replace(definition,legacy,
+    'delivery_ok=case when exists(select from private.training_course_delivery where course_run_id=r.id)
+      then private.training_delivery_complete(r.id) else '||substring(legacy from char_length('delivery_ok=')+1)||' end');
+  execute definition;
+end;
+$migration$;
+
 -- Dedicated Academy REST has a separate allowlist. Preserve every existing
 -- rule and add delivery management to the same active-license boundary as draft scheduling.
 do $migration$

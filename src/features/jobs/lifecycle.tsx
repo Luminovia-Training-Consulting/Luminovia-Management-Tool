@@ -39,7 +39,7 @@ import {
 } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./lifecycle.css";
-import { AssignmentMatchingRequirements } from "./matching-preferences";
+
 import { ManualAssignment } from "./manual-assignment";
 import { topicsQuery } from "../../lib/queries";
 import { selectableTopics } from "../taxonomy/selection";
@@ -65,6 +65,14 @@ type Confirmation = {
 };
 
 /** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
+const AssignmentMatchingRequirements = lazy(() =>
+  import("./matching-preferences").then(
+    ({ AssignmentMatchingRequirements }) => ({
+      default: AssignmentMatchingRequirements,
+    }),
+  ),
+);
+
 export function JobLifecyclePanel({
   job,
   dispatchOnly = false,
@@ -422,7 +430,12 @@ export function JobLifecyclePanel({
           />
         )}
       {info.can_manage && (
-        <AssignmentMatchingRequirements actor={session!.user.id} job={job.id} />
+        <Suspense fallback={null}>
+          <AssignmentMatchingRequirements
+            actor={session!.user.id}
+            job={job.id}
+          />
+        </Suspense>
       )}
       {info.can_manage && (
         <div className="page-actions">

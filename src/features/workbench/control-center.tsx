@@ -26,7 +26,6 @@ import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import { CourseStartPanel } from "../readiness/course-start";
 import "./finance-i18n";
 import "./finance.css";
-import "./training-control-i18n";
 
 const TrainingControl = lazy(() => import("./training-control"));
 
@@ -161,7 +160,6 @@ export function ControlCenterPage() {
   const actor = session!.user.id;
   const boundary = sessionCacheBoundary(session?.access_token);
   const { t, i18n } = useTranslation("financeOps");
-  const training = useTranslation("trainingControl").t;
   const [showTraining, setShowTraining] = useState(false);
   const [period, setPeriod] = useState(() => ({
       from: DateTime.now().minus({ days: 30 }).toISODate()!,
@@ -201,7 +199,7 @@ export function ControlCenterPage() {
           className="panel training-control"
           onToggle={(event) => setShowTraining(event.currentTarget.open)}
         >
-          <summary>{training("overview")}</summary>
+          <summary>{t("trainingOverview")}</summary>
           {showTraining && (
             <Suspense fallback={<Loading />}>
               <TrainingControl key={boundary} actor={actor} period={period} />

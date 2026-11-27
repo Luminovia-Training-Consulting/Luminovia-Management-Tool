@@ -5,6 +5,7 @@ const de = {
   timesheetsHelp:
     "Erfasse tatsächlich geleistete Unterrichtszeit für eigene bestätigte Termine. Das vereinbarte Honorar bleibt unverändert. Eingereichte und freigegebene Stände sind vor direkter Bearbeitung geschützt.",
   controlCenter: "Control Center",
+  trainingOverview: "Kursbetrieb und Forderungen",
   controlHelp:
     "Verfolge offene Besetzungen, fehlende Unterlagen, Stornierungen, Aufgaben und Kursvorbereitung im gewählten Zeitraum.",
   from: "Zeitraum von",
@@ -140,6 +141,7 @@ const en: Record<keyof typeof de, string> = {
   timesheetsHelp:
     "Record teaching time actually delivered for your confirmed sessions. Accepted compensation stays unchanged. Submitted and approved versions are protected from direct editing.",
   controlCenter: "Control Center",
+  trainingOverview: "Training operations and receivables",
   controlHelp:
     "Track unstaffed courses, missing materials, cancellations, tasks and preparation within the selected period.",
   from: "Period from",
