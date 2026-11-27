@@ -503,6 +503,54 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             );
         },
     );
+    await check("The recoverable creator converts exactly the reviewed enquiry and preserves additional reviewed content", async () => {
+        const source = await receive({...payload, topic: "Fictional recoverable training"}, randomUUID(), randomUUID().replaceAll("-", "").repeat(2));
+        await manage(manager, source, "create_customer", {}, 1);
+        const firstId = randomUUID(), replacement = randomUUID();
+        const change = (who, action, id, revision, body) => actor(who,
+            `select public.course_creator_draft_action(${q(action)},'${id}',${revision},${q(JSON.stringify(body))}::jsonb)`
+        ).then(JSON.parse);
+        const start = (who, draft, version) => change(who, "start_enquiry", draft, 0, {enquiry_id: source, version});
+        const first = await start(manager, firstId, 2);
+        assert.equal(first.from_enquiry, true);
+        assert.equal(first.payload.run.organisation_id, (await detail(manager,source)).organisation_id);
+        assert.equal(first.payload.content.title,"Fictional recoverable training");
+        assert.equal(await sql(`select course_run_id is null from private.website_enquiries where id='${source}'`), "t");
+        assert.equal((await start(manager, randomUUID(), 2)).id, firstId);
+        await assert.rejects(start(lecturer,randomUUID(),2), /42501|privilege/i);
+        await assert.rejects(change(admin,"save",firstId,1,first.payload),/42501|privilege/i);
+        await assert.rejects(change(manager,"duplicate",firstId,1,{new_id:randomUUID()}),/42501|privilege/i);
+        await manage(manager,source,"note",{note:"Fictional source revision changed"},2);
+        const plan = (draft) => ({
+          run:{
+            template_id:"",organisation_id:draft.payload.run.organisation_id,time_zone:"Europe/Berlin",
+            delivery_type:"online",venue:"",
+            sessions:[{starts_at:starts,ends_at:ends}],
+          },
+          content:{title:"Reviewed course",description:"Reviewed public outline",syllabus:"Reviewed syllabus",
+            prerequisites:"Reviewed prerequisite",topic_ids:[]},
+          next_action:"offer",
+        });
+        await assert.rejects(change(manager,"create_course",firstId,1,plan(first)), /PT409|Enquiry changed/s);
+        assert.equal(await sql(`select course_run_id is null from private.website_enquiries where id='${source}'`), "t");
+        const resumed = await start(manager,replacement,3);
+        await assert.rejects(change(manager,"create_course",replacement,1,{
+          ...plan(resumed),run:{...plan(resumed).run,organisation_id:randomUUID()},
+        }), /22023|invalid_parameter_value/i);
+        const sameCommand = plan(resumed);
+        const [receipt, replay] = await Promise.all([
+          change(manager,"create_course",replacement,1,sameCommand),
+          change(manager,"create_course",replacement,1,sameCommand),
+        ]);
+        assert.deepEqual(receipt,replay);
+        assert.equal(receipt.next_action,"offer");
+        const converted = await detail(manager,source);
+        assert.equal(converted.course_run_id,receipt.course_run_id);
+        assert.equal(converted.payload.message,payload.message);
+        assert.equal(await sql(`select template.syllabus || '/' || template.prerequisites from public.course_runs run
+          join public.course_templates template on template.id=run.template_id
+          where run.id='${receipt.course_run_id}'`), "Reviewed syllabus/Reviewed prerequisite");
+    });
     await check(
         "Reasoned closure/reopening and append-only notes retain full management history",
         async () => {
@@ -837,53 +885,5 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             }
         },
     );
-    await check("The recoverable creator converts exactly the reviewed enquiry and preserves additional reviewed content", async () => {
-        const source = await receive({...payload, topic: "Fictional recoverable training"}, randomUUID(), randomUUID().replaceAll("-", "").repeat(2));
-        await manage(manager, source, "create_customer", {}, 1);
-        const firstId = randomUUID(), replacement = randomUUID();
-        const change = (who, action, id, revision, body) => actor(who,
-            `select public.course_creator_draft_action(${q(action)},'${id}',${revision},${q(JSON.stringify(body))}::jsonb)`
-        ).then(JSON.parse);
-        const start = (who, draft, version) => change(who, "start_enquiry", draft, 0, {enquiry_id: source, version});
-        const first = await start(manager, firstId, 2);
-        assert.equal(first.from_enquiry, true);
-        assert.equal(first.payload.run.organisation_id, (await detail(manager,source)).organisation_id);
-        assert.equal(first.payload.content.title,"Fictional recoverable training");
-        assert.equal(await sql(`select course_run_id is null from private.website_enquiries where id='${source}'`), "t");
-        assert.equal((await start(manager, randomUUID(), 2)).id, firstId);
-        await assert.rejects(start(lecturer,randomUUID(),2), /42501|privilege/i);
-        await assert.rejects(change(admin,"save",firstId,1,first.payload),/42501|privilege/i);
-        await assert.rejects(change(manager,"duplicate",firstId,1,{new_id:randomUUID()}),/42501|privilege/i);
-        await manage(manager,source,"note",{note:"Fictional source revision changed"},2);
-        const plan = (draft) => ({
-          run:{
-            template_id:"",organisation_id:draft.payload.run.organisation_id,time_zone:"Europe/Berlin",
-            delivery_type:"online",venue:"",
-            sessions:[{starts_at:starts,ends_at:ends}],
-          },
-          content:{title:"Reviewed course",description:"Reviewed public outline",syllabus:"Reviewed syllabus",
-            prerequisites:"Reviewed prerequisite",topic_ids:[]},
-          next_action:"offer",
-        });
-        await assert.rejects(change(manager,"create_course",firstId,1,plan(first)), /PT409|Enquiry changed/s);
-        assert.equal(await sql(`select course_run_id is null from private.website_enquiries where id='${source}'`), "t");
-        const resumed = await start(manager,replacement,3);
-        await assert.rejects(change(manager,"create_course",replacement,1,{
-          ...plan(resumed),run:{...plan(resumed).run,organisation_id:randomUUID()},
-        }), /22023|invalid_parameter_value/i);
-        const sameCommand = plan(resumed);
-        const [receipt, replay] = await Promise.all([
-          change(manager,"create_course",replacement,1,sameCommand),
-          change(manager,"create_course",replacement,1,sameCommand),
-        ]);
-        assert.deepEqual(receipt,replay);
-        assert.equal(receipt.next_action,"offer");
-        const converted = await detail(manager,source);
-        assert.equal(converted.course_run_id,receipt.course_run_id);
-        assert.equal(converted.payload.message,payload.message);
-        assert.equal(await sql(`select template.syllabus || '/' || template.prerequisites from public.course_runs run
-          join public.course_templates template on template.id=run.template_id
-          where run.id='${receipt.course_run_id}'`), "Reviewed syllabus/Reviewed prerequisite");
-    });
     console.log(`\n${checks} website-enquiry PostgreSQL groups passed.`);
 });
