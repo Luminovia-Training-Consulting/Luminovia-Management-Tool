@@ -1,3 +1,4 @@
+import { RemovalAppealsPanel } from "../jobs/removal-appeals";
 import { SessionScroll } from "../../components/session-scroll";
 /**
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
@@ -1190,6 +1191,13 @@ export function AdminPage() {
             <OfferEditor actor={session!.user.id} />
           )}
         </div>
+      ) : params.get("view") === "appeals" ? (
+        <div className="section-stack">
+          <Link to="/admin/assignments">
+            {de ? "Zur Auftragsübersicht" : "Back to assignment overview"}
+          </Link>
+          <RemovalAppealsPanel actor={session!.user.id} />
+        </div>
       ) : params.get("view") === "jobs" ? (
         <div className="section-stack">
           <div className="page-actions">
@@ -1231,6 +1239,11 @@ export function AdminPage() {
                 : "Open and publish assignments and allocate lecturers for complete teaching blocks."}
             </p>
             <div className="form-actions">
+              <Button asChild variant="secondary">
+                <Link to="/admin/assignments?view=appeals">
+                  {de ? "Einsprüche prüfen" : "Review appeals"}
+                </Link>
+              </Button>
               <Button asChild>
                 <Link to="/admin?view=jobs">
                   {de ? "Aufträge verwalten" : "Manage assignments"}

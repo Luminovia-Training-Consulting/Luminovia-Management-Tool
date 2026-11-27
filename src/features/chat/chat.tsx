@@ -42,6 +42,7 @@ import {
 } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
+import { ChatRetention } from "./retention";
 import type { ChatRoom } from "./types";
 import { RoomActivity } from "./room-activity";
 import { RoomUnread } from "./room-unread";
@@ -344,6 +345,10 @@ function ChatDirectory({ actor }: { actor: string }) {
       <header className="chat-page-heading">
         <h1>{t("title")}</h1>
         <div className="chat-page-actions">
+          {permissions.data?.includes("users.manage") &&
+            roles.data?.some(
+              (role) => role === "owner" || role === "admin",
+            ) && <ChatRetention actor={actor} />}
           <Button
             variant="secondary"
             onClick={() => setContactsOpen(true)}

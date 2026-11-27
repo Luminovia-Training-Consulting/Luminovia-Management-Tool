@@ -227,6 +227,7 @@ export function NotificationsPage({
               <NotificationRow
                 key={item.id}
                 item={item}
+                appealActor={academy ? undefined : actor}
                 zone={zone}
                 disabled={!online || marking}
                 readOnly={readOnly}

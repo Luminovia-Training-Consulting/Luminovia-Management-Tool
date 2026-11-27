@@ -70,6 +70,11 @@ services:
             if psql -wXqAt -U supabase_admin -c 'select private.ensure_administration_activity_schedule()' 2>/dev/null | grep -qx t; then
               touch /tmp/portal-administration-schedule;
             fi;
+          fi;
+          if [ ! -f /tmp/portal-chat-retention-schedule ]; then
+            if psql -wXqAt -U supabase_admin -c 'select private.ensure_chat_retention_schedule()' 2>/dev/null | grep -qx t; then
+              touch /tmp/portal-chat-retention-schedule;
+            fi;
           fi
       interval: 30s
       timeout: 5s

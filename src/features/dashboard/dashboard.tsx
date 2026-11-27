@@ -41,6 +41,7 @@ export function Dashboard() {
   const { t, i18n } = useTranslation();
   const dashboard = useTranslation("dashboard").t;
   const inbox = useTranslation("inbox").t;
+  const appeals = useTranslation("removalAppeals").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
@@ -99,6 +100,13 @@ export function Dashboard() {
             <strong>{inbox("lecturerRemoved")}</strong>
             <p>{item.title}</p>
             {item.removal_reason && <p>{item.removal_reason}</p>}
+            {(item.appeal_status === "approved" ||
+              item.appeal_status === "rejected") && (
+              <p>
+                <strong>{appeals(item.appeal_status)}</strong>{" "}
+                {item.appeal_decision_reason}
+              </p>
+            )}
             <Link to="/notifications">{inbox("open")}</Link>
           </Notice>
         ))}

@@ -16,6 +16,11 @@ const notificationItemSchema = z.object({
   assignment_replaced: z.literal(true).optional(),
   assignment_removed: z.literal(true).optional(),
   removal_reason: z.string().optional(),
+  appeal_claim_id: z.uuid().optional(),
+  appeal_status: z
+    .enum(["available", "pending", "approved", "rejected"])
+    .optional(),
+  appeal_decision_reason: z.string().optional(),
   created_at: z.string().datetime({ offset: true }),
   read_at: z.string().datetime({ offset: true }).nullable(),
   // Server-resolved internal destinations only; malformed API data must never

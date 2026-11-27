@@ -462,6 +462,60 @@ await withTestDatabase("permanent_deletion", async ({sql, actor}) => {
                 assert.equal(await sql(`select count(*) from ${relation} where ${selector}`), "1", relation);
         },
     );
+    await check("An unreviewed single-job invoice is purged with its PDF and inbox while a shared invoice blocks", async () => {
+        const [job, sibling, claim, siblingClaim, invoice, file, version] = Array.from({ length: 7 }, randomUUID);
+        await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+          values(${q(job)},'Fictional invoice job','Fictional company','online','filled',50,50,'EUR','fixed_total','Fictional terms'),
+                (${q(sibling)},'Fictional sibling invoice job','Fictional company','online','filled',50,50,'EUR','fixed_total','Fictional terms');
+          insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
+            values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},50,50,'EUR','fixed_total','Fictional invoiced terms',1),
+                  (${q(siblingClaim)},${q(sibling)},${q(owner)},${q(randomUUID())},50,50,'EUR','fixed_total','Fictional invoiced terms',1);
+          insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)
+            values(${q(file)},${q(owner)},${q(owner)},'personal','invoice','Fictional submitted invoice.pdf','application/pdf',100,'clean',${q(randomUUID())});
+          insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)
+            values(${q(version)},${q(file)},${q(owner)},${q(randomUUID())},1,${q(`fictional/invoice/${version}`)},'Fictional submitted invoice.pdf','application/pdf',100,'clean',repeat('a',64));
+          update public.documents set current_version_id=${q(version)} where id=${q(file)};
+          insert into public.invoices(id,user_id,number,issued_on,due_on,currency,total_amount,document_version_id,client_id,status)
+            values(${q(invoice)},${q(owner)},'FICTIONAL-PURGE-SUBMITTED','2001-01-01','2001-02-01','EUR',50,${q(version)},${q(randomUUID())},'submitted');
+          insert into public.invoice_items(invoice_id,claim_id) values(${q(invoice)},${q(claim)}),(${q(invoice)},${q(siblingClaim)});
+          insert into private.document_organisation(user_id,document_id) values(${q(owner)},${q(file)});
+          insert into private.job_matching_requirements(job_id,qualification_topics,teaching_languages)
+            values(${q(job)},'{}','{de}');`);
+        const shared = await plan("job", job);
+        assert.equal(shared.can_confirm, false);
+        assert.equal(shared.counts["public.invoices"] ?? 0, 0);
+        assert.ok(shared.blockers.some(({ kind }) => kind === "public.invoice_items"));
+        await expectCode(confirm(shared), "23503");
+
+        await sql(`delete from public.invoice_items where invoice_id=${q(invoice)} and claim_id=${q(siblingClaim)}`);
+        const preview = await plan("job", job);
+        assert.deepEqual(preview.blockers, []);
+        assert.equal(preview.can_confirm, true);
+        const removed = [
+            ["public.invoices", `id=${q(invoice)}`],
+            ["public.invoice_items", `invoice_id=${q(invoice)}`],
+            ["public.documents", `id=${q(file)}`],
+            ["public.document_versions", `id=${q(version)}`],
+            ["private.document_organisation", `document_id=${q(file)}`],
+            ["public.notifications", `kind='invoice_submitted' and resource_id=${q(invoice)}`],
+            ["private.job_matching_requirements", `job_id=${q(job)}`],
+        ];
+        for (const [relation] of removed) assert.equal(preview.counts[relation], 1, relation);
+        const operation = await confirm(preview);
+        await sql("delete from public.role_permissions where role = 'admin' and permission = 'finance.manage'");
+        await expectCode(permit(operation), "42501");
+        await sql("insert into public.role_permissions(role,permission) values('admin','finance.manage')");
+        const execution = await permit(operation);
+        const work = await worker("work", key(operation, execution));
+        assert.ok(work.objects.some(({path}) => path === `fictional/invoice/${version}`));
+        await expectCode(sql(`update private.job_matching_requirements set teaching_languages='{en}' where job_id=${q(job)}`), "55000");
+        await worker("apply", key(operation, execution));
+        assert.equal((await worker("complete", `${key(operation, execution)},true,true`)).status, "completed");
+        for (const [relation, selector] of removed)
+            assert.equal(await sql(`select count(*) from ${relation} where ${selector}`), "0", relation);
+        assert.equal(await sql(`select count(*) from public.job_claims where id=${q(siblingClaim)}`), "1");
+    });
+
     await check("A standalone job purge cannot remove the source of an approved invoice", async () => {
         const [job, claim, invoice, file, version] = Array.from({ length: 5 }, randomUUID);
         await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)

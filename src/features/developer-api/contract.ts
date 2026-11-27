@@ -2894,13 +2894,14 @@ const nativePaths = {
     "saveCourseRun",
     "Courses",
     "Create or update a scheduled course",
-    "Use a null ID for a new run. On the internal edition, active company members can only create unpublished drafts using an active template owned by their organisation. Sessions use explicit offsets and must not overlap. Course managers can edit venues on linked runs. Prospective lecturers discover live offers through the marketplace. Course access follows assignment. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
+    "Use a null ID for a new run. On the internal edition, active company members can only create unpublished drafts using an active template owned by their organisation. Sessions use explicit offsets and must not overlap. Select de or en to require that teaching language in the lecturer profile, or use an empty string for no language requirement. The course language is fixed once an offer is linked. Course managers can edit venues on linked runs. Prospective lecturers discover live offers through the marketplace. Course access follows assignment. Direct changes to shared planning require the current job_lifecycle version, an idempotency key and the applicable permission on the sole linked offer. Accepted work uses the assignment amendment workflow.",
     {
       p_id: nullableUuid,
       p_payload: {
         ...courseRunRequest,
         properties: {
           ...courseRunRequest.properties,
+          teaching_language: { type: "string", enum: ["", "de", "en"] },
           expected_job_version: { ...version, minimum: 1 },
           job_request_id: uuid,
         },
@@ -3623,6 +3624,51 @@ const nativePaths = {
       },
     },
   },
+  "/rest/v1/rpc/assignment_removal_appeals": rpc(
+    "native_assignment_removal_appeals",
+    "Jobs",
+    "List assignment removal appeals",
+    "Requires current job management authority. Select pending or decided appeals. A cursor requires both the creation timestamp and claim ID from the previous page.",
+    {
+      p_pending: boolean,
+      p_before_at: nullableDateTime,
+      p_before_id: nullableUuid,
+    },
+    {
+      type: "array",
+      maxItems: 30,
+      items: object({
+        claim_id: uuid,
+        job_id: uuid,
+        title: text,
+        display_name: text,
+        removal_reason: { type: ["string", "null"] },
+        reason: lifecycleReason,
+        created_at: sessionInstant,
+        decision: { type: ["boolean", "null"] },
+        decision_reason: { type: ["string", "null"] },
+      }),
+    },
+    ["p_before_at", "p_before_id"],
+  ),
+  "/rest/v1/rpc/submit_assignment_removal_appeal": voidRpc(
+    "native_submit_assignment_removal_appeal",
+    "Jobs",
+    "Appeal the removal of an own assignment",
+    "Only the affected lecturer can appeal a cancellation made by another account. Resubmitting the same claim and reason is safe.",
+    { p_claim_id: uuid, p_reason: { ...lifecycleReason, minLength: 5 } },
+  ),
+  "/rest/v1/rpc/review_assignment_removal_appeal": voidRpc(
+    "native_review_assignment_removal_appeal",
+    "Jobs",
+    "Decide an assignment removal appeal",
+    "Requires job management authority and a reason. The decision is sent to the affected lecturer. Reallocating an assignment uses the normal assignment workflow.",
+    {
+      p_claim_id: uuid,
+      p_approve: boolean,
+      p_reason: { ...lifecycleReason, minLength: 5 },
+    },
+  ),
   "/rest/v1/rpc/assignment_withdrawals": rpc(
     "native_assignment_withdrawals",
     "Jobs",

@@ -1185,6 +1185,10 @@ describe("course form failure and confirmation boundaries", () => {
   it("validates every session before submitting an all-or-nothing run", async () => {
     renderCourses();
     const dialog = await newRun();
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText("Unterrichtssprache"),
+      "en",
+    );
     interval(dialog, "2030-03-30T09:00", "2030-03-30T10:00");
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Termin ergänzen" }),
@@ -1214,6 +1218,7 @@ describe("course form failure and confirmation boundaries", () => {
         organisation_id: "",
         time_zone: "Europe/Berlin",
         delivery_type: "online",
+        teaching_language: "en",
         venue: "",
         published: false,
         archived: false,

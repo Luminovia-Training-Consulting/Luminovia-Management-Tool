@@ -144,6 +144,7 @@ export interface CourseRun {
   delivery_type: "online" | "onsite";
   venue: string;
   published: boolean;
+  teaching_language?: "de" | "en" | null;
   creation_origin?: "staff" | "company" | "unknown";
   own_lecturers_only?: boolean;
   archived_at: string | null;
@@ -245,7 +246,7 @@ export const runsQuery = (actor: string, withAssignments = false) =>
         const query = db()
           .from("course_runs")
           .select(
-            `id,template_id,organisation_id,time_zone,delivery_type,venue,published,creation_origin,own_lecturers_only,archived_at,course_sessions(id,starts_at,ends_at),jobs(id,title,status,company_internal,claim_deadline,first_session:job_sessions(starts_at)${
+            `id,template_id,organisation_id,time_zone,delivery_type,venue,published,teaching_language,creation_origin,own_lecturers_only,archived_at,course_sessions(id,starts_at,ends_at),jobs(id,title,status,company_internal,claim_deadline,first_session:job_sessions(starts_at)${
               withAssignments
                 ? ",capacity,job_claims(status,lecturer_id,profiles!job_claims_lecturer_id_fkey(display_name))"
                 : ""

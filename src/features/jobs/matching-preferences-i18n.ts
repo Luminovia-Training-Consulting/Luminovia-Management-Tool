@@ -12,8 +12,8 @@ const labels = {
   hybrid: ["Hybrid", "Hybrid"],
   languages: ["Unterrichtssprachen", "Teaching languages"],
   languagesHint: [
-    "Sprachcodes durch Leerzeichen oder Kommas trennen, zum Beispiel de en.",
-    "Separate language codes by spaces or commas, for example de en.",
+    "Für Deutsch de und für Englisch en eingeben. Mehrere Sprachcodes durch Leerzeichen oder Kommas trennen.",
+    "Enter de for German and en for English. Separate multiple language codes with spaces or commas.",
   ],
   days: ["Bevorzugte Unterrichtstage", "Preferred teaching days"],
   start: ["Frühester Unterrichtsbeginn", "Earliest teaching start"],

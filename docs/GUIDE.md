@@ -130,13 +130,17 @@ Authorised administrators open `/admin/accounts` (**Konten & Zugänge / Accounts
 
 Open **Meine Rollen / My roles** on your own account card as an internal administrator to combine Administration, Management, Lecturer, Course participant and Company. Select an active company when adding Company. Removing Administration relinquishes its permissions immediately and requires another active administrator or owner. Active teaching assignments protect your last teaching role. Management can assign company, participant and lecturer roles to subordinate accounts and attach the selected company together with the role. A participant role enables learner access; course enrolments remain separate.
 
+## Assignment removal appeals
+
+When another authorised account removes a lecturer from an assignment, the lecturer can read the reason and use **Einspruch einlegen / File an appeal** in the inbox. Reviewers receive an inbox link to **Verwaltung → Aufträge → Einsprüche prüfen / Administration → Assignments → Review appeals**. They record a decision and its reason there. The lecturer receives the decision in the original notice, which becomes unread again. A successful appeal can be followed by a new allocation through the usual scheduling and consent checks.
+
 <a id="section-user-guide-permanent-deletion"></a>
 
 ## Permanent deletion
 
 Open **Endgültig löschen / Delete permanently** from the permitted account, job, course or organisation detail with current required permissions. Archiving remains a separate action. A company account's own-job list contains only jobs linked consistently to its current organisations; names, old lecturer assignments or former membership do not grant access.
 
-From a job's detail, an Owner or administrator can review and confirm **Auftrag endgültig löschen / Permanently delete job**. The preview includes the job's dates, assignments, dedicated lecturer chat, attachments and other records that belong to the job. This action is scoped to the job and its listed records. Linked finance records and dependencies shared with other jobs or the course can block the action. Company members use the existing own-job action with a narrower scope.
+From a job's detail, an Owner or administrator can review and confirm **Auftrag endgültig löschen / Permanently delete job**. The preview includes the job's dates, assignments, dedicated lecturer chat, attachments and other records that belong to the job. This action is scoped to the job and its listed records. With finance management permission, the preview also includes an exclusively linked, unreviewed submitted invoice and its owned PDF. Reviewed, paid, or shared financial records can block the action, as can dependencies shared with other jobs or the course. Company members use the existing own-job action with a narrower scope.
 
 For an unpublished internal course draft with unused dates and no linked assignment or teaching records, the preview includes the dates. Review the total scope, then confirm to remove the draft and dates together. Open **Zu den Kursterminen / Go to course sessions** when the dates block deletion. If an assignment owns the schedule, follow its link in the preview. A blocked template also links to the visible runs using it.
 
@@ -551,6 +555,8 @@ Archive rather than deleting a used identity. Active children must be archived f
 At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. Active owners, administrators and lecturers can open **Dozierenden-Lounge / Lecturer lounge** and join the shared room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
 
 Company/lecturer direct-message contacts are searchable only when a confirmed or cancelled job claim connects the lecturer to the company's own current organisation. This is checked for both parties when creating a DM and again for existing rooms, message history and sending; a stale room membership alone cannot preserve access after the assignment relationship is absent. Past assignment history remains valid, while unrelated companies, open offers and generic management permissions do not grant a company/lecturer contact.
+
+Use **Löschfrist für diesen Chat / Retention for this chat** in the chat header to review that room's policy. Authorised managers can set a room override, disable expiration or inherit the installation default. Administrators can set the default from the chats page. Available periods are eight hours, seven days and fourteen days. The setting applies to existing and new messages. The scheduled job removes expired messages and their message history. Files have their own lifecycle.
 
 Open **Kurschats ohne Nachrichten / Course chats without messages** to show empty course rooms. Search and direct links from courses can also open these rooms. Chats with activity and pinned chats appear directly in their usual list.
 

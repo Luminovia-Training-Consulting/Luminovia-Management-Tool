@@ -10,6 +10,7 @@ export const courseCreatorSnapshotSchema = z.object({
     time_zone: text.refine(validZone),
     delivery_type: z.enum(["online", "onsite"]),
     venue: text,
+    teaching_language: z.enum(["", "de", "en"]).optional(),
     archived: z.boolean(),
     sessions: z
       .array(
