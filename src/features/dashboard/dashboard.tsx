@@ -33,6 +33,7 @@ import {
 import { DashboardCustomization } from "./personal";
 import { notificationPreviewQuery } from "../notifications/api";
 import { DashboardReadinessWidget } from "../readiness/widget";
+import "../jobs/removal-appeals-i18n";
 import "./i18n";
 import "./dashboard.css";
 

@@ -17,12 +17,15 @@ import {
   type NotificationCategory,
 } from "./categories";
 import type { NotificationItem } from "./api";
-import "../jobs/removal-appeals-i18n";
+declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
-const SubmitRemovalAppeal = lazy(async () => {
-  const { SubmitRemovalAppeal } = await import("../jobs/removal-appeals");
-  return { default: SubmitRemovalAppeal };
-});
+const RemovalAppealNotification = __PORTAL_INTERNAL_EDITION__
+  ? lazy(async () => {
+      const { RemovalAppealNotification } =
+        await import("../jobs/removal-appeals");
+      return { default: RemovalAppealNotification };
+    })
+  : null;
 
 /** Categories filter only already-loaded authorized rows; neither totals nor server cursors change. */
 export function CategorySelector({
@@ -86,7 +89,6 @@ export const NotificationRow = memo(function NotificationRow({
   mark: (id: string, read: boolean) => void;
 }) {
   const { t, i18n } = useTranslation("inbox");
-  const appeal = useTranslation("removalAppeals").t;
   return (
     <li
       className={`notification-row ${item.read_at ? "" : "notification-unread"}`}
@@ -104,22 +106,16 @@ export const NotificationRow = memo(function NotificationRow({
       </strong>
       {item.title && <p>{item.title}</p>}
       {item.removal_reason && <p>{item.removal_reason}</p>}
-      {item.appeal_status && item.appeal_status !== "available" && (
-        <p>
-          <strong>{appeal(item.appeal_status)}</strong>{" "}
-          {item.appeal_decision_reason}
-        </p>
+      {RemovalAppealNotification && item.appeal_status && (
+        <Suspense fallback={null}>
+          <RemovalAppealNotification
+            status={item.appeal_status}
+            decisionReason={item.appeal_decision_reason}
+            actor={appealActor}
+            claim={item.appeal_claim_id}
+          />
+        </Suspense>
       )}
-      {appealActor &&
-        item.appeal_status === "available" &&
-        item.appeal_claim_id && (
-          <Suspense fallback={null}>
-            <SubmitRemovalAppeal
-              actor={appealActor}
-              claim={item.appeal_claim_id}
-            />
-          </Suspense>
-        )}
       <small>{dateTime(item.created_at, i18n.language, zone)}</small>
       {item.href ? (
         <Link to={item.href}>{t("open")}</Link>
