@@ -120,9 +120,8 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # Earlier complete acceptance took 38m53s; PR17 reached browsers after 31m.
-    # Keep room for Main/manual all-phase work; individual deadlines stay fixed.
-    timeout-minutes: 60
+    # The PostgreSQL phase and the later API suites need separate time budgets.
+    timeout-minutes: 90
     steps:
       - name: Require a successful recognized scope
         env:
@@ -273,7 +272,8 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Pull requests complete the SQL suites before native self-host acceptance.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 70 || 40 }}
     steps:
       - name: Require a successful recognized scope
         env:

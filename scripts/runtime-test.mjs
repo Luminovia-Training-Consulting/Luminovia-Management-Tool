@@ -493,10 +493,14 @@ try {
         },
     );
     if (phase.system) {
-        await step("PostgreSQL, RLS and 50 concurrent claims", "npm", [
-            "run",
-            "test:db",
-        ]);
+        // This entry point runs the complete serial PostgreSQL suite and advisors.
+        await step(
+            "PostgreSQL, RLS and 50 concurrent claims",
+            "npm",
+            ["run", "test:db"],
+            {},
+            40 * 60 * 1000,
+        );
         env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
         await step(
             "Create one isolated migration snapshot for SQL fixtures",
