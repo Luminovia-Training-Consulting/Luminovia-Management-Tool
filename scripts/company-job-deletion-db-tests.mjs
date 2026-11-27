@@ -99,7 +99,7 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
     );
     const courseSession = randomUUID();
     await sql(`update public.course_runs set published=true where id=${q(acceptedRun)};
-    insert into public.course_sessions(id,course_run_id,starts_at,ends_at) values(${q(courseSession)},${q(acceptedRun)},now()+interval '60 days',now()+interval '60 days 1 hour');`);
+    insert into public.course_sessions(id,course_run_id,starts_at,ends_at) values(${q(courseSession)},${q(acceptedRun)},now()+interval '3 days',now()+interval '3 days 1 hour');`);
     const allocation = randomUUID(),
         foreignClaim = randomUUID(),
         foreignAllocation = randomUUID();
@@ -109,7 +109,7 @@ await withTestDatabase("company_job_deletion", async ({sql, actor}) => {
     await sql(`insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version)
     values(${q(foreignClaim)},${q(foreign)},${q(outsider)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Unrelated lecturer accepted snapshot',1);
     insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values
-    (${q(allocation)},${q(acceptedClaim)},${q(teacher)},now()+interval '60 days',now()+interval '60 days 1 hour'),
+    (${q(allocation)},${q(acceptedClaim)},${q(teacher)},now()+interval '3 days',now()+interval '3 days 1 hour'),
     (${q(foreignAllocation)},${q(foreignClaim)},${q(outsider)},now()+interval '60 days',now()+interval '60 days 1 hour');
     insert into public.claim_events(id,claim_id,actor_id,event_type) values(${q(claimEvent)},${q(acceptedClaim)},${q(teacher)},'confirmed'),(${q(foreignClaimEvent)},${q(foreignClaim)},${q(outsider)},'confirmed');
     insert into public.personal_events(id,user_id,title,starts_at,ends_at) values(${q(privateEvent)},${q(teacher)},'Fictional personal appointment remains private',now()+interval '70 days',now()+interval '70 days 1 hour');`);

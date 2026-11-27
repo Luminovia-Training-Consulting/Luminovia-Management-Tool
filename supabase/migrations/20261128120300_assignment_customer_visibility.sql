@@ -8,6 +8,7 @@ create table private.assignment_customer_policy (
   revision integer not null default 0 check (revision >= 0)
 );
 insert into private.assignment_customer_policy default values;
+alter table private.assignment_customer_policy enable row level security;
 revoke all on private.assignment_customer_policy from public,anon,authenticated,service_role;
 
 create function private.assignment_customer_settings()

@@ -71,12 +71,10 @@ beforeEach(async () => {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
   fake.rpc.mockReset().mockResolvedValue({ data: report, error: null });
   fake.save.mockReset();
-  fake.session
-    .mockReset()
-    .mockResolvedValue({
-      data: { session: { user: { id: actor } } },
-      error: null,
-    });
+  fake.session.mockReset().mockResolvedValue({
+    data: { session: { user: { id: actor } } },
+    error: null,
+  });
 });
 
 afterEach(() => {
