@@ -139,7 +139,7 @@ declare
   link record;
   source text;
   source_predicate text;
-  receipt_predicate text;
+  selected_receipts text;
   notification_predicate text;
   outbox_predicate text;
 begin
@@ -153,13 +153,14 @@ begin
     source := private.deletion_selector(scope, link.relation);
     if source is not null then
       source_predicate := concat_ws(' or ', source_predicate,
-        format('x.%I in (select x.id from %s x where %s)', link.column_name, link.relation, source));
+        format('receipt.%I in (select receipt_origin.id from %s receipt_origin where %s)',
+          link.column_name, link.relation, replace(source, 'x.', 'receipt_origin.')));
     end if;
   end loop;
   if source_predicate is null then return scope; end if;
-  receipt_predicate := format('x.notification_id in (select x.notification_id from private.customer_order_receipts x where %s)', source_predicate);
-  notification_predicate := format('x.id in (select x.notification_id from private.customer_order_receipts x where %s)', source_predicate);
-  outbox_predicate := format('x.notification_id in (select x.notification_id from private.customer_order_receipts x where %s)', source_predicate);
+  selected_receipts := format('(select receipt.notification_id from private.customer_order_receipts receipt where %s)', source_predicate);
+  notification_predicate := 'x.id in ' || selected_receipts;
+  outbox_predicate := 'x.notification_id in ' || selected_receipts;
   return (
     select jsonb_agg(jsonb_build_object('table', relation, 'predicate', predicate) order by first_position)
     from (
@@ -169,7 +170,7 @@ begin
       from jsonb_array_elements(scope || jsonb_build_array(
         jsonb_build_object('table', 'public.notifications', 'predicate', notification_predicate),
         jsonb_build_object('table', 'private.notification_email_outbox', 'predicate', outbox_predicate),
-        jsonb_build_object('table', 'private.customer_order_receipts', 'predicate', receipt_predicate)
+        jsonb_build_object('table', 'private.customer_order_receipts', 'predicate', outbox_predicate)
       )) with ordinality item(entry, position)
       group by entry->>'table'
     ) grouped
