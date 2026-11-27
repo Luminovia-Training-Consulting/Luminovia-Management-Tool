@@ -229,12 +229,15 @@ try {
           select coalesce(jsonb_agg(jsonb_build_object(
             'id', candidate.job_id,
             'status', job.status,
+            'actor', auth.uid(),
             'active', private.actor_active(),
             'lecturer', private.lecturer_actor(),
             'manager', private.has_permission('jobs.manage'),
             'blocked', private.job_lecturer_blocked(job.id, auth.uid()),
             'urgent', job.urgent_reopened_at is not null,
-            'emergency_source', private.emergency_source_lecturer(job.id, auth.uid())
+            'emergency_source', private.emergency_source_lecturer(job.id, auth.uid()),
+            'read', private.can_read_job(job.id),
+            'read_definition', pg_get_functiondef('private.can_read_job(uuid)'::regprocedure)
           ) order by candidate.job_id), '[]'::jsonb)
           from private.job_discovery_candidates(private.job_discovery_filters('{}'::jsonb)) candidate
           join public.jobs job on job.id = candidate.job_id
