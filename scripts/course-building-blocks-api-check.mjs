@@ -262,28 +262,21 @@ await withApiFixture(
             p_client_id: randomUUID(),
         }));
         assert.notEqual(another, job);
-        const actual = await checked(
-            teacher.client
-                .from("jobs")
-                .select("*,job_sessions(*)")
-                .eq("id", job)
-                .single(),
-        );
-        assert.equal(actual.course_run_id, run);
-        assert.equal(actual.amount, 0);
-        assert.equal(actual.total_amount, 0);
         const quote = (await checked(teacher.client.rpc("job_offers"))).find(
             (row) => row.id === job,
         );
+        assert.ok(quote, "Published offer is available through the scoped lecturer API");
+        assert.equal(quote.customer_name, "", "Customer identity stays hidden before its reveal window");
+        assert.equal("course_run_id" in quote, false, "Hidden course linkage is omitted");
         assert.equal(quote.amount, 31);
         assert.equal(quote.total_amount, 62.01);
-        assert.equal(actual.job_sessions.length, 2);
+        assert.equal(quote.job_sessions.length, 2);
         assert.deepEqual(
-            actual.job_sessions.map((row) => row.course_session_id).sort(),
-            preview.sessions.map((row) => row.source_course_session_id).sort(),
+            quote.job_sessions.map((row) => "course_session_id" in row),
+            [false, false],
         );
-        assert.ok(!JSON.stringify(actual).includes("gross_amount"));
-        assert.ok(!JSON.stringify(actual).includes("platform_percent"));
+        assert.ok(!JSON.stringify(quote).includes("gross_amount"));
+        assert.ok(!JSON.stringify(quote).includes("platform_percent"));
         const source = await checked(
             teacher.client.rpc("job_building_block_reference", {p_job_id: job}),
         );

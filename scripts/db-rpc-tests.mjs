@@ -217,9 +217,18 @@ try {
           insert into public.lecturer_topics(user_id,topic_id,verified) values
           ('${users[51]}','${business}',false), ('${users[52]}','${it}',false);`);
         const offer = await job({ topic_ids: [payroll, reporting], sessions: laterSessions(10) });
-        const visibility = (user) => as(user, `select count(*) from public.jobs where id='${offer}'`);
-        assert.equal(await visibility(users[51]), "1");
-        assert.equal(await visibility(users[52]), "0");
+        const discovery = async (user) =>
+            JSON.parse(await as(user, "select public.job_discovery('{}'::jsonb, null, 50)")).items;
+        const visibleOffer = async (user) =>
+            (await discovery(user)).find((item) => item.id === offer);
+        const areaMatch = await visibleOffer(users[51]);
+        assert.ok(areaMatch);
+        assert.equal(areaMatch.customer_hidden, true);
+        assert.equal(areaMatch.customer_name, "");
+        assert.equal(await visibleOffer(users[52]), undefined);
+        const rawVisibility = (user) => as(user, `select count(*) from public.jobs where id='${offer}'`);
+        assert.equal(await rawVisibility(users[51]), "0");
+        assert.equal(await rawVisibility(users[52]), "0");
         const run = await sql(`select course_run_id from public.jobs where id='${offer}'`);
         await sql(`update public.course_runs set published=true where id='${run}'`);
         const courseVisibility = (user) =>
@@ -228,8 +237,12 @@ try {
         assert.equal(await courseVisibility(users[52]), "0");
         assert.equal((await rpc(users[52], offer)).status, "not_eligible");
         assert.equal((await rpc(users[51], offer)).status, "confirmed");
-        assert.equal(await courseVisibility(users[51]), "1");
-        assert.equal(await visibility(users[51]), "1");
+        assert.equal(await courseVisibility(users[51]), "0");
+        const acceptedOffer = JSON.parse(await as(users[51], "select public.job_offers()"))
+            .find((item) => item.id === offer);
+        assert.ok(acceptedOffer);
+        assert.equal(acceptedOffer.customer_name, "");
+        assert.equal("course_run_id" in acceptedOffer, false);
     });
     await test("Missing or expired executed contract rejected", async () => {
         const j = await job({requires_contract: true});

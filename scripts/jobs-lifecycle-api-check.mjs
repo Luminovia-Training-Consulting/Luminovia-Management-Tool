@@ -109,10 +109,12 @@ await withApiFixture(async ({service, actor, passwordOnly, sql, defer, checked})
             organisations.push(r.organisation_id);
     };
     await track(job);
-    const original = await checked(
-        teacher.client.from("jobs").select("*").eq("id", job).single(),
-        "Read real public offer",
-    );
+    const original = (
+        await checked(teacher.client.rpc("job_offers"), "Read scoped lecturer offers")
+    ).find((offer) => offer.id === job);
+    assert.ok(original, "Published offer is available through the scoped lecturer API");
+    assert.equal(original.customer_name, "", "Customer identity stays hidden before its reveal window");
+    assert.equal("course_run_id" in original, false, "Hidden customer linkage is omitted");
     const claim = await checked(
         teacher.client.rpc("claim_job", {
             p_job_id: job,

@@ -409,10 +409,12 @@ try {
         ).find((r) => r.id === request).job_id,
         job,
     );
-    const offer = await checked(
-        lecturer.client.from("jobs").select("*").eq("id", job).single(),
-        "Actual lecturer REST offer",
-    );
+    const offer = (
+        await checked(lecturer.client.rpc("job_offers"), "Read sanitized lecturer offers")
+    ).find((item) => item.id === job);
+    assert.ok(offer, "Published offer remains available through the scoped lecturer API");
+    assert.equal(offer.customer_name, "", "Customer identity stays hidden before its reveal window");
+    assert.equal("course_run_id" in offer, false, "Hidden customer linkage is omitted from the REST projection");
     assert.equal(Number(offer.amount), 0);
     assert.equal(Number(offer.total_amount), 0);
     assert.ok(
