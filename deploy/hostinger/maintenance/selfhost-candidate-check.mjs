@@ -535,6 +535,7 @@ const repairedCourseOriginMigration = "20261124072614_protect_course_run_origin_
 const unacceptedDiscoveryMigrations = new Set([
     "20261128123500_bound_job_discovery_authorization.sql",
     "20261128123600_include_discovery_status_projection.sql",
+    "20261128123700_repair_discovery_scope_status.sql",
 ]);
 
 /** Build the last accepted baseline, excluding only migrations that never passed candidate acceptance. */

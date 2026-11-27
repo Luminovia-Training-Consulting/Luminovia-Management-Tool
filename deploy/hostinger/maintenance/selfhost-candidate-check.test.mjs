@@ -20,6 +20,7 @@ test("only exact unaccepted migrations are deferred from the previous deployment
     const unknown = "20261124072615_additional_baseline_schema.sql";
     const unaccepted = "20261128123600_include_discovery_status_projection.sql";
     const unacceptedPredecessor = "20261128123500_bound_job_discovery_authorization.sql";
+    const unacceptedRepair = "20261128123700_repair_discovery_scope_status.sql";
     const previousBaseline = [old];
     const repairedBaseline = [old, broken, repair, unknown];
     assert.equal(baselineFixtureMigrations(previousBaseline), previousBaseline);
@@ -28,9 +29,10 @@ test("only exact unaccepted migrations are deferred from the previous deployment
     assert.deepEqual(baselineFixtureMigrations([old, unaccepted]), [old]);
     assert.deepEqual(baselineFixtureMigrations([old, unacceptedPredecessor]), [old]);
     assert.deepEqual(baselineFixtureMigrations([old, unacceptedPredecessor, unaccepted]), [old]);
+    assert.deepEqual(baselineFixtureMigrations([old, unacceptedRepair]), [old]);
     assert.deepEqual(baselineFixtureMigrations([old, broken, unaccepted]), [old]);
     assert.deepEqual(
-        acceptedBaselineMigrations([old, unacceptedPredecessor, unaccepted]),
+        acceptedBaselineMigrations([old, unacceptedPredecessor, unaccepted, unacceptedRepair]),
         [old],
     );
     assert.throws(
