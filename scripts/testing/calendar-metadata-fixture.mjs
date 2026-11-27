@@ -60,6 +60,13 @@ export async function cleanupCalendarMetadata(sql, ids) {
     } = ids;
     await sql(
         `delete
+         from public.assignment_sessions
+         where claim_id in (
+             select id
+             from public.job_claims
+             where job_id in ('${linked}', '${manual}', '${foreign}')
+         );
+        delete
          from public.job_claims
          where job_id in ('${linked}', '${manual}', '${foreign}');
         delete
