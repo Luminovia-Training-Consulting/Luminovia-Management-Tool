@@ -9,7 +9,7 @@ import { PublishOfferDraft } from "../jobs/publish-draft";
 import { OfferBoard } from "../jobs/board";
 import { JobDateRange } from "../jobs/session-range";
 import { resolveJobSessions } from "../jobs/session-schedule";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { CourseCommissionField, RoleFeePreview } from "../commercial/pricing";
-import { TrainingCoursePreset } from "../commercial/training-course-preset";
+
 import {
   presetBaseTotal,
   type CommercialPreset,
@@ -63,6 +63,12 @@ import {
 } from "../../components/common";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
+const TrainingCoursePreset = lazy(() =>
+  import("../commercial/training-course-preset").then(
+    ({ TrainingCoursePreset }) => ({ default: TrainingCoursePreset }),
+  ),
+);
+
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(10000),
@@ -654,43 +660,45 @@ function JobForm({
           <>
             {fullFinance && courseRun?.organisation_id && (
               <>
-                <TrainingCoursePreset
-                  actor={actor}
-                  organisationId={courseRun.organisation_id}
-                  applied={appliedPreset}
-                  disabled={create.isPending}
-                  onApply={(selected) => {
-                    setAppliedPreset(selected);
-                    if (!selected) return;
-                    setValue("currency", selected.currency, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                    const initialTotal = presetBaseTotal(
-                      selected,
-                      courseRun.sessions,
-                      courseRun.time_zone,
-                    );
-                    if (
-                      selected.base_rate &&
-                      selected.rate_unit &&
-                      initialTotal !== null
-                    ) {
-                      setValue("amount", Number(selected.base_rate), {
+                <Suspense fallback={null}>
+                  <TrainingCoursePreset
+                    actor={actor}
+                    organisationId={courseRun.organisation_id}
+                    applied={appliedPreset}
+                    disabled={create.isPending}
+                    onApply={(selected) => {
+                      setAppliedPreset(selected);
+                      if (!selected) return;
+                      setValue("currency", selected.currency, {
                         shouldDirty: true,
                         shouldValidate: true,
                       });
-                      setValue("rate_unit", selected.rate_unit, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                      setValue("total_amount", initialTotal, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                    }
-                  }}
-                />
+                      const initialTotal = presetBaseTotal(
+                        selected,
+                        courseRun.sessions,
+                        courseRun.time_zone,
+                      );
+                      if (
+                        selected.base_rate &&
+                        selected.rate_unit &&
+                        initialTotal !== null
+                      ) {
+                        setValue("amount", Number(selected.base_rate), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue("rate_unit", selected.rate_unit, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue("total_amount", initialTotal, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }
+                    }}
+                  />
+                </Suspense>
                 {appliedPreset &&
                   watchedCurrency !== appliedPreset.currency && (
                     <Notice kind="error">

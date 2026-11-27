@@ -279,6 +279,11 @@ import {
 } from "../announcements/schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
+  deliveryView,
+  offerDelivery,
+  venueSchema,
+} from "../training/delivery-schema.ts";
+import {
   trainingControlSchema,
   trainingIssueCode,
 } from "../workbench/training-control-schema.ts";
@@ -2359,6 +2364,55 @@ const nativePaths = {
       p_acknowledged: boolean,
     },
     boolean,
+  ),
+  "/rest/v1/rpc/training_delivery_view": rpc(
+    "getStructuredTrainingDelivery",
+    "Courses",
+    "Read effective delivery and authorised access details",
+    "The current workspace entitlement controls visibility. Course managers receive the editable defaults. Learners and current assigned lecturers receive access details for their authorised sessions.",
+    { p_course_run_id: uuid },
+    z.toJSONSchema(deliveryView.nullable()),
+  ),
+  "/rest/v1/rpc/save_training_delivery": rpc(
+    "saveStructuredTrainingDelivery",
+    "Courses",
+    "Save a versioned course delivery configuration",
+    "Requires courses.manage and the expected delivery revision. An override object patches selected session IDs. Null resets the marked session. Turning off overrides retains its saved values. The offer or course publication rejects incomplete effective venue and meeting requirements.",
+    {
+      p_course_run_id: uuid,
+      p_expected_revision: { type: "integer", minimum: 0 },
+      p_payload: { type: "object" },
+    },
+    z.toJSONSchema(deliveryView),
+  ),
+  "/rest/v1/rpc/training_venue_directory": rpc(
+    "listTrainingVenues",
+    "Courses",
+    "Read the organisation venue directory",
+    "Requires courses.manage and a current organisation. Venue edits do not change address snapshots already used by courses.",
+    { p_organisation_id: uuid },
+    z.toJSONSchema(z.array(venueSchema)),
+  ),
+  "/rest/v1/rpc/save_training_venue": rpc(
+    "saveTrainingVenue",
+    "Courses",
+    "Create or revise a reusable organisation venue",
+    "Requires courses.manage. Pass null and revision zero to create a venue. Existing venues require their organisation and current revision.",
+    {
+      p_organisation_id: uuid,
+      p_venue_id: { anyOf: [uuid, { type: "null" }] },
+      p_expected_revision: { type: "integer", minimum: 0 },
+      p_payload: { type: "object" },
+    },
+    uuid,
+  ),
+  "/rest/v1/rpc/training_offer_delivery": rpc(
+    "getOfferDeliverySummary",
+    "Jobs",
+    "Read the offer delivery label and travel destinations",
+    "Requires current offer read access. Returns the effective mode and city/country pairs. Joining credentials and detailed addresses are excluded.",
+    { p_job_id: uuid },
+    z.toJSONSchema(offerDelivery.nullable()),
   ),
   "/rest/v1/rpc/export_my_calendar": rpc(
     "exportMyCalendar",

@@ -73,7 +73,7 @@
   gap: 0.35rem 1rem;
   margin: 0;
   padding: 0.65rem 0.35rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .control-request-scroll li > div {
@@ -115,7 +115,7 @@
 .finance-table td {
   text-align: start;
   padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .finance-table caption {
@@ -160,7 +160,7 @@
 }
 
 .training-control-metrics > div {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   padding: 0.75rem;
 }
@@ -178,7 +178,7 @@
 }
 
 .training-control-list > li {
-  border-block-start: 1px solid var(--border);
+  border-block-start: 1px solid var(--line);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;

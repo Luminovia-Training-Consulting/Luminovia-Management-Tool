@@ -99,10 +99,7 @@ import {
 import { BuildingBlockReference, CourseRunOfferLink } from "./building-blocks";
 import { CourseSessionBulkEdit } from "./course-session-bulk-edit";
 import { CourseSchedulePlanner } from "./course-schedule-planner";
-import {
-  CourseCreatorDraftLibrary,
-  CourseCreatorDraftSaveBar,
-} from "./course-creator-drafts";
+import "./course-creator-drafts-i18n";
 import {
   courseCreatorDraftId,
   courseCreatorDraftsQuery,
@@ -112,6 +109,17 @@ import {
 import { CourseSeriesForm } from "./course-series";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
+
+const CourseCreatorDraftLibrary = lazy(() =>
+  import("./course-creator-drafts").then(({ CourseCreatorDraftLibrary }) => ({
+    default: CourseCreatorDraftLibrary,
+  })),
+);
+const CourseCreatorDraftSaveBar = lazy(() =>
+  import("./course-creator-drafts").then(({ CourseCreatorDraftSaveBar }) => ({
+    default: CourseCreatorDraftSaveBar,
+  })),
+);
 
 const CourseOfferForm = lazy(() =>
   import("../admin/admin").then(({ CourseOfferForm }) => ({
@@ -1190,19 +1198,21 @@ function RunForm({
           {canPrepareOffer && (
             <p className="muted">{creatorText("offerHint")}</p>
           )}
-          <CourseCreatorDraftSaveBar
-            snapshot={{
-              run: {
-                ...getValues(),
-                ...creatorRunValues,
-                sessions: getValues("sessions"),
-              },
-              content: { ...content.getValues(), ...creatorContentValues },
-            }}
-            saver={draftSaver}
-            busy={save.isPending}
-            onReload={() => reloadCreator?.()}
-          />
+          <Suspense fallback={<Loading />}>
+            <CourseCreatorDraftSaveBar
+              snapshot={{
+                run: {
+                  ...getValues(),
+                  ...creatorRunValues,
+                  sessions: getValues("sessions"),
+                },
+                content: { ...content.getValues(), ...creatorContentValues },
+              }}
+              saver={draftSaver}
+              busy={save.isPending}
+              onReload={() => reloadCreator?.()}
+            />
+          </Suspense>
         </>
       )}
       <div className="form-actions">
@@ -2142,12 +2152,14 @@ export function CoursesPage() {
         }
       />
       {manage && tab === "runs" && (
-        <CourseCreatorDraftLibrary
-          actor={actor}
-          onStart={startCreator}
-          onOpen={openCreator}
-          onContinue={continueCreator}
-        />
+        <Suspense fallback={<Loading />}>
+          <CourseCreatorDraftLibrary
+            actor={actor}
+            onStart={startCreator}
+            onOpen={openCreator}
+            onContinue={continueCreator}
+          />
+        </Suspense>
       )}
       <section className="panel course-toolbar" aria-label={t("catalogue")}>
         <div className="course-toolbar-header">

@@ -323,6 +323,7 @@ export default defineConfig(({ mode }) => {
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
             "**/training-commercial-*.{js,css}",
+            "**/training-course-preset-*.{js,css}",
             "**/expense-panel-*.{js,css}",
             // These private LMS workflows require a live session and load on entry.
             "**/portfolio-*.js",
