@@ -7,6 +7,8 @@ it.each([
   ["forum_reply", "messages"],
   ["portal_announcement", "messages"],
   ["claim_confirmed", "courses"],
+  ["customer_order_submitted", "courses"],
+  ["customer_order_lecturer_confirmed", "courses"],
   ["session_reminder", "courses"],
   ["course_resource_shared", "courses"],
   ["course_schedule_changed", "courses"],

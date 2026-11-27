@@ -42,6 +42,18 @@ class WorkerDeadline(Exception):
     """Interrupt even a peer that keeps a per-socket timeout alive."""
 
 
+CUSTOMER_ORDER_RECEIPT_COPY = {
+    "customer_order_submitted": {
+        "de": ("Ihr Kursauftrag ist eingegangen", "Wir haben Ihren Kursauftrag erhalten. Den aktuellen Stand sehen Sie im Unternehmensportal."),
+        "en": ("We received your course order", "Your course order has been submitted. You can check its status in the company portal."),
+    },
+    "customer_order_lecturer_confirmed": {
+        "de": ("Ein Kursauftrag wurde übernommen", "Eine Lehrkraft hat einen Ihrer Kursaufträge übernommen. Im Unternehmensportal können Sie die Übernahme ansehen und bestätigen."),
+        "en": ("A lecturer accepted a course assignment", "A lecturer has accepted one of your course assignments. You can review and confirm the assignment in the company portal."),
+    },
+}
+
+
 def checked_url(value: str, *, allow_backend_path: bool = False) -> str:
     try:
         url = urlsplit(value)
@@ -222,6 +234,7 @@ def prepared_valid(value: Any, lease: dict[str, str]) -> bool:
             and value["lease_token"] == lease["lease_token"]
             and valid_email(value.get("recipient"))
             and value.get("locale") in ("de", "en")
+            and isinstance(value.get("kind"), str)
             and value.get("message_id") == f"<luminovia-notification.{lease['id']}@luminovia.org>"
             and (value.get("kind") != "course_offer_published" or course_offer_valid(value.get("offer")))
     )
@@ -269,6 +282,12 @@ def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)
     message["Message-ID"] = delivery["message_id"]
+    customer_order_copy = CUSTOMER_ORDER_RECEIPT_COPY.get(delivery.get("kind"))
+    if not config.academy and customer_order_copy:
+        subject, body = customer_order_copy[delivery["locale"]]
+        message.replace_header("Subject", f"Luminovia: {subject}")
+        message.set_content(f"{body}\n\n{config.portal_url}/client\n", charset="utf-8")
+        return message
     if not config.academy and delivery.get("kind") == "course_offer_published":
         subject, body = course_offer_content(delivery["offer"], config.portal_url, german)
         message.replace_header("Subject", subject)

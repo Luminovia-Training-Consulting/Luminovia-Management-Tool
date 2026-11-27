@@ -15,6 +15,8 @@ const groups: Record<
   messages: ["chat_message", "forum_reply", "portal_announcement"],
   courses: [
     "academy_course_enrolled",
+    "customer_order_submitted",
+    "customer_order_lecturer_confirmed",
     "claim_confirmed",
     "claim_cancelled",
     "course_assignment_removal_appeal",

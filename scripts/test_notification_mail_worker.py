@@ -277,6 +277,23 @@ class DeliveryTests(unittest.TestCase):
     def setUp(self):
         self.config = worker.Config.from_env(ENV)
 
+    def test_customer_order_receipts_link_to_company_portal_in_both_languages(self):
+        for kind, locale, subject, body_text in (
+            ("customer_order_submitted", "de", "Kursauftrag ist eingegangen", "erhalten"),
+            ("customer_order_submitted", "en", "received your course order", "submitted"),
+            ("customer_order_lecturer_confirmed", "de", "Kursauftrag wurde übernommen", "bestätigen"),
+            ("customer_order_lecturer_confirmed", "en", "lecturer accepted", "review and confirm"),
+        ):
+            with self.subTest(kind=kind, locale=locale):
+                delivery = {**DELIVERY, "kind": kind, "locale": locale}
+                self.assertTrue(worker.prepared_valid(delivery, LEASE))
+                message = worker.make_message(self.config, delivery)
+                self.assertEqual(message["To"], DELIVERY["recipient"])
+                self.assertEqual(message["Message-ID"], DELIVERY["message_id"])
+                self.assertIn(subject, message["Subject"])
+                self.assertIn(body_text, message.get_content())
+                self.assertIn("https://portal.example.invalid/client", message.get_content())
+
     def test_course_offer_message_is_localized_and_links_to_the_exact_assignment(self):
         delivery = {
             **DELIVERY,
