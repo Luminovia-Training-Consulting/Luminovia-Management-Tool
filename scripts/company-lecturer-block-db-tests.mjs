@@ -404,7 +404,7 @@ for (const edition of [
           teacher,
           `select count(*) from public.jobs where id=${q(outsideJob)};`,
         ),
-        "1",
+      "0",
       );
       assert.equal(
         await actor(
