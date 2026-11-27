@@ -178,7 +178,8 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
             } else if (
                 kind === "assignment_confirmation" &&
                 uuid(body.id) &&
-                Object.keys(body).every((key) => ["kind", "id"].includes(key))
+                (body.locale === undefined || body.locale === "de" || body.locale === "en") &&
+                Object.keys(body).every((key) => ["kind", "id", "locale"].includes(key))
             ) {
                 name = "assignment_confirmation";
                 args = {p_claim_id: body.id};
@@ -269,7 +270,12 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
                 bytes = renderAttendanceCsv(first.data);
                 mime = "text/csv; charset=utf-8";
                 filename = `${brandPrefix}-attendance-${body.id}.csv`;
-            } else bytes = await dependencies.render(renderKind, first.data);
+            } else {
+                const locale = kind === "assignment_confirmation" && (body.locale === "de" || body.locale === "en")
+                    ? body.locale : null;
+                bytes = await dependencies.render(renderKind, locale ? {...first.data, locale} : first.data);
+                if (locale) filename = locale === "de" ? "luminovia-auftragsbestaetigung.pdf" : "luminovia-assignment-confirmation.pdf";
+            }
             // Re-check actual Auth and current database membership after potentially
             // slow storage/font work. Facts changing during rendering fail closed.
             const actor = await dependencies.authenticate(token);

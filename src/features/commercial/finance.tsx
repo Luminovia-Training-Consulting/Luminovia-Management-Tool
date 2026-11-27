@@ -91,6 +91,7 @@ import "./commercial.css";
 
 const RevenueForecast = lazy(() => import("../analytics/revenue-forecast"));
 const ExpensesPanel = lazy(() => import("./expense-panel"));
+const AssignmentFinanceAction = lazy(() => import("./assignment-finance"));
 
 /** Refresh live invoice projections after a confirmed financial mutation. */
 async function refreshInvoiceViews(client: QueryClient, actor: string) {
@@ -993,12 +994,14 @@ const InvoiceCard = memo(function InvoiceCard({
 /** Render authorized fee records with original currency and confirmed billing state. */
 function EarningsTable({
   rows,
+  actor,
   manager,
   zone,
   manageSeries,
   invoiceAction,
 }: {
   rows: EarningRecord[];
+  actor: string;
   manager: boolean;
   zone: string;
   manageSeries?: (row: EarningRecord) => void;
@@ -1025,6 +1028,16 @@ function EarningsTable({
                   <strong>{row.title}</strong>
                   <small>{row.customer_name}</small>
                   {invoiceAction?.(row)}
+                  <div className="form-actions">
+                    <Suspense fallback={null}>
+                      <AssignmentFinanceAction
+                        actor={actor}
+                        claimId={row.claim_id}
+                        title={row.title}
+                        manager={manager}
+                      />
+                    </Suspense>
+                  </div>
                   {manageSeries && (
                     <Button
                       size="sm"
@@ -1362,6 +1375,7 @@ export function FinancePage({
             </div>
             {earnings.data.length ? (
               <EarningsTable
+                actor={actor}
                 rows={earnings.data}
                 manager={effectiveAll}
                 zone={zone}

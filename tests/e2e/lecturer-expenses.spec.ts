@@ -38,6 +38,10 @@ test("an expense receipt scans, receives partial approval and is reimbursed once
     await login(page, lecturer.email);
     await page.getByLabel(/^(Sprache|Language)$/).selectOption("de");
     await page.goto("/finance");
+    const confirmation = page.waitForEvent("download");
+    await page.getByRole("row").filter({hasText: title}).getByRole("button", {name: "Auftragsbestätigung als PDF"}).click();
+    const confirmationPath = await (await confirmation).path();
+    expect((await readFile(confirmationPath!)).subarray(0, 5).toString("ascii")).toBe("%PDF-");
     await page.getByText("Auslagen und Erstattungen", { exact: true }).click();
     await page.getByRole("button", { name: "Auslage einreichen" }).click();
     const submission = page.getByRole("dialog", { name: "Auslage einreichen" });
@@ -78,6 +82,11 @@ test("an expense receipt scans, receives partial approval and is reimbursed once
       await reimburse.getByLabel("Zahlungsreferenz").fill("Fictional payment");
       await reimburse.getByRole("button", { name: "Erstattung erfassen" }).click();
       await expect(row.getByText("Erstattet", { exact: true })).toBeVisible();
+      await reviewerPage.getByRole("row").filter({hasText: title}).getByRole("button", {name: "Auftrag abrechnen und abgleichen"}).click();
+      const reconciled = reviewerPage.getByRole("dialog", {name: "Auftrag abrechnen und abgleichen"});
+      await expect(reconciled.getByText("Vereinbartes Honorar", {exact: true})).toBeVisible();
+      await expect(reconciled.getByText(/84,50/)).toBeVisible();
+      await reconciled.getByRole("button",{name: "Schließen", exact: true}).click();
       await row.getByRole("button", { name: "Erstattung und Rechnung" }).click();
       await expect(reimburse.getByRole("button", { name: "Erstattung erfassen" })).toHaveCount(0);
     } finally {

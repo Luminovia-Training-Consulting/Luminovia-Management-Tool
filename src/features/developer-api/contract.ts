@@ -513,10 +513,14 @@ const courseDocuments = {
             id: uuid,
             request_id: uuid,
           }),
-          object({
-            kind: { const: "assignment_confirmation" },
-            id: uuid,
-          }),
+          {
+            ...object({
+              kind: { const: "assignment_confirmation" },
+              id: uuid,
+              locale: { enum: ["de", "en"] },
+            }),
+            required: ["kind", "id"],
+          },
           {
             ...object({
               kind: { const: "earnings_statement" },

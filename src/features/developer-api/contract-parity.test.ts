@@ -1550,7 +1550,10 @@ describe("documented Premium course and spending operations", () => {
           required: ["kind", "id", "request_id"],
         },
         {
-          properties: { kind: { const: "assignment_confirmation" } },
+          properties: {
+            kind: { const: "assignment_confirmation" },
+            locale: { enum: ["de", "en"] },
+          },
           required: ["kind", "id"],
         },
         {

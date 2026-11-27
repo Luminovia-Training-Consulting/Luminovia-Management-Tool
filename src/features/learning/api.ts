@@ -466,14 +466,10 @@ export async function repeatCourse(
 
 export type PortalDocumentRequest =
   | {
-      kind:
-        | "resource"
-        | "exam"
-        | "wiki_resource"
-        | "completion"
-        | "assignment_confirmation";
+      kind: "resource" | "exam" | "wiki_resource" | "completion";
       id: string;
     }
+  | { kind: "assignment_confirmation"; id: string; locale?: "de" | "en" }
   | { kind: "attendance_evidence"; id: string }
   | { kind: "participant_submission"; id: string; version_id: string }
   | {

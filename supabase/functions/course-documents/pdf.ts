@@ -32,6 +32,57 @@ function printable(value: unknown): string {
         .normalize("NFC");
 }
 
+/** Render a scoped assignment projection in the requested language or the legacy bilingual format. */
+function assignmentConfirmationLines(data: Facts, hash: string, locale: unknown) {
+    const label = (de: string, en: string) => locale === "de" ? de : locale === "en" ? en : de + " / " + en;
+    const row = (de: string, en: string, value: unknown) => label(de, en) + ": " + printable(value);
+    const amount = (value: unknown) => printable(value) + " " + printable(data.currency);
+    const reference = [
+        row("Auftragsreferenz", "Assignment reference", data.claim_id),
+        row("Kurs", "Course", data.title),
+        row("Auftraggeber", "Customer", data.customer_name),
+        row("Dozierende Person", "Lecturer", data.lecturer_name),
+        row("Bestätigt am", "Confirmed on", data.confirmed_at ?? data.accepted_at),
+        row("Auftragsfassung", "Assignment version", data.assignment_version),
+        row("Vertragsfassung", "Contract version", data.contract_version),
+        row("Konditionenfassung", "Terms version", data.terms_version),
+    ];
+    const status = data.status === "confirmed" ? label("Bestätigt", "Confirmed")
+        : data.status === "cancelled" ? label("Storniert", "Cancelled") : printable(data.status);
+    const delivery = data.delivery_type === "onsite" ? label("Präsenz", "On-site")
+        : data.delivery_type === "hybrid" ? label("Hybrid", "Hybrid")
+        : data.delivery_type === "mixed" ? label("Gemischt", "Mixed")
+        : data.delivery_type === "online" ? "Online" : null;
+    const sessions = (Array.isArray(data.sessions) ? data.sessions : []) as Facts[];
+    const details = [
+        row("Status", "Status", status),
+        ...(delivery ? [row("Durchführungsform", "Delivery format", delivery)] : []),
+        ...(data.physical_location ? [row("Unterrichtsort", "Teaching location", data.physical_location)] : []),
+        ...(data.planned_minutes != null ? [row("Geplante Stunden", "Scheduled hours", (Number(data.planned_minutes) / 60).toLocaleString(locale === "de" ? "de" : "en", {maximumFractionDigits: 2}))] : []),
+    ];
+    const teachingMinutes = Number(data.paid_teaching_minutes), unitMinutes = Number(data.teaching_unit_minutes);
+    if (data.paid_teaching_minutes != null)
+        details.push(row("Vergütete Unterrichtsminuten", "Paid teaching minutes", teachingMinutes));
+    if (data.paid_teaching_minutes != null && unitMinutes > 0)
+        details.push(row("Unterrichtseinheiten", "Teaching units",
+            (teachingMinutes / unitMinutes).toLocaleString(locale === "de" ? "de" : "en", {maximumFractionDigits: 2})
+            + " (" + unitMinutes + " min)"));
+    if (data.total_amount != null) {
+        details.push(row("Honorar", "Accepted rate", amount(data.amount) + " | " + printable(data.rate_unit)));
+        details.push(row("Gesamthonorar", "Accepted total", amount(data.total_amount)));
+        for (const item of (Array.isArray(data.additional_compensation) ? data.additional_compensation : []) as Facts[])
+            details.push(row("Zusatzvergütung", "Additional compensation", printable(item.label || item.kind) + " · " + amount(item.amount)));
+    }
+    return [
+        ...reference, ...details, "",
+        ...sessions.map((session) => printable(session.starts_at) + " - " + printable(session.ends_at)
+            + " | " + printable(data.time_zone) + (session.released_at ? " | " + label("Freigegeben", "Released") : "")),
+        ...(data.instructions ? ["", row("Hinweise", "Instructions", data.instructions)] : []),
+        ...(data.terms ? ["", row("Konditionen", "Terms", data.terms)] : []),
+        "", row("Nachweis-Hash", "Record hash", hash),
+    ];
+}
+
 export function factLines(kind: string, facts: Facts): string[] {
     if (kind === "qualification_passport") return passportLines(facts);
     if (kind === "completion") {
@@ -124,6 +175,7 @@ export function factLines(kind: string, facts: Facts): string[] {
     // original accepted currency/terms; arbitrary nested objects are not printed.
     const data = facts.data as Facts | undefined;
     if (data && typeof data === "object" && typeof facts.hash === "string") {
+        if (kind === "assignment_confirmation") return assignmentConfirmationLines(data, facts.hash, facts.locale);
         const assignment = (item: Facts) => [
             `Kurs / Course: ${printable(item.title)}`,
             `Auftraggeber / Customer: ${printable(item.customer_name)}`,
@@ -153,9 +205,7 @@ export function factLines(kind: string, facts: Facts): string[] {
                     }`,
             ),
         ];
-        const lines = kind === "assignment_confirmation"
-            ? [...assignment(data), "", printable(data.terms)]
-            : [
+        const lines = [
                 `Konto / Account: ${printable(data.account_name)}`,
                 `Zeitraum / Period: ${printable(data.from)} - ${
                     printable(data.until)
@@ -207,9 +257,11 @@ export async function renderFactPdf(
     fontBytes: Uint8Array,
 ): Promise<Uint8Array> {
     const title = kind === "qualification_passport"
-        ? ((facts.data as Facts | undefined)?.locale === "en"
-            ? "Qualification passport"
-            : "Qualifikationspass")
+        ? ((facts.data as Facts | undefined)?.locale === "en" ? "Qualification passport" : "Qualifikationspass")
+        : kind === "assignment_confirmation" && facts.locale === "de"
+        ? "Auftragsbestätigung"
+        : kind === "assignment_confirmation" && facts.locale === "en"
+        ? "Assignment confirmation"
         : titles[kind];
     if (!title) throw new Error("invalid_document_kind");
     const brand = academyPdfBrand(kind, facts);

@@ -120,6 +120,32 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
   assert.equal(posted.items[0].subject_id, claim.slice(1, -1));
   assert.equal(posted.totals[0].net, "42.12");
   assert.equal(await sql("select total_amount::text from public.job_claims where id=" + claim), "350.00");
+  const delivery = id();
+  await sql("insert into private.delivery_records(session_id,status,version) values (" + session + ",'confirmed',1);" +
+    "insert into private.delivery_submissions(id,session_id,revision,lecturer_id,outcome,actual_start,actual_end,time_zone,notes,correction_reason,scheduled_start,scheduled_end) " +
+    "select " + delivery + ",id,1,lecturer_id,'completed',starts_at,ends_at,'Europe/Berlin','','',starts_at,ends_at from public.assignment_sessions where id=" + session + ";" +
+    "update private.delivery_records set latest_submission_id=" + delivery + " where session_id=" + session + ";" +
+    "insert into private.teaching_timesheets(id,session_id,lecturer_id,starts_at,ends_at,break_minutes,state) " +
+    "select " + id() + ",id,lecturer_id,starts_at,ends_at,10,'approved' from public.assignment_sessions where id=" + session + ";");
+  const reconciled = await actor(finance, "select public.assignment_finance_reconciliation(" + claim + ")").then(json);
+  assert.equal(reconciled.agreed_lecturer, "350.00");
+  assert.equal(reconciled.delivered_minutes, 60);
+  assert.equal(reconciled.approved_timesheet_minutes, 50);
+  assert.equal(reconciled.customer_invoice_number, null);
+  assert.equal(reconciled.agreed_customer, null);
+  assert.equal(reconciled.lecturer_outstanding, null);
+  assert.deepEqual(reconciled.expenses, [{ currency: "EUR", approved: "42.12", paid: "42.12", outstanding: "0.00" }]);
+  await assert.rejects(actor(lecturer, "select public.assignment_finance_reconciliation(" + claim + ")"), code("42501"));
+  const confirmation = await actor(lecturer, "select public.assignment_confirmation(" + claim + ")").then(json);
+  assert.equal(confirmation.data.assignment_version, 1);
+  assert.equal(confirmation.data.delivery_type, "online");
+  assert.equal(confirmation.data.physical_location, null);
+  assert.equal(Number(confirmation.data.planned_minutes), 60);
+  assert.equal(confirmation.data.total_amount, 350);
+  assert.equal(confirmation.data.additional_compensation.length, 0);
+  assert.equal("agreed_customer" in confirmation.data, false);
+  await assert.rejects(actor(customer, "select public.assignment_confirmation(" + claim + ")"), code("42501"));
+
   await sql("delete from public.user_roles where user_id=" + q(finance));
   assert.equal(await download(finance, first.id, reservation.version_id), null);
   console.log("PASS scan binding, isolation, correction, partial approval, reimbursement and settlement reconciliation");
