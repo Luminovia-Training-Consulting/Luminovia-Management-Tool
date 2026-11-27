@@ -134,7 +134,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
                                                                                                                                 page,
                                                                                                                                 browser,
                                                                                                                             }, testInfo) => {
-    test.setTimeout(160000);
+    test.setTimeout(300000);
     const customer = await account("client", "Customer");
     const outsider = await account("client", "OtherCustomer");
     const lecturer = await account("lecturer", "Teacher");

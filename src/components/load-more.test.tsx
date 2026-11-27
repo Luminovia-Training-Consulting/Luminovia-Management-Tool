@@ -51,3 +51,29 @@ it("requests one batch per intersection and observes the next batch without repl
   await userEvent.click(button);
   expect(load).toHaveBeenCalledTimes(3);
 });
+
+it("uses the supplied scroll region as the intersection root", () => {
+  const roots: (Element | null)[] = [];
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(
+        _callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        roots.push(options?.root as Element | null);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const root = document.createElement("div");
+
+  render(
+    <LoadMore root={root} onLoad={() => {}}>
+      More earnings
+    </LoadMore>,
+  );
+
+  expect(roots).toEqual([root]);
+});

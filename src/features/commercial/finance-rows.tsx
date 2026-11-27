@@ -21,6 +21,7 @@ export function FinanceRows({
 }) {
   const { t } = useTranslation("commercial");
   const [limit, setLimit] = useState(batchSize);
+  const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const shown = Math.min(total, limit);
 
   return (
@@ -32,12 +33,14 @@ export function FinanceRows({
         role="region"
         aria-label={label}
         tabIndex={scroll ? 0 : undefined}
+        ref={setScrollRoot}
       >
         {children(shown)}
         {shown < total && (
           <div className="finance-rows-more">
             <LoadMore
               pageKey={shown}
+              root={scroll ? scrollRoot : null}
               onLoad={() => setLimit(shown + batchSize)}
             >
               {t("moreFinanceRows")}

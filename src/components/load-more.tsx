@@ -6,16 +6,19 @@ export function LoadMore({
   disabled = false,
   onLoad,
   pageKey,
+  root,
 }: {
   children: string;
   disabled?: boolean;
   onLoad: () => void;
   pageKey?: string | number;
+  root?: Element | null;
 }) {
   const sentinel = useLoadOnIntersection<HTMLDivElement>({
     enabled: !disabled,
     pageKey,
     onIntersect: onLoad,
+    root,
   });
   return (
     <div ref={sentinel}>
