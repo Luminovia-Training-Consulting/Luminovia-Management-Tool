@@ -75,6 +75,14 @@ begin
      $new$'syllabus', coalesce(p_payload#>>'{draft,syllabus}',''),
       'prerequisites', coalesce(p_payload#>>'{draft,prerequisites}',''),
       'topic_ids', coalesce(p_payload#>'{draft,topic_ids}','[]'::jsonb)$new$),
+    ('private.manage_enquiry(uuid,text,jsonb,integer,uuid)',
+     $old$'template_id','sessions','time_zone','delivery_type','venue'$old$,
+     $new$'template_id','sessions','time_zone','delivery_type','venue','teaching_language'$new$),
+    ('private.manage_enquiry(uuid,text,jsonb,integer,uuid)',
+     $old$target:=private.save_course_run(null,run_payload);$old$,
+     $new$target:=private.save_course_run(null,run_payload ||
+       case when p_payload ? 'teaching_language' then jsonb_build_object('teaching_language',p_payload->'teaching_language')
+            else '{}'::jsonb end);$new$),
     ('private.course_creator_draft_action(text,uuid,integer,jsonb)',
      $old$'save', 'duplicate', 'discard', 'create_course')$old$,
      $new$'save', 'duplicate', 'discard', 'create_course', 'start_enquiry')$new$),
