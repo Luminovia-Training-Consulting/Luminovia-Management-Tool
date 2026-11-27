@@ -3439,7 +3439,7 @@ const nativePaths = {
     "native_company_class_directory",
     "Jobs",
     "Read company classes and dispatch contacts",
-    "Requires current authority for the internal company. Premium LMS is optional.",
+    "Requires current authority for the internal company. Premium LMS is optional. Returns the effective default contact, including the legacy fallback until a default is explicitly saved.",
     { p_organisation_id: uuid },
     dispatchDirectory,
   ),

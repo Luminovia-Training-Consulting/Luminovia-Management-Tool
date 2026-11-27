@@ -28,6 +28,7 @@ it("retains legacy experience and hidden labels until years are supplied", async
             languages: ["German"],
             labels: ["legacy"],
             teaching_experience: "Teaching since 2012",
+            teaching_minutes: 105,
           }
         : null,
     error: null,
@@ -46,6 +47,10 @@ it("retains legacy experience and hidden labels until years are supplied", async
     name: "Lehrerfahrung (Jahre)",
   });
   expect(years).toHaveValue(null);
+  expect(
+    screen.getByText("Bestätigte Unterrichtszeit bei Luminovia"),
+  ).toBeVisible();
+  expect(screen.getByText(/1,75 Std\./)).toBeVisible();
   expect(screen.queryByLabelText(/Eigene Labels/)).not.toBeInTheDocument();
   expect(screen.getByText(/Teaching since 2012/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Speichern" }));

@@ -54,6 +54,7 @@ const person: PersonDetails = {
   labels: [],
   topics: [],
   teaching_experience: "",
+  teaching_minutes: 0,
   can_moderate: false,
 };
 

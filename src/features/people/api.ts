@@ -37,6 +37,7 @@ export interface PersonDetails extends Omit<
   "rating_average" | "review_count"
 > {
   teaching_experience: string;
+  teaching_minutes: number | null;
   can_moderate: boolean;
 }
 
@@ -45,6 +46,7 @@ export interface ProfileDetails {
   country: string;
   languages: string[];
   teaching_experience: string;
+  teaching_minutes: number | null;
   labels: string[];
 }
 

@@ -221,6 +221,13 @@ test("reviewer reopens exact evidence and lecturer submits a retained correction
     }));
     expect(viewport.scroll).toBeLessThanOrEqual(viewport.width + 1);
 
+    await teaching.goto("/profile");
+    const teachingTime = teaching.locator("p").filter({
+      hasText:
+        /Bestätigte Unterrichtszeit bei Luminovia|Approved teaching time at Luminovia/,
+    });
+    await expect(teachingTime).toHaveText(/0[,.]73 (Std\.|h)$/);
+
     await login(other, outsider.email);
     await other.goto(`/delivery?session=${session}`);
     await expect(other.getByRole("alert")).toBeVisible();

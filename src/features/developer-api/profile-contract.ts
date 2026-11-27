@@ -19,6 +19,7 @@ const profileDetails = z.object({
   teaching_experience: z.string().max(4_000),
   labels: z.array(z.string()),
 });
+const teachingMinutes = z.number().int().nonnegative().nullable();
 const profileDetailsInput = profileDetails
   .extend({
     country: profileDetails.shape.country.nullable(),
@@ -72,8 +73,8 @@ export const profileContracts: Record<string, ProfileContract> = {
   own_profile_details: {
     summary: "Read your own additional profile details",
     description:
-      "An active account without a saved record receives empty text and lists.",
-    result: profileDetails,
+      "An active account without a saved record receives empty text and lists. Teaching minutes reflect confirmed delivery and approved legacy time records and are null for accounts without a lecturer role. An approved break is deducted when its time record matches the confirmed delivery interval.",
+    result: profileDetails.extend({ teaching_minutes: teachingMinutes }),
   },
   save_profile_details: {
     summary: "Replace your own additional profile details",
@@ -108,6 +109,7 @@ export const profileContracts: Record<string, ProfileContract> = {
     request: user,
     result: visiblePerson.extend({
       teaching_experience: profileDetails.shape.teaching_experience,
+      teaching_minutes: teachingMinutes,
       can_moderate: z.boolean(),
     }),
   },

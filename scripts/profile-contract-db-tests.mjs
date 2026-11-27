@@ -58,6 +58,7 @@ await withTestDatabase("profile_contract", async ({sql, actor}) => {
         country: "",
         languages: [],
         teaching_experience: "",
+        teaching_minutes: 0,
         labels: [],
     };
     assert.deepEqual(
@@ -88,6 +89,44 @@ await withTestDatabase("profile_contract", async ({sql, actor}) => {
     const directory = (input) => call(peer, "people_directory", input);
     assert.equal((await profile(peer)).topics[0].verified, true);
     assert.equal((await profile(peer)).can_moderate, false);
+    assert.equal((await call(manager, "own_profile_details")).teaching_minutes, null);
+    const work = [
+        [teacher, "approved", 1, 15],
+        [teacher, "submitted", 2, 0],
+        [teacher, "rejected", 3, 0],
+        [peer, "approved", 4, 0],
+        [teacher, "approved", 5, 30, "cancelled"],
+        [teacher, "approved", 6, 20, "completed"],
+        [teacher, "submitted", 7, 0, "partial"],
+    ];
+    for (const [lecturer, state, day, pause, outcome] of work) {
+        const job = randomUUID(), claim = randomUUID(), session = randomUUID();
+        const start = q(`2020-05-0${day} 09:00:00+00`);
+        const end = q(`2020-05-0${day} 11:00:00+00`);
+        await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
+          values (${q(job)},'Fictional completed assignment','Fictional academy','online','filled',100,100,'EUR','fixed_total','Fixture');
+          insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,total_amount,currency,rate_unit,terms,terms_version)
+          values (${q(claim)},${q(job)},${q(lecturer)},${q(randomUUID())},100,100,'EUR','fixed_total','Fixture',1);
+          insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at)
+          values (${q(session)},${q(claim)},${q(lecturer)},${start},${end});
+          insert into private.teaching_timesheets(id,session_id,lecturer_id,starts_at,ends_at,break_minutes,state)
+          values (gen_random_uuid(),${q(session)},${q(lecturer)},${start},${end},${pause},${q(state)});`);
+        if (outcome) {
+            const revision = randomUUID();
+            const [actualStart, actualEnd] = outcome === "cancelled" ? ["null", "null"] : [start, end];
+            await sql(`insert into private.delivery_records(session_id,status)
+              values (${q(session)},'confirmed');
+              insert into private.delivery_submissions(id,session_id,revision,lecturer_id,outcome,
+                actual_start,actual_end,time_zone,notes,correction_reason,scheduled_start,scheduled_end)
+              values (${q(revision)},${q(session)},1,${q(lecturer)},${q(outcome)},
+                ${actualStart},${actualEnd},'UTC','','',${start},${end});
+              update private.delivery_records set latest_submission_id = ${q(revision)} where session_id = ${q(session)};`);
+        }
+    }
+    assert.equal((await call(teacher, "own_profile_details")).teaching_minutes, 325);
+    assert.equal((await profile(peer)).teaching_minutes, 325);
+    assert.equal((await call(peer, "own_profile_details")).teaching_minutes, 120);
+    await assert.rejects(actor(peer, `select private.lecturer_delivery_minutes(${q(teacher)})`), /42501/);
     const listing = (await directory({p_topic_id: topic})).find(
         ({id}) => id === teacher,
     );

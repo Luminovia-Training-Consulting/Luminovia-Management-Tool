@@ -14,6 +14,7 @@ import { Avatar } from "../profile/avatar";
 import { chatContactsQuery } from "../chat/api";
 import { LoadMore } from "../../components/load-more";
 import { PersonContact } from "./person-contact";
+import { LuminoviaTeachingTime } from "./luminovia-teaching-time";
 import { useAuth } from "../auth/auth-context";
 import { topicsQuery } from "../../lib/queries";
 import { dateTime } from "../../lib/dates";
@@ -310,6 +311,7 @@ export function PersonProfile() {
             {details.languages.length > 0 && (
               <p>{details.languages.join(", ")}</p>
             )}
+            <LuminoviaTeachingTime minutes={details.teaching_minutes} />
             {details.teaching_experience && (
               <>
                 <h3>{t("experience")}</h3>

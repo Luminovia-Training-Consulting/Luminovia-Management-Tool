@@ -454,6 +454,8 @@ function DeliveryDetail({
       Promise.all([
         client.invalidateQueries({ queryKey: deliveryKey(actor) }),
         client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
+        client.invalidateQueries({ queryKey: ["own-profile-details"] }),
+        client.invalidateQueries({ queryKey: ["person"] }),
       ]),
   });
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;

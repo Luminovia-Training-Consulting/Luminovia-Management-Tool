@@ -16,8 +16,8 @@ import { CompanyClassFeedback } from "./company-class-feedback";
 const messages = {
   heading: ["Klassen und Auftragskontakt", "Classes and assignment contact"],
   intro: [
-    "Klassen und Auftragskontakte sind auch ohne Premium LMS verfügbar. Der Standardlink einer Klasse und der Auftragskontakt können in Aufträge übernommen werden.",
-    "Classes and assignment contacts are available without Premium LMS. A class's default meeting link and the assignment contact can be copied into assignments.",
+    "Aufträge übernehmen den Standardkontakt des Unternehmens automatisch. Ein eigens gewählter Kurskontakt hat Vorrang. Klassen und Meetinglinks kannst du hier verwalten.",
+    "Assignments automatically use the company's default contact. A contact selected for the course takes precedence. Manage company classes and meeting links here.",
   ],
   company: ["Unternehmen", "Company"],
   contact: ["Standardkontakt für Aufträge", "Default assignment contact"],

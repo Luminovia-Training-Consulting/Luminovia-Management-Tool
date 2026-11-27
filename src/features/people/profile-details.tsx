@@ -11,6 +11,7 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { labelText, type ProfileDetails } from "./api";
+import { LuminoviaTeachingTime } from "./luminovia-teaching-time";
 import "./i18n";
 import "./people.css";
 
@@ -61,6 +62,7 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
     >
       <h2>{t("details")}</h2>
       <p>{t("detailsHelp")}</p>
+      <LuminoviaTeachingTime minutes={details.teaching_minutes} />
       <Field id="profile-country" label={t("country")}>
         <input
           id="profile-country"
