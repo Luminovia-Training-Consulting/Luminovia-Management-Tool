@@ -168,6 +168,26 @@ await withTestDatabase(
       (await rpc(foreignCompanyLecturer, "job_detail", job)).customer_name,
       "",
     );
+    const companyFilter = { customer: "Fictional College" };
+    const ownCompanyOffers = await rpc(
+      companyLecturer,
+      "job_discovery",
+      companyFilter,
+      null,
+      20,
+    );
+    assert.deepEqual(
+      ownCompanyOffers.items.map(({ id }) => id),
+      [job],
+    );
+    const foreignCompanyOffers = await rpc(
+      foreignCompanyLecturer,
+      "job_discovery",
+      companyFilter,
+      null,
+      20,
+    );
+    assert.deepEqual(foreignCompanyOffers.items, []);
     const marketplace = await rpc(peer, "job_detail", job);
     assert.equal(marketplace.customer_name, "");
     assert.equal(marketplace.customer_reveal_at, null);
