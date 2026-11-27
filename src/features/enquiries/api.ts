@@ -3,7 +3,6 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
-import { zonedInstant } from "../../lib/dates";
 
 import {
   enquiryContextSchema,
@@ -121,26 +120,4 @@ export function nextEnquiryStatuses(status: Enquiry["status"]) {
             ...(status === "awaiting_customer" ? (["closed"] as const) : []),
           ] as const)
         : [];
-}
-
-/** Convert reviewed wall times to canonical instants, rejecting overlaps and DST uncertainty. */
-export function enquirySessions(
-  rows: { starts_at: string; ends_at: string }[],
-  zone: string,
-) {
-  if (rows.length < 1 || rows.length > 60) return null;
-  const sessions: { starts_at: string; ends_at: string }[] = [];
-  for (const row of rows) {
-    const start = zonedInstant(row.starts_at, zone),
-      end = zonedInstant(row.ends_at, zone);
-    if (
-      !start ||
-      !end ||
-      start >= end ||
-      sessions.some((item) => start < item.ends_at && end > item.starts_at)
-    )
-      return null;
-    sessions.push({ starts_at: start, ends_at: end });
-  }
-  return sessions;
 }

@@ -3,6 +3,14 @@ import assert from "node:assert/strict";
 import { withTestDatabase } from "./testing/database.mjs";
 
 await withTestDatabase("delivery_data_boundaries", async ({ sql }) => {
+  await sql("create extension if not exists plpgsql_check with schema extensions");
+  const lint = await sql(`
+    select message from extensions.plpgsql_check_function_tb(
+      'private.deletion_scope_before_removal_appeals(text,uuid)'::regprocedure
+    ) where level in ('error', 'warning', 'warning extra', 'warning performance');
+  `);
+  assert.equal(lint, "");
+
   const leakedTables = await sql(`
     select c.oid::regclass from pg_class c
     where c.oid in ('private.assignment_removal_appeals'::regclass, 'private.chat_retention_default'::regclass)

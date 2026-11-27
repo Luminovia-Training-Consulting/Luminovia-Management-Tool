@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { EnquiriesPage } from "./enquiries";
-import { enquiryError, enquirySessions } from "./api";
+import { enquiryError } from "./api";
 
 it.each(["PT409", "40001"])(
   "presents the %s response as a version conflict",
@@ -329,39 +329,5 @@ describe("private connected website enquiry management", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       /Unternehmensverwaltung/,
     );
-  });
-  it("normalises planning instants in the intended zone and rejects DST gaps, ambiguity and overlapping sessions", () => {
-    expect(
-      enquirySessions(
-        [{ starts_at: "2027-07-01T09:00", ends_at: "2027-07-01T10:00" }],
-        "Europe/Berlin",
-      ),
-    ).toEqual([
-      {
-        starts_at: "2027-07-01T07:00:00.000Z",
-        ends_at: "2027-07-01T08:00:00.000Z",
-      },
-    ]);
-    expect(
-      enquirySessions(
-        [{ starts_at: "2027-03-28T02:30", ends_at: "2027-03-28T04:00" }],
-        "Europe/Berlin",
-      ),
-    ).toBeNull();
-    expect(
-      enquirySessions(
-        [{ starts_at: "2027-10-31T02:30", ends_at: "2027-10-31T04:00" }],
-        "Europe/Berlin",
-      ),
-    ).toBeNull();
-    expect(
-      enquirySessions(
-        [
-          { starts_at: "2027-07-01T09:00", ends_at: "2027-07-01T11:00" },
-          { starts_at: "2027-07-01T10:00", ends_at: "2027-07-01T12:00" },
-        ],
-        "Europe/Berlin",
-      ),
-    ).toBeNull();
   });
 });
