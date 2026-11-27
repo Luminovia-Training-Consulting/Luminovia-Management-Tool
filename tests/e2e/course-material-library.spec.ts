@@ -125,6 +125,15 @@ test("master materials can be archived, restored and copied into a different sca
   if (page.viewportSize()!.width <= 480) {
     expect(openBox.height).toBeGreaterThanOrEqual(44);
     expect(filterBox.height).toBeGreaterThanOrEqual(44);
+    const courseField = (await library
+      .getByLabel("Nach Kurs filtern")
+      .boundingBox())!;
+    const searchField = (await library
+      .getByLabel("Nach Dateiname suchen")
+      .boundingBox())!;
+    expect(
+      searchField.y - (courseField.y + courseField.height),
+    ).toBeGreaterThanOrEqual(12);
   }
   const courseFilter = library.getByLabel("Nach Kurs filtern");
   await filterCourse.press("Enter");
