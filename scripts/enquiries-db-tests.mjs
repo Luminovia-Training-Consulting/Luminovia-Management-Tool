@@ -524,7 +524,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         const plan = (draft) => ({
           run:{
             template_id:"",organisation_id:draft.payload.run.organisation_id,time_zone:"Europe/Berlin",
-            delivery_type:"online",venue:"",
+            delivery_type:"online",teaching_language:"en",venue:"",
             sessions:[{starts_at:starts,ends_at:ends}],
           },
           content:{title:"Reviewed course",description:"Reviewed public outline",syllabus:"Reviewed syllabus",
@@ -547,9 +547,9 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         const converted = await detail(manager,source);
         assert.equal(converted.course_run_id,receipt.course_run_id);
         assert.equal(converted.payload.message,payload.message);
-        assert.equal(await sql(`select template.syllabus || '/' || template.prerequisites from public.course_runs run
+        assert.equal(await sql(`select template.syllabus || '/' || template.prerequisites || '/' || run.teaching_language from public.course_runs run
           join public.course_templates template on template.id=run.template_id
-          where run.id='${receipt.course_run_id}'`), "Reviewed syllabus/Reviewed prerequisite");
+          where run.id='${receipt.course_run_id}'`), "Reviewed syllabus/Reviewed prerequisite/en");
     });
     await check(
         "Reasoned closure/reopening and append-only notes retain full management history",
