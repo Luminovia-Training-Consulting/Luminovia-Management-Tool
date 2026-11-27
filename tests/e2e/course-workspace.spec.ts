@@ -1419,6 +1419,23 @@ test("consented participant enrolment and reviewed XLSX attendance use the nativ
     await page.goto(`/courses/${f.run}/workspace#course-register`);
     await expect(attendance.getByText("Keine eingeschriebenen Teilnehmenden.", {exact: true})).toHaveCount(0);
     await attendance.getByText("Anwesenheit aus CSV oder XLSX übernehmen",{exact:true}).click();
+    const csvTemplate = attendance.getByRole("link", {name: "CSV-Vorlage laden", exact: true});
+    const workbookTemplate = attendance.getByRole("button", {name: "XLSX-Vorlage laden", exact: true});
+    await expect(csvTemplate).toBeVisible();
+    await expect(workbookTemplate).toBeVisible();
+    const csvTemplateBox = (await csvTemplate.boundingBox())!;
+    const workbookTemplateBox = (await workbookTemplate.boundingBox())!;
+    expect(Math.max(
+        workbookTemplateBox.x - (csvTemplateBox.x + csvTemplateBox.width),
+        workbookTemplateBox.y - (csvTemplateBox.y + csvTemplateBox.height),
+    )).toBeGreaterThanOrEqual(11);
+    const formatRules = attendance.getByText("Formatregeln für die Vorlage", {exact: true});
+    const offsetHelp = attendance.getByText(/Zeiten als Text mit UTC-Offset/);
+    await expect(offsetHelp).toBeHidden();
+    await formatRules.press("Enter");
+    await expect(offsetHelp).toBeVisible();
+    await formatRules.press("Enter");
+    await expect(offsetHelp).toBeHidden();
     await attendance.getByLabel("CSV- oder XLSX-Datei prüfen",{exact:true}).setInputFiles({
         name:"attendance.xlsx",
         mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

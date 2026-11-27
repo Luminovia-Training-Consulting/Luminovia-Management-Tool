@@ -95,6 +95,42 @@ test("master materials can be archived, restored and copied into a different sca
   const entry = library
     .getByRole("listitem")
     .filter({ has: page.getByText(filename, { exact: true }) });
+  const sourceCard = library.getByRole("article").filter({
+    has: page.getByRole("heading", { name: `Source course ${suffix}` }),
+  });
+  const openMaterials = sourceCard.getByRole("link", {
+    name: "Neue Kursdatei freigeben",
+  });
+  const filterCourse = sourceCard.getByRole("button", {
+    name: "Nur diesen Kurs anzeigen",
+  });
+  await expect(openMaterials).toHaveAttribute(
+    "href",
+    `/courses/${source}/workspace#course-materials`,
+  );
+  await expect(filterCourse).toBeVisible();
+  expect(
+    await sourceCard.evaluate(
+      (card) => card.scrollWidth <= card.clientWidth + 1,
+    ),
+  ).toBe(true);
+  const openBox = (await openMaterials.boundingBox())!;
+  const filterBox = (await filterCourse.boundingBox())!;
+  expect(
+    Math.max(
+      filterBox.x - (openBox.x + openBox.width),
+      filterBox.y - (openBox.y + openBox.height),
+    ),
+  ).toBeGreaterThanOrEqual(11);
+  if (page.viewportSize()!.width <= 480) {
+    expect(openBox.height).toBeGreaterThanOrEqual(44);
+    expect(filterBox.height).toBeGreaterThanOrEqual(44);
+  }
+  const courseFilter = library.getByLabel("Nach Kurs filtern");
+  await filterCourse.press("Enter");
+  await expect(courseFilter).toHaveValue(source);
+  await expect(filterCourse).toHaveCount(0);
+  await courseFilter.selectOption("");
   const filter = library.getByLabel("Dokumentart", { exact: true });
   await entry
     .getByText("Bibliothekseintrag verwalten", { exact: true })

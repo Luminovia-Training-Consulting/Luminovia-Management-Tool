@@ -881,7 +881,7 @@ const pairs: Record<string, [string, string]> = {
     "Die Änderung konnte nicht gespeichert werden.",
     "The change could not be saved.",
   ],
-  materialAllCourses: ["Alle freigegebenen Kurse", "All available courses"],
+  materialAllCourses: ["Alle Kurse", "All courses"],
   materialSearch: ["Nach Dateiname suchen", "Search by file name"],
   materialSearchHint: [
     "Sucht auch in Titel, Beschreibung, Fachgebiet und Schlagwörtern.",
@@ -1222,8 +1222,24 @@ const pairs: Record<string, [string, string]> = {
     "Import attendance from CSV or XLSX",
   ],
   attendanceImportHelp: [
-    "Lade die CSV- oder XLSX-Vorlage für diesen Termin herunter. Behalte die Spaltenüberschriften und die IDs bei. Trage present, absent oder excused ein. Lass Status und Zusatzfelder leer, wenn ein Eintrag unverändert bleiben soll. Gib Zeiten als Text mit UTC-Offset ein, etwa 2026-11-20T09:20+01:00. Korrekturen brauchen einen Grund. Verwende feste Zellwerte.",
-    "Download the CSV or XLSX template for this session. Keep the column headings and IDs. Enter present, absent or excused. Leave status and optional fields blank for unchanged entries. Enter times as text with a UTC offset, such as 2026-11-20T09:20+01:00. Corrections require a reason. Use literal cell values.",
+    "Vorlage laden, ausfüllen und Datei auswählen. Prüfe die Vorschau vor dem Speichern.",
+    "Download and fill the template, then select the file to review changes before saving.",
+  ],
+  attendanceImportFormat: [
+    "Formatregeln für die Vorlage",
+    "Template format rules",
+  ],
+  attendanceImportFormatColumns: [
+    "Überschriften und IDs beibehalten. Feste Zellwerte verwenden.",
+    "Keep headers and IDs. Use literal cell values.",
+  ],
+  attendanceImportFormatStatuses: [
+    "Status: present, absent oder excused. Für unveränderte Zeilen Status und Zusatzfelder leer lassen.",
+    "Use present, absent or excused. For unchanged rows, leave status and optional fields blank.",
+  ],
+  attendanceImportFormatTime: [
+    "Zeiten als Text mit UTC-Offset, z. B. 2026-11-20T09:20+01:00. Korrekturen begründen.",
+    "Use text times with UTC offset, e.g. 2026-11-20T09:20+01:00. Give a reason for corrections.",
   ],
   attendanceImportTemplate: ["CSV-Vorlage laden", "Download CSV template"],
   attendanceXlsxTemplate: ["XLSX-Vorlage laden", "Download XLSX template"],

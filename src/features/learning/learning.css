@@ -63,7 +63,8 @@
 .learning-panel summary {
   cursor: pointer;
   font-weight: 600;
-  min-height: 32px;
+  min-block-size: 44px;
+  padding-block: 0.6rem;
 }
 
 .learning-checklist,
@@ -129,9 +130,39 @@
   gap: 0.75rem;
 }
 
-.learning-panel a {
+.learning-panel a:not(.button) {
   color: var(--brand);
   font-weight: 600;
+}
+
+.learning-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.learning-action-row > .button {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.material-library-filters .field {
+  margin-block-end: 0;
+}
+
+.learning-resources + .learning-action-row {
+  margin-block-start: 1rem;
+}
+
+.attendance-import .learning-action-row {
+  margin-block: 1rem;
+}
+
+@media (max-width: 480px) {
+  .learning-action-row > .button {
+    flex: 1 1 11rem;
+  }
 }
 
 .learning-quiz-editor .button {

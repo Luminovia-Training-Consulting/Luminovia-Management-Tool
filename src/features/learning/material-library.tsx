@@ -1137,7 +1137,7 @@ export function MaterialLibrary({
 
   return (
     <section className="course-hub-groups" aria-label={t("materialLibrary")}>
-      <div className="panel course-hub-filter">
+      <div className="panel form-row material-library-filters">
         <Field id={id + "-course"} label={t("materialCourseFilter")}>
           <select
             id={id + "-course"}
@@ -1230,7 +1230,16 @@ export function MaterialLibrary({
                   />
                 ))}
               </ul>
-              <div className="button-row">
+              <div className="learning-action-row">
+                <Button asChild>
+                  <Link to={workspace}>
+                    {t(
+                      first.can_upload && !readOnly
+                        ? "uploadCourseFile"
+                        : "workspaceMaterials",
+                    )}
+                  </Link>
+                </Button>
                 {!courseId && (
                   <Button
                     type="button"
@@ -1242,13 +1251,6 @@ export function MaterialLibrary({
                     {t("materialOnlyThisCourse")}
                   </Button>
                 )}
-                <Link to={workspace}>
-                  {t(
-                    first.can_upload && !readOnly
-                      ? "uploadCourseFile"
-                      : "workspaceMaterials",
-                  )}
-                </Link>
               </div>
             </article>
           );

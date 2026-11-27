@@ -95,7 +95,7 @@ export function AttendanceImportPanel({
     <details className="attendance-import">
       <summary>{t("attendanceImport")}</summary>
       <p>{t("attendanceImportHelp")}</p>
-      <div className="button-row">
+      <div className="learning-action-row">
         <Button asChild variant="secondary">
           <a
             download="attendance.csv"
@@ -132,6 +132,14 @@ export function AttendanceImportPanel({
           }}
         />
       </Field>
+      <details>
+        <summary>{t("attendanceImportFormat")}</summary>
+        <ul className="space-y-2">
+          <li>{t("attendanceImportFormatColumns")}</li>
+          <li>{t("attendanceImportFormatStatuses")}</li>
+          <li>{t("attendanceImportFormatTime")}</li>
+        </ul>
+      </details>
       {invalidRow && (
         <Notice kind="error">
           {t("attendanceImportInvalid", { row: invalidRow })}
