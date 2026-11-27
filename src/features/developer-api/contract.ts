@@ -304,6 +304,7 @@ import {
 } from "../training/delivery-schema.ts";
 import {
   trainingControlSchema,
+  trainingEscalationSchema,
   trainingIssueCode,
 } from "../workbench/training-control-schema.ts";
 import {
@@ -2732,6 +2733,25 @@ const nativePaths = {
       p_topic_id: nullableUuid,
     },
     z.toJSONSchema(trainingControlSchema),
+    ["p_organisation_id", "p_topic_id"],
+  ),
+  "/rest/v1/rpc/escalate_training_issue": rpc(
+    "escalateTrainingIssue",
+    "Operations",
+    "Assign a follow-up task for a current training issue",
+    "Internal installation only. Requires jobs.manage and courses.manage. Validates the issue from the reviewed period and accepts active operations staff. The deadline must be in the future and no later than the course start. Repeated requests return the current task.",
+    {
+      ...operationsPeriod,
+      p_run_id: uuid,
+      p_issue: z.toJSONSchema(trainingIssueCode),
+      p_fingerprint: { type: "string", pattern: "^[a-f0-9]{32}$" },
+      p_assignee_id: uuid,
+      p_due_at: { type: "string", format: "date-time" },
+      p_reason: { type: "string", minLength: 3, maxLength: 1000 },
+      p_organisation_id: nullableUuid,
+      p_topic_id: nullableUuid,
+    },
+    z.toJSONSchema(trainingEscalationSchema),
     ["p_organisation_id", "p_topic_id"],
   ),
   "/rest/v1/rpc/acknowledge_training_issue": rpc(

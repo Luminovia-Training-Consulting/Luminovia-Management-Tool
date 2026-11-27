@@ -2,6 +2,33 @@
 import i18n from "../../lib/i18n";
 
 const labels = {
+  escalate: ["Eskalieren", "Escalate"],
+  escalateIssue: [
+    "{{title}} eskalieren. {{code}}",
+    "Escalate {{title}}. {{code}}",
+  ],
+  escalateHelp: [
+    "Lege für {{title}} eine zugewiesene Arbeitsaufgabe an.",
+    "Assign a follow-up task for {{title}}.",
+  ],
+  escalationAssignee: ["Zuständig", "Assignee"],
+  selectAssignee: ["Person auswählen", "Select a person"],
+  escalationDue: ["Frist ({{zone}})", "Deadline ({{zone}})"],
+  escalationReason: ["Nächster Schritt", "Next step"],
+  escalationDueError: [
+    "Die Frist muss in der Zukunft liegen und spätestens beim Kursstart enden.",
+    "The deadline must be in the future and no later than the course start.",
+  ],
+  escalationError: [
+    "Die Eskalation konnte nicht gespeichert werden. Prüfe, ob der Hinweis noch aktuell ist.",
+    "The escalation could not be saved. Check that the issue is still current.",
+  ],
+  escalationTask: ["Aufgabe ansehen", "View task"],
+  escalationOverdue: ["Überfällig", "Overdue"],
+  cancelEscalation: ["Abbrechen", "Cancel"],
+  open: ["Offen", "Open"],
+  doing: ["In Arbeit", "In progress"],
+  done: ["Erledigt", "Done"],
   organisation: ["Unternehmen", "Company"],
   allOrganisations: ["Alle Unternehmen", "All companies"],
   topic: ["Kursthema", "Course topic"],

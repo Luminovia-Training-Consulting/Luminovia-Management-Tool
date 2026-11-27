@@ -102,6 +102,52 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
   assert.equal(initial.capacity.absences.length, 1);
   assert.equal(JSON.stringify(initial.capacity).includes("private"), false);
 
+  const escalate = (
+    who,
+    fingerprint = staffing.fingerprint,
+    assignee = fixture.second,
+  ) =>
+    actor(
+      fixture[who],
+      `select public.escalate_training_issue(
+      ${id("course")},'staffing',${quoteSql(fingerprint)},current_date-2,current_date+5,
+      ${quoteSql(assignee)},now()+interval '2 hours','Arrange a qualified substitute')`,
+      "aal2",
+    ).then(JSON.parse);
+  await assert.rejects(escalate("lecturer"), /permission|privilege/i);
+  await assert.rejects(escalate("admin", "a".repeat(32)), /issue has changed/i);
+  await assert.rejects(
+    escalate("admin", staffing.fingerprint, fixture.lecturer),
+    /Staff assignee/i,
+  );
+  const [task, replay] = await Promise.all([
+    escalate("admin"),
+    escalate("second"),
+  ]);
+  assert.deepEqual(task, replay);
+  assert.equal(task.state, "open");
+  assert.deepEqual(
+    (await fetch("second")).operations.issues.find(
+      (item) => item.code === "staffing",
+    ).escalation,
+    task,
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from private.training_control_escalations where run_id=${id("course")}`,
+    ),
+    "1",
+  );
+  await sql(
+    `update private.work_tasks set state='done' where id=${quoteSql(task.id)}`,
+  );
+  assert.equal(
+    (await fetch("second")).operations.issues.find(
+      (item) => item.code === "staffing",
+    ).escalation.state,
+    "done",
+  );
+
   const write = (value) =>
     actor(
       fixture.admin,
