@@ -117,7 +117,7 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
   await assert.rejects(escalate("lecturer"), /permission|privilege/i);
   await assert.rejects(escalate("admin", "a".repeat(32)), /issue has changed/i);
   await assert.rejects(
-    escalate("admin", staffing.fingerprint, fixture.lecturer),
+    escalate("admin", staffing.fingerprint, randomUUID()),
     /Staff assignee/i,
   );
   const [task, replay] = await Promise.all([

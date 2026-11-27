@@ -42,7 +42,7 @@ create function private.escalate_training_issue(
   p_assignee_id uuid,p_due_at timestamptz,p_reason text,p_organisation_id uuid,p_topic_id uuid
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
-  issue jsonb;
+  current_issue jsonb;
   current_task jsonb;
   created_task jsonb;
   zone text;
@@ -62,18 +62,18 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('training-escalation:'||p_run_id||':'||p_issue,0));
   current_task := private.training_escalation_task(p_run_id,p_issue,p_fingerprint);
   if current_task is not null then return current_task; end if;
-  select item into issue
+  select item into current_issue
   from jsonb_array_elements(private.training_control_center(p_from,p_until,p_organisation_id,p_topic_id)#>'{operations,issues}') item
   where item->>'run_id'=p_run_id::text and item->>'code'=p_issue and item->>'fingerprint'=p_fingerprint;
-  if issue is null then
+  if current_issue is null then
     raise exception 'The current course issue has changed' using errcode='40001';
   end if;
-  if p_due_at<=now() or p_due_at>(issue->>'starts_at')::timestamptz then
+  if p_due_at<=now() or p_due_at>(current_issue->>'starts_at')::timestamptz then
     raise exception 'Choose a future deadline no later than the course start' using errcode='22023';
   end if;
   select time_zone into strict zone from public.profiles where id=auth.uid();
   created_task := private.save_work_task(null,jsonb_build_object(
-    'title',left(issue->>'title',200),'description',btrim(p_reason)||E'\n\n/courses?run='||p_run_id,
+    'title',left(current_issue->>'title',200),'description',btrim(p_reason)||E'\n\n/courses?run='||p_run_id,
     'state','open','due_at',p_due_at,'time_zone',zone,'scope','operations',
     'assignee_id',p_assignee_id,'source_message_id',null
   ),0,gen_random_uuid());
