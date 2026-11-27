@@ -305,7 +305,7 @@ The internal download also includes the customer accounting receiver contract an
 
 ## Customer visibility for teaching assignments
 
-`assignment_customer_settings()` reads the policy and `save_assignment_customer_settings(p_mode,p_lead_hours,p_expected_revision)` changes it with `jobs.manage` and compare-and-set revision checks. Modes are `scheduled`, `on_confirmation` and `management_only`. Scheduled disclosure defaults to 168 elapsed hours before the first unreleased confirmed assignment session. Marketplace projections return an empty customer name and full location until authorised, with `customer_hidden` and an optional own `customer_reveal_at` for job detail. Use the role-scoped RPCs for preparation. Raw REST relations containing customer data return rows only within the current disclosure authority.
+\`assignment_customer_settings()\` reads the policy and \`save_assignment_customer_settings(p_mode,p_lead_hours,p_expected_revision)\` changes it with \`jobs.manage\` and compare-and-set revision checks. Modes are \`scheduled\`, \`on_confirmation\` and \`management_only\`. Scheduled disclosure defaults to 168 elapsed hours before the first unreleased confirmed assignment session. Marketplace projections leave customer names and locations blank until disclosure is authorised, with \`customer_hidden\` and an optional own \`customer_reveal_at\` for job detail. Use the role-scoped RPCs for preparation. Raw REST relations containing customer data return rows only within the current disclosure authority.
 
 ## Assignment amendments, teaching evidence and settlement journal
 
