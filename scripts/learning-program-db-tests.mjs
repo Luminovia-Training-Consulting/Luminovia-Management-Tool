@@ -51,6 +51,7 @@ await Promise.all(
         [colleague, "participant"],
       ];
       const internal = edition === "internal";
+      let upgradeAcademy;
       let checkGradeLicence;
       if (!internal) {
         const now = Date.now();
@@ -63,7 +64,7 @@ await Promise.all(
           starts_at: date(-2),
           expires_at: date(7),
           grace_until: date(9),
-          modules: ["lms"],
+          modules: ["lms-standard"],
           limits: {
             seat_count: 20,
             storage_bytes: 1_000_000,
@@ -79,9 +80,24 @@ await Promise.all(
         };
         await prepareAcademyInstallation(setup, sql);
         await configureAcademyCourseAccess({ ...setup, enabled: true }, sql);
+        upgradeAcademy = async () => {
+          const upgraded = {
+            ...expected,
+            issued_at: date(-2.9),
+            modules: ["lms"],
+          };
+          await prepareAcademyInstallation(
+            {
+              ...setup,
+              expected: upgraded,
+              envelope: signAcademyLicence(upgraded, privateKey),
+            },
+            sql,
+          );
+        };
         const renew = (changes) =>
           sql(
-            `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...expected, ...changes }))}::jsonb);`,
+            `select private.apply_verified_installation_licence(${q(JSON.stringify({ ...expected, modules: ["lms"], ...changes }))}::jsonb);`,
           );
         checkGradeLicence = async (readOwn, readStaff, report) => {
           await renew({
@@ -268,21 +284,44 @@ await Promise.all(
         `PASS ${edition} whole-programme enrolment creates one authorised starting course, roster scope and immutable rules`,
       );
 
-      if (internal) {
-        const workspace = JSON.parse(await invoke(learner, "course_workspace", q(first), "GET"));
-        assert.equal(workspace.lms_enabled, false);
-        assert.equal(workspace.access.learner, true);
-        assert.equal(workspace.learner_status, "enrolled");
-        await invoke(learner, "course_content_studio", q(first), "GET");
-        await assert.rejects(invoke(otherLearner, "course_content_studio", q(first), "GET"), /42501/);
-        await assert.rejects(invoke(learner, "course_exam_state", q(first), "GET"), /42501/);
-        await assert.rejects(invoke(learner, "course_gradebook", q(first), "GET"), /42501/);
-        await invoke(admin, "manage_course_enrolment", `${q(first)},${q(learner)},'completed'`);
-        const basic = await progress();
-        assert.equal(basic.steps[0].state, "completed");
-        assert.equal(basic.steps[0].receipt_id, null);
-        assert.equal(basic.steps[1].state, "ready");
-        await actor(admin, `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())});`);
+      const standardWorkspace = JSON.parse(
+        await invoke(learner, "course_workspace", q(first), "GET"),
+      );
+      assert.equal(standardWorkspace.lms_enabled, false);
+      assert.equal(standardWorkspace.access.learner, true);
+      assert.equal(standardWorkspace.learner_status, "enrolled");
+      await invoke(learner, "course_content_studio", q(first), "GET");
+      await assert.rejects(
+        invoke(otherLearner, "course_content_studio", q(first), "GET"),
+        /42501/,
+      );
+      for (const who of [admin, learner]) {
+        for (const operation of ["course_exam_state", "course_gradebook"]) {
+          await assert.rejects(
+            invoke(who, operation, q(first), "GET"),
+            /42501/,
+          );
+        }
+      }
+      await invoke(
+        admin,
+        "manage_course_enrolment",
+        `${q(first)},${q(learner)},'completed'`,
+      );
+      const basic = await progress();
+      assert.equal(basic.steps[0].state, "completed");
+      assert.equal(basic.steps[0].receipt_id, null);
+      assert.equal(basic.steps[1].state, "ready");
+      console.log(
+        `PASS ${edition} Standard course completion without a receipt unlocks the next module and exam and grade APIs reject staff`,
+      );
+      if (upgradeAcademy) {
+        await upgradeAcademy();
+      } else {
+        await actor(
+          admin,
+          `select public.set_company_premium(${q(org)},true,0,${q(randomUUID())});`,
+        );
       }
 
       const complete = async (course, session) => {
