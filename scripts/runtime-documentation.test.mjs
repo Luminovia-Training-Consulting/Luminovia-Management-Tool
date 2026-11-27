@@ -187,6 +187,7 @@ test("documentation retains the approved project records and published materials
         "GUIDE.md",
         "FEATURES.md",
         "LMS-BACKLOG.md",
+        "LMS-PACKAGES.md",
         "PRODUCTION-READINESS.md",
         "design-qa.md",
         "customer-handoff",
