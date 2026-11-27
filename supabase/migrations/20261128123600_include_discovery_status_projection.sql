@@ -91,7 +91,7 @@ language sql stable security definer set search_path = '' as $$
       )
     )
   ), candidates as materialized (
-    select job.id, job.title, job.customer_name, job.created_at, first_session.starts_at
+    select job.id, job.title, job.status, job.customer_name, job.created_at, first_session.starts_at
     from options
     cross join jobs_in_scope job
     left join lateral (
