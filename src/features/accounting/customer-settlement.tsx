@@ -63,7 +63,7 @@ export function CustomerSettlementPanel({
     return <ErrorState retry={() => void query.refetch()} />;
   return (
     <div>
-      <h3>{invoice.number}</h3>
+      {invoice.number && <h3>{invoice.number}</h3>}
       <p role="status">{t(`settlementState.${result.status}`)}</p>
       <dl className="accounting-settlement-values">
         <dt>{t("total")}</dt>

@@ -1,5 +1,5 @@
 import { financeRoots, type FinanceScope } from "../../app/finance-access";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { commercialAccessQuery } from "../commercial/api";
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
@@ -7,6 +7,7 @@ import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
 import { useState } from "react";
+import { z } from "zod";
 import {
   useInfiniteQuery,
   useMutation,
@@ -535,10 +536,17 @@ export function AccountingPage({
     sources.push("lecturer_all");
   if (scope !== "personal" && access.data?.can_export_customer)
     sources.push("customer");
-  const source =
-    scope === "personal" ? "own" : (selectedSource ?? sources[0] ?? "customer");
   const canManageCustomer =
     scope === "staff" && access.data?.can_manage_customer_invoices === true;
+  const [params, setParams] = useSearchParams();
+  const requestedInvoice = canManageCustomer
+    ? z.uuid().safeParse(params.get("customerInvoice")).data
+    : undefined;
+  const source =
+    scope === "personal"
+      ? "own"
+      : (selectedSource ??
+        (requestedInvoice ? "customer" : (sources[0] ?? "customer")));
   const [selected, setSelected] = useState<string[]>([]);
   const [register, setRegister] = useState(false);
   const [payment, setPayment] = useState<AccountingInvoice | null>(null);
@@ -547,6 +555,9 @@ export function AccountingPage({
   );
   const [settlementInvoice, setSettlementInvoice] =
     useState<AccountingInvoice | null>(null);
+  const activeSettlement =
+    settlementInvoice ??
+    (requestedInvoice ? { id: requestedInvoice, number: "" } : null);
   const [saved, setSaved] = useState(false);
   const [snapshot, setSnapshot] = useState<AccountingExport | null>(null);
   const [denied, setDenied] = useState(false);
@@ -893,18 +904,31 @@ export function AccountingPage({
         )}
       </Dialog>
       <Dialog
-        open={Boolean(settlementInvoice) && sourceAllowed}
+        open={
+          Boolean(activeSettlement) && sourceAllowed && source === "customer"
+        }
         onOpenChange={(open) => {
-          if (!open) setSettlementInvoice(null);
+          if (!open) {
+            setSettlementInvoice(null);
+            if (requestedInvoice)
+              setParams(
+                (previous) => {
+                  const next = new URLSearchParams(previous);
+                  next.delete("customerInvoice");
+                  return next;
+                },
+                { replace: true },
+              );
+          }
         }}
         title={t("customerSettlement")}
         description={t("customerSettlementHint")}
       >
-        {settlementInvoice && sourceAllowed && (
+        {activeSettlement && sourceAllowed && source === "customer" && (
           <CustomerSettlementPanel
-            key={settlementInvoice.id}
+            key={activeSettlement.id}
             actor={actor}
-            invoice={settlementInvoice}
+            invoice={activeSettlement}
             onDenied={() => setDenied(true)}
           />
         )}

@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { type ReactNode, useState } from "react";
+import { lazy, Suspense, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,9 @@ import { sessionCacheBoundary } from "../auth/session-cache-boundary";
 import { CourseStartPanel } from "../readiness/course-start";
 import "./finance-i18n";
 import "./finance.css";
+import "./training-control-i18n";
+
+const TrainingControl = lazy(() => import("./training-control"));
 
 function Section({
   title,
@@ -158,6 +161,8 @@ export function ControlCenterPage() {
   const actor = session!.user.id;
   const boundary = sessionCacheBoundary(session?.access_token);
   const { t, i18n } = useTranslation("financeOps");
+  const training = useTranslation("trainingControl").t;
+  const [showTraining, setShowTraining] = useState(false);
   const [period, setPeriod] = useState(() => ({
       from: DateTime.now().minus({ days: 30 }).toISODate()!,
       until: DateTime.now().plus({ days: 60 }).toISODate()!,
@@ -190,6 +195,20 @@ export function ControlCenterPage() {
     <>
       <PageHeading title={t("controlCenter")} description={t("controlHelp")} />
       <FinancePeriodFilter period={period} onChange={setPeriod} />
+      {(permissions.data?.includes("courses.manage") ||
+        permissions.data?.includes("finance.gross.read")) && (
+        <details
+          className="panel training-control"
+          onToggle={(event) => setShowTraining(event.currentTarget.open)}
+        >
+          <summary>{training("overview")}</summary>
+          {showTraining && (
+            <Suspense fallback={<Loading />}>
+              <TrainingControl key={boundary} actor={actor} period={period} />
+            </Suspense>
+          )}
+        </details>
+      )}
       {permissions.data?.includes("courses.manage") && (
         <CourseStartPanel actor={actor} />
       )}

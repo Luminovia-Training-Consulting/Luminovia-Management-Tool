@@ -279,6 +279,10 @@ import {
 } from "../announcements/schema.ts";
 import { controlSchema, forecastSchema } from "../workbench/finance-schema.ts";
 import {
+  trainingControlSchema,
+  trainingIssueCode,
+} from "../workbench/training-control-schema.ts";
+import {
   companyPremiumCommandSchema,
   companyPremiumSettingsSchema,
   retainedCompanyLmsSchema,
@@ -2334,6 +2338,27 @@ const nativePaths = {
     "Requires jobs.manage. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Each queue contains up to 200 rows. Private tasks require the caller's existing access. The contract, qualification and course queues require their respective permissions. Average ratings are suppressed below three responses.",
     operationsPeriod,
     z.toJSONSchema(controlSchema),
+  ),
+  "/rest/v1/rpc/training_control_center": rpc(
+    "getTrainingControlCenter",
+    "Operations",
+    "Read training coverage and receivables",
+    "Internal installation only. Requires jobs.manage. Operations requires courses.manage; customer balances require finance.gross.read. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Receivables are filtered by invoice date and use current balances. Courses starting within three days are checked for unique issue types.",
+    operationsPeriod,
+    z.toJSONSchema(trainingControlSchema),
+  ),
+  "/rest/v1/rpc/acknowledge_training_issue": rpc(
+    "acknowledgeTrainingIssue",
+    "Operations",
+    "Acknowledge or redisplay a course issue",
+    "Requires jobs.manage and courses.manage. The receipt changes visibility for the caller and the supplied issue fingerprint. It cannot resolve the underlying issue.",
+    {
+      p_run_id: uuid,
+      p_issue: z.toJSONSchema(trainingIssueCode),
+      p_fingerprint: { type: "string", pattern: "^[0-9a-f]{32}$" },
+      p_acknowledged: boolean,
+    },
+    boolean,
   ),
   "/rest/v1/rpc/export_my_calendar": rpc(
     "exportMyCalendar",
