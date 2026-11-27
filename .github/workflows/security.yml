@@ -12,9 +12,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  # Keep each explicit manual source audit independent of concurrent pushes.
-  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || '' }}
-  cancel-in-progress: true
+  # Isolate main pushes by run so GitHub can neither cancel an active check
+  # nor replace a pending one when a newer revision arrives. PR updates still
+  # supersede stale checks, and manual checks keep their own commit group.
+  group: security-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || github.event_name == 'push' && format('-push-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 jobs:
   codeql:
     # Include operating tools and workflow trust boundaries in the three analyses.

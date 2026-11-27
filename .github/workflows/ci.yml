@@ -21,10 +21,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  # A manual acceptance run is evidence for a specific commit. A later push
-  # must not cancel it while the native browser reports are still being written.
-  group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || '' }}
-  cancel-in-progress: true
+  # Isolate main pushes by run so GitHub can neither cancel an active check
+  # nor replace a pending one when a newer revision arrives. PR updates still
+  # supersede stale checks, and manual checks keep their own commit group.
+  group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}${{ github.event_name == 'workflow_dispatch' && format('-manual-{0}', github.sha) || github.event_name == 'push' && format('-push-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 jobs:
   scope:
     name: Change scope
