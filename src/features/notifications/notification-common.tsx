@@ -84,14 +84,17 @@ export const NotificationRow = memo(function NotificationRow({
     >
       <strong>
         {t(
-          item.assignment_replaced
-            ? "lecturerReplaced"
-            : notificationCategory(item.kind) !== "other"
-              ? item.kind
-              : "activity",
+          item.assignment_removed
+            ? "lecturerRemoved"
+            : item.assignment_replaced
+              ? "lecturerReplaced"
+              : notificationCategory(item.kind) !== "other"
+                ? item.kind
+                : "activity",
         )}
       </strong>
       {item.title && <p>{item.title}</p>}
+      {item.removal_reason && <p>{item.removal_reason}</p>}
       <small>{dateTime(item.created_at, i18n.language, zone)}</small>
       {item.href ? (
         <Link to={item.href}>{t("open")}</Link>

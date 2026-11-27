@@ -255,6 +255,31 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
+  it("shows the lecturer the unread removal reason on the dashboard", async () => {
+    fake.rpcData.notification_inbox = {
+      items: [
+        {
+          id: "6f1be4c1-9910-4f22-a3e0-d92b60bc8ee4",
+          kind: "claim_cancelled",
+          title: "Fictional removed assignment",
+          assignment_removed: true,
+          removal_reason: "Fictional scheduling conflict",
+          href: null,
+          created_at: ahead(-1),
+          read_at: null,
+        },
+      ],
+      unread_count: 1,
+      as_of: ahead(0),
+    };
+    setup();
+    const notice = (
+      await screen.findByText("Fictional scheduling conflict")
+    ).closest("[role=alert]");
+    expect(notice).toHaveTextContent("Fictional removed assignment");
+    expect(notice).toHaveTextContent("Fictional scheduling conflict");
+  });
+
   it("provides a named page-level heading", async () => {
     setup();
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
