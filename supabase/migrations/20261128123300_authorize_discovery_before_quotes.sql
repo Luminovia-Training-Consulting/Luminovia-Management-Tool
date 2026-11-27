@@ -53,14 +53,31 @@ language sql stable security definer set search_path = '' as $$
         or f->>'min_total' is not null or f->>'max_total' is not null as needs_quote,
       f->>'sort' = 'duration_asc' or f->>'min_hours' is not null
         or f->>'max_hours' is not null as needs_duration,
+      f->>'sort' = 'customer_asc' or f->>'q' <> ''
+        or f->>'customer' <> '' as needs_customer,
       (nullif(f->>'from', '')::date::timestamp at time zone (f->>'zone')) as range_start,
       ((nullif(f->>'to', '')::date + 1)::timestamp at time zone (f->>'zone')) as range_end,
       private.lecturer_actor() as lecturer,
+      private.has_permission('jobs.manage') as manager,
+      private.has_role(array['client']) as company,
       auth.uid() as actor
   ), jobs_in_scope as materialized (
-    select job.id, job.title, job.customer_name, job.created_at, job.capacity
+    select job.id, job.title,
+      case when options.sort = 'customer_asc' and visibility.customer
+        then job.customer_name else '' end as customer_name,
+      job.created_at, job.capacity
     from options
     cross join public.jobs job
+    -- Confirmed own allocations are excluded from discovery. Among the
+    -- remaining offers, only management or the owning company can read labels.
+    cross join lateral (
+      select case
+        when not options.needs_customer then false
+        when options.manager then true
+        when options.company then private.job_dispatch_company_actor(job.id)
+        else false end as customer
+      offset 0
+    ) visibility
     where (
       not options.open_only or (
         job.status = 'published'
@@ -68,7 +85,8 @@ language sql stable security definer set search_path = '' as $$
       )
     )
     and (f->>'status' = '' or job.status = f->>'status')
-    and (f->>'delivery' = '' or job.delivery_type = f->>'delivery')
+    and (f->>'delivery' = '' or
+      coalesce(private.training_offered_mode(job.id, job.course_run_id), job.delivery_type) = f->>'delivery')
     and (f->>'currency' = '' or job.currency = f->>'currency')
     and (f->>'unit' = '' or job.rate_unit = f->>'unit')
     and (
@@ -80,7 +98,11 @@ language sql stable security definer set search_path = '' as $$
     )
     and (
       f->>'q' = ''
-      or strpos(lower(job.title || ' ' || job.description || ' ' || job.customer_name || ' ' || job.location), lower(f->>'q')) > 0
+      or strpos(lower(job.title || ' ' || job.description), lower(f->>'q')) > 0
+      or (visibility.customer and strpos(
+        lower(job.title || ' ' || job.description || ' ' || job.customer_name || ' ' || job.location),
+        lower(f->>'q')
+      ) > 0)
       or exists (
         select 1
         from public.job_requirements requirement
@@ -89,7 +111,8 @@ language sql stable security definer set search_path = '' as $$
           and strpos(lower(topic.label_de || ' ' || topic.label_en || ' ' || array_to_string(topic.aliases, ' ')), lower(f->>'q')) > 0
       )
     )
-    and (f->>'customer' = '' or strpos(lower(job.customer_name), lower(f->>'customer')) > 0)
+    and (f->>'customer' = '' or
+      (visibility.customer and strpos(lower(job.customer_name), lower(f->>'customer')) > 0))
     and (
       jsonb_array_length(f->'topic_ids') = 0 or exists (
         select 1
