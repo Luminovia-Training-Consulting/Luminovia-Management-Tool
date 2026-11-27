@@ -238,26 +238,38 @@ test("admin persists private customer/contact, course template/run and safe unpu
     const createCopy = dialog.getByRole("button", {name: "Kursentwurf erstellen", exact: true});
     await expect(createCopy).toBeDisabled();
     await dialog.getByRole("button", {name: "Kurskopie prüfen", exact: true}).click();
-    await expect(dialog.getByText("Der Entwurf erhält keine Termine.")).toBeVisible();
+    const planned = dialog.getByRole("region", {name: "Vorgesehene Termine"});
+    await expect(planned.getByRole("listitem")).toHaveCount(2);
     await createCopy.click();
     const editor = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
     await expect(editor).toBeVisible();
     const copyId = new URL(page.url()).searchParams.get("editRun");
     expect(copyId).toMatch(/^[0-9a-f-]{36}$/);
     const savedCopy = await service.from("course_runs")
-        .select("published,course_sessions(id),jobs(id),course_enrolments(user_id)")
+        .select("published,time_zone,course_sessions(starts_at,ends_at),jobs(id),course_enrolments(user_id)")
         .eq("id", copyId!).single();
     expect(savedCopy.error).toBeNull();
-    expect(savedCopy.data).toEqual({
+    expect(savedCopy.data).toMatchObject({
         published: false,
-        course_sessions: [],
+        time_zone: "Europe/Berlin",
         jobs: [],
         course_enrolments: [],
     });
+    expect(savedCopy.data?.course_sessions.map(({starts_at, ends_at}) => [
+        Date.parse(starts_at),
+        Date.parse(ends_at),
+    ]).sort(([left], [right]) => left - right)).toEqual([
+        [first.toMillis(), first.plus({hours: 5}).toMillis()],
+        [first.plus({days: 1}).toMillis(), first.plus({days: 1, hours: 5}).toMillis()],
+    ]);
     await page.reload();
     await expect(editor).toBeVisible();
     await editor.getByRole("button", {name: "Schließen", exact: true}).click();
-    await page.getByRole("dialog").getByRole("button", {name: "Schließen", exact: true}).click();
+    await expect(editor).toBeHidden();
+    const copiedDetail = page.getByRole("dialog", {name: title, exact: true});
+    await expect(copiedDetail).toBeVisible();
+    await copiedDetail.getByRole("button", {name: "Schließen", exact: true}).click();
+    await expect(copiedDetail).toBeHidden();
     await page.getByLabel("Suchen", {exact: true}).fill(title);
     await expect(card).toHaveCount(2);
     await page.reload();
