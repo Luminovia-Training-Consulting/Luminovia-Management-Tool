@@ -9,7 +9,7 @@ Individual package changes do not amend signed licence terms.
 | Function | Package | Portal and Academy navigation | API and current gate | Authority and data |
 | --- | --- | --- | --- | --- |
 | Course templates, drafts, publication and archiving | Standard | Courses, calendar, templates, enquiries and reuse | Existing course creator and template RPCs, plus Academy course creation gateway | Company or course manager scope. Preserve origin, revision and date/time zone. Offer preparation and publication are separate. |
-| Series and schedule | Standard | Courses → Series | Existing course series preview and save commands | Scope to the company. Preview changes, retain exact existing sessions and reject stale saves. |
+| Series and schedule | Standard in both editions | Courses → Series and saved course detail → Edit series schedule | `course_series_classes`, `plan_course_series`, `course_series_for_run`, `revise_course_series` | Course managers and internal company authors of their own series. Academy active for editing and grace for reads. Scoped preview and confirmation preserve untouched runs and reject stale saves. |
 | Classes and accounts | Standard | Courses → Class, Companies → Participants, Accounts & Access | `course_class_options`, `set_course_class`, participant reservation and placement RPCs. Internal paths historically checked Premium. | Staff or scoped company authority. Existing account creation, invitation acceptance and linking checks still apply. |
 | Enrolment and invitations | Standard | Company participants, course workspace, learner invitations | `course_enrolments`, `manage_course_enrolment`, `assign_company_participant_courses` and invitation RPCs | Own organisation and permitted course. Only verified or explicitly associated accounts. |
 | Curriculum | Standard | Learning → Course → Curriculum | `course_content_studio`, `course_content_action` and publication queue. Historically gated by `lms_enabled` and Premium lock. | Assigned staff and enrolled learners. Keep pinned published versions, archived modules, review state and audited version changes. |
@@ -43,9 +43,8 @@ where there is no formal receipt history. If a receipt exists, its revocation
 still withdraws the corresponding credit.
 
 The series creation form accepts a per-run teaching-day count and daily
-start/end override in the shared time zone. The variant applies only to the
-reviewed drafts being created. Course detail combines visible sessions with
+start/end override in the shared time zone. Saved patterns can be edited for selected eligible future drafts after a new preview. Legacy schedules keep their exact dates until a rule is entered and confirmed. Course detail combines visible sessions with
 the recorded creation and archive dates. Current staff also see selected planning, publication and class events in the same timeline in the internal portal and Academy via `course_timeline`. Internal course managers can preview and confirm archive or restore for 2–50
 courses. The server applies the batch atomically and rejects stale rows and
-locked courses. Edits to saved series patterns, assignment and other timeline event sources,
+locked courses. Assignment and other timeline event sources,
 Academy bulk actions and remaining creator entry points require further work.

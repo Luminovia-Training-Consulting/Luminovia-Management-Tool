@@ -118,6 +118,7 @@ export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   course_peer_feedback_attachment: "GET",
   course_operation_destinations: "GET",
   course_readiness: "GET",
+  course_series_for_run: "GET",
   course_run_job_defaults: "GET",
   course_session_register: "GET",
   course_timeline: "GET",

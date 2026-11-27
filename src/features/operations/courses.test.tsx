@@ -60,6 +60,7 @@ const state = vi.hoisted(() => ({
   accountRequest: vi.fn(),
   from: vi.fn(),
   online: true,
+  series: null as unknown,
   tables: {} as Record<string, unknown[]>,
 }));
 vi.mock("../auth/auth-context", () => ({
@@ -218,9 +219,12 @@ function interval(dialog: HTMLElement, start: string, end: string, index = 1) {
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.online = true;
+  state.series = null;
   vi.spyOn(navigator, "onLine", "get").mockImplementation(() => state.online);
   state.rpc.mockReset();
   state.rpc.mockImplementation((name: string) => {
+    if (name === "course_series_for_run")
+      return { abortSignal: async () => ({ data: state.series, error: null }) };
     if (name === "job_lifecycle")
       return {
         abortSignal: async () => ({ data: protectedLifecycle, error: null }),
@@ -504,6 +508,47 @@ it("opens the exact course schedule from a blocked deletion and focuses its date
     "save_course_run",
     expect.anything(),
   );
+});
+
+it("opens saved series editing for a company in the course detail dialog", async () => {
+  state.series = {
+    revision: "a".repeat(64),
+    time_zone: run.time_zone,
+    runs: [
+      { id: runId, editable: true, pattern: null, sessions: [] },
+      {
+        id: "c2000000-0000-4000-8000-000000000002",
+        editable: false,
+        pattern: null,
+        sessions: [],
+      },
+    ],
+  };
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
+    organisations: [organisation],
+    templates: [{ ...template, owner_organisation_id: companyId }],
+    runs: [{ ...run, organisation_id: companyId }],
+    path: `/courses?run=${runId}`,
+  });
+
+  const dialog = within(await screen.findByRole("dialog"));
+  await userEvent.click(await dialog.findByText("Serienmuster bearbeiten"));
+  expect(
+    dialog.getByRole("checkbox", { name: "Muster für Durchlauf 1 ändern" }),
+  ).toBeEnabled();
+  expect(
+    dialog.getByRole("checkbox", { name: "Muster für Durchlauf 2 ändern" }),
+  ).toBeDisabled();
+  expect(state.rpc).toHaveBeenCalledWith(
+    "course_series_for_run",
+    { p_course_id: runId },
+    { get: true },
+  );
+  expect(
+    state.rpc.mock.calls.some(([name]) => name === "revise_course_series"),
+  ).toBe(false);
 });
 
 it("lists one template library and only shows the signed-in company's owned templates", async () => {

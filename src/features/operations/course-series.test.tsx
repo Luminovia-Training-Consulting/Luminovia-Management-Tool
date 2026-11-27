@@ -129,6 +129,13 @@ it.each([false, true])(
     expect(
       screen.queryByRole("button", { name: "Create all runs as drafts" }),
     ).toBeNull();
+    const teachingPattern = {
+      days: 1,
+      start: "09:00",
+      end: "17:00",
+      weekdays: [1, 2, 3, 4, 5],
+      excluded_dates: "2030-05-08",
+    };
     expect(reviewed.mock.calls[0][0]).toEqual({
       p_request_id: null,
       p_organisation_id: organisation.id,
@@ -139,6 +146,7 @@ it.each([false, true])(
           delivery_type: "online",
           venue: "",
           class_id: null,
+          pattern: { ...teachingPattern, first_day: "2030-04-08" },
           sessions: [
             {
               starts_at: "2030-04-08T09:00:00.000Z",
@@ -150,6 +158,7 @@ it.each([false, true])(
           delivery_type: "online",
           venue: "",
           class_id: null,
+          pattern: { ...teachingPattern, first_day: "2030-04-01" },
           sessions: [
             {
               starts_at: "2030-04-01T09:00:00.000Z",
@@ -161,6 +170,11 @@ it.each([false, true])(
           delivery_type: "onsite",
           venue: "Practice room",
           class_id: group.id,
+          pattern: {
+            ...teachingPattern,
+            first_day: "2030-05-08",
+            start: "10:30",
+          },
           sessions: [
             {
               starts_at: "2030-05-09T10:30:00.000Z",
@@ -172,6 +186,7 @@ it.each([false, true])(
           delivery_type: "online",
           venue: "",
           class_id: null,
+          pattern: { ...teachingPattern, first_day: "2030-06-08" },
           sessions: [
             {
               starts_at: "2030-06-10T09:00:00.000Z",

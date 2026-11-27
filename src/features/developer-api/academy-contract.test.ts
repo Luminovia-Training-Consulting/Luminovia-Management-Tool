@@ -264,6 +264,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           "/functions/v1/accounts/v1/academy/invitations/{id}/retry",
           "/rest/v1/rpc/course_series_classes",
           "/rest/v1/rpc/plan_course_series",
+          "/rest/v1/rpc/course_series_for_run",
+          "/rest/v1/rpc/revise_course_series",
           "/rest/v1/rpc/learning_programs",
           "/rest/v1/rpc/learning_program_class_progress",
           "/rest/v1/rpc/learning_program_grade_report",

@@ -323,6 +323,8 @@ When editing an unlocked course schedule in the portal or a dedicated Academy, c
 
 For separate drafts from the same template, open **Kursserie planen / Plan a course series**. Enter a first possible start date and use **Starttage wiederholen / Repeat start dates** to fill empty date slots and add more runs, up to 12. Each run keeps its own class, delivery mode and venue. Review the final teaching dates and room/class conflicts before saving the drafts.
 
+Open a run from the saved series and choose **Serienmuster bearbeiten / Edit series pattern**. Select the future drafts that should change, adjust their teaching days and hours, and review the old and proposed appointments. Confirm the change after reviewing conflicts. For a legacy series, enter the pattern explicitly. The original time zone and unchanged appointments are retained. Published, past, archived or allocated runs and their data remain protected. If another person saves a change first, reload the series and review again. Authorised Academy managers can edit with an active licence, and can read existing patterns during grace.
+
 For a customer with recurring training arrangements, maintain named operational presets in its company record. The course creator and series planner let you explicitly adopt the current preset revision. Review its time zone, suggested teaching times, contact, structured venue and instructions before saving. A series can retain its own delivery choices per run. Meeting credentials are entered in the course.
 
 

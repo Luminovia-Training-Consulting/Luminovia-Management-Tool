@@ -18,6 +18,11 @@ const configure = (id, release, enabled = true) =>
 // These operations need state owned by the listed SQL fixtures, such as a
 // published quiz, a confirmed scan or a registered external tool.
 const featureFixtureOperations = new Map([
+  ["academy-course-creation-db-tests.mjs", ["course_timeline"]],
+  [
+    "course-series-db-tests.mjs",
+    ["course_series_for_run", "revise_course_series"],
+  ],
   [
     "course-scorm-runtime-db-tests.mjs",
     ["read_course_scorm_runtime", "save_course_scorm_runtime"],

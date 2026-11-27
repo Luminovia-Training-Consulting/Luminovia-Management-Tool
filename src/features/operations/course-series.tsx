@@ -205,26 +205,8 @@ export function CourseSeriesForm({
       p_organisation_id: organisation,
       p_template_id: value("template"),
       p_time_zone: zone,
-      p_runs: runs.map(({ key, firstDay }) => ({
-        delivery_type:
-          value(`${key}-delivery`) === "inherit"
-            ? deliveryDefault
-            : value(`${key}-delivery`),
-        venue: value(`${key}-venue`).trim(),
-        class_id: value(`${key}-class`) || null,
-        ...(adoption
-          ? {
-              operational_preset: {
-                id: adoption.preset.id,
-                revision: adoption.preset.revision,
-                apply_delivery:
-                  adoption.delivery &&
-                  !deliveryOverrides[key] &&
-                  !value(`${key}-venue`).trim(),
-              },
-            }
-          : {}),
-        sessions: courseSeriesSessions({
+      p_runs: runs.map(({ key, firstDay }) => {
+        const runSchedule = {
           ...schedule,
           firstDay,
           days: value(`${key}-days`)
@@ -232,8 +214,37 @@ export function CourseSeriesForm({
             : schedule.days,
           start: value(`${key}-start`) || schedule.start,
           end: value(`${key}-end`) || schedule.end,
-        }),
-      })),
+        };
+        return {
+          delivery_type:
+            value(`${key}-delivery`) === "inherit"
+              ? deliveryDefault
+              : value(`${key}-delivery`),
+          venue: value(`${key}-venue`).trim(),
+          class_id: value(`${key}-class`) || null,
+          ...(adoption
+            ? {
+                operational_preset: {
+                  id: adoption.preset.id,
+                  revision: adoption.preset.revision,
+                  apply_delivery:
+                    adoption.delivery &&
+                    !deliveryOverrides[key] &&
+                    !value(`${key}-venue`).trim(),
+                },
+              }
+            : {}),
+          pattern: {
+            first_day: firstDay,
+            days: runSchedule.days,
+            start: runSchedule.start,
+            end: runSchedule.end,
+            weekdays: runSchedule.weekdays,
+            excluded_dates: runSchedule.excludedDates,
+          },
+          sessions: courseSeriesSessions(runSchedule),
+        };
+      }),
       p_request_id: null,
     });
     setInvalid(!body.success);

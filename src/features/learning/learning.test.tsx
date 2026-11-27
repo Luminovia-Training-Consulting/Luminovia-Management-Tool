@@ -20,6 +20,7 @@ const fake = vi.hoisted(() => ({
   upload: vi.fn(),
   academyUpload: vi.fn(),
   workspace: {} as CourseWorkspace,
+  series: null as unknown,
   error: null as unknown,
   meetingError: null as unknown,
   pending: undefined as Promise<unknown> | undefined,
@@ -96,6 +97,7 @@ function fixture(): CourseWorkspace {
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   fake.workspace = fixture();
+  fake.series = null;
   fake.error = null;
   fake.meetingError = null;
   fake.pending = undefined;
@@ -104,6 +106,10 @@ beforeEach(async () => {
   fake.rpc
     .mockReset()
     .mockImplementation((name: string, args?: { p_action?: string }) => {
+      if (name === "course_series_for_run")
+        return {
+          abortSignal: async () => ({ data: fake.series, error: null }),
+        };
       if (name === "get_my_permissions")
         return Promise.resolve({ data: [], error: null });
       const request = {
@@ -233,6 +239,75 @@ function setup(hash = "", academy?: "active" | "grace") {
 }
 
 describe("connected course workspace", () => {
+  it.each(["active", "grace"] as const)(
+    "opens the saved series from the Academy course overview in %s",
+    async (academy) => {
+      fake.workspace.access.manager = true;
+      const sessions = [
+        {
+          starts_at: "2030-04-08T07:00:00+00:00",
+          ends_at: "2030-04-08T15:00:00+00:00",
+        },
+      ];
+      fake.series = {
+        revision: "a".repeat(64),
+        time_zone: "Europe/Berlin",
+        runs: [
+          {
+            id: "80000000-0000-4000-8000-000000000001",
+            editable: true,
+            pattern: null,
+            sessions,
+          },
+          {
+            id: "80000000-0000-4000-8000-000000000002",
+            editable: false,
+            pattern: null,
+            sessions,
+          },
+        ],
+      };
+      const user = userEvent.setup();
+      setup("#course-overview", academy);
+      const active = academy === "active";
+      await user.click(
+        await screen.findByText(
+          active ? "Serienmuster bearbeiten" : "Serienmuster ansehen",
+        ),
+      );
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "course_series_for_run",
+        { p_course_id: "course-a" },
+        { get: true },
+      );
+      if (active) {
+        expect(
+          screen.getByRole("checkbox", {
+            name: "Muster für Durchlauf 1 ändern",
+          }),
+        ).toBeEnabled();
+      } else {
+        const firstRun = screen.getByText("Durchlauf 1");
+        await user.click(firstRun);
+        const currentDates = within(firstRun.closest("details")!).getByRole(
+          "list",
+          {
+            name: "Aktuelle Termine",
+          },
+        );
+        expect(currentDates).toBeVisible();
+        expect(
+          screen.queryByRole("checkbox", {
+            name: "Muster für Durchlauf 1 ändern",
+          }),
+        ).toBeNull();
+      }
+      expect(
+        fake.rpc.mock.calls.some(([name]) => name === "revise_course_series"),
+      ).toBe(false);
+    },
+  );
+
   it("uploads assigned academy material once and retries only the exact scoped share", async () => {
     fake.academyUpload.mockResolvedValue({
       status: "clean",

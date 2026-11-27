@@ -330,6 +330,8 @@ export default defineConfig(({ mode }) => {
             "**/operational-presets-*.js",
             "**/offer-creator-drafts-*.{js,css}",
             "**/course-reuse-*.{js,css}",
+            // Series revision requires an online conflict check and current permissions.
+            "**/course-series-revision-*.js",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
             "**/training-commercial-*.{js,css}",

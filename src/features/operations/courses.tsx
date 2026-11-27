@@ -136,6 +136,8 @@ const OperationalPresetPicker = lazy(() =>
   })),
 );
 
+const CourseSeriesRevision = lazy(() => import("./course-series-revision"));
+
 const CourseOfferForm = lazy(() =>
   import("../admin/admin").then(({ CourseOfferForm }) => ({
     default: CourseOfferForm,
@@ -3418,6 +3420,15 @@ export function CoursesPage() {
             <p>
               {detail.time_zone} · {detail.venue}
             </p>
+            {!detail.archived_at && (manage || companyViewer) && online && (
+              <Suspense fallback={null}>
+                <CourseSeriesRevision
+                  key={actor + ":" + detail.id}
+                  actor={actor}
+                  courseId={detail.id}
+                />
+              </Suspense>
+            )}
           </>
         )}
       </Dialog>

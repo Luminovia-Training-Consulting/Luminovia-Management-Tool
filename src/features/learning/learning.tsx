@@ -83,6 +83,10 @@ import {
 
 declare const __PORTAL_INTERNAL_EDITION__: boolean;
 
+const CourseSeriesRevision = lazy(
+  () => import("../operations/course-series-revision"),
+);
+
 const CourseWeightedGradebook = lazy(() =>
   import("./course-weighted-gradebook").then((module) => ({
     default: module.CourseWeightedGradebook,
@@ -1523,6 +1527,16 @@ function CourseWorkspaceLayout({
               <CourseTeachingChecklist course={course} classroom={classroom} />
             )}
             <CourseBasics course={course} writable={canEdit} />
+            {academy && course.access.manager && online && (
+              <Suspense fallback={null}>
+                <CourseSeriesRevision
+                  key={actor + ":" + course.id}
+                  actor={actor}
+                  courseId={course.id}
+                  readOnly={academy === "grace"}
+                />
+              </Suspense>
+            )}
             <CourseClasses
               key={`classes:${actor}:${course.id}`}
               actor={actor}

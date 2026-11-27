@@ -5,9 +5,20 @@ export const courseSeriesClasses = z.array(
   z.strictObject({ id: z.uuid(), name: z.string() }),
 );
 
-const seriesSession = z.strictObject({
+export const seriesSession = z.strictObject({
   starts_at: z.iso.datetime({ offset: true }),
   ends_at: z.iso.datetime({ offset: true }),
+});
+
+const seriesClock = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/);
+
+export const courseSeriesPattern = z.strictObject({
+  first_day: z.iso.date(),
+  days: z.int().min(1).max(60),
+  start: seriesClock,
+  end: seriesClock,
+  weekdays: z.array(z.int().min(1).max(7)).min(1).max(7),
+  excluded_dates: z.string().max(1000),
 });
 
 export const courseSeriesRequest = z.strictObject({
@@ -21,6 +32,7 @@ export const courseSeriesRequest = z.strictObject({
         venue: z.string().max(500),
         class_id: z.uuid().nullable().optional(),
         operational_preset: operationalPresetCommand.optional(),
+        pattern: courseSeriesPattern.optional(),
         sessions: z.array(seriesSession).min(1).max(60),
       }),
     )

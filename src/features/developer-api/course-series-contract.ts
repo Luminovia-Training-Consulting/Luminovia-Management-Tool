@@ -4,6 +4,10 @@ import {
   courseSeriesRequest,
   courseSeriesResult,
 } from "../operations/course-series-schema.ts";
+import {
+  courseSeriesRevisionRequest,
+  courseSeriesSnapshot,
+} from "../operations/course-series-revision-schema.ts";
 import { jsonContent, postgrestErrorResponse } from "./postgrest-content.ts";
 
 const path = "/rest/v1/rpc/";
@@ -43,6 +47,21 @@ export function courseSeriesPaths(academy = false) {
       "403": denied,
     },
   };
+  const savedSeries = {
+    ...audience,
+    ...(academy ? { "x-portal-licence": "active-or-grace" } : {}),
+    summary: "Read the saved timetable and editable drafts for a series",
+    description:
+      "Returns the recorded timetable in the original time zone, the current revision and the explicit pattern of each run. Older series return a null pattern. During Academy grace, all runs are read-only.",
+    responses: {
+      "200": {
+        description: "A scoped series, or null for a standalone course.",
+        content: jsonContent(courseSeriesSnapshot),
+      },
+      "401": postgrestErrorResponse("Authentication required."),
+      "403": denied,
+    },
+  };
   return {
     [`${path}course_series_classes`]: {
       get: {
@@ -63,6 +82,57 @@ export function courseSeriesPaths(academy = false) {
         requestBody: {
           required: true,
           content: jsonContent(z.strictObject({ p_organisation_id: z.uuid() })),
+        },
+      },
+    },
+    [`${path}course_series_for_run`]: {
+      get: {
+        ...savedSeries,
+        operationId: "readSavedCourseSeries",
+        parameters: [
+          {
+            in: "query",
+            name: "p_course_id",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+      },
+      post: {
+        ...savedSeries,
+        operationId: "readSavedCourseSeriesById",
+        requestBody: {
+          required: true,
+          content: jsonContent(z.strictObject({ p_course_id: z.uuid() })),
+        },
+      },
+    },
+    [`${path}revise_course_series`]: {
+      post: {
+        ...audience,
+        operationId: "reviseSavedCourseSeries",
+        summary:
+          "Preview or confirm a pattern revision for selected course drafts",
+        description:
+          "Submit the original revision and selected drafts with explicit patterns and matching future sessions. Send p_confirm=false for a preview. Confirmation rechecks scope, draft status and conflicts atomically. Matching sessions retain their IDs and untouched courses retain their schedules.",
+        requestBody: {
+          required: true,
+          content: jsonContent(courseSeriesRevisionRequest),
+        },
+        responses: {
+          "200": {
+            description:
+              "Updated draft IDs or schedule conflicts in request order.",
+            content: jsonContent(courseSeriesResult),
+          },
+          "400": postgrestErrorResponse(
+            "The patterns or session inputs are invalid.",
+          ),
+          "401": postgrestErrorResponse("Authentication required."),
+          "403": denied,
+          "409": postgrestErrorResponse(
+            "The review is stale or the selected course is locked.",
+          ),
         },
       },
     },
