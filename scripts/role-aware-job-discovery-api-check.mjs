@@ -69,7 +69,9 @@ await withApiFixture(
             );
         const detail = (who, id) =>
             checked(who.client.rpc("job_detail", {p_job_id: id}));
-        const filter = {customer, currency: "EUR", sort: "total_asc"};
+        // Lecturer discovery intentionally conceals the customer until its
+        // visibility window, so isolate these fixtures using their public title.
+        const filter = {q: "Captured", currency: "EUR", sort: "total_asc"};
         const page = (who, cursor = null, limit = 50) =>
             who.client.rpc("job_discovery", {
                 p_filters: filter,
