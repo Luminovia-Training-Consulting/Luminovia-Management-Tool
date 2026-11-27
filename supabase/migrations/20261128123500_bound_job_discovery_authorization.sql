@@ -11,7 +11,8 @@ declare
   projection_end integer;
   projection text;
   old_projection constant text := 'select job.id, job.title,';
-  new_projection constant text := 'select job.id, job.title, job.status,';
+  status_projection constant text := 'select job.id, job.title, job.status,';
+  full_projection constant text := 'select job.id, job.title, job.status, job.urgent_reopened_at, job.course_run_id,';
   manager_option constant text := 'private.has_permission(''jobs.manage'') as manager,';
   options_with_actor_state constant text := 'private.actor_active() as actor_active, private.has_permission(''jobs.manage'') as manager,';
   old_check constant text := 'where private.can_read_job(job.id)';
@@ -33,8 +34,17 @@ begin
       raise exception 'Unexpected job discovery scope projection';
     end if;
     definition := overlay(
-      definition placing new_projection from scope_start + strpos(projection, old_projection) - 1
+      definition placing full_projection from scope_start + strpos(projection, old_projection) - 1
       for char_length(old_projection)
+    );
+  elsif strpos(projection, 'job.urgent_reopened_at') = 0
+    or strpos(projection, 'job.course_run_id') = 0 then
+    if strpos(projection, status_projection) = 0 then
+      raise exception 'Unexpected job discovery scope projection';
+    end if;
+    definition := overlay(
+      definition placing full_projection from scope_start + strpos(projection, status_projection) - 1
+      for char_length(status_projection)
     );
   end if;
   if cardinality(string_to_array(definition, manager_option)) <> 2 then

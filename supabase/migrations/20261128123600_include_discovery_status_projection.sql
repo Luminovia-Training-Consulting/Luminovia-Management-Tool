@@ -24,7 +24,7 @@ language sql stable security definer set search_path = '' as $$
       private.actor_active() as actor_active,
       auth.uid() as actor
   ), jobs_in_scope as materialized (
-    select job.id, job.title, job.status,
+    select job.id, job.title, job.status, job.urgent_reopened_at, job.course_run_id,
       case when options.sort = 'customer_asc' and visibility.customer
         then job.customer_name else '' end as customer_name,
       job.created_at, job.capacity
