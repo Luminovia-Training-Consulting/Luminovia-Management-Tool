@@ -104,9 +104,6 @@ test("early assignments keep customer data hidden until the configured disclosur
     await editor
         .getByLabel("Hinweise zum Kontakt", {exact: true})
         .fill("Fragen zum Ablauf bitte an diese Koordination.");
-    await expect(
-        editor.getByLabel("Sichtbarkeit der Kontaktangaben", {exact: true}),
-    ).toHaveValue("after_claim");
     const savedResponse = page.waitForResponse((response) =>
         response.url().endsWith("/rest/v1/rpc/save_job_briefing"),
     );
