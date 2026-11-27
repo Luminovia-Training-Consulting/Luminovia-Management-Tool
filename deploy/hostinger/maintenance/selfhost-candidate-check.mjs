@@ -532,9 +532,15 @@ export function financialProbeReceipt(output, phase) {
 
 const originalCourseOriginMigration = "20261124062130_course_run_creation_origin.sql";
 const repairedCourseOriginMigration = "20261124072614_protect_course_run_origin_for_service_writes.sql";
+const unacceptedDiscoveryMigration = "20261128123600_include_discovery_status_projection.sql";
 
-/** Provision fictional records before the exact historical trigger that blocked service-role inserts. */
+/** Build the last accepted baseline, excluding only migrations that never passed candidate acceptance. */
 export function baselineFixtureMigrations(migrations) {
+    // This migration was pushed to main but has not passed its first complete
+    // acceptance run. Model the prior deployed schema without it, then require
+    // the candidate replay to apply its corrected forward migration.
+    if (migrations.includes(unacceptedDiscoveryMigration))
+        migrations = migrations.filter((name) => name !== unacceptedDiscoveryMigration);
     if (!migrations.includes(originalCourseOriginMigration) ||
         migrations.includes(repairedCourseOriginMigration))
         return migrations;
