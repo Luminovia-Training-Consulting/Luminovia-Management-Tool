@@ -180,7 +180,7 @@ class CaptureRpcHandler(BaseHTTPRequestHandler):
         elif name == "lease_notification_emails":
             response = [LEASE]
         elif name == "prepare_notification_email":
-            response = DELIVERY
+            response = getattr(self.server, "delivery", DELIVERY)
         elif name == "finish_notification_email":
             response = True
         else:
@@ -354,6 +354,22 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual([r[0] for r in http.requests], [f"/rest/v1/rpc/{name}" for name in ("refresh_notification_reminders", "lease_notification_emails", "prepare_notification_email", "finish_notification_email")])
         self.assertEqual(http.requests[-1][1]["p_outcome"], "accepted")
         self.assertEqual(http.requests[0][2]["Authorization"], f"Bearer {self.config.service_key}")
+
+    def test_actual_loopback_smtp_accepts_both_customer_receipts(self):
+        for kind in ("customer_order_submitted", "customer_order_lecturer_confirmed"):
+            with self.subTest(kind=kind):
+                server, connect = self.captured_smtp("accepted")
+                http = ThreadingHTTPServer(("127.0.0.1", 0), CaptureRpcHandler)
+                http.requests = []
+                http.delivery = {**DELIVERY, "kind": kind}
+                config = replace(self.config, api_url=f"http://127.0.0.1:{http.server_port}")
+                with server_context(server), server_context(http), patch.object(smtplib, "SMTP", connect):
+                    self.assertEqual(worker.run(config)["accepted"], 1)
+                self.assertEqual(len(server.messages), 1)
+                accepted = BytesParser(policy=policy.default).parsebytes(server.messages[0])
+                self.assertEqual(accepted["To"], DELIVERY["recipient"])
+                self.assertIn("https://portal.example.invalid/client", accepted.get_content())
+                self.assertEqual(http.requests[-1][1]["p_outcome"], "accepted")
 
     def test_actual_temporary_recipient_failure_is_safe_retry(self):
         server, connect = self.captured_smtp("temporary_recipient")

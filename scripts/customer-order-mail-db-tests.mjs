@@ -205,6 +205,25 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
     ),
     "1",
   );
+  const snapshot = JSON.parse(
+    await sql(`select private.deletion_snapshot('assignment', ${q(claimId)})`),
+  );
+  assert.equal(snapshot.counts["private.customer_order_receipts"], 1);
+  assert.ok(
+    !snapshot.blockers.some(
+      ({ kind }) => kind === "private.customer_order_receipts",
+    ),
+  );
+  await sql(
+    `delete from public.notifications where kind = 'customer_order_submitted' and resource_id = ${q(staffRequest)}`,
+  );
+  assert.equal(await pending(staffRequest), "0");
+  assert.equal(
+    await sql(
+      `select count(*) from private.customer_order_receipts where request_id = ${q(staffRequest)}`,
+    ),
+    "0",
+  );
 
   console.log(
     "PASS company order and confirmed lecturer receipts, deduplication, scoped delivery, quiet hours, acceptance and deletion scope.",
