@@ -219,9 +219,27 @@ try {
         const offer = await job({ topic_ids: [payroll, reporting], sessions: laterSessions(10) });
         const discovery = async (user) =>
             JSON.parse(await as(user, "select public.job_discovery('{}'::jsonb, null, 50)")).items;
+        const areaItems = await discovery(users[51]);
+        const inaccessibleCandidates = await as(users[51], `
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'id', candidate.job_id,
+            'status', job.status,
+            'active', private.actor_active(),
+            'lecturer', private.lecturer_actor(),
+            'manager', private.has_permission('jobs.manage'),
+            'blocked', private.job_lecturer_blocked(job.id, auth.uid())
+          ) order by candidate.job_id), '[]'::jsonb)
+          from private.job_discovery_candidates(private.job_discovery_filters('{}'::jsonb)) candidate
+          join public.jobs job on job.id = candidate.job_id
+          where not private.can_read_job(candidate.job_id)
+        `);
+        assert.ok(
+            areaItems.every((item) => item && typeof item.id === "string"),
+            `Discovery included inaccessible offers: ${inaccessibleCandidates}`,
+        );
         const visibleOffer = async (user) =>
-            (await discovery(user)).find((item) => item.id === offer);
-        const areaMatch = await visibleOffer(users[51]);
+            (await discovery(user)).find((item) => item?.id === offer);
+        const areaMatch = areaItems.find((item) => item.id === offer);
         assert.ok(areaMatch);
         assert.equal(areaMatch.customer_hidden, true);
         assert.equal(areaMatch.customer_name, "");
