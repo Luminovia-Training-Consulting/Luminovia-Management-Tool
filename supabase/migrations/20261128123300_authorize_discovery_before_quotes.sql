@@ -11,12 +11,12 @@ language sql stable strict security invoker set search_path = '' as $$
     case when job.company_internal then null
       when offer.pricing_mode = 'role_split'
       then case when private.lecturer_actor()
-        then private.role_net(offer.gross_amount, auth.uid(), job.id) end
+        then (private.lecturer_job_quote(auth.uid(), job.id)->>'amount')::numeric end
       else job.amount end,
     case when job.company_internal then null
       when offer.pricing_mode = 'role_split'
       then case when private.lecturer_actor()
-        then private.role_net(offer.gross_total_amount, auth.uid(), job.id) end
+        then (private.lecturer_job_quote(auth.uid(), job.id)->>'total_amount')::numeric end
       else job.total_amount end,
     case when not p_include_version then null
       when offer.pricing_mode = 'role_split' and private.lecturer_actor()
