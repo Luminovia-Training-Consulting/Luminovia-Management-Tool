@@ -33,6 +33,8 @@ import { useTranslation } from "react-i18next";
 import { CalendarDays, CheckCircle2, ChevronLeft, MapPin } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { hasTeachingRole } from "../auth/internal-capabilities";
+import { offerDelivery } from "../training/delivery-schema";
+import "../training/delivery-i18n";
 import { db } from "../../lib/supabase";
 import { dateTime, money } from "../../lib/dates";
 import type { Job } from "../../lib/types";
@@ -104,6 +106,7 @@ export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
+  const deliveryText = useTranslation("trainingDelivery").t;
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
@@ -122,6 +125,18 @@ export function JobDetail() {
   const claims = useQuery(claimsQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
   const job = jobs.data;
+  const structuredDelivery = useQuery({
+    queryKey: ["training-offer-delivery", session!.user.id, job?.id],
+    enabled: online && Boolean(job && !job.dispatch_only),
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("training_offer_delivery", { p_job_id: job!.id })
+        .abortSignal(signal);
+      if (error) throw error;
+      return offerDelivery.nullable().parse(data);
+    },
+  });
   // Bind consent to the actor-authorized detail and every displayed quote field.
   // A role or offer refresh may replace the price without changing the route.
   const consent = job
@@ -297,13 +312,29 @@ export function JobDetail() {
         <div className="section-stack job-detail-sections">
           <section className="panel">
             <div className="inline-meta">
-              {job.location && (
-                <span>
-                  <MapPin size={17} />
-                  {job.location}
-                </span>
+              {structuredDelivery.data ? (
+                <>
+                  <span>{deliveryText(structuredDelivery.data.mode)}</span>
+                  {structuredDelivery.data.locations.map(
+                    ({ city, country }) => (
+                      <span key={`${city}:${country}`}>
+                        <MapPin size={17} aria-hidden="true" />
+                        {[city, country].filter(Boolean).join(", ")}
+                      </span>
+                    ),
+                  )}
+                </>
+              ) : (
+                <>
+                  {job.location && (
+                    <span>
+                      <MapPin size={17} />
+                      {job.location}
+                    </span>
+                  )}
+                  <span>{t(job.delivery_type)}</span>
+                </>
               )}
-              <span>{t(job.delivery_type)}</span>
             </div>
             <h2>{t("description")}</h2>
             <p className="preserve-text">{job.description}</p>

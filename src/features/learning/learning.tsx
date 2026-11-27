@@ -1152,9 +1152,20 @@ function RepeatBooking({ course }: WorkProps) {
   );
 }
 
+const TrainingDeliveryDisclosure = lazy(
+  () => import("../training/delivery-disclosure"),
+);
+
 /** Keep non-Premium course facts separate from learning files and interactions. */
-function CourseBasics({ course }: { course: CourseWorkspace }) {
+function CourseBasics({
+  course,
+  writable,
+}: {
+  course: CourseWorkspace;
+  writable: boolean;
+}) {
   const { t, i18n } = useTranslation("learning");
+  const { session } = useAuth();
   return (
     <section className="panel learning-panel">
       <h2>{t("courseOverview")}</h2>
@@ -1177,6 +1188,14 @@ function CourseBasics({ course }: { course: CourseWorkspace }) {
           ))}
         </ol>
       </SessionScroll>
+      <Suspense fallback={null}>
+        <TrainingDeliveryDisclosure
+          course={course.id}
+          zone={course.time_zone}
+          actor={session!.user.id}
+          allowEdit={writable && course.access.manager}
+        />
+      </Suspense>
     </section>
   );
 }
@@ -1505,7 +1524,7 @@ function CourseWorkspaceLayout({
             {course.access.teacher && (
               <CourseTeachingChecklist course={course} classroom={classroom} />
             )}
-            <CourseBasics course={course} />
+            <CourseBasics course={course} writable={canEdit} />
             <CourseClasses
               key={`classes:${actor}:${course.id}`}
               actor={actor}
@@ -1995,7 +2014,7 @@ function StandardCourseWorkspace({
       />
       <Notice>{t("premiumOff")}</Notice>
       <div id="course-overview">
-        <CourseBasics course={course} />
+        <CourseBasics course={course} writable={internal} />
       </div>
     </div>
   );

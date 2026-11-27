@@ -1,0 +1,63 @@
+.training-delivery-disclosure > summary,
+.training-venue-directory > summary,
+.training-delivery-session > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.training-delivery-disclosure > .stack,
+.training-venue-directory > .stack {
+  margin-block-start: 1rem;
+}
+
+.training-delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem 1rem;
+  margin-block-start: 0.75rem;
+}
+
+.training-delivery-grid > .field {
+  min-width: 0;
+  margin: 0;
+}
+
+.training-venue-search {
+  align-items: end;
+}
+
+.training-venue-search > .button {
+  justify-self: start;
+}
+
+.training-delivery-session,
+.training-venue-directory {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.training-delivery-session > .button {
+  margin-block-start: 0.75rem;
+}
+
+.training-venue-list {
+  padding: 0;
+  margin: 0.5rem 0;
+  list-style: none;
+}
+
+.training-venue-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  border-block-start: 1px solid var(--border);
+}
+
+.training-venue-list p {
+  margin: 0.25rem 0;
+  overflow-wrap: anywhere;
+}
