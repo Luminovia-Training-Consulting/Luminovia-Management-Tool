@@ -49,17 +49,19 @@ const ownEditableRoles: readonly AccountRole[] = [
   "client",
 ];
 
-/** Keep the profile editor and expertise review within the selected account. */
+/** Keep the profile editor, expertise and contracts within the selected account. */
 function AccountProfileDialog({
   person,
   actorId,
   canVerify,
+  canManageContracts,
   companySettings,
   close,
 }: {
   person: AccountPerson;
   actorId: string;
   canVerify: boolean;
+  canManageContracts: boolean;
   companySettings?: ReactNode;
   close: () => void;
 }) {
@@ -106,6 +108,15 @@ function AccountProfileDialog({
           >
             {t("expertiseTab")}
           </Button>
+        </div>
+      )}
+      {canManageContracts && (
+        <div className="page-actions">
+          <PersonContractAction
+            actor={actorId}
+            id={person.id}
+            name={person.display_name || person.email}
+          />
         </div>
       )}
       <div hidden={showExpertise}>
@@ -445,22 +456,12 @@ function AccountsDirectory({
               <div className="account-list-actions">
                 {person.id === actorId && (
                   <Button asChild variant="secondary">
-                    <Link to="/contracts">{t("ownContracts")}</Link>
+                    <Link to="/profile/contracts">{t("ownContracts")}</Link>
                   </Button>
                 )}
-                {canManageContracts &&
-                  person.roles.some(
-                    (role) => role === "lecturer" || role === "senior_lecturer",
-                  ) && (
-                    <PersonContractAction
-                      actor={actorId}
-                      id={person.id}
-                      name={person.display_name || person.email}
-                    />
-                  )}
                 {canManageCompanies && person.roles.includes("client") && (
                   <Button asChild variant="secondary">
-                    <Link to="/clients">{t("manageCompany")}</Link>
+                    <Link to="/admin/clients">{t("manageCompany")}</Link>
                   </Button>
                 )}
                 {canAssign &&
@@ -537,6 +538,12 @@ function AccountsDirectory({
           actorId={actorId}
           canVerify={
             canVerify &&
+            openAccount.roles.some(
+              (role) => role === "lecturer" || role === "senior_lecturer",
+            )
+          }
+          canManageContracts={
+            canManageContracts &&
             openAccount.roles.some(
               (role) => role === "lecturer" || role === "senior_lecturer",
             )

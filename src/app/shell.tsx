@@ -210,7 +210,12 @@ export function Shell() {
   useEffect(() => {
     if (profileDenied) void clearOfflineSchedule().catch(() => {});
   }, [profileDenied, actor]);
-  const teaching = roles.isSuccess && hasTeachingRole(roles.data);
+  const personalContracts =
+    !limitedAccount &&
+    roles.isSuccess &&
+    (hasTeachingRole(roles.data) ||
+      permissions.data?.includes("contracts.read") ||
+      permissions.data?.includes("contracts.manage"));
   const staff = roles.isSuccess && hasJobStaffRole(roles.data);
   const clientPortalAccess = roles.data?.includes("client") ?? false;
   const learnerAccess = roles.data?.includes("participant") ?? false;
@@ -265,11 +270,6 @@ export function Shell() {
             : []),
           { to: "/chats", icon: MessagesSquare, label: "chats" },
           { to: "/files", icon: FolderOpen, label: "files" },
-          ...(teaching ||
-          permissions.data?.includes("contracts.read") ||
-          permissions.data?.includes("contracts.manage")
-            ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
-            : []),
           ...(portalInternalEdition && financeAccess.personal.overview
             ? [financeNavItem]
             : []),
@@ -406,6 +406,9 @@ export function Shell() {
               </summary>
               <div className="account-menu-panel">
                 <NavLink to="/profile">{t("profile")}</NavLink>
+                {personalContracts && (
+                  <NavLink to="/profile/contracts">{t("myContracts")}</NavLink>
+                )}
                 {!participantOnly && (
                   <NavLink to="/settings">{t("personalSettings")}</NavLink>
                 )}

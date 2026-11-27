@@ -1103,7 +1103,7 @@ export function FilesPage() {
           <div className="files-header-actions">
             {canViewContracts && (
               <Button asChild variant="secondary">
-                <Link to="/contracts">{t("contractsReference")}</Link>
+                <Link to="/profile/contracts">{t("contractsReference")}</Link>
               </Button>
             )}
             <Button onClick={() => setOpen(true)}>

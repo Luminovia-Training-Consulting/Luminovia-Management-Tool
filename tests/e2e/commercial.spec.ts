@@ -245,11 +245,12 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     });
     await expect(contractsLink).toBeVisible();
     await contractsLink.click();
-    await expect(page).toHaveURL(/\/contracts$/);
+    await expect(page).toHaveURL(/\/profile\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
     await expect(page.getByLabel("Ausgeführter Vertrag als PDF", {exact: true})).toHaveCount(0);
     await login(adminPage, administrator);
     await adminPage.goto(`/contracts?user=${lecturer.id}`);
+    await expect(adminPage).toHaveURL(new RegExp(`/admin/contracts\\?user=${lecturer.id}$`));
     await adminPage
         .getByRole("button", {
             name: "Ausgeführten Vertrag hinterlegen",
@@ -331,7 +332,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     await adminPage
         .getByRole("button", {name: "Alle Dozierenden anzeigen", exact: true})
         .click();
-    await expect(adminPage).toHaveURL(/\/contracts$/);
+    await expect(adminPage).toHaveURL(/\/admin\/contracts$/);
     await expect(
         adminPage.getByRole("checkbox", {name: "Alle Dozierenden anzeigen", exact: true}),
     ).toBeChecked();

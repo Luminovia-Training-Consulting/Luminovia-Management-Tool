@@ -30,7 +30,7 @@ export function welcomeSteps(
     { id: "collaboration", path: "/chats" },
     { id: "files", path: "/files" },
     ...(teaching || permissions.includes("contracts.read")
-      ? [{ id: "contracts" as const, path: "/contracts" }]
+      ? [{ id: "contracts" as const, path: "/profile/contracts" }]
       : []),
     { id: "notifications", path: "/settings" },
     ...(permissions.includes("users.manage") ||
