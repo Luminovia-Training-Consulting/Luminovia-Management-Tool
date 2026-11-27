@@ -12,7 +12,7 @@ import {
   installationBrand,
   portalInternalEdition,
 } from "./lib/installation-brand";
-import { App, ErrorBoundary } from "./app/app";
+import { App, ErrorBoundary, RouteLoadFallback } from "./app/app";
 import { AuthProvider } from "./features/auth/auth-context";
 if (installationBrand.edition !== "internal") {
   document.title = installationBrand.name;
@@ -38,6 +38,7 @@ client.setQueryDefaults(["chat-draft"], { gcTime: Infinity });
 const router = createBrowserRouter([
   {
     path: "*",
+    errorElement: <RouteLoadFallback />,
     element: (
       <AuthProvider>
         <App />

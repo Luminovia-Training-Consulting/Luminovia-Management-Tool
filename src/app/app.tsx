@@ -3,10 +3,9 @@ import { Component, type ReactNode, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import EditionRoutes from "@edition-routes";
-import { Loading, Notice } from "../components/common";
+import { Loading } from "../components/common";
 import { PwaInstallOffer } from "../components/pwa-install";
 import { Button } from "../components/ui/button";
-import { installationBrand } from "../lib/installation-brand";
 import { useOnline } from "../lib/online";
 
 /** Expose offline/update state and activate a new service worker only through the visible user action. */
@@ -51,7 +50,33 @@ export function App() {
   );
 }
 
-/** Catch render failures and show a fixed bilingual fallback instead of a blank application. */
+/** Keep route failures recoverable without exposing implementation details. */
+export function RouteLoadFallback() {
+  const { t } = useTranslation();
+  const online = useOnline();
+  return (
+    <main className="route-load-fallback" aria-labelledby="route-load-title">
+      <section className="panel section-stack">
+        <h1 id="route-load-title">{t("routeLoadFailed")}</h1>
+        <p role="status">{t(online ? "routeLoadRetryHint" : "offline")}</p>
+        <div className="page-actions">
+          <Button
+            type="button"
+            disabled={!online}
+            onClick={() => window.location.reload()}
+          >
+            {t("retry")}
+          </Button>
+          <Button asChild variant="secondary">
+            <a href="/">{t("routeLoadHome")}</a>
+          </Button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+/** Catch render failures outside the router and offer the same recovery. */
 export class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean }
@@ -63,17 +88,6 @@ export class ErrorBoundary extends Component<
   }
 
   render() {
-    return this.state.hasError ? (
-      <div className="state">
-        <Notice kind="error">
-          {installationBrand.name} · Bitte neu laden. / Please reload.
-        </Notice>
-        <Button onClick={() => window.location.reload()}>
-          Neu laden / Reload
-        </Button>
-      </div>
-    ) : (
-      this.props.children
-    );
+    return this.state.hasError ? <RouteLoadFallback /> : this.props.children;
   }
 }

@@ -482,6 +482,15 @@ const pairs: Record<string, [string, string]> = {
     "Retry loading more results",
   ],
   retry: ["Erneut versuchen", "Try again"],
+  routeLoadFailed: [
+    "Seite konnte nicht geladen werden",
+    "This page could not load",
+  ],
+  routeLoadRetryHint: [
+    "Lade neu oder öffne die Übersicht.",
+    "Reload or open the overview.",
+  ],
+  routeLoadHome: ["Zur Übersicht", "Back to overview"],
   offline: [
     "Du bist offline. Für aktuelle Daten und Änderungen ist eine Verbindung erforderlich.",
     "You are offline. A connection is required for current data and changes.",

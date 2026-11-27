@@ -316,9 +316,9 @@ await withApiFixture(async ({service, actor, passwordOnly, defer, checked, sql, 
         p_user_id: learner.id,
         p_status: "completed",
     };
-    const deniedWhileOff = await admin.client.rpc("manage_course_enrolment", completedEnrolment);
-    assert.equal(deniedWhileOff.error?.code, "42501");
-    assert.match(deniedWhileOff.error?.message ?? "", /Company Premium LMS is OFF/);
+    const deniedWithoutLink = await admin.client.rpc("manage_course_enrolment", completedEnrolment);
+    assert.equal(deniedWithoutLink.error?.code, "42501");
+    assert.match(deniedWithoutLink.error?.message ?? "", /Active company participant required/);
     const premium = await checked(
         admin.client.rpc("set_company_premium", {
             p_organisation_id: org,

@@ -3958,3 +3958,16 @@ summary:focus-visible {
 .section-navigation small {
   color: var(--muted);
 }
+
+.route-load-fallback {
+  display: grid;
+  align-content: center;
+  min-height: 100dvh;
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: 16px;
+}
+
+.route-load-fallback .page-actions {
+  margin: 0;
+}
