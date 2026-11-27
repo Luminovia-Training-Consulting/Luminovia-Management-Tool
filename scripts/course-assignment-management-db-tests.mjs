@@ -61,6 +61,7 @@ await withTestDatabase(
         title: "Fictional assignment",
         customer_name: "Fictional College",
         delivery_type: "online",
+        location: "https://private-facility.example.invalid/meeting",
         status: "published",
         currency: "EUR",
         rate_unit: "fixed_total",
@@ -224,6 +225,54 @@ await withTestDatabase(
       (await rpc(former, "job_offers")).find(({ id }) => id === job)
         .customer_name,
       "",
+    );
+
+    // One statement timestamps both sides of the boundary. Roll back the
+    // artificial allocation dates so legacy metadata/replacement checks still
+    // use their own booked intervals.
+    await sql(`
+      begin;
+      do $boundary$
+      declare
+        cutover timestamptz := statement_timestamp() + interval '168 hours';
+        slot uuid := (select id from public.assignment_sessions where claim_id=${q(original.claim_id)} order by starts_at limit 1);
+      begin
+        update public.assignment_sessions set starts_at=cutover+interval '1 microsecond', ends_at=cutover+interval '1 hour' where id=slot;
+        perform set_config('request.jwt.claims', ${q(JSON.stringify({ sub: former, role: "authenticated" }))}, true);
+        set local role authenticated;
+        assert (public.job_detail(${q(job)})->>'customer_hidden')::boolean;
+        reset role;
+        update public.assignment_sessions set starts_at=cutover where id=slot;
+        set local role authenticated;
+        assert public.job_detail(${q(job)})->>'customer_name' = 'Fictional College';
+        reset role;
+      end
+      $boundary$;
+      rollback;
+    `);
+
+    const currentChange = (await rpc(former, "changeable_assignments")).find(
+      ({ claim_id }) => claim_id === original.claim_id,
+    ).current;
+    assert.equal(currentChange.location_hidden, true);
+    assert.equal(currentChange.location, "");
+    assert.equal(currentChange.readiness, null);
+    await assert.rejects(
+      rpc(
+        former,
+        "save_assignment_change",
+        null,
+        original.claim_id,
+        {
+          reason: "Fictional location amendment",
+          changes: {
+            location: "https://another-facility.example.invalid/meeting",
+          },
+        },
+        0,
+        randomUUID(),
+      ),
+      /42501/,
     );
 
     const settings = await rpc(
@@ -435,15 +484,16 @@ await withTestDatabase(
       "draft",
     );
     const formerInbox = await rpc(former, "notification_inbox");
-    assert.equal(
-      formerInbox.items.find(({ kind }) => kind === "claim_cancelled")
-        .assignment_replaced,
-      true,
+    const removal = formerInbox.items.find(
+      ({ kind }) => kind === "claim_cancelled",
     );
+    assert.equal(removal.assignment_removed, true);
+    assert.equal(removal.removal_reason, "Fictional staffing change");
     const replacementInbox = await rpc(replacement, "notification_inbox");
     assert.equal(
       replacementInbox.items.some(
-        ({ assignment_replaced }) => assignment_replaced,
+        ({ assignment_replaced, assignment_removed }) =>
+          assignment_replaced || assignment_removed,
       ),
       false,
     );

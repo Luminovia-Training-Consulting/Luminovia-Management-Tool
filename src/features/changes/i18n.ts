@@ -56,6 +56,10 @@ const de = {
     "Der ursprünglich ausgewählte Auftrag ist für Änderungen nicht verfügbar. Wähle einen verfügbaren Auftrag aus.",
   reason: "Begründung",
   location: "Ort oder Meeting-Link",
+  locationHidden:
+    "Ort und Meeting-Link werden bei der Freigabe der Unternehmensangaben sichtbar.",
+  locationConsentHidden:
+    "Du kannst dem neuen Ort zustimmen, sobald die Unternehmensangaben freigegeben sind.",
   scope: "Leistungsumfang",
   terms: "Auftragsbedingungen",
   amount: "Vergütung pro Einheit",
@@ -184,6 +188,10 @@ const en = {
     "The originally selected assignment is unavailable for changes. Select an available assignment.",
   reason: "Reason",
   location: "Location or meeting link",
+  locationHidden:
+    "The location and meeting link appear when the company details are disclosed.",
+  locationConsentHidden:
+    "You can accept the new location when the company details are disclosed.",
   scope: "Scope of work",
   terms: "Assignment terms",
   amount: "Compensation per unit",

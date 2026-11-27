@@ -132,6 +132,9 @@ export function ChangeForm({
   const [source, setSource] = useState(
     () => original?.proposed ?? candidate?.current,
   );
+  const locationHidden = Boolean(
+    (original?.proposed ?? candidate?.current ?? source)?.location_hidden,
+  );
   const linkedCourse = Boolean(source?.course_run_id);
   const scheduleEditable =
     !linkedCourse ||
@@ -213,6 +216,7 @@ export function ChangeForm({
       setInvalidLocation(false);
       if (
         !sharedSchedule &&
+        !locationHidden &&
         source?.delivery_type === "online" &&
         values.location !== source.location
       ) {
@@ -227,7 +231,10 @@ export function ChangeForm({
       }
       const changes: ChangeInput["changes"] = sharedSchedule
         ? {}
-        : { location: values.location, scope: values.scope };
+        : {
+            scope: values.scope,
+            ...(locationHidden ? {} : { location: values.location }),
+          };
       // Unchanged inputs retain exact instants even if the local editor
       // displays whole minutes. The server rechecks linked-course eligibility.
       if (scheduleEditable && !values.cancel) {
@@ -349,13 +356,17 @@ export function ChangeForm({
         </p>
       ) : (
         <>
-          <Field
-            id="change-location"
-            label={t("location")}
-            error={Boolean(errors.location) || invalidLocation}
-          >
-            <input id="change-location" {...register("location")} />
-          </Field>
+          {locationHidden ? (
+            <p className="muted">{t("locationHidden")}</p>
+          ) : (
+            <Field
+              id="change-location"
+              label={t("location")}
+              error={Boolean(errors.location) || invalidLocation}
+            >
+              <input id="change-location" {...register("location")} />
+            </Field>
+          )}
           <Field
             id="change-scope"
             label={t("scope")}
@@ -621,6 +632,7 @@ function DetailActions({ change }: { change: AssignmentChange }) {
     onSuccess: () => refreshAssignmentChanges(client),
   });
   const disabled = !online || mutation.isPending;
+  const canAccept = change.can_respond && !change.awaits_location_disclosure;
   const canReject = change.can_respond || change.can_coordinate;
   return (
     <section className="panel changes-decisions">
@@ -641,7 +653,12 @@ function DetailActions({ change }: { change: AssignmentChange }) {
         {t("lecturerApproval")}:{" "}
         <strong>{t(change.lecturer_approved ? "yes" : "no")}</strong>
       </p>
-      {(change.can_respond || change.can_coordinate) && (
+      {change.can_respond && change.awaits_location_disclosure && (
+        <p className="muted" role="status">
+          {t("locationConsentHidden")}
+        </p>
+      )}
+      {(canAccept || change.can_coordinate) && (
         <label className="checkbox-label">
           <input
             type="checkbox"
@@ -680,7 +697,7 @@ function DetailActions({ change }: { change: AssignmentChange }) {
             {t("coordinate")}
           </Button>
         )}
-        {change.can_respond && (
+        {canAccept && (
           <Button
             disabled={disabled || !consent}
             onClick={() => mutation.mutate("accept")}
@@ -882,6 +899,11 @@ export function ChangeRequestsPage() {
                               selected.proposed[field])
                         : !selected.customer_view ||
                           ["sessions", "location", "scope"].includes(field),
+                    )
+                    .filter(
+                      (field) =>
+                        field !== "location" ||
+                        !selected.original.location_hidden,
                     )
                     .map((field) => (
                       <tr key={field}>
