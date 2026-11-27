@@ -179,8 +179,8 @@ test("public guidance and current catalogue contain no historical customer ident
 // The programme's governing AGENTS instructions require these durable source
 // records. Keep the consolidated product docs and retain an
 // explicit inventory of project records and published materials under docs/.
-// The retired sales material was removed from the current delivery inventory.
-// The exact list still catches new or missing records.
+// The refreshed sales materials are published in both languages. The exact
+// inventory catches missing files and accidental additions.
 test("documentation retains the approved project records and published materials", async () => {
     const requiredRecords = new Set([
         "PRODUCT.md",
@@ -190,6 +190,7 @@ test("documentation retains the approved project records and published materials
         "PRODUCTION-READINESS.md",
         "design-qa.md",
         "customer-handoff",
+        "sales",
     ]);
     const deliveredRecords = (await readdir("docs")).sort();
     assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
@@ -198,6 +199,12 @@ test("documentation retains the approved project records and published materials
         "CUSTOMER-LICENCE.de.md",
         "OPERATIONS-AND-SUPPORT.de.md",
         "README.md",
+    ]);
+    assert.deepEqual((await readdir("docs/sales")).sort(), [
+        "luminovia-flyer-de.pdf",
+        "luminovia-flyer-en.pdf",
+        "luminovia-sales-deck-de.pptx",
+        "luminovia-sales-deck-en.pptx",
     ]);
     const generator = await readFile(
         "scripts/generate-api-reference.mjs",
