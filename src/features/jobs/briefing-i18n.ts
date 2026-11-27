@@ -8,7 +8,7 @@ const de = {
   edit: "Kontakt oder Webverweis bearbeiten",
   configureLink: "Kontakt oder Webverweis ergänzen",
   editDescription:
-    "Ohne eigene Kontaktangaben übernimmt der Auftrag den Kurskontakt oder den neuesten aktiven Unternehmenskontakt.",
+    "Ohne eigene Kontaktangaben übernimmt der Auftrag den Kurskontakt oder den Standardkontakt des Unternehmens.",
   reference: "Externe Auftragsreferenz",
   referenceUrl: "Weblink zum Auftrag",
   referenceLabel: "Bezeichnung des Weblinks",
@@ -18,12 +18,10 @@ const de = {
   contactEmail: "Kontakt-E-Mail",
   contactPhone: "Kontakt-Telefon",
   contactDescription: "Hinweise zum Kontakt",
-  visibility: "Sichtbarkeit der Kontaktangaben",
-  afterClaim: "Erst nach bestätigter Übernahme",
-  offerViewers: "Bereits für berechtigte Angebotsansichten",
   visibilityHint:
-    "Diese Freigabe betrifft nur die hier eingetragenen Angaben, nicht das interne Unternehmensverzeichnis.",
-  hidden: "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
+    "Für Dozierende gelten die Freigabezeiten unter Unternehmenssichtbarkeit in der Verwaltung.",
+  hidden:
+    "Die Kontaktangaben sind bis zur Freigabe der Unternehmensangaben ausgeblendet.",
   save: "Angaben speichern",
   saving: "Wird gespeichert …",
   saved: "Die Angaben wurden gespeichert.",
@@ -53,7 +51,7 @@ const en: Record<keyof typeof de, string> = {
   edit: "Edit contact or web reference",
   configureLink: "Add contact or web reference",
   editDescription:
-    "When these contact fields are empty, the job uses the course contact or the company’s newest active contact.",
+    "When these contact fields are empty, the job uses the course contact or the company’s default contact.",
   reference: "External job reference",
   referenceUrl: "Job web link",
   referenceLabel: "Web link label",
@@ -63,12 +61,10 @@ const en: Record<keyof typeof de, string> = {
   contactEmail: "Contact email",
   contactPhone: "Contact phone",
   contactDescription: "Contact notes",
-  visibility: "Contact details visibility",
-  afterClaim: "Only after a confirmed claim",
-  offerViewers: "Already for authorised offer viewers",
   visibilityHint:
-    "This shares only the details entered here, not the internal company directory.",
-  hidden: "Contact details become available after a confirmed claim.",
+    "The Customer visibility setting in Administration controls when lecturers see these details.",
+  hidden:
+    "Contact details are withheld until the company details are disclosed.",
   save: "Save details",
   saving: "Saving …",
   saved: "The details have been saved.",

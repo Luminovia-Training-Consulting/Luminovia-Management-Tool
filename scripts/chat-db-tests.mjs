@@ -872,10 +872,16 @@ try {
             assert.ok(commercialFacets.some(
                 (facet) => facet.category === "course" && facet.facet_key === courseRun,
             ));
-            assert.ok(commercialFacets.some(
-                (facet) => facet.category === "company" && facet.facet_key === courseOrganisation
-                    && facet.label === "Fictional participant academy",
+            assert.ok(!commercialFacets.some((facet) => facet.category === "company"));
+            const policy = JSON.parse(await actor(admin,
+                "select public.save_assignment_customer_settings('on_confirmation',168,0)",
             ));
+            const disclosedFacets = JSON.parse(await value(a, "chat_directory_filters"));
+            assert.ok(disclosedFacets.some(
+                (facet) => facet.room_id === commercial.id && facet.category === "company"
+                    && facet.facet_key === courseOrganisation && facet.label === "Fictional participant academy",
+            ));
+            await actor(admin, `select public.save_assignment_customer_settings('scheduled',168,${policy.revision})`);
             await assert.rejects(rows(participant, "chat_messages", [commercial.id]));
             await assert.rejects(
                 value(a, "manage_chat_member", [commercial.id, participant, false]),

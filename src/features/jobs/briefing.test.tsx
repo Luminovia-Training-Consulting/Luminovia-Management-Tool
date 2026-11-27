@@ -122,7 +122,7 @@ it("renders safe authored reference text but never exposes redacted contact valu
   expect(screen.queryByText("hidden@example.invalid")).not.toBeInTheDocument();
   expect(
     screen.getByText(
-      "Kontaktangaben stehen nach bestätigter Übernahme zur Verfügung.",
+      "Die Kontaktangaben sind bis zur Freigabe der Unternehmensangaben ausgeblendet.",
     ),
   ).toBeVisible();
 });

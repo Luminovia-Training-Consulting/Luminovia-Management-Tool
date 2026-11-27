@@ -118,7 +118,7 @@ await withTestDatabase("scoped_course_catalogue", async ({ actor, sql }) => {
   );
   assert.equal(accepted.status, "confirmed");
   assert.deepEqual(await runs(winner), []);
-  assert.deepEqual(await sessions(winner), []);
+  assert.deepEqual(await sessions(winner), [assigned]);
   assert.deepEqual(await hub(winner), [assigned]);
   await rpc(
     admin,

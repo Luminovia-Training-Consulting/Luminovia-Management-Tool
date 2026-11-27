@@ -351,22 +351,7 @@ function BriefingContent({
                 "text",
                 3,
               )}
-              <Field
-                id="briefing-contact_visibility"
-                label={t("visibility")}
-                hint={t("visibilityHint")}
-              >
-                <select
-                  value={draft.values.contact_visibility}
-                  disabled={pending}
-                  onChange={(event) =>
-                    update("contact_visibility", event.target.value)
-                  }
-                >
-                  <option value="after_claim">{t("afterClaim")}</option>
-                  <option value="offer_viewers">{t("offerViewers")}</option>
-                </select>
-              </Field>
+              <p className="muted">{t("visibilityHint")}</p>
             </fieldset>
             {parsed && !parsed.success && (
               <Notice kind="error">{t("invalid")}</Notice>

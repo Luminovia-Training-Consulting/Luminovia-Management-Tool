@@ -261,6 +261,8 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             }]);
             assert.equal((await materialSearch(admin, run))[0].can_upload, true);
             assert.equal((await materialSearch(teacher, run))[0].can_upload, true);
+            assert.equal((await materialSearch(teacher, run))[0].organisation_name, null);
+            assert.equal((await materialSearch(admin, run))[0].organisation_name, "Fictional course customer");
             assert.deepEqual(await materialSearch(learner, current), []);
             assert.deepEqual(await materialSearch(learner, run, "%"), []);
             assert.deepEqual(await materialSearch(learner, run, "AGREED", "report"), []);
