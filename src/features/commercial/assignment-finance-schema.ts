@@ -27,6 +27,7 @@ export const assignmentFinanceSchema = z.object({
   lecturer_paid: optional,
   lecturer_outstanding: optional,
   cancellation_compensation: optional,
+  customer_invoice_id: z.uuid().nullable().optional(),
   customer_invoice_number: z.string().nullable(),
   customer_invoice_grouped: z.boolean().nullable(),
   customer_invoiced: optional,
@@ -42,4 +43,25 @@ export const assignmentFinanceSchema = z.object({
       outstanding: decimal,
     }),
   ),
+});
+
+/** The export keeps each assignment and its already reconciled original-currency amounts intact. */
+export const assignmentFinanceExportSchema = z.object({
+  schema_version: z.literal(1),
+  from: z.iso.date(),
+  through: z.iso.date(),
+  time_zone: z.string(),
+  generated_at: z.iso.datetime({ offset: true }),
+  assignments: z
+    .array(
+      z.object({
+        claim_id: z.uuid(),
+        job_id: z.uuid(),
+        title: z.string(),
+        lecturer_name: z.string(),
+        customer_name: z.string(),
+        finance: assignmentFinanceSchema,
+      }),
+    )
+    .max(1000),
 });

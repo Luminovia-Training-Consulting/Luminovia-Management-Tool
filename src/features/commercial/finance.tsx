@@ -92,6 +92,9 @@ import "./commercial.css";
 const RevenueForecast = lazy(() => import("../analytics/revenue-forecast"));
 const ExpensesPanel = lazy(() => import("./expense-panel"));
 const AssignmentFinanceAction = lazy(() => import("./assignment-finance"));
+const AssignmentFinanceExport = lazy(
+  () => import("./assignment-finance-export"),
+);
 
 /** Refresh live invoice projections after a confirmed financial mutation. */
 async function refreshInvoiceViews(client: QueryClient, actor: string) {
@@ -1212,17 +1215,23 @@ export function FinancePage({
         }
         description={t("financeIntro")}
         action={
-          canSubmit && (
-            <Button
-              disabled={!online}
-              onClick={() => {
-                setSelectedException(null);
-                setSubmitting(true);
-              }}
-            >
-              <Plus size={17} />
-              {t("createInvoice")}
-            </Button>
+          manager ? (
+            <Suspense fallback={<Loading />}>
+              <AssignmentFinanceExport actor={actor} zone={zone} />
+            </Suspense>
+          ) : (
+            canSubmit && (
+              <Button
+                disabled={!online}
+                onClick={() => {
+                  setSelectedException(null);
+                  setSubmitting(true);
+                }}
+              >
+                <Plus size={17} />
+                {t("createInvoice")}
+              </Button>
+            )
           )
         }
       />

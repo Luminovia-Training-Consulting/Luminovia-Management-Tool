@@ -136,6 +136,9 @@ await withTestDatabase("lecturer_expenses", async ({ sql, actor }) => {
   assert.equal(reconciled.lecturer_outstanding, null);
   assert.deepEqual(reconciled.expenses, [{ currency: "EUR", approved: "42.12", paid: "42.12", outstanding: "0.00" }]);
   await assert.rejects(actor(lecturer, "select public.assignment_finance_reconciliation(" + claim + ")"), code("42501"));
+  const exported = await actor(finance,
+    "select public.assignment_finance_export(current_date-7,current_date)").then(json);
+  assert.deepEqual(exported.assignments.find((entry) => entry.claim_id === claim.slice(1,-1)).finance, reconciled);
   const confirmation = await actor(lecturer, "select public.assignment_confirmation(" + claim + ")").then(json);
   assert.equal(confirmation.data.assignment_version, 1);
   assert.equal(confirmation.data.delivery_type, "online");
