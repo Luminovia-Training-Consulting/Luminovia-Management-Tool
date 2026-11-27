@@ -17,6 +17,7 @@ import {
   Outlet,
   Route,
   Routes,
+  useLocation,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -539,6 +540,10 @@ export default function PortalRoutes() {
           <Route path="forum" element={<LegacyForumRoute />} />
           <Route path="files" element={<FilesPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route
+            path="profile/contracts"
+            element={<ContractsPage key="personal" scope="personal" />}
+          />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="settings" element={<SettingsPage />} />
@@ -569,7 +574,7 @@ export default function PortalRoutes() {
             <Route path="people/:id" element={<PersonProfile />} />
             <Route path="control-center" element={<ControlCenterRoute />} />
             <Route path="topics" element={<TaxonomyPage />} />
-            <Route path="contracts" element={<ContractsPage />} />
+            <Route path="contracts" element={<LegacyContractsRoute />} />
             <Route path="changes" element={<ChangeRequestsPage />} />
             <Route path="changes/:id" element={<ChangeRequestsPage />} />
             <Route path="admin">
@@ -611,6 +616,10 @@ export default function PortalRoutes() {
               <Route path="people" element={<LegacyLecturersRoute />} />
               <Route path="clients" element={<ClientsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
+              <Route
+                path="contracts"
+                element={<ContractsPage key="staff" scope="staff" />}
+              />
               <Route path="mail" element={<AdminMailPage />} />
               <Route
                 path="assignment-customer"
@@ -630,6 +639,29 @@ export default function PortalRoutes() {
       </Route>
       <Route path="*" element={<PageNotFound standalone />} />
     </Routes>
+  );
+}
+
+/** Preserve saved links and notifications from before the contracts split. */
+export function LegacyContractsRoute() {
+  const { session } = useAuth();
+  const permissions = useQuery(permissionsQuery(session!.user.id));
+  const { search, hash } = useLocation();
+  if (permissions.isPending) return <Loading />;
+  if (permissions.isError)
+    return <ErrorState retry={() => void permissions.refetch()} />;
+  const manager = permissions.data.includes("contracts.manage");
+  const params = new URLSearchParams(search);
+  if (!manager) params.delete("user");
+  return (
+    <Navigate
+      replace
+      to={{
+        pathname: manager ? "/admin/contracts" : "/profile/contracts",
+        search: params.toString(),
+        hash,
+      }}
+    />
   );
 }
 

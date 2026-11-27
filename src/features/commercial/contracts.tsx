@@ -16,6 +16,7 @@ import { useAuth } from "../auth/auth-context";
 import { saveDownload } from "../files/api";
 import { db } from "../../lib/supabase";
 import { profileQuery } from "../../lib/queries";
+import { PageNotFound } from "../../components/page-not-found";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -619,28 +620,29 @@ export function LecturerContracts({
 }
 
 /** Choose own or permitted administrative contract views using commercial capabilities. */
-export function ContractsPage() {
+export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
   const { t } = useTranslation("commercial");
   const { session } = useAuth();
   const actor = session!.user.id;
-  const access = useQuery(commercialAccessQuery(actor));
+  const staff = scope === "staff";
+  const access = useQuery({ ...commercialAccessQuery(actor), enabled: staff });
   const profile = useQuery(profileQuery(actor));
   const [params, setParams] = useSearchParams();
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(true);
   const target = params.get("user") ?? "";
-  const manager = access.data?.can_manage_contracts ?? false;
+  const manager = staff && access.isSuccess && access.data.can_manage_contracts;
   const selectedUser =
     manager && z.string().uuid().safeParse(target).success ? target : "";
   const effectiveAll = manager && (all || Boolean(selectedUser));
   const records = useQuery({
     ...contractsQuery(actor, effectiveAll),
-    enabled: !access.isPending,
-  });
-  const allRecords = useQuery({
-    ...contractsQuery(actor, true),
-    enabled: manager,
+    enabled: !staff || manager,
   });
   const [registering, setRegistering] = useState(false);
+  const allRecords = useQuery({
+    ...contractsQuery(actor, true),
+    enabled: manager && registering,
+  });
   const [search, setSearch] = useState("");
   const filtered =
     records.data?.filter(
@@ -650,11 +652,17 @@ export function ContractsPage() {
           .toLocaleLowerCase()
           .includes(search.toLocaleLowerCase()),
     ) ?? [];
+  if (staff) {
+    if (access.isPending) return <Loading />;
+    if (access.isError)
+      return <ErrorState retry={() => void access.refetch()} />;
+    if (!manager) return <PageNotFound />;
+  }
   return (
     <>
       <PageHeading
         title={t("contracts")}
-        description={t("contractsIntro")}
+        description={t(staff ? "adminContractsIntro" : "contractsIntro")}
         action={
           manager && (
             <Button onClick={() => setRegistering(true)}>
@@ -700,15 +708,10 @@ export function ContractsPage() {
             )
           )}
         </div>
-        {access.isPending || records.isPending ? (
+        {records.isPending ? (
           <Loading />
-        ) : access.isError || records.isError ? (
-          <ErrorState
-            retry={() => {
-              void access.refetch();
-              void records.refetch();
-            }}
-          />
+        ) : records.isError ? (
+          <ErrorState retry={() => void records.refetch()} />
         ) : (
           <ContractCards
             actor={actor}

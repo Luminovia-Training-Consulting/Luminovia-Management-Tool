@@ -3,7 +3,7 @@
  * Controlled UI data do not establish native business-contact access.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -145,7 +145,10 @@ describe("private client directory capability boundary", () => {
       tags: [],
       archived_at: null,
     }));
-    client.setQueryData(["permissions", "actor"], ["organisations.manage"]);
+    client.setQueryData(
+      ["permissions", "actor"],
+      ["organisations.manage", "contracts.manage"],
+    );
     client.setQueryData(["user-roles", "actor"], ["admin"]);
     client.setQueryData(
       ["operations", "organisations", "actor"],
@@ -170,6 +173,15 @@ describe("private client directory capability boundary", () => {
       expect(table).toBe("organisation_private_details");
       return { select };
     });
+    const requestContracts = vi.fn(async (args: unknown) => {
+      expect(args).toEqual({ p_organisation_id: second });
+      return { data: { items: [], has_more: false }, error: null };
+    });
+    rpc.mockImplementation((name, args) => {
+      if (name === "organisation_contracts")
+        return { abortSignal: () => requestContracts(args) };
+      return { abortSignal: async () => ({ data: null, error: null }) };
+    });
     client.setQueryData(
       ["operations", "company-premium", "actor"],
       [
@@ -193,12 +205,25 @@ describe("private client directory capability boundary", () => {
     expect(await screen.findByText("Private first-company note")).toBeVisible();
     expect(select).toHaveBeenCalledWith("private_notes");
     expect(requestNotes.mock.calls).toEqual([[first]]);
+    expect(requestContracts).not.toHaveBeenCalled();
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
     await user.click(
       screen.getByRole("button", { name: organisations[1].name }),
     );
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
     expect(requestNotes.mock.calls).toEqual([[first], [second]]);
+    await user.click(
+      screen.getByRole("button", { name: "Unternehmensverträge" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Unternehmensverträge" }),
+    ).toHaveAccessibleDescription(organisations[1].name);
+    await waitFor(() =>
+      expect(requestContracts).toHaveBeenCalledExactlyOnceWith({
+        p_organisation_id: second,
+      }),
+    );
+    await user.keyboard("{Escape}");
     expect(
       screen.queryByText("Private first-company note"),
     ).not.toBeInTheDocument();

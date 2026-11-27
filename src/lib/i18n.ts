@@ -43,6 +43,7 @@ const pairs: Record<string, [string, string]> = {
   clientCourses: ["Kurse des Unternehmens", "Company courses"],
   companies: ["Unternehmen", "Companies"],
   contracts: ["Verträge", "Contracts"],
+  myContracts: ["Meine Verträge", "My contracts"],
   finance: ["Finanzen", "Finance"],
   controlCenter: ["Leitstand", "Control Center"],
   myFinanceOverview: [

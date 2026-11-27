@@ -571,7 +571,7 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "contracts",
-    path: "/contracts",
+    path: "/profile/contracts",
     title: { de: "Verträge", en: "Contracts" },
     summary: {
       de: "Prüfe die für dich freigegebenen Vertragsversionen, Laufzeiten und Bestätigungen.",

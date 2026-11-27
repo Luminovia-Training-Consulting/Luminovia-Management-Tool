@@ -93,12 +93,14 @@ test("administration navigation keeps shared workflows together on desktop and m
     const mainMenu = mobile ? page.locator(".mobile-more") : page.locator(".sidebar");
     await expect(mainMenu.getByRole("link", {name: "Verwaltung", exact: true})).toBeVisible();
     await expect(mainMenu.getByRole("link", {name: "Chat", exact: true})).toBeVisible();
-    const personalContracts = mainMenu.getByRole("link", {name: "Verträge", exact: true});
-    await expect(personalContracts).toHaveAttribute("href", "/contracts");
-    for (const name of ["Leitstand", "Themen & Tools", "Dozierende"])
+    for (const name of ["Verträge", "Leitstand", "Themen & Tools", "Dozierende"])
         await expect(mainMenu.getByRole("link", {name, exact: true})).toHaveCount(0);
+    if (mobile) await more.click();
+    await page.locator(".account-menu summary").click();
+    const personalContracts = page.locator(".account-menu").getByRole("link", {name: "Meine Verträge", exact: true});
+    await expect(personalContracts).toHaveAttribute("href", "/profile/contracts");
     await personalContracts.click();
-    await expect(page).toHaveURL(/\/contracts$/);
+    await expect(page).toHaveURL(/\/profile\/contracts$/);
     await expect(page.getByRole("heading", {name: "Verträge", exact: true})).toBeVisible();
     await page.goto("/admin");
 
@@ -107,7 +109,12 @@ test("administration navigation keeps shared workflows together on desktop and m
     await expect(sections.getByRole("link", {name: /^Plattformfinanzen(?: |$)/})).toBeVisible();
     await sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/}).click();
     await expect(page.getByRole("link", {name: /^Unternehmen(?! & Personen)/})).toBeVisible();
-    await expect(administrationContent.getByRole("link", {name: /^Verträge(?: |$)/})).toHaveCount(0);
+    const staffContracts = administrationContent.getByRole("link", {name: /^Verträge(?: |$)/});
+    await expect(staffContracts).toHaveAttribute("href", "/admin/contracts");
+    await staffContracts.click();
+    await expect(page).toHaveURL(/\/admin\/contracts$/);
+    await expect(page.getByRole("button", {name: "Ausgeführten Vertrag hinterlegen", exact: true})).toBeVisible();
+    await sections.getByRole("link", {name: /^Unternehmen & Personen(?: |$)/}).click();
     await page.getByRole("link", {name: /^Dozierende(?: |$)/}).click();
     await expect(page).toHaveURL(/\/people$/);
     await expect(page.getByRole("heading", {name: "Dozierende", exact: true})).toBeVisible();

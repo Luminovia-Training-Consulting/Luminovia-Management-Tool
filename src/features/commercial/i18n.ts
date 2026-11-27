@@ -28,6 +28,10 @@ const pairs: Record<string, [string, string]> = {
   ],
 
   contracts: ["Verträge", "Contracts"],
+  adminContractsIntro: [
+    "Verträge von Dozierenden hinterlegen, verwalten und Empfangsbestätigungen einsehen.",
+    "Register and manage lecturer contracts and view receipt acknowledgements.",
+  ],
   contractsIntro: [
     "Deine ausgeführten Verträge und Ergänzungen – nachvollziehbar nach Version und Dokument.",
     "Your executed contracts and addenda, with a clear version and document history.",

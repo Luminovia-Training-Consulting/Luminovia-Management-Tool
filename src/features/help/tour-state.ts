@@ -23,7 +23,7 @@ export function permittedTourModules(
   return guideModules.filter((module) => {
     // Commercial navigation accepts teaching roles OR the corresponding scoped
     // permission; qualification administration requires BOTH permissions.
-    if (module.path === "/contracts")
+    if (module.path === "/profile/contracts")
       return teaching || permissions.includes("contracts.read");
     if (module.path === "/finance")
       return teaching || permissions.includes("finance.manage");

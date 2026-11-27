@@ -244,10 +244,11 @@ function setup(
                 <Route path="admin/clients" element={<NavigationTarget />} />
                 <Route path="changes" element={<NavigationTarget />} />
                 <Route path="changes/:id" element={<NavigationTarget />} />
-                <Route path="contracts" element={<NavigationTarget />} />
+                <Route path="admin/contracts" element={<NavigationTarget />} />
               </Route>
               <Route path="calendar" element={<NavigationTarget />} />
               <Route path="profile" element={<NavigationTarget />} />
+              <Route path="profile/contracts" element={<NavigationTarget />} />
               <Route path="api/docs" element={<NavigationTarget />} />
               <Route path="files" element={<NavigationTarget />} />
               <Route path="courses" element={<p>Live courses route</p>} />
@@ -437,7 +438,7 @@ it.each(["admin", "management"])(
 );
 
 it.each(["admin", "management"])(
-  "groups changes and companies for %s but keeps personal contracts in the main navigation",
+  "groups contract administration, changes and companies for %s",
   async (role) => {
     access.roles = [role];
     access.permissions = [
@@ -452,8 +453,7 @@ it.each(["admin", "management"])(
     expect(sidebar.getByRole("link", { name: "Verwaltung" })).toHaveClass(
       "active",
     );
-    const contracts = sidebar.getByRole("link", { name: "Verträge" });
-    expect(contracts).toHaveAttribute("href", "/contracts");
+    expect(sidebar.queryByRole("link", { name: "Verträge" })).toBeNull();
     for (const name of ["Auftragsänderungen", "Unternehmen"])
       expect(sidebar.queryByRole("link", { name })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Chat" })).toHaveAttribute(
@@ -476,6 +476,13 @@ it.each(["admin", "management"])(
     expect(
       screen.getByRole("link", { name: /^Dozierende(?: |$)/ }),
     ).toHaveAttribute("href", "/people");
+    await user.click(screen.getByRole("link", { name: /^Verträge(?: |$)/ }));
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/admin/contracts",
+    );
+    expect(
+      sections.getByRole("link", { name: /^Unternehmen & Personen(?: |$)/ }),
+    ).toHaveAttribute("aria-current", "location");
     await user.click(
       sections.getByRole("link", { name: /^Kursbetrieb(?: |$)/ }),
     );
@@ -484,24 +491,25 @@ it.each(["admin", "management"])(
         name: /^Verträge(?: |$)/,
       }),
     ).toBeNull();
-    await user.click(contracts);
-    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
-      "/contracts",
-    );
   },
 );
 
-it("keeps contracts and assignment changes directly accessible to lecturers", () => {
+it("puts a lecturer's own contracts in the profile menu only", async () => {
   access.roles = ["lecturer"];
-  const legacyUrl = "/contracts?user=d415d832-e22e-4e32-bacc-180811de988c";
-  setup(legacyUrl, false);
-  expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
-    legacyUrl,
-  );
+  const { user } = setup("/profile", false);
   const sidebar = within(screen.getByRole("complementary"));
-  expect(sidebar.getByRole("link", { name: "Verträge" })).toHaveAttribute(
-    "href",
-    "/contracts",
+  expect(sidebar.queryByRole("link", { name: /Verträge/ })).toBeNull();
+  const account = screen
+    .getByRole("banner")
+    .querySelector(".account-menu summary");
+  await user.click(account!);
+  const contracts = screen.getByRole("link", {
+    name: "Meine Verträge",
+  });
+  expect(contracts).toHaveAttribute("href", "/profile/contracts");
+  await user.click(contracts);
+  expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+    "/profile/contracts",
   );
   expect(
     sidebar.getByRole("link", { name: "Auftragsänderungen" }),
@@ -515,6 +523,16 @@ it("keeps contracts and assignment changes directly accessible to lecturers", ()
     "href",
     "/topics",
   );
+});
+
+it("does not open administrative contracts with personal contract access", () => {
+  access.roles = ["lecturer"];
+  access.permissions = ["contracts.read"];
+  setup("/admin/contracts", false);
+  expect(
+    screen.getByRole("heading", { name: "Diese Seite wurde nicht gefunden." }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText("Fixture location")).toBeNull();
 });
 
 it("keeps the overview in place and exposes only available areas after permissions load", () => {

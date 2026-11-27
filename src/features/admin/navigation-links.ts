@@ -96,6 +96,13 @@ export function administrationLinks(
       visible: has("users.manage"),
     },
     {
+      to: "/admin/contracts",
+      label: "contracts",
+      description: "adminDestination_contracts",
+      area: "directory",
+      visible: has("contracts.manage"),
+    },
+    {
       to: "/admin/finance",
       label: "platformFinance",
       description: "adminDestination_platformFinance",

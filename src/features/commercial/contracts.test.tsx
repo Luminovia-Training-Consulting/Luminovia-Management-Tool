@@ -88,7 +88,7 @@ function record(id: string, user: string, title: string): ContractRecord {
 async function show(
   manager: boolean,
   contextual = false,
-  location = `/contracts?user=${target}`,
+  location = `/admin/contracts?user=${target}`,
 ) {
   await i18n.changeLanguage("de");
   fake.rpc.mockImplementation(
@@ -142,7 +142,9 @@ async function show(
             name={id === target ? "Fictional lecturer" : "Another lecturer"}
           />
         ) : (
-          <ContractsPage />
+          <ContractsPage
+            scope={location.startsWith("/admin/") ? "staff" : "personal"}
+          />
         )}
       </MemoryRouter>
     </QueryClientProvider>
@@ -168,7 +170,9 @@ it("preselects the lecturer and loads the scanned-file candidates in the registr
 
 it("does not grant management authority to a contract link", async () => {
   await show(false);
-  await screen.findByRole("heading", { name: "Personal contract" });
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("commercial_access"),
+  );
   expect(
     screen.queryByRole("button", { name: "Ausgeführten Vertrag hinterlegen" }),
   ).not.toBeInTheDocument();
@@ -180,7 +184,7 @@ it("does not grant management authority to a contract link", async () => {
 it.each([false, true])(
   "shows registered personal contracts without a standalone upload (manager: %s)",
   async (manager) => {
-    await show(manager, false, "/contracts");
+    await show(manager, false, `/profile/contracts?user=${target}`);
     expect(
       await screen.findByRole("heading", { name: "Personal contract" }),
     ).toBeVisible();
@@ -188,6 +192,15 @@ it.each([false, true])(
       screen.queryByLabelText("Ausgeführter Vertrag als PDF"),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Meine Vertragsdateien")).not.toBeInTheDocument();
+    expect(fake.rpc).not.toHaveBeenCalledWith("commercial_access");
+    expect(fake.rpc).not.toHaveBeenCalledWith("contract_records", {
+      p_all: true,
+    });
+    expect(
+      screen.queryByRole("button", {
+        name: "Ausgeführten Vertrag hinterlegen",
+      }),
+    ).not.toBeInTheDocument();
   },
 );
 
@@ -364,7 +377,7 @@ it("discards the open registration draft when the selected person changes", asyn
 });
 
 it("retains the owner's download and version-specific receipt acknowledgement on the personal page", async () => {
-  await show(false);
+  await show(false, false, "/profile/contracts");
   const user = userEvent.setup();
   await user.click(
     await screen.findByRole("button", { name: "Dokument herunterladen" }),

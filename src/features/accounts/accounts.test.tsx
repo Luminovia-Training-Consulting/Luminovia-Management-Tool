@@ -159,7 +159,7 @@ afterEach(async () => {
   });
 });
 describe("Account administration", () => {
-  it("opens the same person-bound contracts dialog from a lecturer's account row", async () => {
+  it("opens the person-bound contracts dialog in the selected lecturer's account details", async () => {
     fake.capabilities = ["users.manage", "contracts.manage"];
     const previous = fake.rpc.getMockImplementation()!;
     fake.rpc.mockImplementation(async (name: string) => {
@@ -174,9 +174,18 @@ describe("Account administration", () => {
       return previous(name);
     });
     page();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Verträge verwalten: Anna" }),
-    );
+    const user = userEvent.setup();
+    const account = await screen.findByRole("button", { name: "Anna" });
+    expect(
+      screen.queryByRole("button", { name: "Verträge verwalten: Anna" }),
+    ).not.toBeInTheDocument();
+    expect(fake.rpc).not.toHaveBeenCalledWith("commercial_people");
+    await user.click(account);
+    const details = await screen.findByRole("dialog", { name: "Kontodetails" });
+    const contracts = await within(details).findByRole("button", {
+      name: "Verträge verwalten: Anna",
+    });
+    await user.click(contracts);
     const dialog = await screen.findByRole("dialog", {
       name: "Verträge verwalten",
     });
@@ -187,6 +196,8 @@ describe("Account administration", () => {
       }),
     ).toBeVisible();
     expect(fake.rpc).toHaveBeenCalledWith("contract_records", { p_all: true });
+    await user.keyboard("{Escape}");
+    expect(contracts).toHaveFocus();
   });
 
   it("opens profile and expertise for the selected account and preserves profile drafts across views", async () => {
@@ -505,7 +516,7 @@ describe("Account administration", () => {
     await userEvent.keyboard("{Escape}");
     expect(
       screen.getByRole("link", { name: "Meine Verträge" }),
-    ).toHaveAttribute("href", "/contracts");
+    ).toHaveAttribute("href", "/profile/contracts");
     const roles = await screen.findByRole("button", { name: "Meine Rollen" });
     await waitFor(() => expect(roles).toBeEnabled());
     await userEvent.click(roles);

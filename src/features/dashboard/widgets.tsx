@@ -244,7 +244,7 @@ function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
           <ul className="dashboard-preview-list">
             {pending.map((contract) => (
               <li key={contract.id}>
-                <Link to="/contracts">{contract.title}</Link>
+                <Link to="/profile/contracts">{contract.title}</Link>
                 {contract.expires_at && (
                   <small>
                     {t("validUntil", {
@@ -259,7 +259,7 @@ function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
           <p className="muted">{t("noContracts")}</p>
         )}
       </WidgetState>
-      <TextLink to="/contracts">{t("reviewContracts")}</TextLink>
+      <TextLink to="/profile/contracts">{t("reviewContracts")}</TextLink>
     </section>
   );
 }

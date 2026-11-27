@@ -298,9 +298,19 @@ export function ProfilePage() {
         title={t("profile")}
         description={session!.user.email}
         action={
-          <Button asChild variant="secondary">
-            <Link to={`/people/${session!.user.id}`}>{t("people:open")}</Link>
-          </Button>
+          <div className="page-actions">
+            <Button asChild variant="secondary">
+              <Link to={`/people/${session!.user.id}`}>{t("people:open")}</Link>
+            </Button>
+            {portalInternalEdition &&
+              (hasTeachingRole(roles.data) ||
+                permissions.data?.includes("contracts.read") ||
+                permissions.data?.includes("contracts.manage")) && (
+                <Button asChild variant="secondary">
+                  <Link to="/profile/contracts">{t("myContracts")}</Link>
+                </Button>
+              )}
+          </div>
         }
       />
       <p className="public-user-id">
