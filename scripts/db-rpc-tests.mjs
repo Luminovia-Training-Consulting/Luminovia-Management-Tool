@@ -60,6 +60,11 @@ function actorSql(id, text, aal = "aal1") {
 
 /** Executes real SQL with the test transaction's controlled identity and password-session claims. */
 const as = (id, text, aal) => sql(actorSql(id, text, aal));
+/** Inspects private candidate scope as the disposable database owner with a controlled identity. */
+const inspectAs = (id, text, aal = "aal1") =>
+    sql(
+        `begin; set local request.jwt.claims=${quote(JSON.stringify({sub: id, aal, role: "authenticated"}))}; ${text}; commit;`,
+    );
 /** Calls the business database API under the fixture's controlled identity/password-session claims. */
 const rpc = (id, job, key = randomUUID(), version = 1) =>
     as(id, `select public.claim_job('${job}','${key}',${version})`).then(
@@ -220,7 +225,7 @@ try {
         const discovery = async (user) =>
             JSON.parse(await as(user, "select public.job_discovery('{}'::jsonb, null, 50)")).items;
         const areaItems = await discovery(users[51]);
-        const inaccessibleCandidates = await as(users[51], `
+        const inaccessibleCandidates = await inspectAs(users[51], `
           select coalesce(jsonb_agg(jsonb_build_object(
             'id', candidate.job_id,
             'status', job.status,
