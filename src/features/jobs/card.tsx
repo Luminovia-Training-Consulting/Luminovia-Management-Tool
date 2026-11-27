@@ -48,7 +48,11 @@ export const JobCard = memo(function JobCard({
           <span className={`status status-${job.status}`}>{t(job.status)}</span>
         )}
       </div>
-      <p className="job-customer">{job.customer_name}</p>
+      {(job.customer_name || job.customer_hidden) && (
+        <p className="job-customer">
+          {job.customer_hidden ? lifeText("customerHidden") : job.customer_name}
+        </p>
+      )}
       <h2>
         <Link to={`/jobs/${job.id}`}>
           {job.title}

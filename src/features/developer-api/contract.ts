@@ -59,6 +59,10 @@ import {
   analyticsScopes,
 } from "../analytics/schema.ts";
 import { accountingPaths } from "./accounting-contract.ts";
+import {
+  assignmentCustomerMode,
+  assignmentCustomerSettingsSchema,
+} from "../admin/assignment-customer-settings-schema.ts";
 import { assignmentFinanceSchema } from "../commercial/assignment-finance-schema.ts";
 import { settlementJournalSchema } from "../accounting/settlement-journal-schema.ts";
 import {
@@ -1790,6 +1794,26 @@ const nativePaths = {
   ...notificationPaths,
   ...enquiriesSupportPaths,
   ...handoverPaths,
+  "/rest/v1/rpc/assignment_customer_settings": rpc(
+    "native_assignment_customer_settings",
+    "Jobs",
+    "Read assignment customer visibility settings",
+    "Requires jobs.manage. The default exposes customer details to the confirmed lecturer 168 elapsed hours before the first unreleased assignment session.",
+    {},
+    z.toJSONSchema(assignmentCustomerSettingsSchema),
+  ),
+  "/rest/v1/rpc/save_assignment_customer_settings": rpc(
+    "native_save_assignment_customer_settings",
+    "Jobs",
+    "Update assignment customer visibility settings",
+    "Requires jobs.manage and the current revision. The setting applies to current and future assignments on subsequent reads. The lead time is used only in scheduled mode.",
+    {
+      p_mode: z.toJSONSchema(assignmentCustomerMode),
+      p_lead_hours: { type: "integer", minimum: 0, maximum: 8760 },
+      p_expected_revision: version,
+    },
+    z.toJSONSchema(assignmentCustomerSettingsSchema),
+  ),
   "/rest/v1/rpc/job_discovery": rpc(
     "native_job_discovery",
     "Jobs",
@@ -1809,7 +1833,7 @@ const nativePaths = {
     "native_job_detail",
     "Jobs",
     "Read one currently visible job offer",
-    "Returns exact sessions and visible topic requirements for a job the account can read. A company-only caller can open its own job using the reduced dispatch_only projection without lecturer rates or contract terms.",
+    "Returns exact sessions and visible topic requirements for a job the account can read. The customer fields and full location follow the installation policy. The server may return customer_reveal_at for the caller's own confirmed assignment. A company-only caller can open its own job using the reduced dispatch_only projection without lecturer rates or contract terms.",
     { p_job_id: uuid },
     z.toJSONSchema(jobSchema),
   ),

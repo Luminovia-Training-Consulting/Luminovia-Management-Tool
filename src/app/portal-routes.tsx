@@ -132,6 +132,11 @@ const PlatformResetStatus = lazy(() =>
     default: module.PlatformResetStatus,
   })),
 );
+const AssignmentCustomerSettingsPage = lazy(() =>
+  import("../features/admin/assignment-customer-settings").then((module) => ({
+    default: module.AssignmentCustomerSettingsPage,
+  })),
+);
 const AdminMailPage = lazy(() =>
   import("../features/admin/mail").then((module) => ({
     default: module.AdminMailPage,
@@ -607,6 +612,10 @@ export default function PortalRoutes() {
               <Route path="clients" element={<ClientsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="mail" element={<AdminMailPage />} />
+              <Route
+                path="assignment-customer"
+                element={<AssignmentCustomerSettingsPage />}
+              />
               <Route path="white-label" element={<WhiteLabelSetupPage />} />
               <Route path="reset" element={<PlatformResetPage />} />
               <Route path="deletions" element={<DeletionsPage />} />

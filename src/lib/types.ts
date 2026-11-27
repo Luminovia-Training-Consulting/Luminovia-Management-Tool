@@ -55,6 +55,8 @@ export interface Job {
   title: string;
   description: string;
   customer_name: string;
+  customer_hidden?: boolean;
+  customer_reveal_at?: string | null;
   /** Effective travel facts for structured course offers; legacy offers omit them. */
   delivery_summary?: {
     mode: "online" | "onsite" | "hybrid" | "mixed";

@@ -93,9 +93,19 @@ function JobDetailLabels({ actor, job }: { actor: string; job: Job }) {
           : t(job.status)}
       </span>
       <span className="badge">
-        {company
-          ? lifeText("detailCompany", { name: company })
-          : lifeText("noCompany")}
+        {job.customer_hidden
+          ? job.customer_reveal_at
+            ? lifeText("customerRevealAt", {
+                date: dateTime(
+                  job.customer_reveal_at,
+                  i18n.language,
+                  job.time_zone,
+                ),
+              })
+            : lifeText("customerHidden")
+          : company
+            ? lifeText("detailCompany", { name: company })
+            : lifeText("noCompany")}
       </span>
       {lecturers.length > 0 && (
         <span className="badge">

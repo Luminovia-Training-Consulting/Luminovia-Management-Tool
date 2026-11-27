@@ -76,3 +76,16 @@ it("provides one native focusable link for the full card without duplicate arrow
   expect(links[0]).toHaveAttribute("href", `/jobs/${job.id}`);
   expect(screen.queryByRole("button")).not.toBeInTheDocument();
 });
+
+it("describes the redacted customer while leaving the offer available", async () => {
+  await i18n.changeLanguage("en");
+  render(
+    <MemoryRouter>
+      <JobCard job={{ ...job, customer_name: "", customer_hidden: true }} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByText("Company details are currently hidden"),
+  ).toBeVisible();
+  expect(screen.getByRole("link", { name: job.title })).toBeVisible();
+});

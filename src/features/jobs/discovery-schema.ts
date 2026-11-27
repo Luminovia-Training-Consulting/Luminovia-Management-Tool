@@ -97,6 +97,8 @@ export const jobSchema = z.object({
   title: z.string(),
   description: z.string(),
   customer_name: z.string(),
+  customer_hidden: z.boolean().optional(),
+  customer_reveal_at: z.iso.datetime({ offset: true }).nullable().optional(),
   delivery_type: z.enum(["online", "onsite"]),
   delivery_summary: offerDelivery.nullable().optional(),
   location: z.string(),

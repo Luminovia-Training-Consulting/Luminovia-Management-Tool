@@ -114,6 +114,13 @@ export function administrationLinks(
       visible: has("announcements.manage"),
     },
     {
+      to: "/admin/assignment-customer",
+      label: "assignmentCustomerSettings",
+      description: "adminDestination_assignmentCustomerSettings",
+      area: "platform",
+      visible: has("jobs.manage"),
+    },
+    {
       to: "/admin/audit",
       label: "auditLog",
       description: "adminDestination_auditLog",

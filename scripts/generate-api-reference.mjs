@@ -303,6 +303,10 @@ The [worker and receiver contract](scripts/examples/README.md) describes scoped 
 
 The internal download also includes the customer accounting receiver contract and the explicitly authorised \`company_accounting_webhook_subscribe\` operation. Each accounting event carries its customer invoice ID, occurrence time, version and event ID. Amounts and documents remain available through authorised portal accounting views.
 
+## Customer visibility for teaching assignments
+
+`assignment_customer_settings()` reads the policy and `save_assignment_customer_settings(p_mode,p_lead_hours,p_expected_revision)` changes it with `jobs.manage` and compare-and-set revision checks. Modes are `scheduled`, `on_confirmation` and `management_only`. Scheduled disclosure defaults to 168 elapsed hours before the first unreleased confirmed assignment session. Marketplace projections return an empty customer name and full location until authorised, with `customer_hidden` and an optional own `customer_reveal_at` for job detail. Use the role-scoped RPCs for preparation. Raw REST relations containing customer data return rows only within the current disclosure authority.
+
 ## Assignment amendments, teaching evidence and settlement journal
 
 Use \`save_assignment_change\` to save a versioned proposal. A company contact can submit eligible shared dates. A manager calls \`assignment_change_action\` with \`coordinate\` to request consent from each affected lecturer. Staff can include eligible lecturer-specific terms and compensation. Current versions and independent consent govern application. An obsolete version returns HTTP 409. Retry an uncertain result with the original request identifier and payload.

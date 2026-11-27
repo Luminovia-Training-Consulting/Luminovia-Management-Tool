@@ -80,6 +80,8 @@ const en = {
   companyFixed:
     "This offer's company is fixed by its source or linked course activity.",
   noCompany: "No company assigned",
+  customerHidden: "Company details are currently hidden",
+  customerRevealAt: "Company details available from {{date}}",
   dispatch: "Company and class",
   editDispatch: "Edit class",
   class: "Class assigned to this job",
@@ -197,6 +199,8 @@ const de: typeof en = {
   companyFixed:
     "Die Firma ist durch die Herkunft des Auftrags oder die verknüpfte Kursaktivität festgelegt.",
   noCompany: "Kein Unternehmen zugeordnet",
+  customerHidden: "Unternehmensangaben sind derzeit ausgeblendet",
+  customerRevealAt: "Unternehmensangaben ab {{date}} verfügbar",
   dispatch: "Unternehmen und Klasse",
   editDispatch: "Klasse bearbeiten",
   class: "Klasse für diesen Auftrag",

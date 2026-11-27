@@ -338,6 +338,14 @@ const pairs: Record<string, [string, string]> = {
     "Mailversand konfigurieren und Zustellprobleme bearbeiten.",
     "Configure outgoing mail and resolve delivery failures.",
   ],
+  assignmentCustomerSettings: [
+    "Unternehmenssichtbarkeit",
+    "Customer visibility",
+  ],
+  adminDestination_assignmentCustomerSettings: [
+    "Freigabe von Unternehmen und Ansprechpersonen für Dozierende einstellen.",
+    "Set when lecturers see the company and its contact details.",
+  ],
   adminDestination_whiteLabel: [
     "Edition, Lizenz und Darstellung der Kundeninstallation verwalten.",
     "Manage the edition, licence and branding of a customer installation.",

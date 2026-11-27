@@ -148,11 +148,123 @@ await withTestDatabase(
       "PASS contact precedence, read-back, authored reference and pre-claim privacy",
     );
 
+    const marketplace = await rpc(peer, "job_detail", job);
+    assert.equal(marketplace.customer_name, "");
+    assert.equal(marketplace.customer_reveal_at, null);
+    assert.ok(marketplace.job_sessions.length > 0);
+    const searched = await rpc(
+      peer,
+      "job_discovery",
+      { customer: "Fictional College" },
+      null,
+      20,
+    );
+    assert.deepEqual(searched.items, []);
     const original = await rpc(former, "claim_job", job, randomUUID(), 1);
     assert.equal(original.status, "confirmed");
+
+    // Test current actor reads on both sides of the disclosure rule before
+    // opting into immediate disclosure for the existing far-future fixture.
+    const policy = await rpc(manager, "assignment_customer_settings");
+    assert.deepEqual(policy, {
+      mode: "scheduled",
+      lead_hours: 168,
+      revision: 0,
+    });
+    await assert.rejects(rpc(former, "assignment_customer_settings"), /42501/);
+    await assert.rejects(
+      rpc(
+        former,
+        "save_assignment_customer_settings",
+        "on_confirmation",
+        168,
+        0,
+      ),
+      /42501/,
+    );
+    const redacted = await rpc(former, "job_detail", job);
+    assert.equal(redacted.customer_name, "");
+    assert.equal(redacted.customer_hidden, true);
+    assert.equal(
+      Date.parse(redacted.customer_reveal_at),
+      Date.parse(sessions[0].starts_at) - 168 * 3_600_000,
+    );
+    assert.equal((await briefing(former)).fallback_contact, null);
+    assert.equal((await lifecycle(former)).dispatch_contact, null);
+    assert.equal((await rpc(former, "course_workspace", run)).contact, null);
+    assert.equal(
+      (await rpc(manager, "job_detail", job)).customer_name,
+      "Fictional College",
+    );
+    assert.equal(
+      await actor(
+        former,
+        `select
+        (select count(*) from public.jobs where id=${q(job)}),
+        (select count(*) from public.course_runs where id=${q(run)}),
+        (select count(*) from public.organisations where id=${q(company)})`,
+      ),
+      "0|0|0",
+    );
+    assert.equal(
+      (await rpc(former, "assignment_confirmation", original.claim_id)).data
+        .customer_name,
+      "",
+    );
+
+    const calendar = JSON.parse(
+      await actor(
+        former,
+        `select public.assignment_calendar_metadata(array[${q(job)}::uuid])`,
+      ),
+    );
+    assert.equal(calendar[0].organisation_name, "");
+    assert.equal(calendar[0].organisation_id, null);
+    assert.equal(
+      (await rpc(former, "job_offers")).find(({ id }) => id === job)
+        .customer_name,
+      "",
+    );
+
+    const settings = await rpc(
+      manager,
+      "save_assignment_customer_settings",
+      "on_confirmation",
+      168,
+      0,
+    );
+    assert.deepEqual(settings, {
+      mode: "on_confirmation",
+      lead_hours: 168,
+      revision: 1,
+    });
+    await assert.rejects(
+      rpc(
+        manager,
+        "save_assignment_customer_settings",
+        "management_only",
+        168,
+        0,
+      ),
+      /40001/,
+    );
+    assert.equal(
+      (await rpc(former, "job_detail", job)).customer_name,
+      "Fictional College",
+    );
+    assert.equal(
+      await actor(
+        former,
+        `select customer_name from public.jobs where id=${q(job)}`,
+      ),
+      "Fictional College",
+    );
     assert.equal(
       (await briefing(former)).fallback_contact.name,
       "Selected coordinator",
+    );
+    console.log(
+      "PASS versioned disclosure policy, marketplace, confirmed job, raw RLS, workspace, PDF data and calendar",
     );
     const originalTerms =
       await sql(`select jsonb_build_array(amount,total_amount,terms,terms_version)
