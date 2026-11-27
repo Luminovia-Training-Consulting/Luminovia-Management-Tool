@@ -21,6 +21,7 @@ language sql stable security definer set search_path = '' as $$
       private.lecturer_actor() as lecturer,
       private.has_permission('jobs.manage') as manager,
       private.has_role(array['client']) as company,
+      private.actor_active() as actor_active,
       auth.uid() as actor
   ), jobs_in_scope as materialized (
     select job.id, job.title, job.status,
@@ -103,19 +104,29 @@ language sql stable security definer set search_path = '' as $$
     ) first_session on true
     -- Materialize only offers accepted by the current shared read policy.
     where (
-      options.manager
-      or (
-        options.lecturer
-        and not private.job_lecturer_blocked(job.id, options.actor)
-        and (
-          job.status = 'published'
-          or exists (
-            select 1 from public.job_claims own
-            where own.job_id = job.id and own.lecturer_id = options.actor
-              and (own.status = 'confirmed' or not exists (
-                select 1 from public.job_claims active
-                where active.job_id = job.id and active.status = 'confirmed'
-              ))
+      options.actor_active and (
+        options.manager
+        or (
+          options.lecturer
+          and not private.job_lecturer_blocked(job.id, options.actor)
+          and not (job.urgent_reopened_at is not null
+            and private.emergency_source_lecturer(job.id, options.actor))
+          and (
+            (job.status = 'published' and (
+              (job.urgent_reopened_at is not null and private.teaching_language_matches((
+                select run.teaching_language from public.course_runs run
+                where run.id = job.course_run_id
+              ), options.actor))
+              or private.job_subject_matches(job.id, options.actor)
+            ))
+            or exists (
+              select 1 from public.job_claims own
+              where own.job_id = job.id and own.lecturer_id = options.actor
+                and (own.status = 'confirmed' or not exists (
+                  select 1 from public.job_claims active
+                  where active.job_id = job.id and active.status = 'confirmed'
+                ))
+            )
           )
         )
       )
