@@ -339,7 +339,9 @@ describe("server-confirmed logout", () => {
       .mockRejectedValueOnce(new Error("Network unavailable"))
       .mockResolvedValueOnce({ error: null });
     const { client, user } = setup();
-    expect(document.querySelector(".mobile-signout")).toBeNull();
+    expect(
+      screen.getByRole("banner").querySelector(".mobile-signout"),
+    ).toBeNull();
     const more = document.querySelector<HTMLDetailsElement>(
       "details.mobile-more",
     );
@@ -630,7 +632,7 @@ describe("native mobile More navigation", () => {
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
     expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
     expect(
-      screen.getByRole("banner").querySelector(".mobile-signout"),
+      within(account).queryByRole("button", { name: "Abmelden" }),
     ).not.toBeInTheDocument();
     expect(
       within(menu).getByRole("button", { name: "Abmelden" }).parentElement,

@@ -2848,10 +2848,6 @@ legend {
     gap: 10px;
   }
 
-  .account-menu-panel .account-menu-signout {
-    display: none;
-  }
-
   .mobile-more nav a {
     display: flex;
     align-items: center;
@@ -3889,8 +3885,7 @@ summary:focus-visible {
   box-shadow: var(--shadow);
 }
 
-.account-menu-panel a,
-.account-menu-panel button {
+.account-menu-panel a {
   display: block;
   border: none;
   border-radius: 0.5rem;
@@ -3903,8 +3898,7 @@ summary:focus-visible {
   cursor: pointer;
 }
 
-.account-menu-panel a:hover,
-.account-menu-panel button:hover {
+.account-menu-panel a:hover {
   background: var(--blue-soft);
 }
 
