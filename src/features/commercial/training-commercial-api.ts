@@ -65,7 +65,6 @@ const plan = z.object({
   configuration,
   unpaid_breaks: z.record(z.string(), z.number().int().nonnegative()),
 });
-export type TrainingConfiguration = z.infer<typeof configuration>;
 export type TrainingPlan = z.infer<typeof plan>;
 
 const projection = z.object({

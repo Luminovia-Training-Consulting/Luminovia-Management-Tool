@@ -52,7 +52,7 @@ $migration$;
 -- Currency rates enter as decimal strings. Calculations use PostgreSQL numeric
 -- and round at the component boundary; no browser-derived totals are accepted.
 create function private.training_component_decimal(p_text text, p_places integer)
-returns numeric language plpgsql immutable set search_path = '' as $$
+returns numeric language plpgsql stable set search_path = '' as $$
 begin
   if p_text is null or p_text !~ ('^[0-9]{1,10}(\.[0-9]{1,' || p_places || '})?$') then
     raise exception 'Invalid commercial decimal' using errcode = '22023';
@@ -62,7 +62,7 @@ end;
 $$;
 
 create function private.validate_training_components(p_configuration jsonb)
-returns void language plpgsql immutable set search_path = '' as $$
+returns void language plpgsql stable set search_path = '' as $$
 declare
   component jsonb;
   customer_rate numeric;
