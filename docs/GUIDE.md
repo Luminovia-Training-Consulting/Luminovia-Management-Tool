@@ -1096,6 +1096,8 @@ and saved-view operations. Existing `job_detail` and `job_dashboard` implementat
 
 [The marketplace candidate migration](../supabase/migrations/20261124164736_optimize_job_discovery_candidates.sql) applies the active-offer and filter conditions before checking visibility and pricing. It looks up the first session for the open or earliest-start view and calculates total teaching time only when the sort or filters require it. The public response, cursor format and existing visibility and pricing rules are preserved.
 
+For role-split offers, [the follow-up compensation migration](../supabase/migrations/20261128123400_keep_personal_discovery_compensation.sql) keeps marketplace and detail quotes aligned: a lecturer's saved personal percentage takes precedence over the role snapshot captured on the offer. The already released authorization migration remains immutable.
+
 | Public RPC                                                | Purpose                                                                                                     |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `job_discovery(p_filters,p_cursor,p_limit)`               | Up to 100 authorised offers, `has_more`, next-page cursor and canonical filters in a bounded JSON response. |
