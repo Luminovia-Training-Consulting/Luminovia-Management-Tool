@@ -97,7 +97,18 @@ test("retained course editing preserves exact timestamps and reviewed schedule c
             .getByLabel(/^(Language|Sprache)$/, {exact: true})
             .selectOption("de");
         await expect(page.locator("html")).toHaveAttribute("lang", "de");
-        await page.goto("/courses");
+        await page.goto("/calendar");
+        await page.getByLabel("Kalenderanzeige in").selectOption("Australia/Brisbane");
+        await page.getByText("Kurs aus dem Kalender planen", {exact: true}).press("Enter");
+        await page.getByLabel("Unterrichtstag", {exact: true}).fill("2030-11-03");
+        await page.getByRole("button", {name: "Kursentwurf öffnen", exact: true}).click();
+        const calendarDraft = page.getByRole("dialog", {name: "Kurs anlegen", exact: true});
+        await expect(calendarDraft.getByLabel("Zeitzone", {exact: true})).toHaveValue("Australia/Brisbane");
+        await expect(calendarDraft.getByLabel("Beginn 1", {exact: true})).toHaveValue("2030-11-03T09:00");
+        await expect(calendarDraft.getByLabel("Ende 1", {exact: true})).toHaveValue("2030-11-03T17:00");
+        await calendarDraft.getByRole("button", {name: "Schließen", exact: true}).click();
+        await expect(calendarDraft).toBeHidden();
+        await expect(page).toHaveURL(/\/courses$/);
         await page.getByLabel("Suchen", {exact: true}).fill(title);
         const card = page.locator(".operations-course").filter({
             has: page.getByRole("heading", {name: title, exact: true}),
