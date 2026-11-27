@@ -99,16 +99,15 @@ await withTestDatabase("lecturer_matching", async ({ sql, actor }) => {
     insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms)
     values (${q(languageJob)},${q(course)},'Fictional English offer','Fictional customer','online','published',100,100,'EUR','fixed_total','Fictional terms');
   `);
+  const matchesCourseLanguage = (lecturer) =>
+    sql(
+      `select private.job_required_profile_matches(${q(languageJob)}, ${q(lecturer)})`,
+    );
+  assert.equal(await matchesCourseLanguage(suitable), "t");
+  assert.equal(await matchesCourseLanguage(wrongLanguage), "f");
   assert.equal(
     await actor(
       suitable,
-      `select count(*) from public.jobs where id=${q(languageJob)}`,
-    ),
-    "1",
-  );
-  assert.equal(
-    await actor(
-      wrongLanguage,
       `select count(*) from public.jobs where id=${q(languageJob)}`,
     ),
     "0",
@@ -116,13 +115,7 @@ await withTestDatabase("lecturer_matching", async ({ sql, actor }) => {
   await sql(
     `update public.jobs set urgent_reopened_at=now() where id=${q(languageJob)}`,
   );
-  assert.equal(
-    await actor(
-      wrongLanguage,
-      `select count(*) from public.jobs where id=${q(languageJob)}`,
-    ),
-    "0",
-  );
+  assert.equal(await matchesCourseLanguage(wrongLanguage), "f");
 
   await rpc(unattested, "save_lecturer_matching_preferences", 0, prefs);
   for (const [user, expiry] of [

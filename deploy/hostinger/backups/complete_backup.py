@@ -499,9 +499,9 @@ class CompleteBackup:
     # Resume only services stopped by this backup, in dependency order, and verify their health.
     def resume(self):
         failures = []
-        # Scanner/mail before Auth; all were running before the backup. Start
-        # batches by dependency order and wait for existing healthcheck contracts.
-        order = ["clamav", "mailpit", "mail-relay", "auth", "rest", "realtime", "storage", "api-gw", "functions", "web"]
+        # The mail relay shares Auth's network namespace. Start Auth before the
+        # relay, then wait for the existing health checks.
+        order = ["clamav", "mailpit", "auth", "mail-relay", "rest", "realtime", "storage", "api-gw", "functions", "web"]
         for service in order:
             name = next((n for n in self.stopped if n.endswith("-" + service + "-1")), None)
             if name:

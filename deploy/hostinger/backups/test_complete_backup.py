@@ -418,6 +418,23 @@ class BackupSafetyTests(unittest.TestCase):
         self.assertFalse(self.backup.maintenance.exists())
         self.assertFalse(self.backup.flag_owned)
 
+    def test_resume_starts_auth_before_its_mail_relay(self):
+        auth = "luminovia-supabase-auth-1"
+        relay = "luminovia-supabase-mail-relay-1"
+        self.backup.stopped = [relay, auth]
+        starts = []
+
+        def fake(arguments, **_kwargs):
+            if arguments[:2] == ["docker", "start"]:
+                starts.append(arguments[-1])
+            if arguments[:2] == ["docker", "inspect"]:
+                return json.dumps([{"State": {"Running": True}}] * 2).encode()
+            return b""
+
+        with patch.object(b, "run", fake):
+            self.backup.resume()
+        self.assertEqual(starts, [auth, relay])
+
     def test_recovery_roots_exclude_recursive_backups_keys_caches_and_live_pgdata(self):
         self.assertTrue(self.backup.excluded(self.portal / "private/update-backups/old/storage.tar"))
         self.assertTrue(self.backup.excluded(self.portal / "private/updates/staging/release/file"))
