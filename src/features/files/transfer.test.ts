@@ -6,9 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   downloadDocument,
   downloadCourseScormPackage,
+  learningSubmissionMaxBytes,
   maximumFileSize,
   saveOrganisationContract,
   saveDownload,
+  saveExpenseReceipt,
   saveQualificationEvidence,
   uploadAcademyAnswerKeyPdf,
   uploadAcademyCourseMaterial,
@@ -19,6 +21,7 @@ import {
   uploadCourseScormPackage,
   uploadCourseSubmission,
   uploadDocument,
+  uploadExpenseReceipt,
   uploadOrganisationContract,
   uploadPortfolioEvidence,
 } from "./api";
@@ -232,6 +235,56 @@ describe("online, authenticated document transfers", () => {
     ]);
     request.respond(200, { document: { status: "clean" } });
     await expect(pending).resolves.toMatchObject({ status: "clean" });
+  });
+
+  it("rejects invalid receipt sizes before starting a transfer", async () => {
+    for (const size of [0, learningSubmissionMaxBytes + 1]) {
+      const bytes = file();
+      Object.defineProperty(bytes, "size", { value: size });
+      await expect(
+        uploadExpenseReceipt(bytes, "retry-id", "fictional-actor"),
+      ).rejects.toThrow("file_size");
+    }
+    expect(auth.getSession).not.toHaveBeenCalled();
+    expect(Request.requests).toHaveLength(0);
+  });
+
+  it.each([
+    ["expense_receipt", "scanned-version", "fictional-actor", true],
+    ["material", "scanned-version", "fictional-actor", false],
+    ["expense_receipt", null, "fictional-actor", false],
+    ["expense_receipt", "scanned-version", "another-actor", false],
+  ] as const)(
+    "validates a receipt with kind %s, version %s, and owner %s",
+    async (kind, current_version_id, owner_id, accepted) => {
+      const bytes = file();
+      const pending = uploadExpenseReceipt(
+        bytes,
+        "retry-id",
+        "fictional-actor",
+      );
+      await vi.waitFor(() => expect(Request.requests).toHaveLength(1));
+      const request = Request.requests[0];
+      expect(request.open).toHaveBeenCalledWith(
+        "POST",
+        "https://fictional.example.invalid/backend/functions/v1/files?mode=expense-receipt",
+      );
+      expect([...request.form!]).toEqual([
+        ["file", bytes],
+        ["client_id", "retry-id"],
+      ]);
+      const document = { status: "clean", kind, current_version_id, owner_id };
+      request.respond(200, { document });
+      if (accepted) await expect(pending).resolves.toEqual(document);
+      else await expect(pending).rejects.toThrow("upload_failed");
+    },
+  );
+
+  it("does not start a receipt upload after the account changes", async () => {
+    await expect(
+      uploadExpenseReceipt(file(), "retry-id", "previous-account"),
+    ).rejects.toThrow("account_changed");
+    expect(Request.requests).toHaveLength(0);
   });
 
   it("rejects invalid company PDF sizes before opening a transfer", () => {
@@ -697,6 +750,31 @@ describe("online, authenticated document transfers", () => {
       );
     },
   );
+
+  it("keeps the expense and reviewed version in a receipt download", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "access_denied" }), {
+          status: 403,
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      saveExpenseReceipt("expense-id", "reviewed-version", "Receipt.pdf"),
+    ).rejects.toThrow("access_denied");
+    expect(fetch).toHaveBeenCalledWith(
+      "https://fictional.example.invalid/backend/functions/v1/files",
+      expect.objectContaining({
+        cache: "no-store",
+        body: JSON.stringify({
+          action: "expense_receipt_download",
+          expense_id: "expense-id",
+          version_id: "reviewed-version",
+        }),
+      }),
+    );
+  });
 
   it.each(["document", "qualification", "company contract"] as const)(
     "saves %s only after authenticated bytes arrive, pins its gateway identity and releases its Blob URL",

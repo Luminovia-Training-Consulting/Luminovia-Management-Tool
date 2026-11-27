@@ -383,6 +383,12 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
   };
   fake.responses.training_control_center = {
     time_zone: "UTC",
+    filters: {
+      organisations: [{ id: job, name: "Fiktives Unternehmen" }],
+      topics: [
+        { id: job, label_de: "Fiktives Thema", label_en: "Fictional topic" },
+      ],
+    },
     operations: {
       upcoming: 2,
       active: 1,
@@ -419,13 +425,26 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
   expect(link).toHaveAttribute("href", `/courses?run=${job}`);
   expect(screen.getByLabelText("EUR")).toHaveTextContent("80,00");
   expect(screen.getByLabelText("AUD")).toHaveTextContent("50,00");
+  await user.selectOptions(screen.getByLabelText("Unternehmen"), job);
+  await user.selectOptions(screen.getByLabelText("Kursthema"), job);
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "training_control_center",
+      expect.objectContaining({ p_organisation_id: job, p_topic_id: job }),
+    ),
+  );
+  await screen.findByRole("link", { name: issue.title });
 
   await user.click(
     screen.getByRole("button", {
       name: /Hinweis zu Fiktive Schulung bestätigen/,
     }),
   );
-  await waitFor(() => expect(link).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("link", { name: issue.title }),
+    ).not.toBeInTheDocument(),
+  );
   expect(fake.rpc).toHaveBeenCalledWith("acknowledge_training_issue", {
     p_run_id: job,
     p_issue: "staffing",

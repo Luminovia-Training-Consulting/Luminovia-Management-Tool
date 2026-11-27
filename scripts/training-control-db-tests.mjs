@@ -4,10 +4,15 @@ import { randomUUID } from "node:crypto";
 import { quoteSql, withTestDatabase } from "./testing/database.mjs";
 
 const fixture = Object.fromEntries(
-  ["admin", "second", "lecturer", "template", "course"].map((key) => [
-    key,
-    randomUUID(),
-  ]),
+  [
+    "admin",
+    "second",
+    "lecturer",
+    "template",
+    "course",
+    "organisation",
+    "topic",
+  ].map((key) => [key, randomUUID()]),
 );
 const id = (key) => quoteSql(fixture[key]);
 const report =
@@ -22,8 +27,14 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
       (${id("admin")},'admin'),(${id("second")},'admin'),(${id("lecturer")},'lecturer');
     insert into public.course_templates(id,title) values
       (${id("template")},'Fictional metrics class');
-    insert into public.course_runs(id,template_id,published) values
-      (${id("course")},${id("template")},true);
+    insert into public.organisations(id,name) values
+      (${id("organisation")},'Fictional training company');
+    insert into public.topics(id,kind,label_de,label_en) values
+      (${id("topic")},'topic','Fiktives Thema','Fictional topic');
+    insert into public.course_template_topics(template_id,topic_id) values
+      (${id("template")},${id("topic")});
+    insert into public.course_runs(id,template_id,organisation_id,published) values
+      (${id("course")},${id("template")},${id("organisation")},true);
     insert into public.course_sessions(course_run_id,starts_at,ends_at)
       values (${id("course")},now()+interval '1 day',now()+interval '1 day 90 minutes');
     insert into public.lecturer_availability(id,user_id,kind,starts_at,ends_at,share_with_management,notes)
@@ -39,6 +50,37 @@ await withTestDatabase("training_control", async ({ actor, sql }) => {
   assert.equal(initial.operations.assigned_minutes, 0);
   assert.equal(initial.operations.unassigned_minutes, 90);
   assert.equal(initial.operations.attention, 1);
+  assert.deepEqual(initial.filters, {
+    organisations: [
+      { id: fixture.organisation, name: "Fictional training company" },
+    ],
+    topics: [
+      {
+        id: fixture.topic,
+        label_de: "Fiktives Thema",
+        label_en: "Fictional topic",
+      },
+    ],
+  });
+  const filtered = async (organisation, topic) =>
+    JSON.parse(
+      await actor(
+        fixture.admin,
+        `select public.training_control_center(current_date-2,current_date+5,${quoteSql(organisation)},${quoteSql(topic)})`,
+        "aal2",
+      ),
+    );
+  assert.equal(
+    (await filtered(fixture.organisation, fixture.topic)).operations.upcoming,
+    1,
+  );
+  assert.equal(
+    (await filtered(randomUUID(), fixture.topic)).operations.upcoming,
+    0,
+  );
+  const missing = await filtered(fixture.organisation, randomUUID());
+  assert.equal(missing.operations.upcoming, 0);
+  assert.deepEqual(missing.capacity, initial.capacity);
   const staffing = initial.operations.issues.find(
     (item) => item.code === "staffing",
   );

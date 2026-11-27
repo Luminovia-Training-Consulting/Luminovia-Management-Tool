@@ -14,6 +14,12 @@ export const trainingIssueCode = z.enum([
 ]);
 export const trainingControlSchema = z.object({
   time_zone: z.string().refine(validZone),
+  filters: z.object({
+    organisations: z.array(z.object({ id: z.uuid(), name: z.string() })),
+    topics: z.array(
+      z.object({ id: z.uuid(), label_de: z.string(), label_en: z.string() }),
+    ),
+  }),
   capacity: z
     .object({
       weeks: z.array(

@@ -2,13 +2,18 @@
 import i18n from "../../lib/i18n";
 
 const labels = {
+  organisation: ["Unternehmen", "Company"],
+  allOrganisations: ["Alle Unternehmen", "All companies"],
+  topic: ["Kursthema", "Course topic"],
+  allTopics: ["Alle Kursthemen", "All course topics"],
+  outsidePeriod: ["Keine Treffer im Zeitraum", "No matches in this period"],
   sharedCapacity: [
     "Freie Zeit aus geteilten Verfügbarkeiten",
     "Free time from shared availability",
   ],
   capacityHelp: [
-    "Nur freigegebene Zeitfenster. Bestätigte Einsätze und geteilte Abwesenheiten sind abgezogen.",
-    "Shared time windows only. Confirmed assignments and shared absences are deducted.",
+    "Alle freigegebenen Zeitfenster im Zeitraum. Bestätigte Einsätze und geteilte Abwesenheiten sind abgezogen.",
+    "All shared time windows in the period. Confirmed assignments and shared absences are deducted.",
   ],
   weeklyCapacity: ["Woche ab {{day}}", "Week beginning {{day}}"],
   capacityValue: [

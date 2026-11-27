@@ -26,13 +26,14 @@ language sql stable security invoker set search_path = '' as $$
         else reason.revision end as revision
     from prep
     cross join lateral (
-      select case requirement->>'code' when 'lecturer' then 'staffing'
-        when 'delivery' then 'delivery' when 'agreement' then 'agreement'
+      select case requirement->>'code' when 'delivery' then 'delivery' when 'agreement' then 'agreement'
         when 'qualification' then 'qualification' else 'preparation' end as issue,
         requirement->>'code' as revision
       from jsonb_array_elements(prep.detail->'checks') requirement
       where (requirement->>'applicable')::boolean and not (requirement->>'complete')::boolean
+        and requirement->>'code' <> 'lecturer'
         and (requirement->>'code' not in ('agreement','qualification') or p_missing_minutes = 0)
+      union all select 'staffing', 'lecturer' where p_missing_minutes > 0
     ) reason
   )
   select issue, pg_catalog.md5(p_run_id::text || '/' || (extract(epoch from p_start))::text || '/'
@@ -93,7 +94,7 @@ $$;
 revoke all on function private.training_shared_capacity(timestamptz,timestamptz,text)
   from public,anon,authenticated,service_role;
 
-create function private.training_control_center(p_from date, p_until date)
+create function private.training_control_center(p_from date, p_until date, p_organisation_id uuid, p_topic_id uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare
   actor uuid := auth.uid();
@@ -103,6 +104,10 @@ declare
   as_of constant timestamptz := now();
   operations jsonb := null;
   finance jsonb := null;
+  organisations jsonb := '[]'::jsonb;
+  topics jsonb := '[]'::jsonb;
+  read_courses boolean := private.has_permission('courses.manage');
+  read_receivables boolean := private.has_permission('finance.gross.read');
 begin
   if not private.actor_active() or not private.has_permission('jobs.manage')
       or not exists (select 1 from private.installation_identity where singleton and edition = 'internal') then
@@ -116,18 +121,48 @@ begin
   begins := p_from::timestamp at time zone zone;
   ends := p_until::timestamp at time zone zone;
 
-  if private.has_permission('courses.manage') then
+  -- Offer filter values only from sources the existing panel can read.
+  with visible_companies as (
+    select run.organisation_id from public.course_runs run
+    where read_courses and run.archived_at is null
+      and exists (select 1 from public.course_sessions session where session.course_run_id=run.id
+        and session.starts_at<ends and session.ends_at>begins)
+      and (run.published or exists (select 1 from public.jobs job where job.course_run_id=run.id
+        and job.status in ('published','filled')))
+    union
+    select invoice.organisation_id from private.accounting_customer_invoices invoice
+    where read_receivables and invoice.issued_on>=p_from and invoice.issued_on<p_until
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('id',item.id,'name',item.name) order by item.name,item.id),'[]'::jsonb)
+  into organisations from visible_companies visible join public.organisations item on item.id=visible.organisation_id;
+
+  if read_courses then
+    select coalesce(jsonb_agg(jsonb_build_object('id',item.id,'label_de',item.label_de,'label_en',item.label_en)
+      order by item.label_de,item.id),'[]'::jsonb)
+    into topics from public.topics item
+    where exists (
+      select 1 from public.course_template_topics link join public.course_runs run on run.template_id=link.template_id
+      where link.topic_id=item.id and run.archived_at is null
+        and exists (select 1 from public.course_sessions session where session.course_run_id=run.id
+          and session.starts_at<ends and session.ends_at>begins)
+        and (run.published or exists (select 1 from public.jobs job where job.course_run_id=run.id
+          and job.status in ('published','filled')))
+    );
+
     with window_sessions as materialized (
       select session.id,session.course_run_id,session.starts_at,session.ends_at,
         extract(epoch from least(session.ends_at, ends) - greatest(session.starts_at, begins)) / 60 as minutes
       from public.course_sessions session
       join public.course_runs run on run.id=session.course_run_id
       where session.starts_at < ends and session.ends_at > begins and run.archived_at is null
+        and (p_organisation_id is null or run.organisation_id=p_organisation_id)
+        and (p_topic_id is null or exists (select 1 from public.course_template_topics link
+          where link.template_id=run.template_id and link.topic_id=p_topic_id))
         and (run.published or exists (select 1 from public.jobs job where job.course_run_id=run.id
           and job.status in ('published','filled')))
     ), positions as (
       select session.id, session.course_run_id, session.minutes,
-        greatest(1, coalesce(sum(job.capacity), 0)) as required,
+        greatest(1, coalesce(sum(job.capacity) filter (where cover.is_cover is null), 0)) as required,
         coalesce(sum(least(job.capacity, assignment.count)), 0) as assigned
       from window_sessions session
       left join public.job_sessions slot on slot.course_session_id=session.id
@@ -135,6 +170,12 @@ begin
         and exists (select 1 from public.jobs live where live.id=slot.job_id
           and live.course_run_id=session.course_run_id and live.status in ('published','filled'))
       left join public.jobs job on job.id=slot.job_id
+      -- A cover order fills a released position on the original offer.
+      left join lateral (
+        select true as is_cover from public.job_claims claim
+        join private.partial_teaching_replacements handover on handover.replacement_claim_id=claim.id
+        where claim.job_id=job.id limit 1
+      ) cover on job.id is not null
       left join lateral (
         select count(*) as count
         from public.job_claims claim
@@ -147,7 +188,7 @@ begin
       group by session.id,session.course_run_id,session.minutes
     ), runs as materialized (
       select position.course_run_id as id, sum(position.required*position.minutes) as required,
-        sum(position.assigned*position.minutes) as assigned
+        sum(least(position.required, position.assigned)*position.minutes) as assigned
       from positions position group by position.course_run_id
     ), facts as materialized (
       select run.id, run.required, run.assigned, schedule.starts_at, schedule.ends_at
@@ -184,7 +225,7 @@ begin
     ) into operations from facts;
   end if;
 
-  if private.has_permission('finance.gross.read') then
+  if read_receivables then
     with invoices as materialized (
       select invoice.id,invoice.number,invoice.due_on,invoice.currency,organisation.name as organisation,
         settlement.net_total,settlement.retained_total,settlement.outstanding_total
@@ -192,6 +233,7 @@ begin
       join public.organisations organisation on organisation.id=invoice.organisation_id
       cross join lateral private.calculate_customer_settlement(invoice.id) settlement
       where invoice.issued_on>=p_from and invoice.issued_on<p_until
+        and (p_organisation_id is null or invoice.organisation_id=p_organisation_id)
     ), overdue as (
       select id,number,due_on,currency,organisation,outstanding_total
       from invoices where due_on < (as_of at time zone zone)::date and outstanding_total>0
@@ -206,7 +248,7 @@ begin
     ) into finance;
   end if;
   return jsonb_build_object('time_zone',zone,'operations',operations,'receivables',finance,
-    'capacity',case when private.has_permission('availability.read_shared')
+    'filters',jsonb_build_object('organisations',organisations,'topics',topics),'capacity',case when private.has_permission('availability.read_shared')
       then private.training_shared_capacity(begins,ends,zone) end);
 end;
 $$;
@@ -240,9 +282,9 @@ begin
 end;
 $$;
 
-create function public.training_control_center(p_from date,p_until date)
+create function public.training_control_center(p_from date,p_until date,p_organisation_id uuid default null,p_topic_id uuid default null)
 returns jsonb language sql stable security invoker set search_path = '' as $$
-  select private.training_control_center(p_from,p_until)
+  select private.training_control_center(p_from,p_until,p_organisation_id,p_topic_id)
 $$;
 
 create function public.acknowledge_training_issue(p_run_id uuid,p_issue text,p_fingerprint text,p_acknowledged boolean)
@@ -250,9 +292,9 @@ returns boolean language sql security invoker set search_path = '' as $$
   select private.acknowledge_training_issue(p_run_id,p_issue,p_fingerprint,p_acknowledged)
 $$;
 
-revoke all on function private.training_control_center(date,date),public.training_control_center(date,date),
+revoke all on function private.training_control_center(date,date,uuid,uuid),public.training_control_center(date,date,uuid,uuid),
   private.acknowledge_training_issue(uuid,text,text,boolean),public.acknowledge_training_issue(uuid,text,text,boolean)
   from public, anon, authenticated, service_role;
-grant execute on function private.training_control_center(date,date),public.training_control_center(date,date),
+grant execute on function private.training_control_center(date,date,uuid,uuid),public.training_control_center(date,date,uuid,uuid),
   private.acknowledge_training_issue(uuid,text,text,boolean),public.acknowledge_training_issue(uuid,text,text,boolean) to authenticated;
 commit;

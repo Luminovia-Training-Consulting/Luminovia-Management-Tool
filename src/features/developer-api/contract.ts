@@ -2472,6 +2472,14 @@ const nativePaths = {
           preparation_count: z.number().int().nonnegative(),
           material_count: z.number().int().nonnegative(),
           contact: z.boolean(),
+          offer: z
+            .object({
+              title: z.string(),
+              currency: z.string(),
+              base_total: z.number(),
+              requirements: z.boolean(),
+            })
+            .nullish(),
         }),
       ]),
     ),
@@ -2665,9 +2673,14 @@ const nativePaths = {
     "getTrainingControlCenter",
     "Operations",
     "Read training coverage and receivables",
-    "Internal installation only. Requires jobs.manage. Operations requires courses.manage; customer balances require finance.gross.read. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Receivables are filtered by invoice date and use current balances. Courses starting within three days are checked for unique issue types.",
-    operationsPeriod,
+    "Internal installation only. Requires jobs.manage. Operations requires courses.manage; customer balances require finance.gross.read. Dates cover up to 93 days in the caller's time zone, with an exclusive end date. Receivables are filtered by invoice date and use current balances. Courses starting within three days are checked for unique issue types. Company filters coverage and receivables. Topic filters course coverage and uses a template topic. Availability covers all shared hours in the period.",
+    {
+      ...operationsPeriod,
+      p_organisation_id: nullableUuid,
+      p_topic_id: nullableUuid,
+    },
     z.toJSONSchema(trainingControlSchema),
+    ["p_organisation_id", "p_topic_id"],
   ),
   "/rest/v1/rpc/acknowledge_training_issue": rpc(
     "acknowledgeTrainingIssue",
@@ -3258,6 +3271,78 @@ const nativePaths = {
     { p_claim_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
     manualAssignmentCandidates,
     ["p_search"],
+  ),
+  "/rest/v1/rpc/partial_replacement_options": rpc(
+    "listPartialTeachingReplacementOptions",
+    "Jobs",
+    "Read eligible future dates and search cover lecturers",
+    "Requires jobs.manage and finance.manage on an internal installation. Past and evidenced dates are excluded. Search returns up to 50 candidates. Eligibility for the selected schedule is checked at confirmation.",
+    { p_claim_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
+    {
+      anyOf: [
+        object({
+          sessions: {
+            type: "array",
+            items: object({ id: uuid, ...timestampInterval }),
+          },
+          candidates: {
+            type: "array",
+            items: object({ id: uuid, name: text }),
+          },
+          currency: text,
+        }),
+        { type: "null" },
+      ],
+    },
+    ["p_search"],
+  ),
+  "/rest/v1/rpc/replace_teaching_sessions": rpc(
+    "replaceSelectedTeachingSessions",
+    "Jobs",
+    "Transfer selected future dates to a cover lecturer",
+    "Requires jobs.manage and finance.manage on an internal installation. Rechecks the job version, lecturer eligibility, reserved invoices and the original schedule. The cover fee uses the assignment currency. The original keeps its agreed terms and finance reviews its retained delivery before invoicing. Reuse a request ID only for an identical retry.",
+    {
+      p_claim_id: uuid,
+      p_expected_job_version: { ...version, minimum: 1 },
+      p_session_ids: {
+        type: "array",
+        minItems: 1,
+        maxItems: 59,
+        uniqueItems: true,
+        items: uuid,
+      },
+      p_lecturer_id: uuid,
+      p_total: { ...text, pattern: "^[0-9]{1,10}(\\.[0-9]{1,2})?$" },
+      p_terms: { ...text, minLength: 1, maxLength: 8000 },
+      p_reason: { ...text, minLength: 5, maxLength: 1000 },
+      ...idempotency,
+    },
+    {
+      anyOf: [
+        object({
+          status: { const: "confirmed" },
+          job_id: uuid,
+          claim_id: uuid,
+          replacement_id: uuid,
+        }),
+        object({
+          status: {
+            enum: [
+              "unavailable",
+              "terms_changed",
+              "not_eligible",
+              "conflict",
+              "prerequisite_missing",
+              "idempotency_conflict",
+              "cancelled",
+              "filled",
+              "already_assigned",
+              "quote_unavailable",
+            ],
+          },
+        }),
+      ],
+    },
   ),
   "/rest/v1/rpc/replace_job_lecturer": rpc(
     "native_replace_job_lecturer",

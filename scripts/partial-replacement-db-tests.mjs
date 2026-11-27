@@ -225,6 +225,15 @@ await withTestDatabase("partial_replacement", async ({ sql, actor }) => {
     ),
     "2",
   );
+  // The signed cover fills the original teaching position without raising the course demand.
+  const report = await actor(
+    manager,
+    "select public.training_control_center(current_date+9,current_date+14)",
+    "aal2",
+  ).then(json);
+  assert.equal(report.operations.assigned_minutes, 360);
+  assert.equal(report.operations.unassigned_minutes, 0);
+  assert.equal(report.operations.partly_staffed, 0);
   const lifecycle = await actor(
     manager,
     "select public.job_lifecycle(" + q(job) + ")",
