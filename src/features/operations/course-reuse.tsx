@@ -1,16 +1,17 @@
 /** Review reusable course setup before the server creates an independent draft. */
 import { useId, useState, type FormEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { Field, Notice } from "../../components/common";
 import { SessionScroll } from "../../components/session-scroll";
 import { Button } from "../../components/ui/button";
-import { dateTime } from "../../lib/dates";
+import { dateTime, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { useRequestKey } from "../../lib/request-key";
 import { db } from "../../lib/supabase";
+import { useAuth } from "../auth/auth-context";
 import type { CourseRun } from "./data";
 import i18n from "../../lib/i18n";
 import "./course-reuse.css";
@@ -32,7 +33,17 @@ const de = {
   preparation: "Vorbereitungsaufgaben als offen übernehmen",
   materials: "Eigene zur Wiederverwendung freigegebene Kursmaterialien",
   credentials:
-    "Der neue Kurs bleibt ein Entwurf. Meeting-Links, Zugangsdaten, Aufträge und bisherige Nachweise werden nicht übernommen.",
+    "Der neue Kurs bleibt ein Entwurf. Meeting-Links, Zugangsdaten und bisherige Nachweise werden nicht übernommen.",
+  offer: "Vergütung aus einem bestehenden Angebot als Entwurf übernehmen",
+  noOffer: "Keinen Angebotspreis übernehmen",
+  offerRequirements:
+    "Qualifikationen, Sprachen und Nachweisanforderungen übernehmen",
+  offerReview:
+    "Neuer Angebotsentwurf · {{title}} · {{amount}} Grundhonorar für den Kunden",
+  offerHint:
+    "Das Angebot übernimmt den Preis und die allgemeinen Vergütungsregeln. Konditionen und individuelle Terminbeträge werden neu geprüft.",
+  offerLoadFailed:
+    "Vergütungsvorlagen für diesen Kurs konnten nicht geladen werden.",
   preview: "Kurskopie prüfen",
   plannedDates: "Vorgesehene Termine",
   noSessions: "Der Entwurf erhält keine Termine.",
@@ -64,7 +75,14 @@ const en = {
   preparation: "Copy preparation tasks as open",
   materials: "Own course materials available for reuse",
   credentials:
-    "The copy is a new draft. Meeting links, access credentials, teaching offers and existing evidence stay with the original.",
+    "The copy is a new draft. Meeting links, access credentials and existing evidence stay with the original.",
+  offer: "Create an offer draft using existing compensation",
+  noOffer: "Skip offer pricing",
+  offerRequirements: "Copy qualifications, languages and evidence requirements",
+  offerReview: "New offer draft · {{title}} · {{amount}} customer base fee",
+  offerHint:
+    "The draft includes base pricing and general compensation rules. Review terms and individual session rates separately.",
+  offerLoadFailed: "Unable to load reusable offers for this course.",
   preview: "Review course copy",
   plannedDates: "Planned sessions",
   noSessions: "The draft will have no sessions.",
@@ -93,6 +111,15 @@ const copyPlan = z.object({
   preparation_count: z.number().int(),
   material_count: z.number().int(),
   contact: z.boolean(),
+  offer: z
+    .object({
+      title: z.string(),
+      currency: z.string(),
+      base_total: z.number(),
+      requirements: z.boolean(),
+    })
+    .nullable()
+    .optional(),
 });
 type TemplateMode = "reuse" | "copy" | "blank";
 type ScheduleMode = "same" | "shift" | "none";
@@ -106,6 +133,8 @@ type CopyOptions = {
   preparation: boolean;
   contact: boolean;
   materials: boolean;
+  offer_id: string | null;
+  offer_requirements: boolean;
 };
 
 export function CourseReuseForm({
@@ -120,6 +149,8 @@ export function CourseReuseForm({
   const { t, i18n: locale } = useTranslation("courseReuse");
   const prefix = useId();
   const online = useOnline();
+  const { session } = useAuth();
+  const actor = session?.user.id;
   const requestKey = useRequestKey();
   const [options, setOptions] = useState<CopyOptions>({
     template: "reuse",
@@ -131,6 +162,26 @@ export function CourseReuseForm({
     contact: false,
     preparation: false,
     materials: false,
+    offer_id: null,
+    offer_requirements: false,
+  });
+  const reusableOffers = useQuery({
+    queryKey: ["training-course-reuse-offers", actor, run.id],
+    enabled: Boolean(actor && run.jobs?.length),
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await db().rpc("copy_training_course", {
+        p_source_run_id: run.id,
+        p_action: "options",
+        p_options: {},
+      });
+      if (error) throw error;
+      return z
+        .array(
+          z.object({ id: z.uuid(), title: z.string(), currency: z.string() }),
+        )
+        .parse(data);
+    },
   });
   const signature = JSON.stringify(options);
   const [review, setReview] = useState<{
@@ -228,6 +279,9 @@ export function CourseReuseForm({
                 setOptions({
                   ...options,
                   schedule: event.target.value as ScheduleMode,
+                  ...(event.target.value === "none"
+                    ? { offer_id: null, offer_requirements: false }
+                    : {}),
                 })
               }
             >
@@ -292,6 +346,53 @@ export function CourseReuseForm({
             </label>
           ))}
         </div>
+        {reusableOffers.isError && (
+          <Notice kind="error">{t("offerLoadFailed")}</Notice>
+        )}
+        {Boolean(reusableOffers.data?.length) &&
+          options.schedule !== "none" && (
+            <>
+              <Field
+                id={`${prefix}-offer`}
+                label={t("offer")}
+                hint={t("offerHint")}
+              >
+                <select
+                  id={`${prefix}-offer`}
+                  value={options.offer_id ?? ""}
+                  onChange={(event) =>
+                    setOptions({
+                      ...options,
+                      offer_id: event.target.value || null,
+                      offer_requirements: false,
+                    })
+                  }
+                >
+                  <option value="">{t("noOffer")}</option>
+                  {reusableOffers.data?.map((offer) => (
+                    <option key={offer.id} value={offer.id}>
+                      {offer.title} ({offer.currency})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {options.offer_id && (
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={options.offer_requirements}
+                    onChange={(event) =>
+                      setOptions({
+                        ...options,
+                        offer_requirements: event.target.checked,
+                      })
+                    }
+                  />
+                  {t("offerRequirements")}
+                </label>
+              )}
+            </>
+          )}
         <div className="form-actions">
           <Button variant="secondary" type="submit" disabled={!online}>
             {t("preview")}
@@ -349,6 +450,19 @@ export function CourseReuseForm({
               <li>{t("materialCount", { count: preview.material_count })}</li>
             )}
             {preview.contact && <li>{t("contactIncluded")}</li>}
+            {preview.offer && (
+              <li>
+                {t("offerReview", {
+                  title: preview.offer.title,
+                  amount: money(
+                    preview.offer.base_total,
+                    preview.offer.currency,
+                    locale.language,
+                  ),
+                })}
+              </li>
+            )}
+
             {preview.structured_delivery && <li>{t("structuredIncluded")}</li>}
           </ul>
         </section>

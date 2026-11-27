@@ -9,6 +9,9 @@ import { CourseReuseForm } from "./course-reuse";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: mocks.rpc }) }));
+vi.mock("../auth/auth-context", () => ({
+  useAuth: () => ({ session: { user: { id: "fictional-staff" } } }),
+}));
 afterEach(cleanup);
 
 it("reuses the exact confirmation on retry and invalidates the review when a copy option changes", async () => {

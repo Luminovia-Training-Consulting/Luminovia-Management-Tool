@@ -306,4 +306,101 @@ await withTestDatabase("training_reuse", async ({ sql, actor }) => {
   console.log(
     "PASS DST folds and gaps reject from server-side shifted scheduling",
   );
+
+  const management = randomUUID();
+  await sql(`
+    insert into auth.users(id) values ('${management}');
+    insert into public.user_roles(user_id,role) values ('${management}','management');
+    insert into public.job_sessions(job_id,course_session_id,starts_at,ends_at)
+      select '${sourceJob}',id,starts_at,ends_at from public.course_sessions where course_run_id = '${source}';
+    insert into private.job_matching_requirements(job_id,qualification_topics,teaching_languages)
+      values ('${sourceJob}','{}',array['de']);
+  `);
+  await actor(
+    admin,
+    `select public.set_job_commission('${sourceJob}',200,200,20)`,
+  );
+  const originalPrice = JSON.parse(
+    await actor(
+      admin,
+      `select public.training_offer_compensation('${sourceJob}','read')`,
+    ),
+  );
+  const templatePrice = {
+    configuration: {
+      unit_minutes: 60,
+      components: [
+        {
+          kind: "travel",
+          label: "",
+          basis: "fixed_total",
+          treatment: "pass_through",
+          customer_rate: "45.00",
+          reason: "",
+        },
+      ],
+    },
+    unpaid_breaks: {},
+  };
+  await actor(
+    admin,
+    `select public.training_offer_compensation('${sourceJob}','save',${originalPrice.terms_version},
+    ${quoteSql(JSON.stringify(templatePrice))})`,
+  );
+  const financeOptions = await call(admin, "options", {});
+  assert.deepEqual(financeOptions, [
+    { id: sourceJob, title: "Fictional source offer", currency: "EUR" },
+  ]);
+  assert.deepEqual(await call(management, "options", {}), []);
+  const offerPlan = {
+    ...options,
+    offer_id: sourceJob,
+    offer_requirements: true,
+  };
+  await assert.rejects(
+    call(management, "preview", offerPlan),
+    /insufficient_privilege|42501/,
+  );
+  const offerReview = await call(admin, "preview", offerPlan);
+  assert.equal(offerReview.offer.base_total, 200);
+  const copiedOfferRun = await call(
+    admin,
+    "save",
+    offerPlan,
+    offerReview.revision,
+    randomUUID(),
+  );
+  const withOffer = JSON.parse(
+    await sql(`select to_jsonb(job) from public.jobs job
+    where course_run_id='${copiedOfferRun.course_run_id}'`),
+  );
+  assert.notEqual(withOffer.id, sourceJob);
+  assert.equal(withOffer.status, "draft");
+  assert.notEqual(withOffer.terms, "Existing terms");
+  assert.equal(
+    await sql(
+      `select count(*) from public.job_claims where job_id='${withOffer.id}'`,
+    ),
+    "0",
+  );
+  assert.equal(
+    await sql(
+      `select gross_total_amount from private.job_commission_offers where job_id='${withOffer.id}'`,
+    ),
+    "200.00",
+  );
+  assert.equal(
+    await sql(`select training_components->'configuration'->'components'->0->>'customer_rate'
+    from private.job_commission_offers where job_id='${withOffer.id}'`),
+    "45.00",
+  );
+  assert.equal(
+    await sql(
+      `select teaching_languages[1] from private.job_matching_requirements where job_id='${withOffer.id}'`,
+    ),
+    "de",
+  );
+  console.log(
+    "PASS Optional paid offer draft copies scoped base pricing, compensation and requirements without prior terms or claims",
+  );
 });
