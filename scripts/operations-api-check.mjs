@@ -373,22 +373,29 @@ await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql})
         );
         assert.equal(claim.status, "confirmed");
         const assignedCourse = () =>
-            lecturer.client
-                .from("course_runs")
-                .select("venue,course_sessions(id,starts_at,ends_at)")
-                .eq("id", run)
-                .order("starts_at", {referencedTable: "course_sessions"})
-                .single();
+            lecturer.client.rpc("course_workspace", {p_run_id: run});
         const assigned = await checked(
             assignedCourse(),
-            "Assigned lecturer reads the course and its sessions",
+            "Assigned lecturer reads the privacy-preserving course workspace",
         );
-        assert.equal(assigned.course_sessions.length, 2);
-        const customer = await checked(
-            lecturer.client.from("organisations").select("name").eq("id", org).single(),
-            "Assigned lecturer sees the customer identity",
+        assert.equal(assigned.id, run);
+        assert.equal(assigned.sessions.length, 2);
+        assert.equal(assigned.venue, "");
+        assert.equal(assigned.contact, null);
+        assert.deepEqual(
+            await checked(
+                lecturer.client.from("course_runs").select("id").eq("id", run),
+                "Hide raw course rows while the customer identity is withheld",
+            ),
+            [],
         );
-        assert.equal(customer.name, base.name);
+        assert.deepEqual(
+            await checked(
+                lecturer.client.from("organisations").select("name").eq("id", org),
+                "Keep customer identity hidden before the reveal window",
+            ),
+            [],
+        );
         for (const request of directCompanyRows(lecturer))
             assert.deepEqual(await checked(request, "Private company data after assignment"), []);
         assert.equal(
@@ -411,10 +418,13 @@ await withApiFixture(async ({actor, checked, defer, passwordOnly, service, sql})
             ),
             run,
         );
-        assert.deepEqual(
-            await checked(assignedCourse(), "Course venue update preserves the booked sessions"),
-            {...assigned, venue},
+        const updatedWorkspace = await checked(
+            assignedCourse(),
+            "Course workspace preserves the booked sessions without revealing the customer",
         );
+        assert.deepEqual(updatedWorkspace.sessions, assigned.sessions);
+        assert.equal(updatedWorkspace.venue, "");
+        assert.equal(updatedWorkspace.contact, null);
         assert.equal(
             (
                 await admin.client.rpc("save_course_template", {
