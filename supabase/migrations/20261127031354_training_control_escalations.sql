@@ -73,7 +73,7 @@ begin
   end if;
   select time_zone into strict zone from public.profiles where id=auth.uid();
   created_task := private.save_work_task(null,jsonb_build_object(
-    'title',left(current_issue->>'title',200),'description',btrim(p_reason)||E'\n\n/courses?run='||p_run_id,
+    'title',left(current_issue->>'title',200),'description',btrim(p_reason),
     'state','open','due_at',p_due_at,'time_zone',zone,'scope','operations',
     'assignee_id',p_assignee_id,'source_message_id',null
   ),0,gen_random_uuid());
