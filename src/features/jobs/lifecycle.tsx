@@ -48,6 +48,8 @@ import { orgQuery } from "../operations/data";
 import { JobClassFeedback } from "../operations/company-class-feedback";
 import { briefingWebUrl } from "./briefing-api";
 
+const PartialTeachingReplacement = lazy(() => import("./partial-replacement"));
+
 const AssignmentScheduleForm = lazy(() =>
   import("../changes/changes").then(({ ChangeForm }) => ({
     default: ChangeForm,
@@ -664,6 +666,17 @@ export function JobLifecyclePanel({
                       lecturer: claim.lecturer_name,
                     }}
                   />
+                )}
+              {online &&
+                info.partial_replaceable_claim_ids?.includes(claim.id) && (
+                  <Suspense fallback={null}>
+                    <PartialTeachingReplacement
+                      actor={session!.user.id}
+                      claimId={claim.id}
+                      version={info.version}
+                      zone={job.time_zone}
+                    />
+                  </Suspense>
                 )}
               {claim.can_cancel &&
                 info.can_manage &&

@@ -334,6 +334,8 @@ export default defineConfig(({ mode }) => {
             "**/offer-delivery-summary-*.js",
             "**/expense-panel-*.{js,css}",
             "**/assignment-finance-*.{js,css}",
+            // Selected-session cover validates live finance and availability.
+            "**/partial-replacement-*.{js,css}",
             // These private LMS workflows require a live session and load on entry.
             "**/portfolio-*.js",
             "**/peer-feedback-*.js",

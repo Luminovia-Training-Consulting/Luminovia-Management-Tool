@@ -44,6 +44,7 @@ export interface JobLifecycle {
   can_edit: boolean;
   can_edit_metadata?: boolean;
   replaceable_claim_ids?: string[];
+  partial_replaceable_claim_ids?: string[];
   can_edit_schedule?: boolean;
   can_edit_course_details?: boolean;
   can_duplicate: boolean;
