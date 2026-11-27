@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Search, UserPlus, UsersRound, X } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
+import { PersonRatingButton } from "../people/person-rating";
 import { JobPicker } from "../jobs/picker";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
@@ -111,6 +112,11 @@ export function ContactPicker({
                 <span>{contactName(contact, t("unnamed"))}</span>
                 <UserPlus size={17} />
               </button>
+              <PersonRatingButton
+                actor={actor}
+                person={contact.id}
+                name={contactName(contact, t("unnamed"))}
+              />
             </li>
           ))}
           {filtered.length === 0 && (
@@ -439,6 +445,13 @@ export function MembersPanel({
                     <small>{t("owner")}</small>
                   )}
                 </span>
+                {member.user_id !== actor && (
+                  <PersonRatingButton
+                    actor={actor}
+                    person={member.user_id}
+                    name={member.display_name || t("unnamed")}
+                  />
+                )}
                 {canManage &&
                   member.user_id !== room.owner_id &&
                   (room.kind === "participant_course" ||

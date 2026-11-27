@@ -136,6 +136,10 @@ Open **Meine Rollen / My roles** on your own account card as an internal adminis
 
 When another authorised account removes a lecturer from an assignment, the lecturer can read the reason and use **Einspruch einlegen / File an appeal** in the inbox. Reviewers receive an inbox link to **Verwaltung → Aufträge → Einsprüche prüfen / Administration → Assignments → Review appeals**. They record a decision and its reason there. The lecturer receives the decision in the original notice, which becomes unread again. A successful appeal can be followed by a new allocation through the usual scheduling and consent checks.
 
+## Personal star ratings
+
+In the internal portal, select **Person bewerten / Rate person** from an accessible profile, chat contact or chat member. Choose one to five stars and optionally leave a comment. You can give or update your rating at any time while you have access to that person. **Erhaltene Bewertungen / Ratings received** in your own profile shows your latest ratings and comments without the reviewers' names.
+
 <a id="section-user-guide-permanent-deletion"></a>
 
 ## Permanent deletion

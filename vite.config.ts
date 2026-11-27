@@ -338,6 +338,7 @@ export default defineConfig(({ mode }) => {
             // Appeals and retention controls require a live actor and revision.
             "**/removal-appeals-*.js",
             "**/retention-*.js",
+            "**/person-rating-dialog-*.js",
             "**/job-publication-window-*.js",
             "**/offer-delivery-summary-*.js",
             "**/expense-panel-*.{js,css}",

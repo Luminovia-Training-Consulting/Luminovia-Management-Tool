@@ -13,6 +13,7 @@ import { PersonManagementActions } from "../accounts/person-actions";
 import { Avatar } from "../profile/avatar";
 import { chatContactsQuery } from "../chat/api";
 import { LoadMore } from "../../components/load-more";
+import { PersonRatingButton } from "./person-rating";
 import { PersonContact } from "./person-contact";
 import { LuminoviaTeachingTime } from "./luminovia-teaching-time";
 import { useAuth } from "../auth/auth-context";
@@ -345,6 +346,12 @@ function BookedPersonProfile({ id }: { id: string }) {
       </p>
       <Avatar userId={id} name={details.display_name} size="large" />
       <div className="page-actions people-profile-actions">
+        <PersonRatingButton
+          key={id}
+          actor={actor}
+          person={id}
+          name={details.display_name}
+        />
         <PersonManagementActions id={id} name={details.display_name} />
         {portalInternalEdition &&
           id !== actor &&
