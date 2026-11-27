@@ -303,7 +303,7 @@ Accepted full/net/platform snapshots cannot be repriced by a later policy/role c
 
 ## Course workspaces, customers and participants
 
-In **Kurs- und Auftragsentwürfe / Course and assignment drafts**, start or resume a managed draft. **Zwischenstand speichern / Save progress** writes an actor-owned server revision. A stale revision requires a reload before continuing. Use the draft library to copy a draft or delete it after confirmation. Saving a course creates its scheduled draft and offers a separate review of the teaching offer where your role permits it.
+In **Kurs- und Auftragsentwürfe / Course and assignment drafts**, start or resume a managed draft. **Zwischenstand speichern / Save progress** writes an actor-owned server revision. A stale revision requires a reload before continuing. Use the draft library to copy a draft or delete it after confirmation. In an active Academy, open the same course editor from **Lernen / Learning**. After creation, resume the saved run from its course workspace. In the portal, where your role permits it, choose the separate teaching offer review after saving the course draft.
 
 In the course workspace, open **Durchführung und Lernorte / Delivery and venues**. Set course defaults, then enable **Individuelle Termineinstellungen ermöglichen / Allow individual session settings** to change selected sessions. Hybrid supplies both a physical venue and a joining link. Mixed describes a course with different modes on separate dates. Turning off the individual settings keeps them available. **Auf Kursstandard zurücksetzen / Reset to course default** removes a session override. Use **Lernorte der Organisation / Organisation venues** to create, revise, archive or choose a default venue. A directory change does not move a previously configured course.
 
@@ -781,7 +781,7 @@ In a linked customer enquiry, use **Kursentwurf aus Anfrage öffnen / Open cours
 
 Open **Gespeicherte Angebotsentwürfe / Saved offer drafts** in a standalone or course-backed offer form to resume or duplicate an unfinished offer. **Zwischenstand speichern / Save progress** saves incomplete values without creating a public listing. The library links to the resulting assignment after the offer is confirmed.
 
-When copying a course, choose the schedule and content to reuse, then review the preview before saving. You can include an unpublished offer based on its base compensation and optionally its eligibility requirements. The copied offer needs its own terms and publication review.
+When copying a course, choose the schedule and content to reuse, then review the preview before saving. You can include an unpublished offer based on its base compensation and optionally its eligibility requirements. The saved copy opens in **Bearbeiten / Edit** and the address can reopen the same draft. The copied offer needs its own terms and publication review.
 
 In an eligible assignment, **Einzelne Termine vertreten / Replace selected sessions** lets staff with job and finance permissions select the eligible future dates, search for a lecturer, and review the separate cover fee. The original lecturer retains their other dates and recorded teaching. Finance reviews the retained delivery before invoicing. Assignments with a reserved or issued invoice are unavailable for this action.
 

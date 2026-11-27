@@ -5,7 +5,7 @@
 import {expect, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {assertPointerReady} from "./helpers/pointer-readiness";
-import {actor, assertPasswordOnly} from "./helpers/accounts-support";
+import {actor, assertPasswordOnly, login} from "./helpers/accounts-support";
 import {createClient} from "@supabase/supabase-js";
 import {randomUUID} from "node:crypto";
 import {DateTime} from "luxon";
@@ -23,17 +23,6 @@ function api(key: string) {
     return createClient(url, key, {
         auth: {persistSession: false, autoRefreshToken: false},
     });
-}
-
-/** Signs this test actor in through the visible form and waits for confirmed navigation. */
-async function login(page: Page, email: string) {
-    await page.goto("/login");
-    await page.getByLabel("E-Mail", {exact: true}).fill(email);
-    await page
-        .getByLabel("Passwort", {exact: true})
-        .fill(process.env.E2E_PASSWORD!);
-    await page.getByRole("button", {name: "Anmelden", exact: true}).click();
-    await expect(page).toHaveURL(/\/$/);
 }
 
 /** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
@@ -244,12 +233,27 @@ test("admin persists private customer/contact, course template/run and safe unpu
         .click();
     dialog = page.getByRole("dialog");
     await expect(dialog).toContainText(
-        "keine Aufträge, Verträge, persönlichen Daten",
+        "Der neue Kurs bleibt ein Entwurf. Meeting-Links, Zugangsdaten und bisherige Nachweise werden nicht übernommen.",
     );
+    const createCopy = dialog.getByRole("button", {name: "Kursentwurf erstellen", exact: true});
+    await expect(createCopy).toBeDisabled();
     await dialog.getByRole("button", {name: "Kurskopie prüfen", exact: true}).click();
-    await dialog.getByRole("button", {name: "Kursentwurf erstellen", exact: true}).click();
+    await expect(dialog.getByText("Der Entwurf erhält keine Termine.")).toBeVisible();
+    await createCopy.click();
     const editor = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
     await expect(editor).toBeVisible();
+    const copyId = new URL(page.url()).searchParams.get("editRun");
+    expect(copyId).toMatch(/^[0-9a-f-]{36}$/);
+    const savedCopy = await service.from("course_runs")
+        .select("published,course_sessions(id),jobs(id),course_enrolments(user_id)")
+        .eq("id", copyId!).single();
+    expect(savedCopy.error).toBeNull();
+    expect(savedCopy.data).toEqual({
+        published: false,
+        course_sessions: [],
+        jobs: [],
+        course_enrolments: [],
+    });
     await page.reload();
     await expect(editor).toBeVisible();
     await editor.getByRole("button", {name: "Schließen", exact: true}).click();

@@ -61,6 +61,7 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
                                                                                                     page,
                                                                                                     browser,
                                                                                                 }) => {
+    test.setTimeout(90_000);
     const admin = await actor("Fictional Premium admin", "admin"),
         manager = await actor("Fictional Premium manager", "management"),
         service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -69,8 +70,12 @@ test("only an actual admin can confirm Premium ON/OFF and inspect retained cours
     await checked(service.from("organisations").insert({id: organisation, name}));
     try {
         await login(page, admin.email);
-        await page.goto("/admin/clients");
-        await page.getByRole("searchbox", {name: "Suchen", exact: true}).fill(name);
+        const search = page.getByRole("searchbox", {name: "Suchen", exact: true});
+        await expect(async () => {
+            await page.goto("/admin/clients", {waitUntil: "commit", timeout: 8_000});
+            await expect(search).toBeVisible({timeout: 8_000});
+        }).toPass({timeout: 28_000, intervals: [300]});
+        await search.fill(name);
         await page.getByRole("button", {name, exact: true}).click();
         const premiumSwitch = page.getByRole("switch", {name: "Premium LMS", exact: true});
         await expect(premiumSwitch).toBeVisible();

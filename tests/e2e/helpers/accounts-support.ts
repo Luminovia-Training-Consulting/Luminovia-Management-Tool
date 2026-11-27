@@ -94,8 +94,14 @@ export async function actor(name: string, role: string) {
 
 /** Signs this test actor in through the visible form and waits for confirmed navigation. */
 export async function login(page: Page, email: string, landing = /\/$/) {
-    await page.goto("/login");
-    await page.getByLabel(/^(E-Mail|Email)$/, {exact: true}).fill(email);
+    const identifier = page.getByLabel(/^(E-Mail|Email)$/, {exact: true});
+    // Retry the development page if its form never mounts. Submit credentials
+    // only once after the visible login form is ready.
+    await expect(async () => {
+        await page.goto("/login", {waitUntil: "commit", timeout: 8_000});
+        await expect(identifier).toBeVisible({timeout: 8_000});
+    }).toPass({timeout: 28_000, intervals: [300]});
+    await identifier.fill(email);
     await page
         .getByLabel(/^(Passwort|Password)$/, {exact: true})
         .fill(process.env.E2E_PASSWORD!);
