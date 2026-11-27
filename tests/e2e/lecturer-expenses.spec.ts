@@ -43,6 +43,18 @@ test("an expense receipt scans, receives partial approval and is reimbursed once
     const confirmationPath = await (await confirmation).path();
     expect((await readFile(confirmationPath!)).subarray(0, 5).toString("ascii")).toBe("%PDF-");
     await page.getByText("Auslagen und Erstattungen", { exact: true }).click();
+    await expect(page.getByRole("button", { name: "Dieses Jahr" })).toHaveAttribute("aria-pressed", "true");
+    const expenseDates = page.locator(".expense-dates");
+    await expect(expenseDates).toBeVisible();
+    const whiteSpace = await expenseDates.evaluate((row) => {
+      const [from, through] = [...row.querySelectorAll<HTMLInputElement>('input[type="date"]')];
+      const submit = row.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      return [from, through, submit].map((control) => control.getBoundingClientRect().toJSON());
+    });
+    // Stacked date controls and the submit button must never touch.
+    for (const [first, second] of [[whiteSpace[0], whiteSpace[1]], [whiteSpace[1], whiteSpace[2]]]) {
+      expect(Math.max(second.top - first.bottom, second.left - first.right)).toBeGreaterThanOrEqual(8);
+    }
     await page.getByRole("button", { name: "Auslage einreichen" }).click();
     const submission = page.getByRole("dialog", { name: "Auslage einreichen" });
     await submission.getByLabel("Lehrauftrag").selectOption(claim);

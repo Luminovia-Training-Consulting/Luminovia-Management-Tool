@@ -14,6 +14,7 @@ import {
   trainingEscalationSchema,
   trainingEscalationAssignees,
 } from "./training-control-schema";
+import "./finance.css";
 
 export default function TrainingEscalation({
   actor,
@@ -57,6 +58,7 @@ export default function TrainingEscalation({
     Date.parse(due) > now &&
     Date.parse(due) <= Date.parse(issue.starts_at) &&
     reason.trim().length >= 3;
+  const eligibleAssignee = options.data?.some((staff) => staff.id === assignee);
   const create = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -80,6 +82,9 @@ export default function TrainingEscalation({
       close();
     },
   });
+  const canSubmit = Boolean(
+    online && valid && eligibleAssignee && !create.isPending,
+  );
   return (
     <Dialog
       open
@@ -92,24 +97,28 @@ export default function TrainingEscalation({
     >
       {options.isPending && <Loading />}
       {options.isError && <ErrorState retry={() => void options.refetch()} />}
-      {options.data && (
+      {options.data?.length === 0 && (
+        <Notice>{t("noEscalationAssignees")}</Notice>
+      )}
+      {Boolean(options.data?.length) && (
         <form
-          className="section-stack"
+          className="section-stack training-escalation-form"
           onSubmit={(event) => {
             event.preventDefault();
-            if (valid && online) create.mutate();
+            if (canSubmit) create.mutate();
           }}
         >
           <div className="form-row">
             <Field id={`${id}-staff`} label={t("escalationAssignee")}>
               <select
                 id={`${id}-staff`}
-                value={assignee}
+                value={eligibleAssignee ? assignee : ""}
+                disabled={create.isPending}
                 required
                 onChange={(event) => setAssignee(event.target.value)}
               >
                 <option value="">{t("selectAssignee")}</option>
-                {options.data.map((staff) => (
+                {options.data?.map((staff) => (
                   <option key={staff.id} value={staff.id}>
                     {staff.name}
                   </option>
@@ -121,6 +130,7 @@ export default function TrainingEscalation({
                 id={`${id}-due`}
                 type="datetime-local"
                 value={deadline}
+                disabled={create.isPending}
                 required
                 onChange={(event) => setDeadline(event.target.value)}
               />
@@ -133,6 +143,7 @@ export default function TrainingEscalation({
               rows={3}
               required
               value={reason}
+              disabled={create.isPending}
               onChange={(event) => setReason(event.target.value)}
             />
           </Field>
@@ -154,15 +165,7 @@ export default function TrainingEscalation({
             >
               {t("cancelEscalation")}
             </Button>
-            <Button
-              type="submit"
-              disabled={
-                !online ||
-                !valid ||
-                !options.data.some((staff) => staff.id === assignee) ||
-                create.isPending
-              }
-            >
+            <Button type="submit" disabled={!canSubmit}>
               {t("escalate")}
             </Button>
           </div>

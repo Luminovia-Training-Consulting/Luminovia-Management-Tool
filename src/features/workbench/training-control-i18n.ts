@@ -12,6 +12,10 @@ const labels = {
     "Assign a follow-up task for {{title}}.",
   ],
   escalationAssignee: ["Zuständig", "Assignee"],
+  noEscalationAssignees: [
+    "Aktuell kann die Aufgabe keiner berechtigten Person zugewiesen werden.",
+    "The task cannot currently be assigned to an eligible person.",
+  ],
   selectAssignee: ["Person auswählen", "Select a person"],
   escalationDue: ["Frist ({{zone}})", "Deadline ({{zone}})"],
   escalationReason: ["Nächster Schritt", "Next step"],

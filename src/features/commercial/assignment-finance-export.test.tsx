@@ -98,7 +98,7 @@ async function openDialog() {
   return {
     user,
     dialog: within(
-      screen.getByRole("dialog", { name: "Auftragsabrechnungen exportieren" }),
+      screen.getByRole("dialog", { name: "Abrechnung exportieren" }),
     ),
   };
 }
@@ -143,4 +143,29 @@ it("discards the response when the session belongs to another user", async () =>
     await dialog.findByText("Die Abrechnung konnte nicht exportiert werden."),
   ).toBeVisible();
   expect(fake.save).not.toHaveBeenCalled();
+});
+
+it("keeps the export formats identifiable and announces one pending status", async () => {
+  const { user, dialog } = await openDialog();
+  let resolveReport!: (value: { data: typeof report; error: null }) => void;
+  fake.rpc.mockReturnValue(
+    new Promise((resolve) => {
+      resolveReport = resolve;
+    }),
+  );
+
+  const csv = dialog.getByRole("button", { name: "CSV herunterladen" });
+  const json = dialog.getByRole("button", { name: "JSON herunterladen" });
+  await user.click(csv);
+  expect(await dialog.findByRole("status")).toHaveTextContent(
+    "Export wird erstellt",
+  );
+  expect(dialog.getAllByRole("status")).toHaveLength(1);
+  expect(csv).toHaveAccessibleName("CSV herunterladen");
+  expect(json).toHaveAccessibleName("JSON herunterladen");
+  expect(csv).toBeDisabled();
+  expect(json).toBeDisabled();
+
+  resolveReport({ data: report, error: null });
+  expect(await dialog.findByText(/zum Download bereitgestellt/)).toBeVisible();
 });

@@ -91,3 +91,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.expense-workspace .form-actions {
+  margin-block: 0;
+}
+
+.expense-dates,
+.expense-dimensions {
+  gap: 0.75rem 1rem;
+}
+
+.expense-period-actions .button[aria-pressed="true"] {
+  background: var(--blue-soft);
+  border-color: var(--brand);
+}
+
+@media (max-width: 610px) {
+  .expense-period-actions {
+    gap: 0.5rem;
+  }
+
+  .expense-period-actions .button {
+    flex: 1 1 4.75rem;
+    min-block-size: 44px;
+    padding-inline: 0.375rem;
+  }
+}

@@ -5,6 +5,7 @@ const titles = {
     "Auftragsabrechnungen exportieren",
     "Export assignment settlements",
   ],
+  exportDialogTitle: ["Abrechnung exportieren", "Export settlements"],
   exportDescription: [
     "Wähle bis zu 93 Tage. Der Export umfasst Aufträge mit Terminen im Zeitraum und zeigt ihre aktuellen Abrechnungsstände in Originalwährung. Bei Aufträgen ohne Termine zählt das Annahmedatum.",
     "Select up to 93 days. The export includes assignments with sessions in the period and shows their current settlement in the original currency. Assignments without sessions use the acceptance date.",

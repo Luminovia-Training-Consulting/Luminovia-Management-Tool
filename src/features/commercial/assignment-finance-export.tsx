@@ -13,6 +13,7 @@ import { db } from "../../lib/supabase";
 import { saveAssignmentFinanceExport } from "./assignment-finance-export-file";
 import { assignmentFinanceExportSchema } from "./assignment-finance-schema";
 import "./assignment-finance-i18n";
+import "./commercial.css";
 
 export default function AssignmentFinanceExport({
   actor,
@@ -78,10 +79,10 @@ export default function AssignmentFinanceExport({
         open={open}
         onOpenChange={setOpen}
         closeDisabled={download.isPending}
-        title={t("exportTitle")}
+        title={t("exportDialogTitle")}
         description={t("exportDescription")}
       >
-        <div className="section-stack">
+        <div className="section-stack settlement-export-dialog">
           <div className="form-row">
             <Field id={`${fieldId}-from`} label={t("exportFrom")}>
               <input
@@ -116,6 +117,11 @@ export default function AssignmentFinanceExport({
               {t(tooMany ? "exportLimit" : "exportFailure")}
             </Notice>
           )}
+          {download.isPending && (
+            <p role="status" className="muted">
+              {t("exportPending")}
+            </p>
+          )}
           {download.isSuccess && (
             <Notice>
               {t(download.data === 0 ? "exportEmpty" : "exportReady")}
@@ -133,13 +139,7 @@ export default function AssignmentFinanceExport({
                   if (valid) download.mutate(format);
                 }}
               >
-                {t(
-                  download.isPending
-                    ? "exportPending"
-                    : format === "csv"
-                      ? "exportCsv"
-                      : "exportJson",
-                )}
+                {t(format === "csv" ? "exportCsv" : "exportJson")}
               </Button>
             ))}
           </div>

@@ -647,3 +647,23 @@
 .finance-rows-count {
   margin: 0.75rem 0 0;
 }
+
+/* The dialog grid owns the spacing between fields, status and actions. */
+.settlement-export-dialog {
+  gap: 1rem;
+}
+
+.settlement-export-dialog .form-row {
+  gap: 0.75rem 1rem;
+}
+
+.settlement-export-dialog :is(.field, .form-actions, .notice, p) {
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .settlement-export-dialog .button {
+    flex: 1 1 8rem;
+    padding-inline: 0.625rem;
+  }
+}

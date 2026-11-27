@@ -116,8 +116,7 @@ function ExpenseWorkspace({ actor, zone, manager }: Props) {
   const setFilter = (key: FilterName, value: string) => {
     setFilters((current) => ({ ...current, [key]: value || null }));
   };
-  const setCurrentPeriod = (unit: "month" | "quarter" | "year") => {
-    const updated = periodFor(zone, unit);
+  const setCurrentPeriod = (updated: Period) => {
     setFormDates(updated);
     setPeriod(updated);
   };
@@ -228,18 +227,25 @@ function ExpenseWorkspace({ actor, zone, manager }: Props) {
         )}
       </div>
       <form className="expense-filter-form" onSubmit={submitDates}>
-        <div className="form-actions">
-          {(["month", "quarter", "year"] as const).map((preset) => (
-            <Button
-              key={preset}
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setCurrentPeriod(preset)}
-            >
-              {t(preset)}
-            </Button>
-          ))}
+        <div className="form-actions expense-period-actions">
+          {(["month", "quarter", "year"] as const).map((preset) => {
+            const presetDates = periodFor(zone, preset);
+            return (
+              <Button
+                key={preset}
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-pressed={
+                  period.p_from === presetDates.p_from &&
+                  period.p_through === presetDates.p_through
+                }
+                onClick={() => setCurrentPeriod(presetDates)}
+              >
+                {t(preset)}
+              </Button>
+            );
+          })}
         </div>
         <div className="form-row expense-dates">
           <Field id={id + "-from"} label={t("from")}>

@@ -499,6 +499,15 @@ it("acknowledges the exact displayed issue and retains its corrective link", asy
     dialog.getByLabelText("Nächster Schritt"),
     "Vertretung abstimmen",
   );
+  const assignee = dialog.getByLabelText("Zuständig");
+  await user.selectOptions(assignee, "");
+  expect(submit).toBeDisabled();
+  fireEvent.submit(due.closest("form")!);
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "escalate_training_issue",
+    expect.anything(),
+  );
+  await user.selectOptions(assignee, teacher);
   await user.click(submit);
   expect(
     await screen.findByRole("link", { name: "Aufgabe ansehen" }),
