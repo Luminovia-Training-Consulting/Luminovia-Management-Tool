@@ -37,6 +37,9 @@ export function CourseSeriesForm({
   defaultTemplate,
   defaultOrganisation = "",
   academic = false,
+  canPrepareOffer = false,
+  savedRuns,
+  onSaved,
   onOpen,
   onBusy,
 }: {
@@ -50,6 +53,9 @@ export function CourseSeriesForm({
   defaultTemplate?: string;
   defaultOrganisation?: string;
   academic?: boolean;
+  canPrepareOffer?: boolean;
+  savedRuns?: readonly string[];
+  onSaved?: (runs: string[]) => void;
   onOpen?: () => void;
   onBusy?: (busy: boolean) => void;
 }) {
@@ -122,6 +128,7 @@ export function CourseSeriesForm({
     onSettled: () => onBusy?.(false),
     onSuccess: (result) => {
       if (!result.run_ids.length) return;
+      onSaved?.(result.run_ids);
       void client.invalidateQueries({ queryKey: ["operations"] });
       void client.invalidateQueries({ queryKey: ["course-workspaces", actor] });
     },
@@ -198,7 +205,7 @@ export function CourseSeriesForm({
     timeZone: "UTC",
   });
   const id = (name: string) => `${instanceId}-${name}`;
-  const results = plan.data?.run_ids;
+  const results = savedRuns?.length ? savedRuns : plan.data?.run_ids;
   const workload =
     reviewed && plan.data?.conflicts.length === 0
       ? courseSeriesWorkload(reviewed.p_runs)
@@ -226,6 +233,13 @@ export function CourseSeriesForm({
               >
                 {t("open", { number: index + 1 })}
               </Link>
+              {!academic && canPrepareOffer && (
+                <Button asChild variant="secondary">
+                  <Link to={`/courses?offer=${encodeURIComponent(run)}`}>
+                    {t("prepareOffer", { number: index + 1 })}
+                  </Link>
+                </Button>
+              )}
             </li>
           ))}
         </ul>

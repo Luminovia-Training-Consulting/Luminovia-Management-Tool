@@ -213,14 +213,16 @@ export function CourseCreatorDraftLibrary({
                         >
                           {t("resume")}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          disabled={pending}
-                          onClick={() => void change("duplicate", draft)}
-                        >
-                          {t("duplicate")}
-                        </Button>
+                        {!draft.from_enquiry && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            disabled={pending}
+                            onClick={() => void change("duplicate", draft)}
+                          >
+                            {t("duplicate")}
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"

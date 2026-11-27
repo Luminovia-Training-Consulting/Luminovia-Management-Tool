@@ -746,6 +746,8 @@ The log records structured activity such as account creation, invitations, acces
 
 The shell's **Im Portal suchen / Search the portal** uses server-authorised cursor search across jobs, clean files, permitted wiki/forum/chat, people, courses, client/task and authorised commercial metadata. Enter at least two characters; load another page when available. Private drafts, message/task source access and commercial capabilities remain enforced, and the destination checks access again. A copied UUID, favourite or old notification never becomes a grant.
 
+In a linked customer enquiry, use **Kursentwurf aus Anfrage öffnen / Open course draft from enquiry**. This opens the recoverable course creator with the source company, time zone and suggested text. Review the text, add the dates, and save either to course planning or directly to the separate offer editor. Reopening the same enquiry revision resumes your draft. After planning a series, **Auftrag für Durchlauf vorbereiten / Prepare offer for run** opens the exact new run in the same offer editor.
+
 Open **Gespeicherte Angebotsentwürfe / Saved offer drafts** in a standalone or course-backed offer form to resume or duplicate an unfinished offer. **Zwischenstand speichern / Save progress** saves incomplete values without creating a public listing. The library links to the resulting assignment after the offer is confirmed.
 
 When copying a course, choose the schedule and content to reuse, then review the preview before saving. You can include an unpublished offer based on its base compensation and optionally its eligibility requirements. The copied offer needs its own terms and publication review.

@@ -56,6 +56,15 @@ const labels = {
     "Offline. Changes cannot currently be saved on the server.",
   ],
   information: ["Kursinformationen", "Course information"],
+  enquirySourceConflict: [
+    "Die Kundenanfrage wurde geändert. Öffne den aktuellen Stand im Anfragepostfach.",
+    "The customer enquiry changed. Open the current revision from the enquiry inbox.",
+  ],
+  backToEnquiries: ["Anfragepostfach öffnen", "Open enquiry inbox"],
+  enquirySourceReview: [
+    "Prüfe die übernommenen Texte auf private Angaben, bevor du den Kurs anlegst.",
+    "Review the imported text for private details before creating the course.",
+  ],
   schedule: ["Termine und Durchführung", "Schedule and delivery"],
   review: [
     "Kurs anlegen und nächsten Schritt wählen",

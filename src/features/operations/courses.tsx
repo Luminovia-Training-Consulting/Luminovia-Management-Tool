@@ -912,7 +912,7 @@ function RunForm({
               {...register("template_id", {
                 onChange: (event) => {
                   // Company planning is already bound to the selected company.
-                  if (companyOnly) return;
+                  if (companyOnly || creator?.saved?.from_enquiry) return;
                   const owner = templates.find(
                     ({ id }) => id === event.target.value,
                   )?.owner_organisation_id;
@@ -934,8 +934,12 @@ function RunForm({
               {templates
                 .filter(
                   (template) =>
-                    !template.archived_at ||
-                    template.id === original?.template_id,
+                    (!template.archived_at ||
+                      template.id === original?.template_id) &&
+                    (!creator?.saved?.from_enquiry ||
+                      !template.owner_organisation_id ||
+                      template.owner_organisation_id ===
+                        selectedOrganisationId),
                 )
                 .map((template) => (
                   <option value={template.id} key={template.id}>
@@ -945,7 +949,20 @@ function RunForm({
             </select>
           </Field>
         )}
-        {canEditCompany && (
+        {creator?.saved?.from_enquiry && needsContent && (
+          <p className="muted">{creatorText("enquirySourceReview")}</p>
+        )}
+        {creator?.saved?.from_enquiry && (
+          <div className="field">
+            <input type="hidden" {...register("organisation_id")} />
+            <strong>{t("organisation")}</strong>
+            <span>
+              {organisations.find(({ id }) => id === selectedOrganisationId)
+                ?.name ?? t("courseRecordUnavailable")}
+            </span>
+          </div>
+        )}
+        {canEditCompany && !creator?.saved?.from_enquiry && (
           <Field
             id="run-org"
             label={t("organisation")}
@@ -1304,15 +1321,25 @@ function RunForm({
       )}
       {(save.isError || timeError) && (
         <Notice kind="error">
-          {t(
-            timeError
-              ? "timeInvalid"
-              : save.error?.message === "course_locked" ||
-                  (save.error &&
-                    "code" in save.error &&
-                    save.error.code === "40001")
-                ? "linkedRunConflict"
-                : "error",
+          {creator?.saved?.from_enquiry &&
+          save.error &&
+          "code" in save.error &&
+          save.error.code === "PT409" ? (
+            <>
+              {creatorText("enquirySourceConflict")}{" "}
+              <Link to="/enquiries">{creatorText("backToEnquiries")}</Link>
+            </>
+          ) : (
+            t(
+              timeError
+                ? "timeInvalid"
+                : save.error?.message === "course_locked" ||
+                    (save.error &&
+                      "code" in save.error &&
+                      save.error.code === "40001")
+                  ? "linkedRunConflict"
+                  : "error",
+            )
           )}
         </Notice>
       )}
@@ -1410,6 +1437,7 @@ export function CoursesPage() {
   const [templateEdit, setTemplateEdit] = useState<Template | null>();
   const [seriesTemplate, setSeriesTemplate] = useState<Template | null>();
   const [seriesBusy, setSeriesBusy] = useState(false);
+  const [seriesResults, setSeriesResults] = useState<string[]>([]);
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
@@ -2657,10 +2685,13 @@ export function CoursesPage() {
         </div>
       )}
       <Dialog
-        open={mayOpenSeries && seriesTemplate !== undefined}
+        open={mayOpenSeries && seriesTemplate !== undefined && !offerRunId}
         closeDisabled={seriesBusy}
         onOpenChange={(open) => {
-          if (!open && !seriesBusy) setSeriesTemplate(undefined);
+          if (!open && !seriesBusy) {
+            setSeriesTemplate(undefined);
+            setSeriesResults([]);
+          }
         }}
         title={t("courseSeries:title")}
         description={t("courseSeries:intro")}
@@ -2677,6 +2708,9 @@ export function CoursesPage() {
               (template) => !template.archived_at,
             )}
             defaultTemplate={seriesTemplate?.id}
+            canPrepareOffer={canPrepareOffer}
+            savedRuns={seriesResults}
+            onSaved={setSeriesResults}
             defaultOrganisation={
               seriesTemplate?.owner_organisation_id ??
               (planningOrganisations.length === 1
@@ -2685,6 +2719,7 @@ export function CoursesPage() {
             }
             onOpen={() => {
               setSeriesTemplate(undefined);
+              setSeriesResults([]);
               setSearch("");
               setPhase("all");
             }}
@@ -2762,6 +2797,14 @@ export function CoursesPage() {
               canReadBlockPlanning
               onBusy={setRunSaving}
               onDone={(_result, offer, run) => {
+                if (creatorRecord?.from_enquiry) {
+                  void client.invalidateQueries({
+                    queryKey: ["enquiry-detail", actor],
+                  });
+                  void client.invalidateQueries({
+                    queryKey: ["enquiry-inbox", actor],
+                  });
+                }
                 if (run) setSavedRun(run);
                 setCourseView(offer ? { offer } : {});
                 if (!offer) setMessage(t("courseDraftCreated"));
@@ -2951,7 +2994,13 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(offerRunId)}
         onOpenChange={(open) => {
-          if (!open) setCourseView({ run: offerRunId ?? "" }, true);
+          if (!open)
+            setCourseView(
+              seriesTemplate !== undefined && seriesResults.length
+                ? {}
+                : { run: offerRunId ?? "" },
+              true,
+            );
         }}
         title={t("createRunOffer")}
         description={t("offerEditorDescription")}

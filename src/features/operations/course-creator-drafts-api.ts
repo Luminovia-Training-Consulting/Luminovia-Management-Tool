@@ -15,7 +15,8 @@ export {
   type CourseCreatorDraft,
 } from "./course-creator-drafts-schema";
 
-type Action = "save" | "duplicate" | "discard" | "create_course";
+type Action =
+  "save" | "duplicate" | "discard" | "create_course" | "start_enquiry";
 type SaveStatus =
   "unchanged" | "unsaved" | "saving" | "saved" | "conflict" | "error";
 

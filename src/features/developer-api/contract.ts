@@ -2552,18 +2552,25 @@ const nativePaths = {
   "/rest/v1/rpc/course_creator_draft_action": rpc(
     "mutateCourseCreatorDraft",
     "Courses",
-    "Save, duplicate, discard or create from a course draft",
-    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt.",
+    "Start from an enquiry, save, duplicate, discard or create from a course draft",
+    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt. To start from an enquiry, pass an authorised enquiry_id and version in p_payload with action start_enquiry and expected draft revision zero. Confirmation converts the originally reviewed enquiry atomically.",
     {
       p_action: {
         type: "string",
-        enum: ["save", "duplicate", "discard", "create_course"],
+        enum: [
+          "save",
+          "duplicate",
+          "discard",
+          "create_course",
+          "start_enquiry",
+        ],
       },
       p_draft_id: uuid,
       p_expected_revision: { type: "integer", minimum: 0 },
       p_payload: {
         anyOf: [
           z.toJSONSchema(courseCreatorSnapshotSchema),
+          object({ enquiry_id: uuid, version }),
           { type: "object" },
           { type: "null" },
         ],

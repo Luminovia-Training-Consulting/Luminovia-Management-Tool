@@ -169,11 +169,11 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                     page.getByText(managementNote, {exact: true}),
                 ).toBeVisible();
                 await page
-                    .getByRole("button", {name: "Kursdurchlauf erstellen", exact: true})
+                    .getByRole("button", {name: "Kursentwurf aus Anfrage öffnen", exact: true})
                     .click();
                 const form = page.getByRole("dialog");
-                await expect(form.getByLabel("Kurstitel")).toHaveValue(payload.topic);
-                const courseDescription = form.getByLabel("Kursbeschreibung");
+                await expect(form.getByLabel("Titel", {exact: true})).toHaveValue(payload.topic);
+                const courseDescription = form.getByLabel("Beschreibung", {exact: true});
                 await expect(courseDescription).toHaveValue(payload.message);
                 await courseDescription.fill("Reviewed course outline for the company.");
                 const start = new Date(Date.now() + 90 * 86400000);
@@ -186,24 +186,38 @@ test("private incoming enquiry triage, explicit customer creation and course pla
                     .getByLabel("Ende 1", {exact: true})
                     .fill(end.toISOString().slice(0, 16));
                 await form
-                    .getByRole("button", {name: "Bestätigen", exact: true})
+                    .getByRole("button", {name: "Zwischenstand speichern", exact: true})
                     .click();
-                await expect(form).not.toBeVisible();
+                await expect(form.getByText("Entwurf auf dem Server gespeichert.", {exact:true})).toBeVisible();
+                await page.reload();
+                await expect(form.getByLabel("Beschreibung", {exact:true}))
+                    .toHaveValue("Reviewed course outline for the company.");
+                await expect(form.getByLabel("Beginn 1", {exact:true})).toHaveValue(start.toISOString().slice(0,16));
+                const draftRoute = page.url();
+                await form
+                    .getByRole("button", {name: "Speichern und zum Auftrag", exact: true})
+                    .click();
+                await expect(page.getByRole("heading", {name:"Auftrag aus diesem Kurs",exact:true})).toBeVisible();
+                const runId = await sql(
+                    `select course_run_id from private.website_enquiries where id='${id}'`,
+                );
+                expect(page.url()).not.toBe(draftRoute);
+                await expect(page).toHaveURL(new RegExp(`/courses\\?offer=${runId}$`));
+                await page.goto(`/enquiries/${id}`);
+                await expect(page.getByRole("link", {name:"Lehrauftrag vorbereiten",exact:true}))
+                    .toHaveAttribute("href", `/courses?offer=${runId}`);
                 await expect(
                     page.getByRole("link", {name: "Kursplanung öffnen", exact: true}),
                 ).toBeVisible();
                 await expect(
                     page.getByRole("button", {
-                        name: "Kursdurchlauf erstellen",
+                        name: "Kursentwurf aus Anfrage öffnen",
                         exact: true,
                     }),
                 ).toHaveCount(0);
                 await expect(
                     page.getByText(payload.message, {exact: true}),
                 ).toBeVisible();
-                const runId = await sql(
-                    `select course_run_id from private.website_enquiries where id='${id}'`,
-                );
                 await page.getByRole("link", {name: "Kursplanung öffnen", exact: true}).click();
                 await expect(page).toHaveURL(new RegExp(`/courses\\?run=${runId}$`));
                 const course = page.getByRole("dialog", {name: payload.topic});
