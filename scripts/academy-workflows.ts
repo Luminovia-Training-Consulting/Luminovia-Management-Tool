@@ -61,7 +61,7 @@ const groups = {
       "Kurse, Entwürfe, Klassen und Stundenplan",
       "Courses, drafts, classes and timetable",
     ],
-    "readAcademyCourseWorkspaceEntitlement readAcademyDraftOptions createAcademyCourseDraft readAcademyDraftSchedule saveAcademyDraftSchedule readAcademyCoursePublication publishAcademyCourse setAcademyCourseCapacity readAcademyCourseClass setAcademyCourseClass readAcademyTimetable listAcademyCourseWorkspaces readAcademyCourseWorkspace readAcademyCourseTimeline setAcademyCourseMeetingLink readAcademyCourseWelcome publishAcademyCourseWelcome listCourseSeriesClasses readCourseSeriesClasses planCourseSeries readSavedCourseSeries readSavedCourseSeriesById reviseSavedCourseSeries",
+    "readAcademyCourseWorkspaceEntitlement readAcademyDraftOptions readAcademyCourseCreatorDrafts mutateAcademyCourseCreatorDraft createAcademyCourseDraft readAcademyDraftSchedule saveAcademyDraftSchedule readAcademyCoursePublication publishAcademyCourse setAcademyCourseCapacity readAcademyCourseClass setAcademyCourseClass readAcademyTimetable listAcademyCourseWorkspaces readAcademyCourseWorkspace readAcademyCourseTimeline setAcademyCourseMeetingLink readAcademyCourseWelcome publishAcademyCourseWelcome listCourseSeriesClasses readCourseSeriesClasses planCourseSeries readSavedCourseSeries readSavedCourseSeriesById reviseSavedCourseSeries listAcademyCourseArchiveRuns archiveCourseRuns",
   ],
   programmes: [
     ["Lernprogramme", "Learning programmes"],

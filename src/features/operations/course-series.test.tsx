@@ -217,6 +217,14 @@ it.each([false, true])(
         ? `/courses/${runIds[2]}/workspace`
         : `/courses?run=${runIds[2]}`,
     );
+    expect(
+      screen.getByRole("link", { name: "Edit schedule pattern for run 3" }),
+    ).toHaveAttribute(
+      "href",
+      academic
+        ? `/courses/${runIds[2]}/workspace?editSeries=1`
+        : `/courses?run=${runIds[2]}&editSeries=1`,
+    );
     if (!academic) {
       for (const [index, run] of runIds.entries()) {
         expect(

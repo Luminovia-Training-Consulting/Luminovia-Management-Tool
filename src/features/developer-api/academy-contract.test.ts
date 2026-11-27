@@ -56,6 +56,7 @@ const readPaths = [
   "/rest/v1/rpc/course_lti_ags_grades",
   "/rest/v1/rpc/course_completion_policy",
   "/rest/v1/rpc/course_timeline",
+  "/rest/v1/rpc/academy_course_archive_runs",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -106,6 +107,7 @@ const writePaths = [
   "/rest/v1/rpc/lti_deep_link_review",
   "/rest/v1/rpc/configure_course_lti_ags",
   "/rest/v1/rpc/course_completion_policy_action",
+  "/rest/v1/rpc/archive_course_runs",
 ] as const;
 const bootstrap = "/rest/v1/rpc/installation_capabilities";
 const upload = "/functions/v1/files";
@@ -158,6 +160,8 @@ const draftPaths = [
   "/rest/v1/rpc/academy_create_course_draft",
   "/rest/v1/rpc/academy_draft_schedule",
   "/rest/v1/rpc/academy_save_draft_schedule",
+  "/rest/v1/rpc/course_creator_drafts",
+  "/rest/v1/rpc/course_creator_draft_action",
 ] as const;
 
 for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
@@ -322,6 +326,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
           },
           customer_ready: { const: false },
           lms_available: { const: false },
+          academy_standard_only: { const: true },
           marketplace_available: { const: false },
           company_premium_switch_available: { const: false },
         },
@@ -604,6 +609,37 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         },
       });
       expect(command.responses).toHaveProperty("409");
+    });
+
+    it("describes private draft recovery and course-only confirmation for active Academy managers", () => {
+      const recovery = spec.paths["/rest/v1/rpc/course_creator_drafts"].post;
+      expect(recovery["x-portal-licence"]).toBe("active");
+      expect(recovery.requestBody.required).toBe(false);
+      const draft = spec.paths["/rest/v1/rpc/course_creator_draft_action"].post;
+      expect(draft["x-portal-licence"]).toBe("active");
+      expect(draft.responses).toHaveProperty("409");
+      expect(
+        draft.requestBody.content["application/json"].schema,
+      ).toMatchObject({
+        required: [
+          "p_action",
+          "p_draft_id",
+          "p_expected_revision",
+          "p_payload",
+        ],
+        properties: {
+          p_action: { enum: ["save", "duplicate", "discard", "create_course"] },
+          p_payload: {
+            anyOf: expect.arrayContaining([
+              expect.objectContaining({
+                properties: expect.objectContaining({
+                  next_action: { const: "course" },
+                }),
+              }),
+            ]),
+          },
+        },
+      });
     });
 
     it("documents the active-only atomic attendance import and version conflicts", () => {

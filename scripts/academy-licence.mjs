@@ -76,7 +76,7 @@ export function validateAcademyLicenceTerms(terms) {
     !commit.test(terms.release_commit) ||
     !Array.isArray(terms.modules) ||
     terms.modules.length !== 1 ||
-    terms.modules[0] !== "lms" ||
+    !["lms", "lms-standard"].includes(terms.modules[0]) ||
     !exactKeys(terms.limits, [
       "seat_count",
       "storage_bytes",

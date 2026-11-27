@@ -8,6 +8,7 @@ node scripts/lecturer-expenses-db-tests.mjs
 node scripts/assignment-finance-export-db-tests.mjs
 node scripts/course-creator-db-tests.mjs
 node scripts/course-series-db-tests.mjs
+node scripts/academy-lms-packages-db-tests.mjs
 node scripts/course-bulk-archive-db-tests.mjs
 node scripts/offer-creator-drafts-db-tests.mjs
 node scripts/training-commercial-db-tests.mjs

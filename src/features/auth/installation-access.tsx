@@ -11,6 +11,7 @@ import { SignOutButton } from "./sign-out-button";
 import { AuthenticatorGate, authenticatorRequired } from "./authenticator";
 import { sessionCacheBoundary } from "./session-cache-boundary";
 import { useAuth } from "./auth-context";
+import { academyPremiumContext } from "./academy-lms-package";
 
 type CourseAccess = "active" | "grace";
 
@@ -64,7 +65,12 @@ function OnlineAcademyCourseAccess({
     retry: false,
     queryFn: async ({
       signal,
-    }): Promise<CourseAccess | "password-setup" | "authenticator" | null> => {
+    }): Promise<
+      | { access: CourseAccess; premium: boolean }
+      | "password-setup"
+      | "authenticator"
+      | null
+    > => {
       const { data, error } = await db()
         .rpc("installation_capabilities")
         .abortSignal(signal);
@@ -90,7 +96,12 @@ function OnlineAcademyCourseAccess({
       if (access.error?.code === authenticatorRequired) return "authenticator";
       if (access.error?.code === "42501") return null;
       if (access.error) throw access.error;
-      return access.data === true ? data.licence_status : null;
+      return access.data === true
+        ? {
+            access: data.licence_status,
+            premium: data.academy_standard_only !== true,
+          }
+        : null;
     },
   });
   if (query.isPending || (query.isFetching && !query.isFetchedAfterMount))
@@ -111,5 +122,9 @@ function OnlineAcademyCourseAccess({
         <SignOutButton />
       </main>
     );
-  return children(query.data);
+  return (
+    <academyPremiumContext.Provider value={query.data.premium}>
+      {children(query.data.access)}
+    </academyPremiumContext.Provider>
+  );
 }

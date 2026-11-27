@@ -2580,7 +2580,7 @@ const nativePaths = {
     "listCourseCreatorDrafts",
     "Courses",
     "List or restore the caller's course drafts",
-    "Requires courses.manage on an internal installation. Pass a draft ID to restore its saved payload, or omit it to list draft receipts.",
+    "Internal course managers and authorised company template planners can recover their own draft. Company access requires a current membership and a company-owned template or course. Pass a draft ID for the saved payload or omit it for receipts.",
     { p_draft_id: { anyOf: [uuid, { type: "null" }] } },
     z.toJSONSchema(courseCreatorIndexSchema),
     ["p_draft_id"],
@@ -2589,7 +2589,7 @@ const nativePaths = {
     "mutateCourseCreatorDraft",
     "Courses",
     "Start from an enquiry, save, duplicate, discard or create from a course draft",
-    "Requires the draft owner, courses.manage and the expected revision. Creating the unpublished course commits its sessions and template together and returns a receipt. To start from an enquiry, pass an authorised enquiry_id and version in p_payload with action start_enquiry and expected draft revision zero. Confirmation converts the originally reviewed enquiry atomically.",
+    "Requires the draft owner and the expected revision. Course managers may start from an authorised enquiry_id and version with action start_enquiry and expected draft revision zero. Company planners can create unpublished runs from their own active company template. Creating the unpublished course commits its sessions and template together and returns a receipt.",
     {
       p_action: {
         type: "string",
@@ -3043,7 +3043,7 @@ const nativePaths = {
     "archiveCourseRuns",
     "Courses",
     "Archive or restore reviewed courses",
-    "Internal course managers can archive or restore 2–50 reviewed runs in one transaction. The submitted publication, archive and company values must still match. The current publication flag is preserved.",
+    "Course managers can archive or restore 2–50 reviewed runs in one transaction. The submitted publication, archive and company values must still match. The current publication flag is preserved.",
     {
       p_items: {
         type: "array",
@@ -5318,7 +5318,7 @@ const nativePaths = {
     "readCourseTimeline",
     "Courses",
     "Read recorded course milestones",
-    "Course managers and current instructors get up to 100 scoped planning, visibility and class milestones. The response contains event categories and timestamps.",
+    "Course managers and current instructors get up to 100 scoped planning, series, visibility and class milestones. Managers with assignment authority also see confirmations and releases from linked instructor assignments. Each entry contains an opaque event ID, category and timestamp.",
     course,
     courseTimelineResult,
   ),

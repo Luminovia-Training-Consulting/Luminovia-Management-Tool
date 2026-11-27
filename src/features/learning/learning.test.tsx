@@ -308,6 +308,31 @@ describe("connected course workspace", () => {
     },
   );
 
+  it.each(["active", "grace"] as const)(
+    "shows the shared Standard workspace without the Premium exam query in Academy %s",
+    async (academy) => {
+      fake.workspace.lms_enabled = false;
+      fake.workspace.access.manager = true;
+      fake.workspace.learner_status = "completed";
+      setup("", academy);
+      expect(
+        await screen.findByRole("heading", { name: "Fictional course" }),
+      ).toBeVisible();
+      expect(document.querySelector("#course-materials")).toBeInTheDocument();
+      expect(document.querySelector("#course-exam")).toBeNull();
+      expect(
+        fake.rpc.mock.calls.some(([name]) => name === "course_exam_state"),
+      ).toBe(false);
+      if (academy === "grace") {
+        expect(document.querySelector("#course-enrolments")).toBeNull();
+      } else {
+        expect(
+          document.querySelector("#course-enrolments"),
+        ).toBeInTheDocument();
+      }
+    },
+  );
+
   it("uploads assigned academy material once and retries only the exact scoped share", async () => {
     fake.academyUpload.mockResolvedValue({
       status: "clean",

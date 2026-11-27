@@ -1178,6 +1178,7 @@ function CourseBasics({
       {course.delivery_type !== "online" && course.venue && (
         <p>{course.venue}</p>
       )}
+      <h3>{t("courseTimeline")}</h3>
       <CourseTimeline
         sessions={course.sessions}
         history={
@@ -1185,7 +1186,7 @@ function CourseBasics({
             ? { actor: session!.user.id, courseId: course.id }
             : undefined
         }
-        label={i18n.t("translation:sessions")}
+        label={t("courseTimeline")}
         language={i18n.language}
         zone={course.time_zone}
         className="course-workspace-sessions"
@@ -1527,16 +1528,6 @@ function CourseWorkspaceLayout({
               <CourseTeachingChecklist course={course} classroom={classroom} />
             )}
             <CourseBasics course={course} writable={canEdit} />
-            {academy && course.access.manager && online && (
-              <Suspense fallback={null}>
-                <CourseSeriesRevision
-                  key={actor + ":" + course.id}
-                  actor={actor}
-                  courseId={course.id}
-                  readOnly={academy === "grace"}
-                />
-              </Suspense>
-            )}
             <CourseClasses
               key={`classes:${actor}:${course.id}`}
               actor={actor}
@@ -1559,14 +1550,11 @@ function CourseWorkspaceLayout({
                 learner={learner}
               />
             )}
-            {academy === "active" && course.access.manager && (
-              <AcademyInstructors courseId={course.id} actor={actor} />
-            )}
             {academy && course.access.manager && (
-              <AcademyCoursePublication
+              <AcademyPlanningControls
                 courseId={course.id}
                 actor={actor}
-                readOnly={academy === "grace"}
+                academy={academy}
               />
             )}
             <CourseContact
@@ -1998,17 +1986,56 @@ function ScormMaterials({
   );
 }
 
+function AcademyPlanningControls({
+  courseId,
+  actor,
+  academy,
+}: {
+  courseId: string;
+  actor: string;
+  academy: "active" | "grace";
+}) {
+  const online = useOnline();
+  const startSeriesOpen =
+    new URLSearchParams(useLocation().search).get("editSeries") === "1";
+  const readOnly = academy === "grace";
+  return (
+    <>
+      {online && (
+        <Suspense fallback={null}>
+          <CourseSeriesRevision
+            key={actor + ":" + courseId}
+            actor={actor}
+            courseId={courseId}
+            readOnly={readOnly}
+            startOpen={startSeriesOpen}
+          />
+        </Suspense>
+      )}
+      {!readOnly && <AcademyInstructors courseId={courseId} actor={actor} />}
+      <AcademyCoursePublication
+        courseId={courseId}
+        actor={actor}
+        readOnly={readOnly}
+      />
+    </>
+  );
+}
+
 /** Standard access loads the shared course content and permitted operational views. */
 function StandardCourseWorkspace({
   course,
   internal,
   actor,
+  academy,
 }: {
   course: CourseWorkspace;
   internal: boolean;
   actor: string;
+  academy?: "active" | "grace";
 }) {
   const { t } = useTranslation("learning");
+  const writable = academy !== "grace";
   const [scormOpen, setScormOpen] = useState(false);
   const [h5pOpen, setH5pOpen] = useState(false);
   const [ltiOpen, setLtiOpen] = useState(false);
@@ -2029,12 +2056,12 @@ function StandardCourseWorkspace({
             <Button asChild variant="secondary">
               <Link
                 to={
-                  course.access.manager
+                  internal && course.access.manager
                     ? `/courses?run=${course.id}`
                     : "/learning"
                 }
               >
-                {t(course.access.manager ? "manageCourse" : "back")}
+                {t(internal && course.access.manager ? "manageCourse" : "back")}
               </Link>
             </Button>
           </div>
@@ -2050,10 +2077,37 @@ function StandardCourseWorkspace({
         </Notice>
       )}
       <div id="course-overview">
-        <CourseBasics course={course} writable={internal} />
+        <CourseBasics course={course} writable={writable} />
+        {(course.access.manager ||
+          course.access.client ||
+          course.access.teacher) && (
+          <CourseClasses
+            actor={actor}
+            courseId={course.id}
+            editor={writable && (course.access.manager || course.access.client)}
+          />
+        )}
+        {academy && course.access.manager && (
+          <AcademyPlanningControls
+            courseId={course.id}
+            actor={actor}
+            academy={academy}
+          />
+        )}
       </div>
       <div id="course-materials">
-        <Resources course={course} actor={actor} />
+        <Resources
+          course={course}
+          actor={actor}
+          readOnly={Boolean(academy)}
+          academy={academy === "active"}
+          academyCanUpload={
+            academy === "active" &&
+            (course.access.manager ||
+              course.access.teacher ||
+              course.access.client)
+          }
+        />
         {(course.access.staff || course.access.learner) && (
           <details onToggle={(event) => setScormOpen(event.currentTarget.open)}>
             <summary>{t("standardScormMaterials")}</summary>
@@ -2063,7 +2117,7 @@ function StandardCourseWorkspace({
                   key={course.id}
                   actor={actor}
                   course={course}
-                  editable={course.access.staff}
+                  editable={writable && course.access.staff}
                 />
               </Suspense>
             )}
@@ -2107,27 +2161,33 @@ function StandardCourseWorkspace({
         <CourseAuthoring
           actor={actor}
           courseId={course.id}
-          editable={course.access.staff}
+          editable={writable && course.access.staff}
           manager={course.access.manager}
           roster={course.roster}
           resources={course.resources}
           zone={course.time_zone}
         />
       )}
-      {(course.access.manager || course.access.client) && (
+      {writable && (course.access.manager || course.access.client) && (
         <div id="course-enrolments">
+          {academy === "active" && course.access.client && (
+            <AcademyCompanyInvitation
+              key={actor + ":" + course.id}
+              courseId={course.id}
+            />
+          )}
           <CourseEnrolmentsPanel
             course={course}
             actor={actor}
-            academy={false}
+            academy={Boolean(academy)}
           />
         </div>
       )}
       {course.access.learner && (
-        <CourseWithdrawal course={course} actor={actor} />
+        <CourseWithdrawal course={course} actor={actor} academy={academy} />
       )}
       {(course.access.staff || course.access.client) && (
-        <AttendancePanel course={course} actor={actor} />
+        <AttendancePanel course={course} actor={actor} academy={academy} />
       )}
     </div>
   );
@@ -2164,10 +2224,7 @@ function ConnectedCourseWorkspace({
     refetchInterval: 10_000,
   });
   if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
-  if (
-    query.error?.message?.includes("company_premium_lms_off") ||
-    (academy && query.isSuccess && !query.data.lms_enabled)
-  ) {
+  if (query.error?.message?.includes("company_premium_lms_off")) {
     return (
       <section className="panel">
         <PageHeading title={t("workspaceDisabledTitle")} />
@@ -2193,6 +2250,7 @@ function ConnectedCourseWorkspace({
         course={query.data}
         actor={actor}
         internal={__PORTAL_INTERNAL_EDITION__ && !academy}
+        academy={academy}
       />
     );
   return (

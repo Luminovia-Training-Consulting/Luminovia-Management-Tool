@@ -280,6 +280,12 @@ for (const edition of selected ? [selected] : editions) {
            from public.course_sessions s where course_run_id=${q(course)}`,
         ),
       );
+    const timeline = async (who, course) =>
+      response("course_timeline", "post").parse(
+        JSON.parse(await invoke(who, "course_timeline", q(course), "GET")),
+      );
+    const seriesEvents = async (course) =>
+      (await timeline(admin, course)).filter(({ kind }) => kind === "series_pattern");
 
     await sql(
       `update private.course_series_requests set organisation_id = null, time_zone = null
@@ -410,6 +416,9 @@ for (const edition of selected ? [selected] : editions) {
     );
     assert.deepEqual(await find(planner, editId), snapshot);
     assert.deepEqual(await sessionRows(editId), before);
+    assert.deepEqual(await seriesEvents(editId), []);
+    await assert.rejects(timeline(outsider, editId), /42501/);
+    await assert.rejects(timeline(participant, editId), /42501/);
     await assert.rejects(
       revise(outsider, editId, snapshot.revision, [extend], true),
       /42501/,
@@ -490,6 +499,8 @@ for (const edition of selected ? [selected] : editions) {
       true,
     );
     assert.deepEqual(edited, { run_ids: [editId], conflicts: [] });
+    assert.equal((await seriesEvents(editId)).length, 1);
+    assert.deepEqual(await seriesEvents(siblingId), []);
     const after = await sessionRows(editId);
     assert.equal(after.length, 2);
     assert.deepEqual(
@@ -609,8 +620,10 @@ for (const edition of selected ? [selected] : editions) {
             graceSnapshot.runs.map(({ sessions }) => sessions),
             licensedSnapshot.runs.map(({ sessions }) => sessions),
           );
+          assert.equal((await seriesEvents(editId)).length, 2);
         } else {
           await assert.rejects(find(planner, editId), /42501/);
+          await assert.rejects(timeline(admin, editId), /42501/);
         }
       }
       await sql(

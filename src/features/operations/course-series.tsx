@@ -296,6 +296,17 @@ export function CourseSeriesForm({
                   {t("editDraft", { number: index + 1 })}
                 </Link>
               )}
+              <Link
+                className="text-link"
+                to={
+                  academic
+                    ? `/courses/${run}/workspace?editSeries=1`
+                    : `/courses?run=${encodeURIComponent(run)}&editSeries=1`
+                }
+                onClick={onOpen}
+              >
+                {t("editPattern", { number: index + 1 })}
+              </Link>
               {!academic && canPrepareOffer && (
                 <Button asChild variant="secondary">
                   <Link to={`/courses?offer=${encodeURIComponent(run)}`}>

@@ -39,6 +39,7 @@ const fake = vi.hoisted(() => ({
   examRequired: false,
   canCreateDraft: false,
   draftAttempts: 0,
+  creatorDraft: null as Record<string, unknown> | null,
   notificationRead: false,
   publication: null as { published: boolean; capacity: number | null } | null,
   publicationAttempts: 0,
@@ -206,6 +207,7 @@ beforeEach(async () => {
   fake.examRequired = false;
   fake.canCreateDraft = false;
   fake.draftAttempts = 0;
+  fake.creatorDraft = null;
   fake.notificationRead = false;
   fake.publication = null;
   fake.publicationAttempts = 0;
@@ -223,6 +225,9 @@ beforeEach(async () => {
     (
       name: string,
       input?: {
+        p_action?: string;
+        p_draft_id?: string;
+        p_payload?: unknown;
         p_capacity?: number;
         p_support_url?: string | null;
         p_privacy_url?: string | null;
@@ -482,10 +487,39 @@ beforeEach(async () => {
           fake.notificationRead = true;
           data = 1;
           break;
-        case "academy_create_course_draft":
-          fake.draftAttempts++;
-          if (fake.draftAttempts === 1) error = { code: "unavailable" };
-          else data = { course_run_id: id, template_id: sessionId };
+        case "course_creator_drafts":
+          data = fake.creatorDraft ? [fake.creatorDraft] : [];
+          break;
+        case "course_creator_draft_action":
+          if (input?.p_action === "save") {
+            const revision = Number(fake.creatorDraft?.revision ?? 0) + 1;
+            const snapshot = input.p_payload as { content: { title: string } };
+            fake.creatorDraft = {
+              id: input.p_draft_id,
+              title: snapshot.content.title,
+              revision,
+              updated_at: start,
+              state: "editing",
+              course_run_id: null,
+              next_action: null,
+              payload: snapshot,
+            };
+            data = fake.creatorDraft;
+          } else if (input?.p_action === "create_course") {
+            fake.draftAttempts++;
+            if (fake.draftAttempts === 1) error = { code: "unavailable" };
+            else {
+              fake.creatorDraft = {
+                ...fake.creatorDraft,
+                revision: Number(fake.creatorDraft?.revision) + 1,
+                state: "created",
+                course_run_id: id,
+                next_action: "course",
+                payload: null,
+              };
+              data = fake.creatorDraft;
+            }
+          }
           break;
         case "academy_course_publication":
           data = fake.publication;
@@ -750,101 +784,118 @@ it("keeps German staff access for the managed Academy on a course deep link", as
   ).toBeNull();
 });
 
-it("keeps keyboard focus in the course schedule when adding and removing draft sessions", async () => {
+async function openAcademyCreator(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByText("Saved course drafts"));
+  await user.click(
+    screen.getByRole("button", { name: "Start a new course draft" }),
+  );
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "Create course draft" }),
+  );
+  await dialog.findByLabelText("Start 1");
+  return dialog;
+}
+
+it("keeps keyboard focus in the shared course schedule when adding and removing draft sessions", async () => {
   fake.canCreateDraft = true;
   open("/learning");
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByText("Create course draft", { exact: true }),
-  );
-  const first = within(screen.getByRole("group", { name: "Session 1" }));
-  const firstStart = first.getByLabelText("Start", { exact: true });
+  const dialog = await openAcademyCreator(user);
+  const firstStart = dialog.getByLabelText("Start 1");
   fireEvent.change(firstStart, { target: { value: "2039-01-02T09:00" } });
 
-  const add = screen.getByRole("button", { name: "Add session" });
+  const add = dialog.getByRole("button", { name: "Add session" });
   add.focus();
   await user.keyboard("{Enter}");
-  const second = within(screen.getByRole("group", { name: "Session 2" }));
-  expect(second.getByLabelText("Start", { exact: true })).toHaveFocus();
+  expect(dialog.getByLabelText("Start 2")).toHaveFocus();
 
-  second.getByRole("button", { name: "Remove session 2" }).focus();
+  dialog.getByRole("button", { name: "Remove 2" }).focus();
   await user.keyboard("{Enter}");
-  expect(screen.queryByRole("group", { name: "Session 2" })).toBeNull();
-  expect(firstStart).toHaveFocus();
+  expect(dialog.queryByLabelText("Start 2")).toBeNull();
+  await waitFor(() => expect(firstStart).toHaveFocus());
   expect(firstStart).toHaveValue("2039-01-02T09:00");
 });
 
-it("creates an academy series draft for the selected company and preserves its request on a failed reply", async () => {
+it("recovers a shared Academy draft and retries course creation without creating an offer", async () => {
   fake.canCreateDraft = true;
   open("/learning");
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByText("Create course draft", { exact: true }),
-  );
+  const initial = await openAcademyCreator(user);
+  await user.selectOptions(initial.getByLabelText("Organisation"), learnerId);
+  await user.type(initial.getByLabelText("Title"), "Course from local academy");
   await user.selectOptions(
-    screen.getByLabelText("Organisation", {
-      exact: true,
-      selector: "#academy-draft-company",
-    }),
-    learnerId,
+    initial.getByLabelText("Time zone"),
+    "Australia/Brisbane",
   );
-  await user.click(screen.getByLabelText("Create a new course template"));
-  await user.type(
-    screen.getByLabelText("Course template title"),
-    "Course from local academy",
-  );
-  fireEvent.change(screen.getByLabelText("Course time zone (IANA)"), {
-    target: { value: "Australia/Brisbane" },
-  });
-  fireEvent.change(screen.getByLabelText("Start", { exact: true }), {
+  fireEvent.change(initial.getByLabelText("Start 1"), {
     target: { value: "2039-01-02T09:00" },
   });
-  fireEvent.change(screen.getByLabelText("End", { exact: true }), {
+  fireEvent.change(initial.getByLabelText("End 1"), {
     target: { value: "2039-01-02T10:00" },
   });
-  const draft = within(
-    screen.getByLabelText("Start", { exact: true }).closest("form")!,
-  );
-  await user.selectOptions(draft.getByLabelText("Repeat"), "weekly");
-  fireEvent.change(draft.getByLabelText("Number of appointments"), {
+  await user.selectOptions(initial.getByLabelText("Repeat"), "weekly");
+  fireEvent.change(initial.getByLabelText("Number of appointments"), {
     target: { value: "2" },
   });
-  await user.click(draft.getByRole("button", { name: "Add repeats" }));
-  const repeat = within(screen.getByRole("group", { name: "Session 2" }));
-  expect(repeat.getByLabelText("Start")).toHaveValue("2039-01-09T09:00");
-  expect(repeat.getByLabelText("Start")).toHaveFocus();
+  await user.click(initial.getByRole("button", { name: "Add repeats" }));
+  expect(initial.getByLabelText("Start 2")).toHaveValue("2039-01-09T09:00");
+  expect(initial.getByLabelText("Start 2")).toHaveFocus();
+  await user.click(initial.getByRole("button", { name: "Save progress" }));
+  expect(await initial.findByText("Draft saved on the server.")).toBeVisible();
   expect(fake.draftAttempts).toBe(0);
-  await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
-  expect(
-    await screen.findByText(/The course draft could not be confirmed/),
-  ).toBeVisible();
-  await user.click(screen.getByRole("button", { name: /^Save draft$/ }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("heading", { name: "Fictional course room" }),
-    ).toBeVisible(),
+  await user.keyboard("{Escape}");
+  await user.click(await screen.findByRole("button", { name: "Resume" }));
+  const resumed = within(
+    await screen.findByRole("dialog", { name: "Create course draft" }),
   );
+  expect(await resumed.findByLabelText("Start 2")).toHaveValue(
+    "2039-01-09T09:00",
+  );
+  expect(resumed.getByLabelText("Title")).toHaveValue(
+    "Course from local academy",
+  );
+  expect(resumed.getByLabelText("Organisation")).toHaveValue(learnerId);
+  expect(resumed.getByLabelText("Time zone")).toHaveValue("Australia/Brisbane");
+  expect(resumed.queryByRole("button", { name: /offer/i })).toBeNull();
+
+  await user.click(resumed.getByRole("button", { name: /^Save draft$/ }));
+  expect(
+    await resumed.findByText(/The change could not be saved/),
+  ).toBeVisible();
+  await user.click(resumed.getByRole("button", { name: /^Save draft$/ }));
+  expect(
+    await screen.findByRole("heading", { name: "Fictional course room" }),
+  ).toBeVisible();
+
   const writes = fake.rpc.mock.calls
-    .filter(([name]) => name === "academy_create_course_draft")
+    .filter(
+      ([name, payload]) =>
+        name === "course_creator_draft_action" &&
+        payload.p_action === "create_course",
+    )
     .map(([, data]) => data);
   expect(writes).toHaveLength(2);
   expect(writes[0]).toMatchObject({
-    p_request_id: expect.any(String),
-    p_organisation_id: learnerId,
-    p_template_id: null,
-    p_template_title: "Course from local academy",
+    p_draft_id: expect.any(String),
+    p_expected_revision: expect.any(Number),
     p_payload: {
-      time_zone: "Australia/Brisbane",
-      sessions: [
-        {
-          starts_at: "2039-01-01T23:00:00.000Z",
-          ends_at: "2039-01-02T00:00:00.000Z",
-        },
-        {
-          starts_at: "2039-01-08T23:00:00.000Z",
-          ends_at: "2039-01-09T00:00:00.000Z",
-        },
-      ],
+      next_action: "course",
+      content: { title: "Course from local academy" },
+      run: {
+        organisation_id: learnerId,
+        template_id: "",
+        time_zone: "Australia/Brisbane",
+        sessions: [
+          {
+            starts_at: "2039-01-01T23:00:00.000Z",
+            ends_at: "2039-01-02T00:00:00.000Z",
+          },
+          {
+            starts_at: "2039-01-08T23:00:00.000Z",
+            ends_at: "2039-01-09T00:00:00.000Z",
+          },
+        ],
+      },
     },
   });
   expect(writes[1]).toEqual(writes[0]);

@@ -67,5 +67,112 @@ await withTestDatabase("course_creator", async ({ sql, actor }) => {
   assert.equal(await sql(`select count(*) from public.jobs where course_run_id = ${q(completed.course_run_id)}`), "0",
     "the existing separate offer review still governs marketplace publication");
   assert.equal(await sql(`select published from public.course_runs where id = ${q(completed.course_run_id)}`), "f");
+  const [
+    companyActor,
+    foreignActor,
+    foreignOrg,
+    companyTemplate,
+    foreignTemplate,
+    companyDraft,
+  ] = Array.from({ length: 6 }, randomUUID);
+  await sql(`
+    insert into auth.users(id,email,email_confirmed_at)
+    values ${[companyActor, foreignActor].map((id) => `(${q(id)},${q(id + "@example.invalid")},now())`).join(",")};
+    insert into public.user_roles(user_id,role) values (${q(companyActor)},'client'),(${q(foreignActor)},'client');
+    insert into public.organisations(id,name) values (${q(foreignOrg)},'Another fictional organisation');
+    insert into public.client_organisation_memberships(user_id,organisation_id)
+      values (${q(companyActor)},${q(org)}),(${q(foreignActor)},${q(foreignOrg)});
+    insert into public.course_templates(id,title,owner_organisation_id)
+      values (${q(companyTemplate)},'Company template',${q(org)}),(${q(foreignTemplate)},'Foreign template',${q(foreignOrg)});
+  `);
+  const companySnapshot = {
+    ...snapshot,
+    run: { ...snapshot.run, template_id: companyTemplate },
+  };
+  const foreignSnapshot = {
+    ...snapshot,
+    run: {
+      ...snapshot.run,
+      template_id: foreignTemplate,
+      organisation_id: foreignOrg,
+    },
+  };
+  await assert.rejects(
+    action(companyActor, "save", companyDraft, 0, foreignSnapshot),
+    /42501/,
+  );
+  const companyProgress = await action(
+    companyActor,
+    "save",
+    companyDraft,
+    0,
+    companySnapshot,
+  );
+  assert.equal(companyProgress.course_run_id, null);
+  assert.deepEqual(
+    (await read(companyActor, companyDraft))[0].payload,
+    companySnapshot,
+  );
+  assert.deepEqual(await read(foreignActor, companyDraft), []);
+  await assert.rejects(
+    action(foreignActor, "discard", companyDraft, 1, {}),
+    /42501/,
+  );
+  const companyConfirmation = {
+    run: { ...run, template_id: companyTemplate },
+    content: null,
+    next_action: "course",
+  };
+  await assert.rejects(
+    action(companyActor, "create_course", companyDraft, 1, {
+      ...companyConfirmation,
+      next_action: "offer",
+    }),
+    /42501/,
+  );
+  await assert.rejects(
+    action(companyActor, "create_course", companyDraft, 1, {
+      ...companyConfirmation,
+      content,
+    }),
+    /42501/,
+  );
+  const companyCourse = await action(
+    companyActor,
+    "create_course",
+    companyDraft,
+    1,
+    companyConfirmation,
+  );
+  assert.deepEqual(
+    await action(
+      companyActor,
+      "create_course",
+      companyDraft,
+      1,
+      companyConfirmation,
+    ),
+    companyCourse,
+  );
+  assert.equal(
+    await sql(
+      `select published from public.course_runs where id = ${q(companyCourse.course_run_id)}`,
+    ),
+    "f",
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from public.jobs where course_run_id = ${q(companyCourse.course_run_id)}`,
+    ),
+    "0",
+  );
+  await sql(
+    `update public.client_organisation_memberships set removed_at = now() where user_id = ${q(companyActor)}`,
+  );
+  assert.deepEqual(await read(companyActor, companyDraft), []);
+  await assert.rejects(
+    action(companyActor, "create_course", companyDraft, 1, companyConfirmation),
+    /42501/,
+  );
   console.log("Course creator SQL checks passed.");
 });

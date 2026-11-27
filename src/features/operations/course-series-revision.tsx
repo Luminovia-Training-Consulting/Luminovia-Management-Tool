@@ -503,10 +503,12 @@ export default function CourseSeriesRevision({
   actor,
   courseId,
   readOnly = false,
+  startOpen = false,
 }: {
   actor: string;
   courseId: string;
   readOnly?: boolean;
+  startOpen?: boolean;
 }) {
   const { t } = useTranslation("courseSeries");
   const client = useQueryClient();
@@ -533,7 +535,7 @@ export default function CourseSeriesRevision({
   const canRevise = !readOnly && snapshot.runs.some((run) => run.editable);
 
   return (
-    <details>
+    <details open={startOpen || undefined}>
       <summary>{t(canRevise ? "revisionTitle" : "revisionViewTitle")}</summary>
       {saved && <Notice kind="success">{t("revisionSaved")}</Notice>}
       {canRevise ? (

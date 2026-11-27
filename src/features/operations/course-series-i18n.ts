@@ -35,6 +35,10 @@ const messages = {
   runStart: ["Abweichender Tagesbeginn", "Custom daily start"],
   runEnd: ["Abweichendes Tagesende", "Custom daily end"],
   editDraft: ["Entwurf {{number}} bearbeiten", "Edit draft {{number}}"],
+  editPattern: [
+    "Terminmuster für Durchlauf {{number}} bearbeiten",
+    "Edit schedule pattern for run {{number}}",
+  ],
   firstDay: ["Erster möglicher Unterrichtstag", "First possible teaching day"],
   repeatStartDates: ["Starttage wiederholen", "Repeat start dates"],
   repeatStartDatesHint: [

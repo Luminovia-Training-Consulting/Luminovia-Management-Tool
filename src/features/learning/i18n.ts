@@ -622,6 +622,7 @@ const pairs: Record<string, [string, string]> = {
     "Course information, dates, preparation and shared files.",
   ],
   courseOverview: ["Kursübersicht & Termine", "Course overview & dates"],
+  courseTimeline: ["Kurszeitleiste", "Course timeline"],
   premiumOff: [
     "Das Lernmodul dieses Unternehmens ist derzeit deaktiviert. Kursstammdaten und Termine bleiben verfügbar; Lerninhalte, Teilnehmendenfunktionen und Materialien sind gesperrt.",
     "This company's learning module is currently OFF. Base course details and sessions remain available; learning content, participant features and materials are blocked.",

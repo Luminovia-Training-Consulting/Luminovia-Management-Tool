@@ -18,7 +18,14 @@ const configure = (id, release, enabled = true) =>
 // These operations need state owned by the listed SQL fixtures, such as a
 // published quiz, a confirmed scan or a registered external tool.
 const featureFixtureOperations = new Map([
-  ["academy-course-creation-db-tests.mjs", ["course_timeline"]],
+  [
+    "academy-course-creation-db-tests.mjs",
+    ["course_timeline", "course_creator_drafts", "course_creator_draft_action"],
+  ],
+  [
+    "course-bulk-archive-db-tests.mjs",
+    ["academy_course_archive_runs", "archive_course_runs"],
+  ],
   [
     "course-series-db-tests.mjs",
     ["course_series_for_run", "revise_course_series"],
@@ -1056,12 +1063,38 @@ const checkCourseAccess = async ({ sql, actor }, edition) => {
       reason,
       request,
     ]).then(JSON.parse);
+  // Academy allocations use their own audit receipts. Only a course manager
+  // sees the sanitized confirmation and release for this exact course.
+  const instructorTimeline = (who, course) =>
+    actor(
+      who,
+      `${gate("course_timeline", "GET")}
+      select public.course_timeline(${q(course)});`,
+    ).then((json) =>
+      JSON.parse(json).filter(({ kind }) => kind.startsWith("instructor_")),
+    );
+  assert.deepEqual(
+    (await instructorTimeline(admin, run)).map(({ kind }) => kind),
+    ["instructor_confirmed"],
+  );
+  assert.deepEqual(await instructorTimeline(admin, conflictingRun), []);
+  assert.deepEqual(await instructorTimeline(teacher, run), []);
   await assert.rejects(release(teacher, run), /42501/);
   await assert.rejects(release(admin, conflictingRun), /42501/);
   assert.deepEqual(await release(admin, run), {
     status: "cancelled",
     claim_id: result.claim_id,
   });
+  const instructorHistory = await instructorTimeline(admin, run);
+  assert.deepEqual(
+    instructorHistory.map(({ kind }) => kind),
+    ["instructor_confirmed", "instructor_released"],
+  );
+  assert.ok(
+    instructorHistory.every(
+      (event) => Object.keys(event).sort().join(",") === "at,id,kind",
+    ),
+  );
   await assert.rejects(
     release(admin, run, releaseKey, "Changed fictional reason"),
     /22023/,

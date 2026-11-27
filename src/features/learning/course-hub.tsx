@@ -1,6 +1,6 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
 import { PublishedExamResults } from "./timed-exam";
-import { lazy, Suspense, useState } from "react";
+import { useContext, lazy, Suspense, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import { dateTime } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { useAuth } from "../auth/auth-context";
+import { academyPremiumContext } from "../auth/academy-lms-package";
 import { AcademyCompanyLecturerBlocks } from "../operations/company-lecturer-blocks";
 import { courseHubQuery, type CourseOverview } from "./api";
 import {
@@ -36,6 +37,12 @@ import { LearningPrograms } from "./learning-programs";
 import "./i18n";
 import "./learning.css";
 
+const AcademyCourseArchive = lazy(() =>
+  import("./academy-course-archive").then(({ AcademyCourseArchive }) => ({
+    default: AcademyCourseArchive,
+  })),
+);
+
 const MaterialLibrary = lazy(() =>
   import("./material-library").then(({ MaterialLibrary }) => ({
     default: MaterialLibrary,
@@ -48,17 +55,10 @@ const PersonalPortfolio = lazy(() =>
   })),
 );
 
-function CourseCard({
-  course,
-  academy,
-}: {
-  course: CourseOverview;
-  academy: boolean;
-}) {
+function CourseCard({ course }: { course: CourseOverview }) {
   const { t, i18n } = useTranslation("learning");
   const start = course.next_start_at ?? course.starts_at;
   const workspace = `/courses/${course.id}/workspace`;
-  const canOpen = course.lms_enabled || !academy;
   return (
     <article className="panel learning-card">
       <div className="course-card-label">
@@ -66,7 +66,7 @@ function CourseCard({
         {course.organisation_name && <span>{course.organisation_name}</span>}
       </div>
       <h3>
-        {canOpen ? <Link to={workspace}>{course.title}</Link> : course.title}
+        <Link to={workspace}>{course.title}</Link>
       </h3>
       <div className="course-card-facts">
         <span>
@@ -81,13 +81,11 @@ function CourseCard({
         </span>
       </div>
       <div className="course-card-actions">
-        {canOpen && (
-          <Button asChild>
-            <Link to={workspace}>
-              {t("openWorkspace")} <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </Button>
-        )}
+        <Button asChild>
+          <Link to={workspace}>
+            {t("openWorkspace")} <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        </Button>
         {course.lms_enabled ? (
           <Button asChild variant="secondary">
             <Link to={workspace + "#course-chat"}>
@@ -153,6 +151,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const results = params.get("view") === "results";
   const programmes = params.get("view") === "programmes";
   const portfolio = params.get("view") === "portfolio";
+  const premium = useContext(academyPremiumContext);
   const dashboard = !materials && !results && !programmes && !portfolio;
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
@@ -189,7 +188,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
               {t("title", { ns: "learningPrograms" })}
             </Link>
           </Button>
-          {(academy || roles.data?.includes("participant")) && (
+          {premium && (academy || roles.data?.includes("participant")) && (
             <Button asChild variant={portfolio ? "default" : "secondary"}>
               <Link
                 to="/learning?view=portfolio"
@@ -199,24 +198,37 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
               </Link>
             </Button>
           )}
-          <Button asChild variant={results ? "default" : "secondary"}>
-            <Link
-              to="/learning?view=results"
-              aria-current={results ? "page" : undefined}
-            >
-              {t("results", { ns: "timedExam" })}
-            </Link>
-          </Button>
+          {premium && (
+            <Button asChild variant={results ? "default" : "secondary"}>
+              <Link
+                to="/learning?view=results"
+                aria-current={results ? "page" : undefined}
+              >
+                {t("results", { ns: "timedExam" })}
+              </Link>
+            </Button>
+          )}
         </nav>
       )}
       {dashboard && academy === "active" && (
         <AcademyCourseDraft actor={actor} />
       )}
+      {dashboard && academy && (
+        <Suspense fallback={null}>
+          <AcademyCourseArchive
+            key={actor}
+            actor={actor}
+            readOnly={academy === "grace"}
+          />
+        </Suspense>
+      )}
       {dashboard && academy && <AcademyCompanyLecturerBlocks actor={actor} />}
       {dashboard && !academy && roles.data?.includes("participant") && (
         <CompanyInvitations actor={actor} />
       )}
-      {programmes ? (
+      {!premium && (portfolio || results) ? (
+        <Notice>{t("premiumOff")}</Notice>
+      ) : programmes ? (
         <LearningPrograms actor={actor} />
       ) : portfolio ? (
         <Suspense fallback={<Loading />}>
@@ -281,11 +293,7 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
                   <h2 id={`course-phase-${group}`}>{t(`phase.${group}`)}</h2>
                   <div className="learning-grid">
                     {courses.map((course) => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        academy={Boolean(academy)}
-                      />
+                      <CourseCard key={course.id} course={course} />
                     ))}
                   </div>
                 </section>

@@ -37,6 +37,11 @@ import {
   academyDraftScheduleReceipt,
 } from "../learning/academy-draft-schema.ts";
 import {
+  courseCreatorIndexSchema,
+  courseCreatorReceiptSchema,
+  courseCreatorSnapshotSchema,
+} from "../operations/course-creator-drafts-schema.ts";
+import {
   academyCourseCapacity,
   academyCoursePublication,
   academyPublishedCourse,
@@ -112,6 +117,12 @@ import { academyAdministrationPaths } from "./academy-administration-contract.ts
 import { academySupportPaths } from "./academy-support-contract.ts";
 import { academyLicencePaths } from "./academy-licence-contract.ts";
 import { courseSeriesPaths } from "./course-series-contract.ts";
+import {
+  academyCourseArchivePage,
+  academyCourseArchiveRequest,
+  courseBulkArchiveRequest,
+  courseBulkArchiveResult,
+} from "../operations/course-bulk-archive-schema.ts";
 import { learningProgramPaths } from "./learning-program-contract.ts";
 import { weightedGradebookPaths } from "./weighted-gradebook-contract.ts";
 import { portfolioPaths } from "./portfolio-contract.ts";
@@ -934,7 +945,7 @@ const coursePaths = {
   "/rest/v1/rpc/academy_course_draft_options": courseOperation(
     "readAcademyDraftOptions",
     "Find organisations and templates for a new course draft",
-    "A current course manager may search the active local catalogue by literal name or title. Each list is limited to 50. Eligible course members without management authority receive null.",
+    "A current course manager may search the active local catalogue by literal name, title or exact ID. Each list is limited to 50. Eligible course members without management authority receive null.",
     "active",
     record(
       {
@@ -944,6 +955,54 @@ const coursePaths = {
       [],
     ),
     z.toJSONSchema(academyDraftOptions),
+  ),
+  "/rest/v1/rpc/course_creator_drafts": courseOperation(
+    "readAcademyCourseCreatorDrafts",
+    "List or restore the caller's saved course drafts",
+    "Requires a current course manager. Omit the ID or pass null for the caller's receipts. Pass a draft ID to restore the full editing snapshot. Other managers' drafts are unavailable.",
+    "active",
+    record({ p_draft_id: nullable(uuid) }, []),
+    z.toJSONSchema(courseCreatorIndexSchema),
+  ),
+  "/rest/v1/rpc/course_creator_draft_action": courseOperation(
+    "mutateAcademyCourseCreatorDraft",
+    "Save progress, duplicate, discard or create a draft course",
+    "Requires the draft owner, current course management and the expected revision. Saving progress leaves the course catalogue unchanged. Creating a draft course saves its template and sessions and returns the same receipt on retry. Publication takes place in the course workspace.",
+    "active",
+    record({
+      p_action: {
+        type: "string",
+        enum: ["save", "duplicate", "discard", "create_course"],
+      },
+      p_draft_id: uuid,
+      p_expected_revision: { type: "integer", minimum: 0 },
+      p_payload: {
+        anyOf: [
+          z.toJSONSchema(courseCreatorSnapshotSchema),
+          record({ new_id: uuid }),
+          record({}),
+          record({
+            run: record({
+              organisation_id: uuid,
+              template_id: { anyOf: [uuid, { const: "" }] },
+              ...z.toJSONSchema(academyDraftPayload).properties,
+            }),
+            content: nullable(
+              record({
+                title: string,
+                description: string,
+                syllabus: string,
+                prerequisites: string,
+                topic_ids: { type: "array", items: uuid },
+              }),
+            ),
+            next_action: { const: "course" },
+          }),
+        ],
+      },
+    }),
+    z.toJSONSchema(courseCreatorReceiptSchema),
+    true,
   ),
   "/rest/v1/rpc/academy_create_course_draft": courseOperation(
     "createAcademyCourseDraft",
@@ -1034,6 +1093,23 @@ const coursePaths = {
   ...academyLicencePaths,
   ...academyClassPaths,
   ...courseSeriesPaths(true),
+  "/rest/v1/rpc/academy_course_archive_runs": courseOperation(
+    "listAcademyCourseArchiveRuns",
+    "List current or archived course runs for course managers",
+    "Reads a page of local course-run states for archive and restore review.",
+    "active-or-grace",
+    z.toJSONSchema(academyCourseArchiveRequest),
+    z.toJSONSchema(academyCourseArchivePage),
+  ),
+  "/rest/v1/rpc/archive_course_runs": courseOperation(
+    "archiveCourseRuns",
+    "Archive or restore reviewed courses",
+    "Changes 2–50 reviewed courses from current local organisations together. Publication, organisation and archive state must match the review.",
+    "active",
+    z.toJSONSchema(courseBulkArchiveRequest),
+    z.toJSONSchema(courseBulkArchiveResult),
+    true,
+  ),
   ...learningProgramPaths(true),
   ...portfolioPaths(true),
   ...weightedGradebookPaths(true),
@@ -1144,7 +1220,7 @@ const coursePaths = {
   "/rest/v1/rpc/course_timeline": courseOperation(
     "readAcademyCourseTimeline",
     "Read recorded course milestones",
-    "Current course management and assigned instructors get up to 100 scoped planning and publication milestones. The response contains event categories and timestamps.",
+    "Current course management and assigned instructors get up to 100 scoped planning, series, visibility and class milestones. Course managers also see confirmations and releases of Academy instructor assignments linked to the course. Each entry contains an opaque event ID, category and timestamp.",
     "active-or-grace",
     record(run),
     courseTimelineResult,
@@ -1750,26 +1826,38 @@ export function academyOpenApi(backend: string, brand: AcademyIdentity) {
           security: [{ apiKey: [] }],
           responses: {
             "200": ok(
-              record({
-                installation_id:
-                  brand.installationId === null
-                    ? uuid
-                    : { const: brand.installationId },
-                edition: { const: brand.edition },
-                licence_status: {
-                  enum: [
-                    "unlicensed",
-                    "scheduled",
-                    "active",
-                    "grace",
-                    "expired",
-                  ],
+              record(
+                {
+                  installation_id:
+                    brand.installationId === null
+                      ? uuid
+                      : { const: brand.installationId },
+                  edition: { const: brand.edition },
+                  licence_status: {
+                    enum: [
+                      "unlicensed",
+                      "scheduled",
+                      "active",
+                      "grace",
+                      "expired",
+                    ],
+                  },
+                  customer_ready: { const: false },
+                  lms_available: { const: false },
+                  academy_standard_only: { const: true },
+                  marketplace_available: { const: false },
+                  company_premium_switch_available: { const: false },
                 },
-                customer_ready: { const: false },
-                lms_available: { const: false },
-                marketplace_available: { const: false },
-                company_premium_switch_available: { const: false },
-              }),
+                [
+                  "installation_id",
+                  "edition",
+                  "licence_status",
+                  "customer_ready",
+                  "lms_available",
+                  "marketplace_available",
+                  "company_premium_switch_available",
+                ],
+              ),
             ),
           },
         },

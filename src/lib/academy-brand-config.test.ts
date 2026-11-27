@@ -125,7 +125,15 @@ it("packages the exact approved customer assets and its scoped licensed API", ()
   const paths = Object.keys(document.paths).filter(
     (path) => !path.startsWith("/functions/v1/portal-api/v1/"),
   );
-  expect(paths).toHaveLength(178);
+  expect(paths).toHaveLength(182);
+  expect(paths).toEqual(
+    expect.arrayContaining([
+      "/rest/v1/rpc/course_creator_drafts",
+      "/rest/v1/rpc/course_creator_draft_action",
+      "/rest/v1/rpc/archive_course_runs",
+      "/rest/v1/rpc/academy_course_archive_runs",
+    ]),
+  );
   expect(document.paths["/rest/v1/rpc/course_series_for_run"]).toMatchObject({
     get: { "x-portal-licence": "active-or-grace" },
   });

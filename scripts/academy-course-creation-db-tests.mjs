@@ -14,6 +14,8 @@ const gate = (path, method = "POST") =>
 const makePath = "/rpc/save_course_run";
 const choicesPath = "/rpc/academy_course_draft_options";
 const draftPath = "/rpc/academy_create_course_draft";
+const recoverPath = "/rpc/course_creator_drafts";
+const creatorPath = "/rpc/course_creator_draft_action";
 
 /** Wait for the configuration holder to reach its database barrier before submitting the write. */
 async function waitForTransaction(sql, tag) {
@@ -137,9 +139,22 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
         `${gate(draftPath)} select public.academy_create_course_draft(${q(id)},${q(company)},${chosen === null ? "null" : q(chosen)},${title === null ? "null" : q(title)},${q(JSON.stringify(body))}::jsonb)`,
       ).then(JSON.parse);
 
+    const creatorId = randomUUID();
+    const recover = (who, id = creatorId) =>
+      actor(
+        who,
+        `${gate(recoverPath)} select public.course_creator_drafts(${id ? q(id) : "null"})`,
+      ).then(JSON.parse);
+    const creatorAction = (who, action, revision, body) =>
+      actor(
+        who,
+        `${gate(creatorPath)} select public.course_creator_draft_action(${q(action)},${q(creatorId)},${revision},${q(JSON.stringify(body))}::jsonb)`,
+      ).then(JSON.parse);
+
     await assert.rejects(save(manager), /42501/);
     await assert.rejects(choices(manager), /42501/);
     await assert.rejects(draft(manager), /42501/);
+    await assert.rejects(recover(manager), /42501/);
     await assert.rejects(actor(manager, saveSql()), /42501/);
     await sql(configure(true));
     await assert.rejects(save(teacher), /42501/);
@@ -277,6 +292,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       expires_at: date(-2),
     });
     assert.equal((await workspace(manager)).id, run);
+    await assert.rejects(recover(manager), /42501/);
+    await assert.rejects(creatorAction(manager, "discard", 1, {}), /42501/);
     await assert.rejects(save(manager), /42501/);
     await assert.rejects(actor(manager, saveSql()), /42501/);
     await renew({
@@ -287,6 +304,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     });
     await assert.rejects(save(manager), /42501/);
     await assert.rejects(workspace(manager), /42501/);
+    await assert.rejects(recover(manager), /42501/);
     assert.equal(await sql("select count(*) from public.course_runs"), "1");
     assert.equal(await sql("select count(*) from public.course_sessions"), "2");
 
@@ -443,10 +461,16 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     const historyPath = "/rpc/course_timeline";
     const history = (who) =>
-      actor(who, `${gate(historyPath, "GET")} select public.course_timeline(${q(first.course_run_id)})`).then(JSON.parse);
+      actor(
+        who,
+        `${gate(historyPath, "GET")} select public.course_timeline(${q(first.course_run_id)})`,
+      ).then(JSON.parse);
     const milestones = await history(manager);
     validateResponse(historyPath, milestones);
-    assert.equal(milestones.filter(({kind}) => kind === "schedule").length, 1);
+    assert.equal(
+      milestones.filter(({ kind }) => kind === "schedule").length,
+      1,
+    );
     await assert.rejects(history(learner), /42501/);
     await sql(
       `update public.course_runs set published=true where id=${q(first.course_run_id)}`,
@@ -464,6 +488,82 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     await assert.rejects(draft(manager), /PT409/);
     assert.equal(await sql("select count(*) from public.jobs"), "0");
+    const snapshot = {
+      run: {
+        ...payload,
+        template_id: "",
+        archived: false,
+        sessions: [{ starts_at: "2028-07-13T08:00", ends_at: "" }],
+      },
+      content: {
+        title: "Recovered workshop",
+        description: "Academy-only draft description",
+        syllabus: "",
+        prerequisites: "",
+        topic_ids: [],
+        archived: false,
+      },
+    };
+    await assert.rejects(recover(learner), /42501/);
+    await assert.rejects(creatorAction(teacher, "save", 0, snapshot), /42501/);
+    const progress = await creatorAction(manager, "save", 0, snapshot);
+    validateResponse(creatorPath, progress);
+    validateResponse(creatorPath, progress);
+    assert.equal(progress.course_run_id, null);
+    assert.deepEqual((await recover(manager))[0].payload, snapshot);
+    assert.equal((await recover(manager, null))[0].payload, null);
+    await sql(
+      `insert into public.user_roles(user_id,role) values (${q(teacher)},'management')`,
+    );
+    assert.deepEqual(await recover(teacher), []);
+    await assert.rejects(creatorAction(teacher, "discard", 1, {}), /42501/);
+    const content = { ...snapshot.content };
+    delete content.archived;
+    const confirmation = {
+      run: { ...payload, template_id: "" },
+      content,
+      next_action: "course",
+    };
+    await assert.rejects(
+      creatorAction(manager, "create_course", 1, {
+        ...confirmation,
+        next_action: "offer",
+      }),
+      /42501/,
+    );
+    await assert.rejects(
+      creatorAction(manager, "create_course", 1, {
+        ...confirmation,
+        run: { ...confirmation.run, organisation_id: archivedOrg },
+      }),
+      /22023/,
+    );
+    const created = await creatorAction(
+      manager,
+      "create_course",
+      1,
+      confirmation,
+    );
+    validateResponse(creatorPath, created);
+    assert.equal(created.state, "created");
+    assert.deepEqual(
+      await creatorAction(manager, "create_course", 1, confirmation),
+      created,
+    );
+    assert.equal(
+      await sql(
+        `select published from public.course_runs where id=${q(created.course_run_id)}`,
+      ),
+      "f",
+    );
+    assert.equal(await sql("select count(*) from public.jobs"), "0");
+    const recovered = await recover(manager);
+    validateResponse(recoverPath, recovered);
+    validateResponse(creatorPath, created);
+    const [confirmed] = recovered;
+    validateResponse(recoverPath, [confirmed]);
+    assert.equal(confirmed.course_run_id, created.course_run_id);
+
     console.log(
       `PASS ${edition} course creation and draft edits, stable session IDs, template reuse, exact retries, publication lock, grace and expiry`,
     );

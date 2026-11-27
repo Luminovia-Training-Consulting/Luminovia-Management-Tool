@@ -1,380 +1,150 @@
-/** Online draft form for the licensed academy's local courses. */
-import { useRef, useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Field, Loading, Notice } from "../../components/common";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { validScheduleIntervals, zonedInstant } from "../../lib/dates";
-import { requireOnline, useOnline } from "../../lib/online";
+import { Dialog } from "../../components/ui/dialog";
+import { useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
-import type { LocalScheduleEntry } from "../../lib/recurrence";
 import { CourseSeriesForm } from "../operations/course-series";
-import { courseHubQuery } from "./api";
-import { CourseSessionBulkEdit } from "../operations/course-session-bulk-edit";
-import { CourseSchedulePlanner } from "../operations/course-schedule-planner";
-import { CourseSessionRecurrence } from "./course-session-recurrence";
+import { CourseCreatorDraftLibrary } from "../operations/course-creator-drafts";
 import {
-  academyDraftOptions,
-  academyDraftPayload,
-  academyDraftReceipt,
-} from "./academy-draft-schema";
+  courseCreatorDraftId,
+  courseCreatorDraftsQuery,
+  type CourseCreatorDraft,
+} from "../operations/course-creator-drafts-api";
+import { courseHubQuery } from "./api";
+import { academyDraftOptions } from "./academy-draft-schema";
 
-function resolveSession(row: LocalScheduleEntry, zone: string) {
+const CourseEditor = lazy(() =>
+  import("../operations/course-editor").then(({ RunForm }) => ({
+    default: RunForm,
+  })),
+);
+
+function draftOptionsQuery(
+  actor: string,
+  organisation: string,
+  template: string,
+) {
   return {
-    starts_at: zonedInstant(row.starts_at, zone),
-    ends_at: zonedInstant(row.ends_at, zone),
-  };
-}
-
-/** Access to options and the final transaction is rechecked by the exact licensed installation. */
-export function AcademyCourseDraft({ actor }: { actor: string }) {
-  const { t } = useTranslation(["learning", "courseSeries"]);
-  const online = useOnline();
-  const navigate = useNavigate();
-  const cache = useQueryClient();
-  const [organisationQuery, setOrganisationQuery] = useState("");
-  const [templateQuery, setTemplateQuery] = useState("");
-  const [newTemplate, setNewTemplate] = useState(false);
-  const [timeZone, setTimeZone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
-  const [sessions, setSessions] = useState<
-    (LocalScheduleEntry & { id: string })[]
-  >(() => [{ id: crypto.randomUUID(), starts_at: "", ends_at: "" }]);
-  const [invalid, setInvalid] = useState(false);
-  const lastRequest = useRef<{ content: string; id: string }>(undefined);
-  const sessionToFocus = useRef<string>(undefined);
-  const options = useQuery<ReturnType<typeof academyDraftOptions.parse>>({
-    queryKey: [
-      "academy-draft-options",
-      actor,
-      organisationQuery,
-      templateQuery,
-    ],
-    enabled: online,
-    staleTime: 0,
-    refetchOnMount: "always",
-    placeholderData: (previous, query) =>
-      query?.queryKey[1] === actor ? previous : undefined,
-    retry: false,
-    queryFn: async ({ signal }) => {
+    queryKey: ["academy-draft-options", actor, organisation, template],
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
       const { data, error } = await db()
         .rpc("academy_course_draft_options", {
-          p_organisation_query: organisationQuery,
-          p_template_query: templateQuery,
+          p_organisation_query: organisation,
+          p_template_query: template,
         })
         .abortSignal(signal);
       if (error) throw error;
       return academyDraftOptions.parse(data);
     },
-  });
-  const save = useMutation({
-    mutationFn: async (body: {
-      p_organisation_id: string;
-      p_template_id: string | null;
-      p_template_title: string | null;
-      p_payload: ReturnType<typeof academyDraftPayload.parse>;
-    }) => {
-      requireOnline();
-      const content = JSON.stringify(body);
-      if (lastRequest.current?.content !== content)
-        lastRequest.current = { content, id: crypto.randomUUID() };
-      const { data, error } = await db().rpc("academy_create_course_draft", {
-        ...body,
-        p_request_id: lastRequest.current.id,
-      });
-      if (error) throw error;
-      return academyDraftReceipt.parse(data);
-    },
-    onSuccess: async ({ course_run_id }) => {
-      await cache.invalidateQueries({
-        queryKey: courseHubQuery(actor).queryKey,
-      });
-      void navigate(`/courses/${course_run_id}/workspace`);
-    },
-  });
+    staleTime: 0,
+    retry: false,
+  };
+}
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const value = (name: string) => String(form.get(name) ?? "").trim();
-    const zone = timeZone.trim();
-    const payload = academyDraftPayload.safeParse({
-      time_zone: zone,
-      venue: value("venue"),
-      delivery_type: value("delivery_type"),
-      sessions: sessions.map((item) => resolveSession(item, zone)),
-    });
-    save.reset();
-    if (!payload.success || !validScheduleIntervals(payload.data.sessions)) {
-      setInvalid(true);
-      return;
-    }
-    setInvalid(false);
-    save.mutate({
-      p_organisation_id: value("organisation"),
-      p_template_id: newTemplate ? null : value("template"),
-      p_template_title: newTemplate ? value("new_template") : null,
-      p_payload: payload.data,
-    });
-  }
+/** Active Academy managers use the same personal draft store and course editor as the internal portal. */
+export function AcademyCourseDraft({ actor }: { actor: string }) {
+  const { t } = useTranslation(["learning", "courseSeries", "courseCreator"]);
+  const online = useOnline();
+  const navigate = useNavigate();
+  const cache = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const parsed = courseCreatorDraftId.safeParse(params.get("creator"));
+  const draftId = parsed.success ? parsed.data : undefined;
+  const fresh = params.get("startCreator") === "1";
+  const [busy, setBusy] = useState(false);
+  const [epoch, setEpoch] = useState(0);
+  const options = useQuery({
+    ...draftOptionsQuery(actor, "", ""),
+    enabled: online,
+    refetchOnMount: "always",
+  });
+  const enabled =
+    online &&
+    options.isSuccess &&
+    options.isFetchedAfterMount &&
+    Boolean(options.data);
+  const draft = useQuery({
+    ...courseCreatorDraftsQuery(actor, draftId),
+    enabled: enabled && Boolean(draftId),
+    retry: false,
+  });
+  const saved = draft.data?.[0];
 
-  function updateSession(
-    id: string,
-    field: keyof LocalScheduleEntry,
-    value: string,
-  ) {
-    setSessions((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item,
-      ),
+  function changeDraft(id?: string, start = false) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (id) next.set("creator", id);
+        else next.delete("creator");
+        if (start) next.set("startCreator", "1");
+        else next.delete("startCreator");
+        return next;
+      },
+      { replace: !id },
     );
   }
 
+  async function openCourse(id: string) {
+    await cache.invalidateQueries({ queryKey: courseHubQuery(actor).queryKey });
+    void navigate(`/courses/${id}/workspace`);
+  }
+
   if (!online || options.isError || options.data === null) return null;
-  if (!options.data) return <Loading />;
-  const disabled = save.isPending || options.isFetching;
+  if (!enabled || !options.data) return <Loading />;
   return (
     <>
-      <details className="panel academy-draft">
-        <summary>{t("academyCreateDraft")}</summary>
-        <form onSubmit={submit}>
-          <Field
-            id="academy-draft-company-search"
-            label={t("academySearchOrganisations")}
-          >
-            <input
-              id="academy-draft-company-search"
-              maxLength={100}
-              value={organisationQuery}
-              onChange={(event) =>
-                setOrganisationQuery(event.currentTarget.value)
-              }
-            />
-          </Field>
-          <Field id="academy-draft-company" label={t("academyOrganisation")}>
-            <select
-              id="academy-draft-company"
-              name="organisation"
-              required
-              defaultValue=""
-            >
-              <option value="">{t("choose")}</option>
-              {options.data.organisations.map(({ id, name }) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {!options.data.organisations.length && (
-            <Notice>{t("academyNoOrganisation")}</Notice>
-          )}
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={newTemplate}
-              onChange={(event) => setNewTemplate(event.currentTarget.checked)}
-            />
-            {t("academyNewTemplate")}
-          </label>
-          {newTemplate ? (
-            <Field id="academy-draft-title" label={t("academyTemplateTitle")}>
-              <input
-                id="academy-draft-title"
-                name="new_template"
-                required
-                maxLength={200}
+      <CourseCreatorDraftLibrary
+        actor={actor}
+        courseOnly
+        onStart={() => changeDraft(crypto.randomUUID(), true)}
+        onOpen={changeDraft}
+        onContinue={(receipt) => {
+          if (receipt.course_run_id) void openCourse(receipt.course_run_id);
+        }}
+      />
+      <Dialog
+        open={Boolean(draftId)}
+        title={t("academyCreateDraft")}
+        description={t("courseCreator:courseDraftDescription")}
+        closeDisabled={busy}
+        onOpenChange={(open) => {
+          if (!open && !busy) changeDraft();
+        }}
+      >
+        {draftId &&
+          (draft.isPending ? (
+            <Loading />
+          ) : draft.isError ? (
+            <ErrorState retry={() => void draft.refetch()} />
+          ) : saved?.state === "created" && saved.course_run_id ? (
+            <Button onClick={() => void openCourse(saved.course_run_id!)}>
+              {t("courseCreator:openCourse")}
+            </Button>
+          ) : saved?.state === "editing" || fresh ? (
+            <Suspense fallback={<Loading />}>
+              <AcademyCreatorFields
+                key={draftId + ":" + epoch}
+                actor={actor}
+                draftId={draftId}
+                saved={saved}
+                options={options.data}
+                reload={() => {
+                  void draft.refetch().then((result) => {
+                    if (result.isSuccess) setEpoch((value) => value + 1);
+                  });
+                }}
+                onBusy={setBusy}
+                onOpen={openCourse}
               />
-            </Field>
+            </Suspense>
           ) : (
-            <>
-              <Field
-                id="academy-draft-template-search"
-                label={t("academySearchTemplates")}
-              >
-                <input
-                  id="academy-draft-template-search"
-                  maxLength={100}
-                  value={templateQuery}
-                  onChange={(event) =>
-                    setTemplateQuery(event.currentTarget.value)
-                  }
-                />
-              </Field>
-              <Field id="academy-draft-template" label={t("academyTemplate")}>
-                <select
-                  id="academy-draft-template"
-                  name="template"
-                  required
-                  defaultValue=""
-                >
-                  <option value="">{t("choose")}</option>
-                  {options.data.templates.map(({ id, title }) => (
-                    <option key={id} value={id}>
-                      {title}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </>
-          )}
-          <Field id="academy-draft-zone" label={t("academyTimeZone")}>
-            <input
-              id="academy-draft-zone"
-              name="time_zone"
-              value={timeZone}
-              onChange={(event) => setTimeZone(event.currentTarget.value)}
-              required
-            />
-          </Field>
-          <Field id="academy-draft-delivery" label={t("academyDelivery")}>
-            <select
-              id="academy-draft-delivery"
-              name="delivery_type"
-              defaultValue="online"
-            >
-              <option value="online">{t("academyOnline")}</option>
-              <option value="onsite">{t("academyOnsite")}</option>
-            </select>
-          </Field>
-          <Field id="academy-draft-venue" label={t("academyVenue")}>
-            <input id="academy-draft-venue" name="venue" maxLength={500} />
-          </Field>
-          {sessions.map(({ id, starts_at, ends_at }, index) => (
-            <fieldset key={id} className="academy-draft-session">
-              <legend>{t("sessionNumber", { number: index + 1 })}</legend>
-              <Field id={`start-${id}`} label={t("academySessionStart")}>
-                <input
-                  id={`start-${id}`}
-                  name={`start-${id}`}
-                  type="datetime-local"
-                  value={starts_at}
-                  onChange={(event) =>
-                    updateSession(id, "starts_at", event.currentTarget.value)
-                  }
-                  required
-                  ref={(input) => {
-                    if (input && sessionToFocus.current === id) {
-                      sessionToFocus.current = undefined;
-                      input.focus();
-                    }
-                  }}
-                />
-              </Field>
-              <Field id={`end-${id}`} label={t("academySessionEnd")}>
-                <input
-                  id={`end-${id}`}
-                  name={`end-${id}`}
-                  type="datetime-local"
-                  value={ends_at}
-                  onChange={(event) =>
-                    updateSession(id, "ends_at", event.currentTarget.value)
-                  }
-                  required
-                />
-              </Field>
-              {sessions.length > 1 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    // Keep focus in the schedule after its focused row unmounts.
-                    sessionToFocus.current = (
-                      sessions[index + 1] ?? sessions[index - 1]
-                    )?.id;
-                    setSessions((items) =>
-                      items.filter((item) => item.id !== id),
-                    );
-                  }}
-                >
-                  {t("academyRemoveSession", { number: index + 1 })}
-                </Button>
-              )}
-            </fieldset>
+            <Notice kind="error">{t("courseCreator:error")}</Notice>
           ))}
-          <CourseSchedulePlanner
-            zone={timeZone.trim()}
-            editedSessionCount={
-              sessions.filter((item) => item.starts_at || item.ends_at).length
-            }
-            disabled={disabled}
-            onApply={(entries) => {
-              const rows = entries.map((entry) => ({
-                ...entry,
-                id: crypto.randomUUID(),
-              }));
-              sessionToFocus.current = rows[0]?.id;
-              setSessions(rows);
-              setInvalid(false);
-            }}
-          />
-          {sessions.length > 1 && (
-            <CourseSessionBulkEdit
-              entries={sessions.map((row) => ({ id: row.id, row }))}
-              zone={timeZone.trim()}
-              disabled={disabled}
-              onApply={(changes) => {
-                const edits = new Map(changes.map(({ id, row }) => [id, row]));
-                const rows = sessions.map((row) => ({
-                  ...row,
-                  ...edits.get(row.id),
-                }));
-                if (
-                  !validScheduleIntervals(
-                    rows.map((row) => resolveSession(row, timeZone.trim())),
-                  )
-                )
-                  return false;
-                setSessions(rows);
-                setInvalid(false);
-                return true;
-              }}
-            />
-          )}
-          <CourseSessionRecurrence
-            anchor={sessions[sessions.length - 1]}
-            zone={timeZone}
-            sessionCount={sessions.length}
-            disabled={disabled}
-            onAppend={(entries) => {
-              const rows = entries.map((entry) => ({
-                ...entry,
-                id: crypto.randomUUID(),
-              }));
-              sessionToFocus.current = rows[0]?.id;
-              setSessions((items) => [...items, ...rows]);
-            }}
-          />
-          {invalid && (
-            <Notice kind="error">{t("academyDraftTimesInvalid")}</Notice>
-          )}
-          {save.isError && (
-            <Notice kind="error">{t("academyDraftFailed")}</Notice>
-          )}
-          <div className="form-actions academy-draft-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={sessions.length >= 60 || save.isPending}
-              onClick={() => {
-                const id = crypto.randomUUID();
-                sessionToFocus.current = id;
-                setSessions((items) => [
-                  ...items,
-                  { id, starts_at: "", ends_at: "" },
-                ]);
-              }}
-            >
-              {t("academyAddSession")}
-            </Button>
-            <Button type="submit" disabled={disabled}>
-              {t("academySaveDraft")}
-            </Button>
-          </div>
-        </form>
-      </details>
+      </Dialog>
       {options.data.templates.length > 0 &&
         options.data.organisations.length > 0 && (
           <details className="panel academy-draft">
@@ -394,5 +164,124 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
           </details>
         )}
     </>
+  );
+}
+
+type DraftOptions = NonNullable<ReturnType<typeof academyDraftOptions.parse>>;
+
+function mergeOptions(
+  base: DraftOptions,
+  ...other: (DraftOptions | null | undefined)[]
+): DraftOptions {
+  const organisations = new Map(
+    base.organisations.map((item) => [item.id, item]),
+  );
+  const templates = new Map(base.templates.map((item) => [item.id, item]));
+  for (const group of other) {
+    for (const item of group?.organisations ?? [])
+      organisations.set(item.id, item);
+    for (const item of group?.templates ?? []) templates.set(item.id, item);
+  }
+  return {
+    organisations: [...organisations.values()],
+    templates: [...templates.values()],
+  };
+}
+
+function AcademyCreatorFields({
+  actor,
+  draftId,
+  saved,
+  options,
+  reload,
+  onBusy,
+  onOpen,
+}: {
+  actor: string;
+  draftId: string;
+  saved?: CourseCreatorDraft;
+  options: DraftOptions;
+  reload: () => void;
+  onBusy: (busy: boolean) => void;
+  onOpen: (id: string) => Promise<void>;
+}) {
+  const { t } = useTranslation("learning");
+  const [companySearch, setCompanySearch] = useState("");
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [seen, setSeen] = useState(options);
+  const lookup = useQuery({
+    ...draftOptionsQuery(actor, companySearch, templateSearch),
+    enabled: Boolean(companySearch || templateSearch),
+  });
+  const organisationId = saved?.payload?.run.organisation_id;
+  const templateId = saved?.payload?.run.template_id;
+  const missingCompany =
+    organisationId &&
+    !options.organisations.some(({ id }) => id === organisationId);
+  const missingTemplate =
+    templateId && !options.templates.some(({ id }) => id === templateId);
+  const original = useQuery({
+    ...draftOptionsQuery(
+      actor,
+      missingCompany ? organisationId : "",
+      missingTemplate ? templateId : "",
+    ),
+    enabled: Boolean(missingCompany || missingTemplate),
+  });
+  // Keep prior choices available if a different remote search runs.
+  const visible = mergeOptions(seen, original.data, lookup.data);
+  const retainSources = () => {
+    if (lookup.data) setSeen(visible);
+  };
+  if ((missingCompany || missingTemplate) && original.isPending)
+    return <Loading />;
+  if (original.isError)
+    return <ErrorState retry={() => void original.refetch()} />;
+  return (
+    <CourseEditor
+      creator={{ id: draftId, saved }}
+      academy
+      templates={visible.templates}
+      organisations={visible.organisations}
+      companyOnly={false}
+      canPrepareOffer={false}
+      canReadBlockPlanning={false}
+      reloadCreator={reload}
+      sourceSearch={
+        <div className="form-row">
+          <Field
+            id="academy-draft-company-search"
+            label={t("academySearchOrganisations")}
+          >
+            <input
+              value={companySearch}
+              maxLength={100}
+              onChange={(event) => {
+                retainSources();
+                setCompanySearch(event.currentTarget.value);
+              }}
+            />
+          </Field>
+          <Field
+            id="academy-draft-template-search"
+            label={t("academySearchTemplates")}
+          >
+            <input
+              value={templateSearch}
+              maxLength={100}
+              onChange={(event) => {
+                retainSources();
+                setTemplateSearch(event.currentTarget.value);
+              }}
+            />
+          </Field>
+          {lookup.isError && <ErrorState retry={() => void lookup.refetch()} />}
+        </div>
+      }
+      onBusy={onBusy}
+      onDone={(_result, _offer, run) => {
+        if (run) void onOpen(run);
+      }}
+    />
   );
 }

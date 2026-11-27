@@ -4,6 +4,7 @@ export type PortalHttpMethod = "GET" | "PUT" | "PATCH" | "DELETE";
 export const portalHttpMethods: Readonly<Record<string, PortalHttpMethod>> = {
   // GET
   academy_administration: "GET",
+  academy_course_archive_runs: "GET",
   academy_course_draft_options: "GET",
   academy_course_instructor_candidates: "GET",
   academy_course_participation_report: "GET",

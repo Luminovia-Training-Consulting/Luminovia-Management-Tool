@@ -16,6 +16,12 @@ const labels = {
     "Aktuellen Kursstand übernehmen",
     "Use the current course revision",
   ],
+  courseDraftDescription: [
+    "Speichere einen Zwischenstand oder lege den Kurs als Entwurf an. Die Veröffentlichung erfolgt im Kurs.",
+    "Save your progress or create the course as a draft. Publish it from the course workspace.",
+  ],
+  courseLibrary: ["Gespeicherte Kursentwürfe", "Saved course drafts"],
+  startCourse: ["Neuen Kursentwurf starten", "Start a new course draft"],
   library: ["Kurs- und Auftragsentwürfe", "Course and assignment drafts"],
   start: [
     "Kurs- und Auftragsassistent starten",

@@ -40,10 +40,15 @@ const recordedV1Request = z.strictObject({
 });
 
 // Keep the original field order for already approved v1 request digests.
-const licenceRequestSchema = recordedV1Request.extend({
-  version: z.union([z.literal(1), z.literal(2)]),
-  action: currentActions,
-});
+const licenceRequestSchema = recordedV1Request
+  .extend({
+    version: z.union([z.literal(1), z.literal(2)]),
+    action: currentActions,
+    lms_package: z.enum(["standard", "premium"]).optional(),
+  })
+  .refine(
+    (request) => request.version === 2 || request.lms_package === undefined,
+  );
 
 export const licenceReceiptSchema = z.strictObject({
   request: z.union([licenceRequestSchema, recordedV1Request]),
@@ -119,6 +124,11 @@ function planRecordedTransition(receipt, request, previous) {
       "An existing envelope hash is required only when registering a licence.",
     );
 
+  if (
+    previous?.request.lms_package === "standard" &&
+    request.lms_package === undefined
+  )
+    throw new Error("Confirm the Academy LMS package explicitly on renewal.");
   const { issued_at, starts_at, expires_at, grace_until } = request;
   // Only historical records use the old commercial tier metadata. It is
   // outside the signed entitlement terms, which keep their existing format.
@@ -136,7 +146,7 @@ function planRecordedTransition(receipt, request, previous) {
     starts_at,
     expires_at,
     grace_until,
-    modules: ["lms"],
+    modules: [request.lms_package === "standard" ? "lms-standard" : "lms"],
     limits: request.limits,
   };
   validateAcademyLicenceTerms(terms);

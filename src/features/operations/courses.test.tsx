@@ -223,6 +223,8 @@ beforeEach(async () => {
   vi.spyOn(navigator, "onLine", "get").mockImplementation(() => state.online);
   state.rpc.mockReset();
   state.rpc.mockImplementation((name: string) => {
+    if (name === "course_creator_drafts")
+      return { abortSignal: async () => ({ data: [], error: null }) };
     if (name === "course_series_for_run")
       return { abortSignal: async () => ({ data: state.series, error: null }) };
     if (name === "job_lifecycle")
@@ -713,7 +715,45 @@ it("rejects a creator template source which is no longer active", async () => {
   );
 });
 
-it("keeps the company-only template shortcut in the restricted course draft workflow", async () => {
+it("resumes an unpublished company draft started from an authorised company template", async () => {
+  let receipt: Record<string, unknown> | undefined;
+  const prior = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation(
+    (name: string, args: Record<string, unknown>) => {
+      if (name === "course_creator_drafts")
+        return {
+          abortSignal: async () => ({
+            data: receipt ? [receipt] : [],
+            error: null,
+          }),
+        };
+      if (name === "course_creator_draft_action") {
+        if (args.p_action === "save") {
+          receipt = {
+            id: args.p_draft_id,
+            title: template.title,
+            revision: Number(receipt?.revision ?? 0) + 1,
+            updated_at: "2030-03-08T10:00:00.000Z",
+            state: "editing",
+            course_run_id: null,
+            next_action: null,
+            payload: args.p_payload,
+          };
+        } else {
+          receipt = {
+            ...receipt,
+            revision: Number(receipt?.revision) + 1,
+            state: "created",
+            course_run_id: runId,
+            next_action: "course",
+            payload: null,
+          };
+        }
+        return Promise.resolve({ data: receipt, error: null });
+      }
+      return prior(name, args);
+    },
+  );
   renderCourses({
     permissions: [],
     roles: ["client"],
@@ -729,43 +769,68 @@ it("keeps the company-only template shortcut in the restricted course draft work
   await userEvent.click(
     screen.getByRole("button", { name: "Aus Vorlage erstellen" }),
   );
-  const dialog = screen.getByRole("dialog", { name: "Kurs anlegen" });
-  expect(within(dialog).getByLabelText("Kursvorlage")).toHaveValue(templateId);
+  let dialog = await screen.findByRole("dialog", {
+    name: "Neuen Kursentwurf starten",
+  });
+  expect(await within(dialog).findByLabelText("Kursvorlage")).toHaveValue(
+    templateId,
+  );
   expect(within(dialog).getByLabelText("Organisation")).toHaveValue(companyId);
   expect(
     within(dialog).queryByRole("button", { name: "Im Kurskatalog anzeigen" }),
-  ).not.toBeInTheDocument();
+  ).toBeNull();
   expect(
-    within(dialog).queryByRole("button", {
-      name: "Speichern und zum Auftrag",
-    }),
-  ).not.toBeInTheDocument();
+    within(dialog).queryByRole("button", { name: "Speichern und zum Auftrag" }),
+  ).toBeNull();
   interval(dialog, "2030-04-01T09:00", "2030-04-01T10:00");
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Zwischenstand speichern" }),
+  );
+  expect(
+    await within(dialog).findByText("Entwurf auf dem Server gespeichert."),
+  ).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await userEvent.click(screen.getByText("Gespeicherte Kursentwürfe"));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Weiterbearbeiten" }),
+  );
+  dialog = await screen.findByRole("dialog", {
+    name: "Neuen Kursentwurf starten",
+  });
+  expect(await within(dialog).findByLabelText("Beginn 1")).toHaveValue(
+    "2030-04-01T09:00",
+  );
   await userEvent.click(
     within(dialog).getByRole("button", { name: "Entwurf speichern" }),
   );
   expect(
     await screen.findByText("Durchführung als Entwurf gespeichert."),
   ).toBeVisible();
-  await waitFor(() =>
-    expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/),
+  expect(screen.getByTestId("course-route")).toHaveTextContent(
+    `/courses?company=${companyId}`,
   );
+  expect(state.rpc).toHaveBeenCalledWith("course_creator_draft_action", {
+    p_action: "create_course",
+    p_draft_id: expect.any(String),
+    p_expected_revision: expect.any(Number),
+    p_payload: {
+      run: expect.objectContaining({
+        template_id: templateId,
+        organisation_id: companyId,
+        sessions: [
+          {
+            starts_at: "2030-04-01T07:00:00.000Z",
+            ends_at: "2030-04-01T08:00:00.000Z",
+          },
+        ],
+      }),
+      content: null,
+      next_action: "course",
+    },
+  });
   expect(
-    state.rpc.mock.calls.filter(([name]) => name.startsWith("save_course")),
-  ).toEqual([
-    [
-      "save_course_run",
-      {
-        p_id: null,
-        p_payload: expect.objectContaining({
-          template_id: templateId,
-          organisation_id: companyId,
-          published: false,
-          archived: false,
-        }),
-      },
-    ],
-  ]);
+    state.rpc.mock.calls.some(([name]) => name === "save_course_run"),
+  ).toBe(false);
 });
 
 it("opens the company library directly and saves new and existing company templates", async () => {
@@ -780,7 +845,7 @@ it("opens the company library directly and saves new and existing company templa
     await screen.findByRole("button", { name: "Vorlage anlegen" }),
   );
   let dialog = screen.getByRole("dialog", { name: "Vorlage anlegen" });
-  const owner = within(dialog).getByLabelText("Unternehmen der Vorlage");
+  const owner = await within(dialog).findByLabelText("Unternehmen der Vorlage");
   expect(owner).toHaveValue(companyId);
   expect(within(owner).getAllByRole("option")).toHaveLength(1);
   await userEvent.type(
@@ -802,7 +867,7 @@ it("opens the company library directly and saves new and existing company templa
   await userEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
   dialog = screen.getByRole("dialog", { name: "Bearbeiten" });
   expect(
-    within(dialog).getByLabelText("Unternehmen der Vorlage"),
+    await within(dialog).findByLabelText("Unternehmen der Vorlage"),
   ).toBeDisabled();
   const title = within(dialog).getByLabelText("Titel", { exact: true });
   await userEvent.clear(title);
@@ -856,8 +921,10 @@ it("uses one selected company for the library and refuses a deep link to another
   await userEvent.click(
     screen.getByRole("button", { name: "Aus Vorlage erstellen" }),
   );
-  const editor = within(screen.getByRole("dialog", { name: "Kurs anlegen" }));
-  expect(editor.getByLabelText("Organisation")).toHaveValue(runId);
+  const editor = within(
+    await screen.findByRole("dialog", { name: "Neuen Kursentwurf starten" }),
+  );
+  expect(await editor.findByLabelText("Organisation")).toHaveValue(runId);
   expect(editor.getByLabelText("Kursvorlage")).toHaveValue(runId);
   expect(
     editor.queryByRole("option", { name: "First company template" }),
@@ -2596,6 +2663,11 @@ it("shows the course dates and staff milestones chronologically in German and En
                   kind: "class",
                   at: "2030-04-02T08:00:00.000Z",
                 },
+                {
+                  id: "c2000000-0000-4000-8000-000000000010",
+                  kind: "series_pattern",
+                  at: "2030-04-02T09:00:00.000Z",
+                },
               ]
             : [],
         error: null,
@@ -2608,7 +2680,7 @@ it("shows the course dates and staff milestones chronologically in German and En
   });
   const timeline = screen.getByRole("region", { name: "Kurszeitleiste" });
   await within(timeline).findByText("Klasse zugeordnet oder geändert");
-  const [created, session, assigned] =
+  const [created, session, assigned, seriesPattern] =
     within(timeline).getAllByRole("listitem");
   expect(created).toHaveTextContent("Kurs angelegt");
   expect(session.querySelector("time")).toHaveAttribute(
@@ -2616,10 +2688,12 @@ it("shows the course dates and staff milestones chronologically in German and En
     run.course_sessions[0].ends_at,
   );
   expect(assigned).toHaveTextContent("Klasse zugeordnet oder geändert");
+  expect(seriesPattern).toHaveTextContent("Serienmuster geändert");
   await act(() => i18n.changeLanguage("en"));
   expect(
     within(screen.getByRole("region", { name: "Course timeline" })).getByText(
       "Class assignment changed",
     ),
   ).toBeVisible();
+  expect(screen.getByText("Series pattern changed")).toBeVisible();
 });

@@ -389,6 +389,11 @@ const pairs: Record<string, [string, string]> = {
     "Weiteren Auftrag erstellen",
     "Create another assignment",
   ],
+  academyCourseArchive: ["Kursarchiv verwalten", "Manage course archive"],
+  academyCourseArchiveFilter: ["Angezeigte Kurse", "Courses to show"],
+  academyCourseArchiveCurrent: ["Aktuelle Kurse", "Current courses"],
+  academyCourseArchivePrevious: ["Zurück", "Previous"],
+  academyCourseArchiveNext: ["Weiter", "Next"],
   bulkSelect: ["Auswählen", "Select"],
   bulkSelectCourse: [
     "{{title}} ({{company}}) auswählen",

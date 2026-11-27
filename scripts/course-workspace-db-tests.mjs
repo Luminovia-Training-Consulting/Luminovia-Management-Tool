@@ -392,6 +392,32 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             assert.equal(await reuse(admin, current), reused);
             assert.equal((await materialSearch(admin, current))[0].metadata.title, "Destination-only title");
             await action(admin, "resource_remove", { id: reused }, 0, current);
+            const toggleStandard = async (enabled) => {
+                const state = (await rpc(admin, "company_premium_settings")).find(
+                    ({organisation_id}) => organisation_id === org,
+                );
+                await rpc(admin, "set_company_premium", [q(org), String(enabled), String(state.version), q(randomUUID())]);
+            };
+            await toggleStandard(false);
+            try {
+                const target = randomUUID();
+                await sql(`insert into public.course_runs(id,template_id,organisation_id)
+                  values (${q(target)},${q(template)},${q(org)})`);
+                assert.equal((await materialSearch(admin, run))[0].can_edit_metadata, true);
+                assert.equal(await revise(admin, 9, { ...metadata, title: "Standard workbook" }), 10);
+                assert.deepEqual((await history(admin))[0].content.competencies, [competencyLink]);
+                await assert.rejects(revise(admin, 10, { ...metadata, competencies: [] }), /42501/);
+                await assert.rejects(reuse(admin, foreignRun), /42501/);
+                assert.ok((await targets(admin)).some(({id}) => id === target));
+                const linked = await reuse(admin, target);
+                assert.equal((await workspace(admin, target)).resources[0].version_id, versionId);
+                assert.equal((await materialSearch(admin, target))[0].metadata.competencies, undefined);
+                assert.equal((await materialSearch(admin, target))[0].metadata.title, "Standard workbook");
+                await action(admin, "resource_remove", { id: linked }, 0, target);
+            } finally {
+                await toggleStandard(true);
+            }
+
             await actor(learner, `set local request.path='/rpc/search_course_materials';
               set local request.method='POST';select public.require_portal_access()`);
             assert.equal((await workspace(client)).resources.length, 0);
@@ -517,13 +543,19 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await assert.rejects(remove(client, staffLink), /42501/);
         await assert.rejects(download(client, staffLink), /42501/);
         await sql(`update public.client_organisation_memberships set removed_at=null where user_id=${q(client)} and organisation_id=${q(org)}`);
-        await rpc(admin, "set_company_premium", [q(org), "false", "1", q(randomUUID())]);
+        const companyPremium = async () => (await rpc(admin, "company_premium_settings")).find(
+            ({organisation_id}) => organisation_id === org,
+        );
+        await rpc(admin, "set_company_premium", [q(org), "false", String((await companyPremium()).version), q(randomUUID())]);
         assert.equal(await share(teacher, lecturerFile, "all"), lecturerLink);
         assert.equal((await download(learner, lecturerLink)).id, lecturerFile.version);
         await assert.rejects(download(client, clientReport), /42501/);
         await assert.rejects(share(learner, lecturerFile, "staff"), /42501/);
-        await assert.rejects(remove(client, companyLink), /42501/);
-        await rpc(admin, "set_company_premium", [q(org), "true", "2", q(randomUUID())]);
+        await assert.rejects(remove(client, clientReport), /42501/);
+        await assert.rejects(remove(teacher, companyLink), /42501/);
+        await remove(client, companyLink);
+        assert.equal(await share(client, companyFile, "all"), companyLink);
+        await rpc(admin, "set_company_premium", [q(org), "true", String((await companyPremium()).version), q(randomUUID())]);
 
         await remove(teacher, lecturerLink);
         const activeReportPlan = await deletionPlan(teacher, lecturerFile.document);
@@ -1269,6 +1301,34 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
             insert into public.audit_events (actor_id,resource_id,action) values (${q(admin)},${q(unassigned)},'course.class.changed');`);
         assert.deepEqual((await history(admin, unassigned)).map(({kind}) => kind), ["class"]);
         await assert.rejects(history(teacher, unassigned), /42501/);
+
+        // Real visibility transitions add specific milestones to the original
+        // audit action and keep the old history readable after restoration.
+        await sql(`insert into public.course_sessions(course_run_id,starts_at,ends_at)
+          values (${q(unassigned)},now()+interval '1 day',now()+interval '25 hours')`);
+        const visibility = (published, archived) =>
+            actor(admin, `select public.set_course_visibility(${q(unassigned)},${published},${archived});`);
+        await visibility(false, false);
+        await visibility(false, false);
+        await visibility(true, false);
+        await visibility(true, true);
+        await assert.rejects(history(admin, unassigned), /42501/);
+        await visibility(true, false);
+        assert.deepEqual((await history(admin, unassigned)).map(({kind}) => kind),
+            ["class", "unpublished", "published", "archived", "restored"]);
+
+        // An existing linked claim may contribute an assignment event without
+        // exposing claim or lecturer IDs to staff using the timeline.
+        const allocation = randomUUID();
+        await sql(`insert into public.claim_events(id,claim_id,actor_id,event_type)
+           values (${q(allocation)},${q(claim)},${q(admin)},'confirmed')`);
+        assert.deepEqual(
+            (await history(admin)).filter(({kind}) => kind.startsWith("instructor_"))
+                .map(({id, kind}) => ({id, kind})),
+            [{id: allocation, kind: "instructor_confirmed"}],
+        );
+        assert.deepEqual(await history(teacher), milestones);
+        assert.ok(!(await history(admin, unassigned)).some(({id}) => id === allocation));
     });
     await check("LTI tool registration and launch bind current course roles, Auth sessions and one-time proof", async () => {
         const deployment = randomUUID();

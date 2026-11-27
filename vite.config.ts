@@ -332,6 +332,8 @@ export default defineConfig(({ mode }) => {
             "**/course-reuse-*.{js,css}",
             // Series revision requires an online conflict check and current permissions.
             "**/course-series-revision-*.js",
+            // The editor writes online and the core catalogue remains available offline.
+            "**/course-editor-*.{js,css}",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
             "**/training-commercial-*.{js,css}",

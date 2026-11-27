@@ -5,7 +5,15 @@ export const academyDraftOptions = z
     organisations: z
       .array(z.object({ id: z.uuid(), name: z.string() }))
       .max(50),
-    templates: z.array(z.object({ id: z.uuid(), title: z.string() })).max(50),
+    templates: z
+      .array(
+        z.object({
+          id: z.uuid(),
+          title: z.string(),
+          owner_organisation_id: z.uuid().nullable().optional(),
+        }),
+      )
+      .max(50),
   })
   .nullable();
 

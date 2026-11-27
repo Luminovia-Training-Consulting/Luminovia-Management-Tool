@@ -114,11 +114,13 @@ export function CourseCreatorDraftSaveBar(props: {
 export function CourseCreatorDraftLibrary({
   actor,
   onStart,
+  courseOnly = false,
   onOpen,
   onContinue,
 }: {
   actor: string;
-  onStart: () => void;
+  onStart?: () => void;
+  courseOnly?: boolean;
   onOpen: (id: string) => void;
   onContinue: (draft: CourseCreatorDraft) => void;
 }) {
@@ -169,17 +171,21 @@ export function CourseCreatorDraftLibrary({
 
   return (
     <details
-      className="operations-schedule-planner"
+      className={
+        courseOnly ? "panel academy-draft" : "operations-schedule-planner"
+      }
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary>{t("library")}</summary>
+      <summary>{t(courseOnly ? "courseLibrary" : "library")}</summary>
       {open && (
         <div className="course-planner-fields">
-          <div className="form-actions">
-            <Button disabled={!online} type="button" onClick={onStart}>
-              {t("start")}
-            </Button>
-          </div>
+          {onStart && (
+            <div className="form-actions">
+              <Button disabled={!online} type="button" onClick={onStart}>
+                {t(courseOnly ? "startCourse" : "start")}
+              </Button>
+            </div>
+          )}
           {!online ? (
             <Notice>{t("offline")}</Notice>
           ) : index.isPending ? (

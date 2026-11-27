@@ -239,6 +239,11 @@ test("course series reviews room collisions, creates exact drafts and resumes a 
   await expect(
     detail.getByText("Das Serienmuster wurde gespeichert."),
   ).toBeVisible();
+  await expect(
+    detail
+      .getByRole("region", { name: "Kurszeitleiste" })
+      .getByText("Serienmuster geändert"),
+  ).toBeVisible();
 
   const [changed, ...unchanged] = (await savedRuns())!;
   expect(unchanged).toEqual(beforeEdit.slice(1));
@@ -260,6 +265,11 @@ test("course series reviews room collisions, creates exact drafts and resumes a 
   await page.goto("/courses");
   await page.getByLabel("Sprache", { exact: true }).selectOption("en");
   await page.goto(`/courses?run=${editedRun.id}`);
+  await expect(
+    detail
+      .getByRole("region", { name: "Course timeline" })
+      .getByText("Series pattern changed"),
+  ).toBeVisible();
   await detail.getByText("Edit series pattern", { exact: true }).click();
   await detail
     .getByRole("checkbox", { name: "Change pattern for run 1" })

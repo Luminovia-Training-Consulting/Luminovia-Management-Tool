@@ -321,9 +321,17 @@ Use **Mehrere Termine bearbeiten / Edit multiple sessions** in the internal edit
 
 When editing an unlocked course schedule in the portal or a dedicated Academy, choose **Wiederholung / Repeat** below the last session. Preview the dates and choose **Wiederholungen ergänzen / Add repeats**. The extra dates remain editable rows in the same course run and are saved with that run. The final row is the starting point, and existing sessions retain their identities.
 
+In the Academy, the signed licence selects Standard or Premium. Standard includes course planning, invitations, materials, curricula and progress. An existing licence with the LMS module keeps the previously licensed Premium access. A package change leaves saved records in place. During grace, continue using views supported by your package and role until the licence expires.
+
 For separate drafts from the same template, open **Kursserie planen / Plan a course series**. Enter a first possible start date and use **Starttage wiederholen / Repeat start dates** to fill empty date slots and add more runs, up to 12. Each run keeps its own class, delivery mode and venue. Review the final teaching dates and room/class conflicts before saving the drafts.
 
 Open a run from the saved series and choose **Serienmuster bearbeiten / Edit series pattern**. Select the future drafts that should change, adjust their teaching days and hours, and review the old and proposed appointments. Confirm the change after reviewing conflicts. For a legacy series, enter the pattern explicitly. The original time zone and unchanged appointments are retained. Published, past, archived or allocated runs and their data remain protected. If another person saves a change first, reload the series and review again. Authorised Academy managers can edit with an active licence, and can read existing patterns during grace.
+
+### Archive or restore several courses
+
+On the internal course list, select two to 50 current or archived courses. In the Academy, open **Kursarchiv verwalten / Manage course archive** in the Learning hub and choose current or archived courses. Open **Archivierung prüfen / Review archive** or **Wiederherstellung prüfen / Review restore** and review the selected courses before confirming. The server rejects the whole change if a course is stale or locked. Publication, scheduled appointments and enrolments retain their recorded values. Academy course managers can read the archive in grace and make changes while the licence is active.
+
+In the course detail or workspace, **Kurszeitleiste / Course timeline** lists teaching dates. Current staff also see committed planning and publication events on that course. A confirmed series change appears on each changed run. The timeline shows recorded archive and restoration events after restoration. Managers with assignment authority can see when a linked instructor assignment was confirmed or released.
 
 For a customer with recurring training arrangements, maintain named operational presets in its company record. The course creator and series planner let you explicitly adopt the current preset revision. Review its time zone, suggested teaching times, contact, structured venue and instructions before saving. A series can retain its own delivery choices per run. Meeting credentials are entered in the course.
 
