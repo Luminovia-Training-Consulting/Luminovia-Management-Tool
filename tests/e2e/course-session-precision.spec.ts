@@ -229,6 +229,20 @@ test("retained course editing preserves exact timestamps and reviewed schedule c
             {starts_at: "2030-11-07T08:00:00+00:00", ends_at: "2030-11-07T16:00:00+00:00"},
         ]);
 
+
+        await page.goto(`/courses/${runId}/workspace`);
+        await page.getByText("Delivery and venues", {exact: true}).press("Enter");
+        const delivery = page.locator(".training-delivery-disclosure");
+        await delivery.getByLabel("Delivery format", {exact: true}).selectOption("online");
+        await delivery.getByLabel("Joining link", {exact: true}).fill("https://training.example.invalid/live");
+        await delivery.getByRole("button", {name: "Save delivery", exact: true}).click();
+        await expect(delivery.getByRole("status")).toHaveText("Delivery saved.");
+        await expect.poll(() => delivery.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+        const deliveryAudit = await new AxeBuilder({page})
+            .include(".training-delivery-disclosure")
+            .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+            .analyze();
+        expect(deliveryAudit.violations).toEqual([]);
     } finally {
         // Only exact IDs created above are removed, outside the browser and only
         // after the ordinary authorised server readbacks. No production target is
