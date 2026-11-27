@@ -1127,6 +1127,80 @@ it("edits a draft schedule using its last confirmed revision and stable session 
   });
 });
 
+it("reviews generated dates before saving an Academy draft revision", async () => {
+  fake.publication = { published: false, capacity: null };
+  open(`/courses/${id}/workspace`);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Edit draft schedule and venue", { exact: true }),
+  );
+  const original = within(
+    await screen.findByRole("group", { name: "Session 1" }),
+  );
+  const originalValue = (original.getByLabelText("Start") as HTMLInputElement)
+    .value;
+  await user.click(screen.getByText("Plan sessions", { exact: true }));
+  await user.selectOptions(screen.getByLabelText("Date selection"), "dates");
+  await user.type(
+    screen.getByLabelText("Specific teaching dates"),
+    "2039-01-03{enter}2039-01-05",
+  );
+  await user.click(screen.getByRole("button", { name: "Preview sessions" }));
+  expect(original.getByLabelText("Start")).toHaveValue(originalValue);
+  expect(fake.rpc).not.toHaveBeenCalledWith(
+    "academy_save_draft_schedule",
+    expect.anything(),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Replace sessions in form" }),
+  );
+  const second = within(screen.getByRole("group", { name: "Session 2" }));
+  await user.click(screen.getByText("Edit multiple sessions", { exact: true }));
+  const bulk = within(
+    screen.getByText("Edit multiple sessions", { exact: true }).parentElement!,
+  );
+  await user.click(bulk.getAllByRole("checkbox")[1]);
+  fireEvent.change(bulk.getByLabelText("Shift by calendar days"), {
+    target: { value: "-2" },
+  });
+  await user.click(
+    bulk.getByRole("button", { name: "Review session changes" }),
+  );
+  await user.click(bulk.getByRole("button", { name: "Apply session changes" }));
+  expect(bulk.getByRole("alert")).toBeVisible();
+  expect(second.getByLabelText("Start")).toHaveValue("2039-01-05T09:00");
+  fireEvent.change(bulk.getByLabelText("Shift by calendar days"), {
+    target: { value: "1" },
+  });
+  await user.click(
+    bulk.getByRole("button", { name: "Review session changes" }),
+  );
+  expect(second.getByLabelText("Start")).toHaveValue("2039-01-05T09:00");
+  await user.click(bulk.getByRole("button", { name: "Apply session changes" }));
+  expect(second.getByLabelText("Start")).toHaveValue("2039-01-06T09:00");
+  await user.click(screen.getByRole("button", { name: "Save schedule" }));
+  expect(await screen.findByText("Schedule saved.")).toBeVisible();
+  expect(fake.rpc).toHaveBeenCalledWith("academy_save_draft_schedule", {
+    p_course_id: id,
+    p_expected_revision: 1,
+    p_payload: expect.objectContaining({
+      time_zone: "Australia/Brisbane",
+      sessions: [
+        {
+          id: null,
+          starts_at: "2039-01-02T23:00:00.000Z",
+          ends_at: "2039-01-03T07:00:00.000Z",
+        },
+        {
+          id: null,
+          starts_at: "2039-01-05T23:00:00.000Z",
+          ends_at: "2039-01-06T07:00:00.000Z",
+        },
+      ],
+    }),
+  });
+});
+
 it("extends the editable academy draft without replacing its retained session ID", async () => {
   fake.publication = { published: false, capacity: null };
   open(`/courses/${id}/workspace`);

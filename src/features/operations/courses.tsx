@@ -71,6 +71,8 @@ import {
   dateTime,
   validZone,
   zonedInstantForScheduleEdit,
+  compareScheduleInstants,
+  validScheduleIntervals,
 } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { TableImport } from "../../components/table-import";
@@ -94,7 +96,8 @@ import {
   templatesQuery,
 } from "./data";
 import { BuildingBlockReference, CourseRunOfferLink } from "./building-blocks";
-import { weekdaySessions } from "./schedule";
+import { CourseSessionBulkEdit } from "./course-session-bulk-edit";
+import { CourseSchedulePlanner } from "./course-schedule-planner";
 import { CourseSeriesForm } from "./course-series";
 
 import { courseTemplateFormSchema as templateSchema } from "./course-building-block-schema";
@@ -134,24 +137,35 @@ const newCourseSchema = runSchema.extend({
   template_id: z.union([z.uuid(), z.literal("")]),
 });
 
-/** Compare absolute instants, retaining PostgreSQL microseconds when JavaScript milliseconds tie. Invalid endpoints return null. */
-function compareCourseInstants(first: string, second: string): number | null {
-  const firstMillis = Date.parse(first);
-  const secondMillis = Date.parse(second);
-  if (!Number.isFinite(firstMillis) || !Number.isFinite(secondMillis))
-    return null;
-  const difference = firstMillis - secondMillis;
-  if (difference) return difference;
-  // PostgreSQL timestamps retain up to six fractional digits. Equal JavaScript
-  // milliseconds still need that precision; whole-minute ISO offsets do not
-  // affect the fractional component within the same absolute second.
-  const microseconds = (instant: string) =>
-    Number(
-      (/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/i.exec(instant)?.[1] ?? "")
-        .padEnd(6, "0")
-        .slice(0, 6),
+/** Validate the draft without rounding unchanged stored instants or reordering submitted rows. */
+function resolveCourseSessions(
+  rows: z.infer<typeof runSchema>["sessions"],
+  zone: string,
+  origins: {
+    zone: string;
+    sessions: Map<string, { starts_at: string; ends_at: string }>;
+  },
+) {
+  const sessions = [];
+  for (const row of rows) {
+    const source = origins.sessions.get(row.source_session_id ?? "");
+    const starts_at = zonedInstantForScheduleEdit(
+      row.starts_at,
+      zone,
+      source?.starts_at,
+      origins.zone,
     );
-  return microseconds(first) - microseconds(second);
+    const ends_at = zonedInstantForScheduleEdit(
+      row.ends_at,
+      zone,
+      source?.ends_at,
+      origins.zone,
+    );
+    if (!starts_at || !ends_at) return null;
+    sessions.push({ starts_at, ends_at });
+  }
+  if (!validScheduleIntervals(sessions)) return null;
+  return sessions;
 }
 
 async function saveCourseTemplate(
@@ -398,10 +412,6 @@ function RunForm({
     owner: string;
   } | null>(null);
   const [timeError, setTimeError] = useState(false);
-  const [planningDate, setPlanningDate] = useState("");
-  const [planningStart, setPlanningStart] = useState("09:00");
-  const [planningEnd, setPlanningEnd] = useState("17:00");
-  const [planningError, setPlanningError] = useState(false);
   const sessionOrigins = useRef({
     zone: original?.time_zone ?? "Europe/Berlin",
     sessions: new Map(
@@ -447,6 +457,10 @@ function RunForm({
         : [{ starts_at: "", ends_at: "" }],
     },
   });
+  const editedSessions = useWatch({ control, name: "sessions" }) ?? [];
+  const editedSessionCount = editedSessions.filter(
+    (entry) => entry.starts_at || entry.ends_at,
+  ).length;
   const schedule = useRef<HTMLFieldSetElement>(null);
   useEffect(() => {
     if (!focusTarget) return;
@@ -615,41 +629,12 @@ function RunForm({
         return { kind: "template" } as const;
       }
       const { values } = intent;
-      const origins = sessionOrigins.current;
-      const sessions = values.sessions.map((s) => {
-        const source = origins.sessions.get(s.source_session_id ?? "");
-        const start = zonedInstantForScheduleEdit(
-          s.starts_at,
-          values.time_zone,
-          source?.starts_at,
-          origins.zone,
-        );
-        const end = zonedInstantForScheduleEdit(
-          s.ends_at,
-          values.time_zone,
-          source?.ends_at,
-          origins.zone,
-        );
-        const order = start && end ? compareCourseInstants(end, start) : null;
-        if (!start || !end || order === null || order <= 0) {
-          setTimeError(true);
-          throw new Error("time");
-        }
-        return { starts_at: start, ends_at: end };
-      });
-      const ordered = [...sessions].sort(
-        (a, b) => compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+      const sessions = resolveCourseSessions(
+        values.sessions,
+        values.time_zone,
+        sessionOrigins.current,
       );
-      if (
-        ordered.some(
-          (session, index) =>
-            index > 0 &&
-            (compareCourseInstants(
-              session.starts_at,
-              ordered[index - 1].ends_at,
-            ) ?? -1) < 0,
-        )
-      ) {
+      if (!sessions) {
         setTimeError(true);
         throw new Error("time");
       }
@@ -682,18 +667,21 @@ function RunForm({
       let offerChange:
         { expected_job_version: number; job_request_id: string } | undefined;
       if (linked && original) {
+        const ordered = [...sessions].sort(
+          (a, b) => compareScheduleInstants(a.starts_at, b.starts_at) ?? 0,
+        );
         const originalSessions = [...original.course_sessions].sort(
-          (a, b) => compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+          (a, b) => compareScheduleInstants(a.starts_at, b.starts_at) ?? 0,
         );
         const scheduleChanged =
           ordered.length !== originalSessions.length ||
           ordered.some(
             (row, index) =>
-              compareCourseInstants(
+              compareScheduleInstants(
                 row.starts_at,
                 originalSessions[index].starts_at,
               ) !== 0 ||
-              compareCourseInstants(
+              compareScheduleInstants(
                 row.ends_at,
                 originalSessions[index].ends_at,
               ) !== 0,
@@ -925,67 +913,6 @@ function RunForm({
           blockPlanning.isError && (
             <ErrorState retry={() => void blockPlanning.refetch()} />
           )}
-        {selectedBlock && canEditSchedule && (
-          <fieldset className="operations-schedule-planner">
-            <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
-            <p>
-              {t("scheduleHelp", {
-                days: selectedBlock.duration_days,
-                hours: selectedBlock.duration_hours,
-              })}
-            </p>
-            <Field id="planning-start-date" label={t("firstDate")}>
-              <input
-                id="planning-start-date"
-                type="date"
-                value={planningDate}
-                onChange={(event) => setPlanningDate(event.target.value)}
-              />
-            </Field>
-            <div className="form-row">
-              <Field id="planning-start-time" label={t("dailyStart")}>
-                <input
-                  id="planning-start-time"
-                  type="time"
-                  value={planningStart}
-                  onChange={(event) => setPlanningStart(event.target.value)}
-                />
-              </Field>
-              <Field id="planning-end-time" label={t("dailyEnd")}>
-                <input
-                  id="planning-end-time"
-                  type="time"
-                  value={planningEnd}
-                  onChange={(event) => setPlanningEnd(event.target.value)}
-                />
-              </Field>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                try {
-                  replace(
-                    weekdaySessions(
-                      planningDate,
-                      planningStart,
-                      planningEnd,
-                      selectedBlock.duration_days,
-                    ),
-                  );
-                  setPlanningError(false);
-                } catch {
-                  setPlanningError(true);
-                }
-              }}
-            >
-              {t("generateSchedule", { count: selectedBlock.duration_days })}
-            </Button>
-            {planningError && (
-              <Notice kind="error">{t("scheduleInvalid")}</Notice>
-            )}
-          </fieldset>
-        )}
         {canEditCourseDetails && (
           <div className="form-row">
             <Field
@@ -1019,6 +946,52 @@ function RunForm({
         <legend>{t("sessions")}</legend>
         {canEditSchedule ? (
           <>
+            <CourseSchedulePlanner
+              zone={zone}
+              suggestedDays={selectedBlock?.duration_days}
+              editedSessionCount={editedSessionCount}
+              disabled={!online || save.isPending}
+              onApply={replace}
+            />
+            {editedSessionCount > 1 && (
+              <CourseSessionBulkEdit
+                entries={fields.flatMap(({ id }, index) =>
+                  editedSessions[index]
+                    ? [{ id, row: editedSessions[index] }]
+                    : [],
+                )}
+                zone={zone}
+                disabled={!online || save.isPending}
+                onApply={(changes) => {
+                  const byId = new Map(
+                    changes.map((entry) => [entry.id, entry.row]),
+                  );
+                  const rows = fields.flatMap(({ id }, index) => {
+                    const row = editedSessions[index];
+                    if (!row || (!row.starts_at && !row.ends_at)) return [];
+                    return [{ ...row, ...byId.get(id) }];
+                  });
+                  if (
+                    !resolveCourseSessions(rows, zone, sessionOrigins.current)
+                  )
+                    return false;
+                  fields.forEach(({ id }, index) => {
+                    const adjusted = byId.get(id);
+                    if (!adjusted) return;
+                    setValue(
+                      `sessions.${index}.starts_at`,
+                      adjusted.starts_at,
+                      { shouldDirty: true, shouldValidate: true },
+                    );
+                    setValue(`sessions.${index}.ends_at`, adjusted.ends_at, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  });
+                  return true;
+                }}
+              />
+            )}
             <SessionScroll label={t("sessions")}>
               {fields.map((field, index) => (
                 <div className="session-form-row" key={field.id}>
@@ -1088,7 +1061,7 @@ function RunForm({
               {[...(original?.course_sessions ?? [])]
                 .sort(
                   (a, b) =>
-                    compareCourseInstants(a.starts_at, b.starts_at) ?? 0,
+                    compareScheduleInstants(a.starts_at, b.starts_at) ?? 0,
                 )
                 .map((slot) => (
                   <li key={slot.id}>
@@ -1999,7 +1972,8 @@ export function CoursesPage() {
                         if (
                           !starts_at ||
                           !ends_at ||
-                          (compareCourseInstants(ends_at, starts_at) ?? 0) <= 0
+                          (compareScheduleInstants(ends_at, starts_at) ?? 0) <=
+                            0
                         )
                           throw new Error("invalid course session");
                         return {

@@ -5,6 +5,7 @@
  * same authorised server API, never rounded through JavaScript Date/Luxon.
  * The canonical runner owns the disposable stack and both browser projects.
  */
+import AxeBuilder from "@axe-core/playwright";
 import {expect, test} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, assertPasswordOnly, checked, login,} from "./helpers/accounts-support";
@@ -14,7 +15,7 @@ test.skip(
     "Course precision fixtures require the canonical disposable project.",
 );
 
-test("metadata-only course editing preserves a known DST fold and all six PostgreSQL fractional digits", async ({
+test("retained course editing preserves exact timestamps and reviewed schedule changes", async ({
                                                                                                                     page,
                                                                                                                 }) => {
     test.setTimeout(90_000);
@@ -166,6 +167,8 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
         // The authored venue and minute display must still describe the same data.
         await page.reload();
         await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+        await page.getByLabel("Theme", {exact: true}).selectOption("dark");
+        await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
         await page.getByLabel("Search", {exact: true}).fill(title);
         await expect(card).toHaveCount(1);
         await card.getByRole("button", {name: "View course", exact: true}).click();
@@ -183,8 +186,38 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
         await expect(reopened.getByLabel("End 1", {exact: true})).toHaveValue(
             "2030-10-27T03:15",
         );
-        await reopened.getByRole("button", {name: "Close", exact: true}).click();
+        await reopened.getByText("Plan sessions", {exact: true}).press("Enter");
+        await reopened.getByLabel("Date selection").selectOption("dates");
+        await reopened.getByLabel("Specific teaching dates", {exact: true}).fill("2030-11-04\n2030-11-05");
+        await reopened.getByRole("button", {name: "Preview sessions", exact: true}).click();
+        await expect(reopened.getByRole("status").filter({hasText: "Proposed sessions (2)"})).toBeVisible();
+        await expect(reopened.getByLabel("Start 1", {exact: true})).toHaveValue("2030-10-27T02:30");
+        await reopened.getByRole("button", {name: "Replace sessions in form", exact: true}).click();
+        await expect(reopened.getByLabel("Start 2", {exact: true})).toHaveValue("2030-11-05T09:00");
+        await reopened.getByText("Edit multiple sessions", {exact: true}).click();
+        await reopened.getByRole("group", {name: "Select sessions"}).getByRole("checkbox").nth(1).check();
+        await reopened.getByLabel("Shift by calendar days").fill("2");
+        await reopened.getByRole("button", {name: "Review session changes"}).click();
+        await expect(reopened.getByLabel("Start 2", {exact: true})).toHaveValue("2030-11-05T09:00");
+        await reopened.getByRole("button", {name: "Apply session changes"}).click();
+        await expect(reopened.getByLabel("Start 1", {exact: true})).toHaveValue("2030-11-04T09:00");
+        await expect(reopened.getByLabel("Start 2", {exact: true})).toHaveValue("2030-11-07T09:00");
+        await expect.poll(() => reopened.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+        const audit = await new AxeBuilder({page})
+            .include(".operations-schedule-planner")
+            .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+            .analyze();
+        expect(audit.violations).toEqual([]);
+        await reopened.getByRole("button", {name: "Save", exact: true}).click();
         await expect(reopened).toBeHidden();
+        const proposed = await checked(
+            client.from("course_sessions").select("starts_at,ends_at").eq("course_run_id", runId!).order("starts_at"),
+        );
+        expect(proposed).toEqual([
+            {starts_at: "2030-11-04T08:00:00+00:00", ends_at: "2030-11-04T16:00:00+00:00"},
+            {starts_at: "2030-11-07T08:00:00+00:00", ends_at: "2030-11-07T16:00:00+00:00"},
+        ]);
+
     } finally {
         // Only exact IDs created above are removed, outside the browser and only
         // after the ordinary authorised server readbacks. No production target is

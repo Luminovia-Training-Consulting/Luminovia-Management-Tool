@@ -1766,8 +1766,18 @@ describe("course form failure and confirmation boundaries", () => {
       target: { value: "10:00" },
     });
     await userEvent.click(
+      within(dialog).getByRole("button", { name: "Terminvorschau erstellen" }),
+    );
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "save_course_run",
+      expect.anything(),
+    );
+    expect(within(dialog).getByLabelText("Ende 1")).toHaveValue(
+      "2030-04-01T10:00",
+    );
+    await userEvent.click(
       within(dialog).getByRole("button", {
-        name: "1 Werktagstermine erzeugen",
+        name: "Termine im Formular ersetzen",
       }),
     );
     await userEvent.click(

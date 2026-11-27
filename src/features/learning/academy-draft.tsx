@@ -5,18 +5,27 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { zonedInstant } from "../../lib/dates";
+import { validScheduleIntervals, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import type { LocalScheduleEntry } from "../../lib/recurrence";
 import { CourseSeriesForm } from "../operations/course-series";
 import { courseHubQuery } from "./api";
+import { CourseSessionBulkEdit } from "../operations/course-session-bulk-edit";
+import { CourseSchedulePlanner } from "../operations/course-schedule-planner";
 import { CourseSessionRecurrence } from "./course-session-recurrence";
 import {
   academyDraftOptions,
   academyDraftPayload,
   academyDraftReceipt,
 } from "./academy-draft-schema";
+
+function resolveSession(row: LocalScheduleEntry, zone: string) {
+  return {
+    starts_at: zonedInstant(row.starts_at, zone),
+    ends_at: zonedInstant(row.ends_at, zone),
+  };
+}
 
 /** Access to options and the final transaction is rechecked by the exact licensed installation. */
 export function AcademyCourseDraft({ actor }: { actor: string }) {
@@ -95,19 +104,10 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
       time_zone: zone,
       venue: value("venue"),
       delivery_type: value("delivery_type"),
-      sessions: sessions.map(({ starts_at, ends_at }) => ({
-        starts_at: zonedInstant(starts_at, zone),
-        ends_at: zonedInstant(ends_at, zone),
-      })),
+      sessions: sessions.map((item) => resolveSession(item, zone)),
     });
     save.reset();
-    if (
-      !payload.success ||
-      payload.data.sessions.some(
-        ({ starts_at, ends_at }) =>
-          Date.parse(starts_at) >= Date.parse(ends_at),
-      )
-    ) {
+    if (!payload.success || !validScheduleIntervals(payload.data.sessions)) {
       setInvalid(true);
       return;
     }
@@ -294,6 +294,45 @@ export function AcademyCourseDraft({ actor }: { actor: string }) {
               )}
             </fieldset>
           ))}
+          <CourseSchedulePlanner
+            zone={timeZone.trim()}
+            editedSessionCount={
+              sessions.filter((item) => item.starts_at || item.ends_at).length
+            }
+            disabled={disabled}
+            onApply={(entries) => {
+              const rows = entries.map((entry) => ({
+                ...entry,
+                id: crypto.randomUUID(),
+              }));
+              sessionToFocus.current = rows[0]?.id;
+              setSessions(rows);
+              setInvalid(false);
+            }}
+          />
+          {sessions.length > 1 && (
+            <CourseSessionBulkEdit
+              entries={sessions.map((row) => ({ id: row.id, row }))}
+              zone={timeZone.trim()}
+              disabled={disabled}
+              onApply={(changes) => {
+                const edits = new Map(changes.map(({ id, row }) => [id, row]));
+                const rows = sessions.map((row) => ({
+                  ...row,
+                  ...edits.get(row.id),
+                }));
+                if (
+                  !validScheduleIntervals(
+                    rows.map((row) => resolveSession(row, timeZone.trim())),
+                  )
+                )
+                  return false;
+                setSessions(rows);
+                setInvalid(false);
+                return true;
+              }}
+            />
+          )}
           <CourseSessionRecurrence
             anchor={sessions[sessions.length - 1]}
             zone={timeZone}

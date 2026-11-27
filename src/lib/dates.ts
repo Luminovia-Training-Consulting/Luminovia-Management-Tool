@@ -70,6 +70,52 @@ export function resolveScheduleWindow(
     : null;
 }
 
+/** Compare absolute instants, retaining PostgreSQL microseconds when JavaScript milliseconds tie. Invalid endpoints return null. */
+export function compareScheduleInstants(
+  first: string,
+  second: string,
+): number | null {
+  const firstMillis = Date.parse(first);
+  const secondMillis = Date.parse(second);
+  if (!Number.isFinite(firstMillis) || !Number.isFinite(secondMillis))
+    return null;
+  const difference = firstMillis - secondMillis;
+  if (difference) return difference;
+  // PostgreSQL timestamps retain up to six fractional digits. Equal JavaScript
+  // milliseconds still need that precision; whole-minute ISO offsets do not
+  // affect the fractional component within the same absolute second.
+  const microseconds = (instant: string) =>
+    Number(
+      (/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/i.exec(instant)?.[1] ?? "")
+        .padEnd(6, "0")
+        .slice(0, 6),
+    );
+  return microseconds(first) - microseconds(second);
+}
+
+/** Check all half-open intervals without rounding stored microseconds or changing form order. */
+export function validScheduleIntervals(
+  rows: readonly { starts_at: string | null; ends_at: string | null }[],
+) {
+  const intervals = rows.flatMap(({ starts_at, ends_at }) =>
+    starts_at &&
+    ends_at &&
+    (compareScheduleInstants(starts_at, ends_at) ?? 0) < 0
+      ? [{ starts_at, ends_at }]
+      : [],
+  );
+  if (intervals.length !== rows.length) return false;
+  intervals.sort(
+    (a, b) => compareScheduleInstants(a.starts_at, b.starts_at) ?? 0,
+  );
+  return intervals.every(
+    (item, index) =>
+      index === 0 ||
+      (compareScheduleInstants(item.starts_at, intervals[index - 1].ends_at) ??
+        -1) >= 0,
+  );
+}
+
 // Reuse ICU formatters in large lists while bounding the number of retained zones.
 const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
 const maxDateTimeFormatters = 32;

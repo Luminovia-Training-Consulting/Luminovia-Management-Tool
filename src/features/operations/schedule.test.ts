@@ -3,7 +3,25 @@
  * arithmetic does not replace session/claim database acceptance.
  */
 import { describe, expect, it } from "vitest";
-import { weekdaySessions } from "./schedule";
+import { teachingSchedule } from "./schedule";
+
+function weekdaySessions(
+  firstDay: string,
+  start: string,
+  end: string,
+  days: number,
+) {
+  const defaults = { start, end };
+  return teachingSchedule({
+    kind: "count",
+    firstDay,
+    days,
+    defaults,
+    weekdays: Object.fromEntries(
+      [1, 2, 3, 4, 5].map((day) => [day, [defaults]]),
+    ),
+  });
+}
 import { zonedInstant } from "../../lib/dates";
 
 describe("Course weekday planning", () => {
@@ -48,4 +66,46 @@ describe("Course weekday planning", () => {
     for (const args of invalid)
       expect(() => weekdaySessions(...args)).toThrow("invalid_schedule");
   });
+});
+
+it("generates selected ranges, weekend blocks and multiple windows per day", () => {
+  const defaults = { start: "09:00", end: "10:00" };
+  const weekdays = {
+    1: [defaults, { start: "13:00", end: "14:00" }],
+    6: [{ start: "12:00", end: "16:00" }],
+  };
+  const range = teachingSchedule({
+    kind: "range",
+    firstDay: "2030-04-01",
+    lastDay: "2030-04-20",
+    everyWeeks: 2,
+    weekdays,
+    defaults,
+    excludedDates: "2030-04-06",
+  });
+  expect(range.map((row) => row.starts_at)).toEqual([
+    "2030-04-01T09:00",
+    "2030-04-01T13:00",
+    "2030-04-15T09:00",
+    "2030-04-15T13:00",
+    "2030-04-20T12:00",
+  ]);
+  expect(
+    teachingSchedule({
+      kind: "dates",
+      dates: "2030-04-07 2030-04-06 2030-04-07",
+      weekdays,
+      defaults,
+      excludedDates: "2030-04-06",
+    }),
+  ).toEqual([{ starts_at: "2030-04-07T09:00", ends_at: "2030-04-07T10:00" }]);
+  expect(() =>
+    teachingSchedule({
+      kind: "count",
+      days: 1,
+      firstDay: "2030-04-01",
+      defaults,
+      weekdays: { 1: [defaults, { start: "09:30", end: "11:00" }] },
+    }),
+  ).toThrow("invalid_schedule");
 });
