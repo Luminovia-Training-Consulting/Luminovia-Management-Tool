@@ -183,9 +183,10 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
       "subscription",
     ]);
   }
+  // Eligible lecturers receive scoped offer notifications, not raw customer rows.
   assert.equal(
     await actor(broad, `select count(*) from public.jobs where id=${q(draft)}`),
-    "1",
+    "0",
   );
   assert.equal(
     await actor(
