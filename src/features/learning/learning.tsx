@@ -1176,6 +1176,11 @@ function CourseBasics({
       )}
       <CourseTimeline
         sessions={course.sessions}
+        history={
+          course.access.staff
+            ? { actor: session!.user.id, courseId: course.id }
+            : undefined
+        }
         label={i18n.t("translation:sessions")}
         language={i18n.language}
         zone={course.time_zone}

@@ -195,6 +195,7 @@ import {
   quizPoolStartResult,
   courseWelcomePublishedResult,
   courseWelcomeResult,
+  courseTimelineResult,
   courseWelcomeWrite,
   enrolmentState,
   meetingLinkResult,
@@ -5312,6 +5313,14 @@ const nativePaths = {
     "Returns at most 200 nonarchived courses in scope. A verified participant sees its enrolled or completed courses in an active company. Staff and company contacts can also see scoped base courses with lms_enabled=false.",
     {},
     myWorkspacesResult,
+  ),
+  "/rest/v1/rpc/course_timeline": rpc(
+    "readCourseTimeline",
+    "Courses",
+    "Read recorded course milestones",
+    "Course managers and current instructors get up to 100 scoped planning, visibility and class milestones. The response contains event categories and timestamps.",
+    course,
+    courseTimelineResult,
   ),
   "/rest/v1/rpc/course_workspace": rpc(
     "readCourseWorkspace",

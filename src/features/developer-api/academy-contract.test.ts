@@ -55,6 +55,7 @@ const readPaths = [
   "/rest/v1/rpc/course_lti_tools",
   "/rest/v1/rpc/course_lti_ags_grades",
   "/rest/v1/rpc/course_completion_policy",
+  "/rest/v1/rpc/course_timeline",
 ] as const;
 const writePaths = [
   "/rest/v1/rpc/set_course_meeting_link",
@@ -686,7 +687,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
     });
 
     it("describes read-only grace, version conflicts, scanned evidence and report exports", () => {
-      const read = spec.paths[readPaths[5]].post;
+      const read = spec.paths["/rest/v1/rpc/course_session_register"].post;
       expect(read["x-portal-licence"]).toBe("active-or-grace");
       expect(
         read.responses["200"].content["application/json"].schema,
@@ -919,9 +920,8 @@ for (const edition of ["customer-self-hosted", "customer-managed"] as const) {
         required: ["p_room_id", "p_body", "p_client_id"],
       });
       expect(
-        spec.paths[readPaths[4]].post.responses["200"].content[
-          "application/json"
-        ].schema,
+        spec.paths["/rest/v1/rpc/course_chat_messages"].post.responses["200"]
+          .content["application/json"].schema,
       ).toMatchObject({
         items: {
           additionalProperties: false,

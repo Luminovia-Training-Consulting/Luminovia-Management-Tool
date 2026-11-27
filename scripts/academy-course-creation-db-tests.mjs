@@ -441,6 +441,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       ),
       "1",
     );
+    const historyPath = "/rpc/course_timeline";
+    const history = (who) =>
+      actor(who, `${gate(historyPath, "GET")} select public.course_timeline(${q(first.course_run_id)})`).then(JSON.parse);
+    const milestones = await history(manager);
+    validateResponse(historyPath, milestones);
+    assert.equal(milestones.filter(({kind}) => kind === "schedule").length, 1);
+    await assert.rejects(history(learner), /42501/);
     await sql(
       `update public.course_runs set published=true where id=${q(first.course_run_id)}`,
     );

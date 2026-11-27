@@ -157,6 +157,7 @@ import {
   enrolmentState,
   courseWelcomePublishedResult,
   courseWelcomeResult,
+  courseTimelineResult,
   courseWelcomeWrite,
   meetingLinkResult,
   meetingUrl,
@@ -1139,6 +1140,14 @@ const coursePaths = {
         lms_enabled: { const: true },
       }),
     },
+  ),
+  "/rest/v1/rpc/course_timeline": courseOperation(
+    "readAcademyCourseTimeline",
+    "Read recorded course milestones",
+    "Current course management and assigned instructors get up to 100 scoped planning and publication milestones. The response contains event categories and timestamps.",
+    "active-or-grace",
+    record(run),
+    courseTimelineResult,
   ),
   "/rest/v1/rpc/course_workspace": courseOperation(
     "readAcademyCourseWorkspace",

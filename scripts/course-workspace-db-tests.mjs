@@ -1247,6 +1247,29 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         await edit(learner, "delete", {state_revision: 3, title: text.title}, 5);
         assert.equal(await sql(`select count(*) from private.learning_portfolio_evidence where entry_id=${q(id)}`), "0");
     });
+    await check("Course milestones contain bounded history for current staff and omit audit actors and details", async () => {
+        const older = randomUUID(), later = randomUUID();
+        await sql(`insert into public.audit_events (id,actor_id,resource_id,action,created_at,details) values
+          (${q(older)},${q(admin)},${q(run)},'course.run.saved','2030-01-01','{"private_note":"Fictional scope"}'),
+          (${q(later)},${q(admin)},${q(run)},'course.class.changed','2030-02-01','{"identity":"Fictional learner"}'),
+          (${q(randomUUID())},${q(admin)},${q(run)},'course.enrolment.changed','2030-03-01','{}'),
+          (${q(randomUUID())},${q(admin)},${q(randomUUID())},'course.run.saved','2030-03-01','{}');`);
+        const history = (who, courseId = run) => rpc(who, "course_timeline", [q(courseId)]);
+        const milestones = await history(admin);
+        assert.deepEqual(milestones.slice(-2).map(({id, kind}) => ({id, kind})), [
+            {id: older, kind: "updated"}, {id: later, kind: "class"},
+        ]);
+        assert.deepEqual(Object.keys(milestones.at(-1)).sort(), ["at", "id", "kind"]);
+        assert.doesNotMatch(JSON.stringify(milestones), /Fictional scope|Fictional learner|enrolment/);
+        assert.deepEqual(await history(teacher), milestones);
+        for (const who of [client, learner]) await assert.rejects(history(who), /42501/);
+        await assert.rejects(history(teacher, randomUUID()), /42501/);
+        const unassigned = randomUUID();
+        await sql(`insert into public.course_runs (id,template_id,published) values (${q(unassigned)},${q(template)},true);
+            insert into public.audit_events (actor_id,resource_id,action) values (${q(admin)},${q(unassigned)},'course.class.changed');`);
+        assert.deepEqual((await history(admin, unassigned)).map(({kind}) => kind), ["class"]);
+        await assert.rejects(history(teacher, unassigned), /42501/);
+    });
     await check("LTI tool registration and launch bind current course roles, Auth sessions and one-time proof", async () => {
         const deployment = randomUUID();
         const managerSession = randomUUID();

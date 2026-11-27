@@ -252,7 +252,7 @@ const ControlCenterPage = lazy(() =>
     default: module.ControlCenterPage,
   })),
 );
-const CourseCloseoutFollowupRoute = lazy(() =>
+const CourseCloseoutFollowupPage = lazy(() =>
   import("../features/learning/course-closeout-followup").then((module) => ({
     default: module.CourseCloseoutFollowupRoute,
   })),
@@ -633,7 +633,17 @@ export default function PortalRoutes() {
   );
 }
 
-/** Keep bookmarks for the former separate expertise directory working. */
+/** Keep the offline shell available without loading live follow-up tasks. */
+function CourseCloseoutFollowupRoute() {
+  const online = useOnline();
+  const { t } = useTranslation();
+  return online ? (
+    <CourseCloseoutFollowupPage />
+  ) : (
+    <Notice>{t("offline")}</Notice>
+  );
+}
+
 /** Keep the offline shell available without loading online-only management code. */
 function ControlCenterRoute() {
   const online = useOnline();
@@ -641,6 +651,7 @@ function ControlCenterRoute() {
   return online ? <ControlCenterPage /> : <Notice>{t("offline")}</Notice>;
 }
 
+/** Keep bookmarks for the former separate expertise directory working. */
 function LegacyLecturersRoute() {
   const [params] = useSearchParams();
   const id = params.get("user");

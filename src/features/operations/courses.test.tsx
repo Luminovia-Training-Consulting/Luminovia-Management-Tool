@@ -2536,3 +2536,45 @@ it("previews a keyboard-selected course batch before submitting the reviewed sta
     ),
   });
 });
+
+it("shows the course dates and staff milestones chronologically in German and English", async () => {
+  state.rpc.mockImplementation((name) => {
+    if (name === "course_workspace_entitlement")
+      return { data: { lms_enabled: false }, error: null };
+    return {
+      abortSignal: async () => ({
+        data:
+          name === "course_timeline"
+            ? [
+                {
+                  id: "c2000000-0000-4000-8000-000000000009",
+                  kind: "class",
+                  at: "2030-04-02T08:00:00.000Z",
+                },
+              ]
+            : [],
+        error: null,
+      }),
+    };
+  });
+  renderCourses({
+    path: `/courses?run=${run.id}`,
+    runs: [{ ...run, created_at: "2030-03-30T07:00:00.000Z" }],
+  });
+  const timeline = screen.getByRole("region", { name: "Kurszeitleiste" });
+  await within(timeline).findByText("Klasse zugeordnet oder geändert");
+  const [created, session, assigned] =
+    within(timeline).getAllByRole("listitem");
+  expect(created).toHaveTextContent("Kurs angelegt");
+  expect(session.querySelector("time")).toHaveAttribute(
+    "datetime",
+    run.course_sessions[0].ends_at,
+  );
+  expect(assigned).toHaveTextContent("Klasse zugeordnet oder geändert");
+  await act(() => i18n.changeLanguage("en"));
+  expect(
+    within(screen.getByRole("region", { name: "Course timeline" })).getByText(
+      "Class assignment changed",
+    ),
+  ).toBeVisible();
+});

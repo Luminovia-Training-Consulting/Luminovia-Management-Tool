@@ -45,7 +45,7 @@ still withdraws the corresponding credit.
 The series creation form accepts a per-run teaching-day count and daily
 start/end override in the shared time zone. The variant applies only to the
 reviewed drafts being created. Course detail combines visible sessions with
-the recorded creation and archive dates. Internal course managers can preview and confirm archive or restore for 2–50
+the recorded creation and archive dates. Current staff also see selected planning, publication and class events in the same timeline in the internal portal and Academy via `course_timeline`. Internal course managers can preview and confirm archive or restore for 2–50
 courses. The server applies the batch atomically and rejects stale rows and
-locked courses. Edits to saved series patterns, other timeline event sources,
+locked courses. Edits to saved series patterns, assignment and other timeline event sources,
 Academy bulk actions and remaining creator entry points require further work.

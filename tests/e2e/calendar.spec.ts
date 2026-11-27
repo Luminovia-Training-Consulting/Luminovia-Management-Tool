@@ -385,6 +385,12 @@ test("global calendar reveals published events and opens the precise published c
             ends_at: interval.ends_at,
         }),
     );
+    await checked(service.from("audit_events").insert({
+        actor_id: owner.id,
+        resource_id: run,
+        action: "course.class.changed",
+        details: {private_note: "Fictional confidential audit note"},
+    }));
     const unaffiliated = await signedIn(prospect);
     expect(await checked(
         unaffiliated.from("course_runs").select("id").eq("id", run),
@@ -426,9 +432,13 @@ test("global calendar reveals published events and opens the precise published c
         dialog.getByText("Fictional published course detail", {exact: true}),
     ).toBeVisible();
     const timeline = dialog.getByRole("region", {name: "Kurszeitleiste"});
-    await expect(timeline.getByRole("listitem")).toHaveCount(2);
     await expect(timeline.getByText("Kurs angelegt", {exact: true})).toBeVisible();
-    const session = timeline.getByRole("listitem").filter({hasNotText: "Kurs angelegt"});
+    await expect(timeline.getByText("Klasse zugeordnet oder geändert", {exact: true})).toBeVisible();
+    await expect(timeline.getByText("Fictional confidential audit note")).toHaveCount(0);
+    await expect(timeline.getByRole("listitem")).toHaveCount(3);
+    const session = timeline.getByRole("listitem").filter({
+        hasNotText: /Kurs angelegt|Klasse zugeordnet oder geändert/,
+    });
     await expect(session).toHaveCount(1);
     expect(new Date((await session.locator("time").getAttribute("datetime"))!).toISOString()).toBe(interval.ends_at);
 });

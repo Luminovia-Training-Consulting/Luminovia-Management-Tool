@@ -21,6 +21,26 @@ import {
   courseWelcomeRevisionSchema,
 } from "../learning/welcome-content-schema.ts";
 
+export const courseTimelineResult = z.toJSONSchema(
+  z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        kind: z.enum([
+          "updated",
+          "copied",
+          "visibility",
+          "class",
+          "schedule",
+          "published",
+          "capacity",
+        ]),
+        at: z.iso.datetime({ offset: true }),
+      }),
+    )
+    .max(100),
+);
+
 export const courseWelcomeResult = z.toJSONSchema(courseWelcomeRevisionSchema);
 export const courseWelcomePublishedResult = z.toJSONSchema(
   courseWelcomeRevisionSchema.safeExtend({

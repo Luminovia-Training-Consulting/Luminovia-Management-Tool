@@ -3385,6 +3385,11 @@ export function CoursesPage() {
             <h3>{t("courseTimeline")}</h3>
             <CourseTimeline
               sessions={detail.course_sessions}
+              history={
+                manage && !detail.archived_at
+                  ? { actor, courseId: detail.id }
+                  : undefined
+              }
               milestones={[
                 ...(detail.created_at
                   ? [
