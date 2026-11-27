@@ -1,5 +1,4 @@
-import { SubmitRemovalAppeal } from "../jobs/removal-appeals";
-import { memo } from "react";
+import { lazy, memo, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -18,6 +17,12 @@ import {
   type NotificationCategory,
 } from "./categories";
 import type { NotificationItem } from "./api";
+import "../jobs/removal-appeals-i18n";
+
+const SubmitRemovalAppeal = lazy(async () => {
+  const { SubmitRemovalAppeal } = await import("../jobs/removal-appeals");
+  return { default: SubmitRemovalAppeal };
+});
 
 /** Categories filter only already-loaded authorized rows; neither totals nor server cursors change. */
 export function CategorySelector({
@@ -108,10 +113,12 @@ export const NotificationRow = memo(function NotificationRow({
       {appealActor &&
         item.appeal_status === "available" &&
         item.appeal_claim_id && (
-          <SubmitRemovalAppeal
-            actor={appealActor}
-            claim={item.appeal_claim_id}
-          />
+          <Suspense fallback={null}>
+            <SubmitRemovalAppeal
+              actor={appealActor}
+              claim={item.appeal_claim_id}
+            />
+          </Suspense>
         )}
       <small>{dateTime(item.created_at, i18n.language, zone)}</small>
       {item.href ? (

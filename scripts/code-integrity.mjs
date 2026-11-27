@@ -366,13 +366,33 @@ function scanEditionDeclarations(root, edition) {
                 || ts.isExportDeclaration(node) || (ts.isExportAssignment(node) && source !== buildSource)
                 || ts.isTypeNode(node)) return;
             owner = byDeclaration.get(node) ?? owner;
-            if (ts.isIdentifier(node)) {
-                const target = bySymbol.get(symbol(node));
-                if (target && target.node !== node) {
-                    target[target.file === source.fileName ? "local" : "external"]++;
-                    if (owner) owner.dependencies.add(target);
-                    else roots.add(target);
+            let target;
+            if (ts.isIdentifier(node)) target = bySymbol.get(symbol(node));
+            if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+                && node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])
+                && ts.isArrowFunction(node.parent) && node.parent.body === node
+                && ts.isCallExpression(node.parent.parent)
+                && node.parent.parent.arguments[0] === node.parent
+                && ts.isIdentifier(node.parent.parent.expression)) {
+                // React.lazy loads the module's default export when its loader
+                // directly returns import(). A bare import alone does not use it.
+                const loader = checker.getSymbolAtLocation(node.parent.parent.expression);
+                const reactLazy = loader?.declarations?.some((declaration) =>
+                    ts.isImportSpecifier(declaration)
+                    && (declaration.propertyName ?? declaration.name).text === "lazy"
+                    && declaration.parent.parent.parent.moduleSpecifier.text === "react");
+                const module = reactLazy && checker.getSymbolAtLocation(node.arguments[0]);
+                if (module) {
+                    const exportedDefault = checker.getExportsOfModule(module).find((entry) => entry.name === "default");
+                    const value = exportedDefault && exportedDefault.flags & ts.SymbolFlags.Alias
+                        ? checker.getAliasedSymbol(exportedDefault) : exportedDefault;
+                    target = bySymbol.get(value);
                 }
+            }
+            if (target && target.node !== node) {
+                target[target.file === source.fileName ? "local" : "external"]++;
+                if (owner) owner.dependencies.add(target);
+                else roots.add(target);
             }
             ts.forEachChild(node, (child) => visit(child, owner));
         }

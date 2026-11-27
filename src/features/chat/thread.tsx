@@ -7,6 +7,8 @@ import { canRetryNextPage } from "../../lib/paged-read";
 import { orderedCursorRows } from "../../lib/cursor-rows";
 import {
   Fragment,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useEffectEvent,
@@ -45,7 +47,7 @@ import {
 import { chatKeys, chatMessagesQuery } from "./api";
 import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
-import { ChatRetention } from "./retention";
+
 import { MembersPanel, RoomIcon } from "./manage";
 import { MessageBubble } from "./message";
 import { TopicMessagePins } from "./topic-message-pins";
@@ -55,6 +57,11 @@ import "./message-days.css";
 import { useChatRealtime } from "./realtime";
 import type { ChatMessage, ChatRoom } from "./types";
 import "./i18n";
+
+const ChatRetention = lazy(async () => {
+  const { ChatRetention } = await import("./retention");
+  return { default: ChatRetention };
+});
 
 const olderHistoryThreshold = 120;
 const editWindow = 15 * 60_000;
@@ -451,7 +458,9 @@ export function ChatThread({
           </span>
         </div>
         <div className="chat-thread-controls">
-          <ChatRetention actor={actor} roomId={room.id} />
+          <Suspense fallback={null}>
+            <ChatRetention actor={actor} roomId={room.id} />
+          </Suspense>
           {!["dm", "general"].includes(room.kind) && (
             <Button
               variant="ghost"
