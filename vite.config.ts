@@ -328,7 +328,7 @@ export default defineConfig(({ mode }) => {
             "**/delivery-i18n-*.js",
             "**/course-creator-drafts-*.js",
             "**/operational-presets-*.js",
-            "**/offer-creator-drafts-*.js",
+            "**/offer-creator-drafts-*.{js,css}",
             "**/course-reuse-*.{js,css}",
             "**/delivery-disclosure-*.js",
             "**/structured-delivery-*.{js,css}",
@@ -343,6 +343,9 @@ export default defineConfig(({ mode }) => {
             "**/offer-delivery-summary-*.js",
             "**/expense-panel-*.{js,css}",
             "**/assignment-finance-*.{js,css}",
+            // These lazy admin screens need current finance or disclosure rights.
+            "**/assignment-customer-settings-*.js",
+            "**/revenue-forecast-*.js",
             // Selected-session cover validates live finance and availability.
             "**/partial-replacement-*.{js,css}",
             // These private LMS workflows require a live session and load on entry.
