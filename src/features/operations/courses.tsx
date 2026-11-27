@@ -121,6 +121,12 @@ const CourseCreatorDraftSaveBar = lazy(() =>
   })),
 );
 
+const CourseReuseForm = lazy(() =>
+  import("./course-reuse").then((module) => ({
+    default: module.CourseReuseForm,
+  })),
+);
+
 const CourseOfferForm = lazy(() =>
   import("../admin/admin").then(({ CourseOfferForm }) => ({
     default: CourseOfferForm,
@@ -1630,11 +1636,10 @@ export function CoursesPage() {
     setTab(tab);
     editRun(null);
   };
-  const [copy, setCopy] = useState<{
-    type: "template" | "run";
-    id: string;
-    title: string;
-  }>();
+  const [copy, setCopy] = useState<
+    | { type: "template"; id: string; title: string }
+    | { type: "run"; id: string; title: string; run: CourseRun }
+  >();
   const [copyTitle, setCopyTitle] = useState("");
   const [message, setMessage] = useState("");
   const [savedRun, setSavedRun] = useState<string>();
@@ -1662,15 +1667,11 @@ export function CoursesPage() {
   const duplicate = useMutation({
     mutationFn: async () => {
       requireOnline();
-      if (!copy) throw new Error("missing");
-      const { error } = await db().rpc(
-        copy.type === "template"
-          ? "duplicate_course_template"
-          : "duplicate_course_run",
-        copy.type === "template"
-          ? { p_id: copy.id, p_title: copyTitle.trim() }
-          : { p_id: copy.id },
-      );
+      if (!copy || copy.type !== "template") throw new Error("missing");
+      const { error } = await db().rpc("duplicate_course_template", {
+        p_id: copy.id,
+        p_title: copyTitle.trim(),
+      });
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -2493,6 +2494,7 @@ export function CoursesPage() {
                             type: "run",
                             id: run.id,
                             title: template?.title ?? "",
+                            run,
                           });
                         }}
                       >
@@ -2876,28 +2878,42 @@ export function CoursesPage() {
           copy?.type === "template" ? "templateCopyHint" : "copyHint",
         )}
       >
-        <p>{copy?.title}</p>
-        {copy?.type === "template" && (
-          <Field id="copy-title" label={t("copyTitle")}>
-            <input
-              id="copy-title"
-              value={copyTitle}
-              onChange={(e) => setCopyTitle(e.target.value)}
-              maxLength={200}
+        {copy?.type === "run" ? (
+          <Suspense fallback={<Loading />}>
+            <CourseReuseForm
+              key={copy.id}
+              title={copy.title}
+              run={copy.run}
+              onSaved={async (runId) => {
+                await client.invalidateQueries({ queryKey: ["operations"] });
+                setCopy(undefined);
+                setMessage(t("copied"));
+                setCourseView({ run: runId });
+              }}
             />
-          </Field>
+          </Suspense>
+        ) : (
+          copy?.type === "template" && (
+            <>
+              <p>{copy.title}</p>
+              <Field id="copy-title" label={t("copyTitle")}>
+                <input
+                  id="copy-title"
+                  value={copyTitle}
+                  onChange={(event) => setCopyTitle(event.target.value)}
+                  maxLength={200}
+                />
+              </Field>
+              <Button
+                disabled={!online || duplicate.isPending || !copyTitle.trim()}
+                onClick={() => duplicate.mutate()}
+              >
+                {t("duplicate")}
+              </Button>
+              {duplicate.isError && <Notice kind="error">{t("error")}</Notice>}
+            </>
+          )
         )}
-        <Button
-          disabled={
-            !online ||
-            duplicate.isPending ||
-            (copy?.type === "template" && !copyTitle.trim())
-          }
-          onClick={() => duplicate.mutate()}
-        >
-          {t("duplicate")}
-        </Button>
-        {duplicate.isError && <Notice kind="error">{t("error")}</Notice>}
       </Dialog>
       <Dialog
         open={Boolean(offerRunId)}

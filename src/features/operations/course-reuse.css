@@ -1,0 +1,20 @@
+/* Keep the review and selection groups spaced within the existing dialog. */
+.course-reuse-form,
+.course-reuse-options {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.course-reuse-options {
+  margin-block: 0.75rem;
+}
+
+.course-reuse-preview {
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--border);
+  padding-block-start: 0.75rem;
+}
+
+.course-reuse-summary:empty {
+  display: none;
+}

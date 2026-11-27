@@ -713,8 +713,8 @@ const pairs: Record<string, [string, string]> = {
   duplicate: ["Sicher kopieren", "Duplicate safely"],
   copyTitle: ["Titel der Kopie", "Copy title"],
   copyHint: [
-    "Die Kopie enthält Inhalte und Termine, jedoch keine Aufträge, Verträge, persönlichen Daten oder Chat-Mitgliedschaften. Sie startet unveröffentlicht; prüfe die Termine vor der Veröffentlichung.",
-    "The copy contains content and sessions, without jobs, contracts, personal data or chat memberships. It starts unpublished; review its sessions before publishing.",
+    "Wähle die Angaben für den neuen Kursentwurf und prüfe die Vorschau.",
+    "Choose what to copy into the new course draft and review the preview.",
   ],
   templateCopyHint: [
     "Kopiert die Kursinhalte und Themen in eine neue Vorlage.",
