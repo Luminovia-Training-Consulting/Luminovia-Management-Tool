@@ -20,6 +20,10 @@ import { App } from "./app";
 
 vi.mock("@edition-routes", () => import("./academy-routes"));
 vi.mock("@edition-help", () => import("../features/help/academy-catalog"));
+vi.mock(
+  "@edition-course-offers",
+  () => import("../features/operations/course-offers.academy"),
+);
 
 const fake = vi.hoisted(() => ({
   installation: "c23c5015-398f-4d6a-9dd2-f7bb1d8b27ca",

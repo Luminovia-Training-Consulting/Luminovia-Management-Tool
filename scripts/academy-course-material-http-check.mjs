@@ -364,6 +364,12 @@ renewTerms({
 assert.equal((await capabilities()).licence_status, "expired");
 assert.equal((await json(await workspace(learner), 403)).code, "42501");
 
+// The optional browser and mail rehearsals continue on this same installation.
+renewTerms({ issued_at: day(-1.1) });
+assert.equal((await capabilities()).licence_status, "active");
+assert.equal((await json(await workspace(learner), 200)).lms_enabled, true);
+assert.equal((await grades()).status, 200);
+
 console.log(
   JSON.stringify({
     edition,

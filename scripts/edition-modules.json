@@ -6,5 +6,9 @@
   "@edition-help": {
     "internal": "src/features/help/catalog.ts",
     "academy": "src/features/help/academy-catalog.ts"
+  },
+  "@edition-course-offers": {
+    "internal": "src/features/operations/course-offers.portal.ts",
+    "academy": "src/features/operations/course-offers.academy.ts"
   }
 }

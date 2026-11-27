@@ -38,9 +38,12 @@ import {
 import { requireOnline, useOnline } from "../../lib/online";
 import { selectableTopics } from "../taxonomy/selection";
 import { useAuth } from "../auth/auth-context";
-import { changeCandidatesQuery } from "../changes/api";
-import { OfferPublicationAction } from "../jobs/publish-draft";
-import { lifecycleQuery, refreshJobState } from "../jobs/lifecycle-api";
+import {
+  changeCandidatesQuery,
+  lifecycleQuery,
+  OfferPublicationAction,
+  refreshJobState,
+} from "@edition-course-offers";
 import { CourseSessionRecurrence } from "../learning/course-session-recurrence";
 import {
   buildingBlockPlanningQuery,
@@ -497,7 +500,7 @@ export function RunForm({
       )
     : undefined;
   const needsContent = !original && !selectedTemplateId;
-  const linkedJobs = original?.jobs ?? [];
+  const linkedJobs = academy ? [] : (original?.jobs ?? []);
   const linked = linkedJobs.length > 0;
   const linkedJob = linkedJobs.length === 1 ? linkedJobs[0] : undefined;
   const lifecycle = useQuery({
