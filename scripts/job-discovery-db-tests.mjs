@@ -154,6 +154,14 @@ await withTestDatabase("job_discovery", async ({sql, actor}) => {
             assert.equal((await rpc(teacher, {q: "Exact%XAlias"})).items.length, 0);
             assert.equal((await rpc(teacher, {customer: "[same]"})).items.length, 0);
             assert.equal((await rpc(teacher, {q: "Fictional [same] academy"})).items.length, 0);
+            const hiddenCustomerOrder = await rpc(teacher, {sort: "customer_asc"}, null, 1);
+            assert.equal(hiddenCustomerOrder.next_cursor.text, "");
+            await sql(`update public.jobs set location='Fictional private campus marker' where id='${id}'`);
+            assert.deepEqual((await rpc(teacher, {q: "Fictional private campus marker"})).items, []);
+            assert.deepEqual(
+                (await rpc(manager, {q: "Fictional private campus marker"})).items.map((item) => item.id),
+                [id],
+            );
             assert.equal(
                 (
                     await rpc(teacher, {
