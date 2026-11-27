@@ -162,7 +162,15 @@ await withApiFixture(async ({actor, checked, sql, defer, service}) => {
     const withoutPremium = await checked(owner.client.rpc("teaching_day"));
     assert.equal(withoutPremium.sessions.length, 1);
     assert.equal(withoutPremium.sessions[0].id, session);
-    assert.deepEqual(withoutPremium.sessions[0].course_resources, []);
+    assert.deepEqual(withoutPremium.sessions[0].course_resources, [
+        {
+            id: resource,
+            name: "Agreed V1.pdf",
+            sha256: "a".repeat(64),
+            category: "material",
+            version_id: version,
+        },
+    ]);
     await checked(admin.client.rpc("set_company_premium", {
         p_organisation_id: org,
         p_enabled: true,
