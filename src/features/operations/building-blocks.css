@@ -72,24 +72,6 @@
   font-size: 14px;
 }
 
-/* Keep weekday suggestions in an explicit planning section before creating actual session instants. */
-.operations-schedule-planner {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 18px;
-  margin: 20px 0;
-}
-
-.operations-schedule-planner legend {
-  padding: 0 6px;
-}
-
-.operations-schedule-planner p {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.7;
-}
-
 @media (max-width: 650px) {
   .building-block-reference {
     padding: 15px;

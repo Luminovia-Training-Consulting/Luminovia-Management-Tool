@@ -1,0 +1,53 @@
+/* Keep generation and review inside the existing session editor at narrow widths. */
+.operations-schedule-planner {
+  min-inline-size: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: clamp(12px, 2vw, 18px);
+}
+
+.operations-schedule-planner summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.course-planner-fields,
+.course-planner-advanced[open],
+.course-planner-day[open],
+.course-planner-review {
+  display: grid;
+  gap: 12px;
+  margin-block-start: 12px;
+}
+
+.course-planner-weekdays,
+.course-planner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 8px 16px;
+}
+
+.course-planner-actions {
+  margin-block-start: 12px;
+}
+
+.course-planner-day {
+  border-block-start: 1px solid var(--line);
+  padding-block-start: 8px;
+}
+
+.course-planner-review {
+  border-block-start: 1px solid var(--line);
+  padding-block-start: 12px;
+}
+
+.course-planner-review :is(h3, p, ol) {
+  margin: 0;
+}
+
+.course-planner-review ol {
+  max-block-size: 13rem;
+  overflow-y: auto;
+  padding-inline-start: 1.6rem;
+}

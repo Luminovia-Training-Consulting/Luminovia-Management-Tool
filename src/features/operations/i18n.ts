@@ -424,25 +424,6 @@ const pairs: Record<string, [string, string]> = {
   contentPages: ["Inhaltsseiten", "Content pages"],
   sourcePageCount: ["{{count}} Seiten gesamt", "{{count}} pages in total"],
   sourceHash: ["SHA-256-Prüfsumme anzeigen", "Show SHA-256 checksum"],
-  blockSchedule: [
-    "Terminplanung für {{code}}",
-    "Session planning for {{code}}",
-  ],
-  scheduleHelp: [
-    "Vorschlag für {{days}} Werktage aus {{hours}} Quellenstunden. Wochenenden werden ausgelassen; Feiertage, Pausen und individuelle Unterrichtszeiten bitte prüfen. Die Termine lassen sich anschließend einzeln bearbeiten.",
-    "Suggest {{days}} weekdays from {{hours}} source hours. Weekends are skipped; review holidays, breaks and individual teaching times. Every suggested session remains editable.",
-  ],
-  firstDate: ["Erster Unterrichtstag", "First teaching date"],
-  dailyStart: ["Täglicher Beginn", "Daily start"],
-  dailyEnd: ["Tägliches Ende", "Daily end"],
-  generateSchedule: [
-    "{{count}} Werktagstermine erzeugen",
-    "Generate {{count}} weekday sessions",
-  ],
-  scheduleInvalid: [
-    "Bitte prüfe Startdatum, tägliche Uhrzeiten und Dauer. Das Ende muss nach dem Beginn liegen.",
-    "Check the start date, daily times and duration. End must follow start.",
-  ],
   clients: ["Unternehmen", "Companies"],
   companyContracts: ["Unternehmensverträge", "Company contracts"],
   companyContractsIntro: [

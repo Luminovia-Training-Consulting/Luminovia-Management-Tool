@@ -4,7 +4,10 @@ import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
-import { zonedInstant, zonedInstantForEdit } from "../../lib/dates";
+import {
+  validScheduleIntervals,
+  zonedInstantForScheduleEdit,
+} from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
 import type { LocalScheduleEntry } from "../../lib/recurrence";
@@ -13,6 +16,8 @@ import {
   academyDraftScheduleReceipt,
 } from "./academy-draft-schema";
 import { courseHubQuery, courseWorkspaceKey } from "./api";
+import { CourseSessionBulkEdit } from "../operations/course-session-bulk-edit";
+import { CourseSchedulePlanner } from "../operations/course-schedule-planner";
 import { CourseSessionRecurrence } from "./course-session-recurrence";
 import "./i18n";
 
@@ -134,38 +139,37 @@ function DraftScheduleForm({
     },
     onSuccess: confirm,
   });
+  const zone = timeZone.trim();
+  function resolveSession(item: SessionInput) {
+    return {
+      id: item.original?.id ?? null,
+      starts_at: zonedInstantForScheduleEdit(
+        item.starts_at,
+        zone,
+        item.original?.starts_at,
+        initial.time_zone,
+      ),
+      ends_at: zonedInstantForScheduleEdit(
+        item.ends_at,
+        zone,
+        item.original?.ends_at,
+        initial.time_zone,
+      ),
+    };
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const read = (name: string) => String(form.get(name) ?? "").trim();
-    const zone = timeZone.trim();
-    const instant = (item: SessionInput, field: "starts_at" | "ends_at") => {
-      const input = item[field];
-      return item.original && zone === initial.time_zone
-        ? zonedInstantForEdit(
-            input,
-            zone,
-            localTime(item.original[field], zone),
-            item.original[field],
-          )
-        : zonedInstant(input, zone);
-    };
     const result = academyDraftScheduleInput.safeParse({
       time_zone: zone,
       venue: read("venue"),
       delivery_type: read("delivery_type"),
-      sessions: sessions.map((item) => ({
-        id: item.original?.id ?? null,
-        starts_at: instant(item, "starts_at"),
-        ends_at: instant(item, "ends_at"),
-      })),
+      sessions: sessions.map(resolveSession),
     });
     const invalid =
-      !result.success ||
-      result.data.sessions.some(
-        ({ starts_at, ends_at }) =>
-          Date.parse(starts_at) >= Date.parse(ends_at),
-      );
+      !result.success || !validScheduleIntervals(result.data.sessions);
     setInvalid(invalid);
     if (!invalid && result.success) save.mutate(result.data);
   }
@@ -248,6 +252,42 @@ function DraftScheduleForm({
             </Button>
           </fieldset>
         ))}
+        <CourseSchedulePlanner
+          zone={zone}
+          editedSessionCount={
+            sessions.filter((item) => item.starts_at || item.ends_at).length
+          }
+          disabled={save.isPending}
+          onApply={(entries) => {
+            const rows = entries.map((entry) => ({
+              ...entry,
+              key: crypto.randomUUID(),
+              original: null,
+            }));
+            focus.current = rows[0]?.key;
+            setSessions(rows);
+            setInvalid(false);
+          }}
+        />
+        {sessions.length > 1 && (
+          <CourseSessionBulkEdit
+            entries={sessions.map((row) => ({ id: row.key, row }))}
+            zone={zone}
+            disabled={save.isPending}
+            onApply={(changes) => {
+              const edits = new Map(changes.map(({ id, row }) => [id, row]));
+              const rows = sessions.map((row) => ({
+                ...row,
+                ...edits.get(row.key),
+              }));
+              if (!validScheduleIntervals(rows.map(resolveSession)))
+                return false;
+              setSessions(rows);
+              setInvalid(false);
+              return true;
+            }}
+          />
+        )}
         <CourseSessionRecurrence
           anchor={sessions[sessions.length - 1]}
           zone={timeZone}
