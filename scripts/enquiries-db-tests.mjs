@@ -521,10 +521,19 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         await assert.rejects(change(admin,"save",firstId,1,first.payload),/42501|privilege/i);
         await assert.rejects(change(manager,"duplicate",firstId,1,{new_id:randomUUID()}),/42501|privilege/i);
         await manage(manager,source,"note",{note:"Fictional source revision changed"},2);
+        const organisation = first.payload.run.organisation_id;
+        const presetInput={name:"Fictional enquiry delivery", archived:false, config:{
+            time_zone:"Europe/Berlin", starts_at:"08:00", ends_at:"15:00", contact_id:null,
+            delivery:{mode:"online",venue_id:null,meeting_platform:"teams",teaching_instructions:"Review the meeting link before the start."},
+        }};
+        const preset = JSON.parse(await actor(manager,
+            `select public.save_training_operational_preset(${q(organisation)},null,0,${q(JSON.stringify(presetInput))}::jsonb)`
+        ));
         const plan = (draft) => ({
           run:{
             template_id:"",organisation_id:draft.payload.run.organisation_id,time_zone:"Europe/Berlin",
             delivery_type:"online",teaching_language:"en",venue:"",
+            operational_preset:{id:preset.id,revision:preset.revision,apply_delivery:true},
             sessions:[{starts_at:starts,ends_at:ends}],
           },
           content:{title:"Reviewed course",description:"Reviewed public outline",syllabus:"Reviewed syllabus",
@@ -550,6 +559,8 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         assert.equal(await sql(`select template.syllabus || '/' || template.prerequisites || '/' || run.teaching_language from public.course_runs run
           join public.course_templates template on template.id=run.template_id
           where run.id='${receipt.course_run_id}'`), "Reviewed syllabus/Reviewed prerequisite/en");
+        assert.equal(await sql(`select defaults->>'teaching_instructions' from private.training_course_delivery
+          where course_run_id='${receipt.course_run_id}'`),presetInput.config.delivery.teaching_instructions);
     });
     await check(
         "Reasoned closure/reopening and append-only notes retain full management history",
