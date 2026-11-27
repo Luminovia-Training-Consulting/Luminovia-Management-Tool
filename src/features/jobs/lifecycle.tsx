@@ -39,6 +39,7 @@ import {
 } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./lifecycle.css";
+import { AssignmentMatchingRequirements } from "./matching-preferences";
 import { ManualAssignment } from "./manual-assignment";
 import { topicsQuery } from "../../lib/queries";
 import { selectableTopics } from "../taxonomy/selection";
@@ -420,6 +421,9 @@ export function JobLifecyclePanel({
             classId={info.class_id}
           />
         )}
+      {info.can_manage && (
+        <AssignmentMatchingRequirements actor={session!.user.id} job={job.id} />
+      )}
       {info.can_manage && (
         <div className="page-actions">
           <ManualAssignment

@@ -26,6 +26,7 @@ it("submits the exact lecturer and reviewed version; keeps dialog pending until 
               name: "Fictional Teacher",
               eligibility: "eligible",
               terms_version: 1000021,
+              match_reasons: ["format", "weekdays"],
               quote: { amount: 200, total_amount: 400, currency: "EUR" },
             },
             {
@@ -55,6 +56,8 @@ it("submits the exact lecturer and reviewed version; keeps dialog pending until 
     await screen.findByLabelText("Dozent:in"),
     "teacher-a",
   );
+  expect(screen.getByText("Bevorzugtes Format")).toBeVisible();
+  expect(screen.getByText("Bevorzugte Unterrichtstage")).toBeVisible();
   expect(
     screen.getByRole("option", { name: "Busy teacher · Terminüberschneidung" }),
   ).toBeDisabled();

@@ -10,6 +10,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
 import { OwnContactVisibility } from "./contact-visibility";
+import { TeachingMatchingPreferences } from "../jobs/matching-preferences";
 import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
@@ -366,6 +367,9 @@ export function ProfilePage() {
           </section>
         </div>
         <OwnProfileDetails />
+        {portalInternalEdition && hasTeachingRole(roles.data) && (
+          <TeachingMatchingPreferences actor={session!.user.id} />
+        )}
         <div className="profile-privacy-grid">
           <OwnContactVisibility actor={session!.user.id} />
           <OwnTopicVisibility actor={session!.user.id} />

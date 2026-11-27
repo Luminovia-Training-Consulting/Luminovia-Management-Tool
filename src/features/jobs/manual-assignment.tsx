@@ -11,12 +11,22 @@ import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { refreshJobState } from "./lifecycle-api";
+import "./matching-preferences-i18n";
+
+const matchingLabels = {
+  subject: "subjectMatch",
+  format: "formatMatch",
+  weekdays: "weekdaysMatch",
+  hours: "hoursMatch",
+  urgent: "urgentMatch",
+} as const;
 
 interface Candidate {
   id: string;
   name: string;
   eligibility: string;
   terms_version: number;
+  match_reasons?: (keyof typeof matchingLabels)[];
   quote: { amount: number; total_amount: number; currency: string } | null;
 }
 
@@ -36,6 +46,7 @@ export function ManualAssignment({
     actor = useAuth().session!.user.id,
     client = useQueryClient(),
     online = useOnline();
+  const matchingText = useTranslation("teachingMatching").t;
   const [open, setOpen] = useState(false),
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState(""),
@@ -206,6 +217,13 @@ export function ManualAssignment({
               ))}
             </select>
           </Field>
+        )}
+        {!!candidate?.match_reasons?.length && (
+          <ul className="session-list">
+            {candidate.match_reasons.map((entry) => (
+              <li key={entry}>{matchingText(matchingLabels[entry])}</li>
+            ))}
+          </ul>
         )}
         {candidate?.quote && (
           <p>

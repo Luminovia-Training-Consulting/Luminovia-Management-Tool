@@ -1149,6 +1149,45 @@ const manualAssignmentCandidates = {
     quote: { anyOf: [object(lecturerQuote), { type: "null" }] },
   }),
 };
+const candidateMatchReasons = {
+  type: "array",
+  maxItems: 5,
+  items: { enum: ["subject", "format", "weekdays", "hours", "urgent"] },
+};
+const rankedAssignmentCandidates = {
+  ...manualAssignmentCandidates,
+  items: object({
+    ...manualAssignmentCandidates.items.properties,
+    match_reasons: candidateMatchReasons,
+  }),
+};
+const teachingLanguageCodes = {
+  type: "array",
+  maxItems: 12,
+  items: { ...text, pattern: "^[a-z]{2,3}$" },
+};
+const teachingClock = { type: ["string", "null"] };
+const teachingPreferenceFields = {
+  teaching_languages: teachingLanguageCodes,
+  delivery_formats: {
+    type: "array",
+    maxItems: 3,
+    items: { enum: ["online", "onsite", "hybrid"] },
+  },
+  teaching_days: {
+    type: "array",
+    maxItems: 7,
+    items: { type: "integer", minimum: 1, maximum: 7 },
+  },
+  teaching_start: teachingClock,
+  teaching_end: teachingClock,
+  urgent_cover: boolean,
+};
+const jobRequirementFields = {
+  qualification_topics: { type: "array", maxItems: 20, items: uuid },
+  teaching_languages: teachingLanguageCodes,
+  document_evidence_required: boolean,
+};
 const manualAssignmentReceipt = {
   anyOf: [
     object({ status: replacementRefusal }),
@@ -2834,13 +2873,52 @@ const nativePaths = {
     }),
     ["p_search", "p_cursor", "p_limit", "p_selected_id"],
   ),
+  "/rest/v1/rpc/own_lecturer_matching_preferences": rpc(
+    "native_own_lecturer_matching_preferences",
+    "Jobs",
+    "Read own teaching preferences",
+    "Requires an active internal lecturer. An empty profile returns version zero. Teaching times use the profile time zone.",
+    {},
+    object({ version, ...teachingPreferenceFields }),
+  ),
+  "/rest/v1/rpc/save_lecturer_matching_preferences": rpc(
+    "native_save_lecturer_matching_preferences",
+    "Jobs",
+    "Save own teaching preferences",
+    "Requires an active internal lecturer and the current preference version. Send local preferred times as HH:MM or null. Stale versions return 409.",
+    {
+      p_expected_version: version,
+      p_payload: object(teachingPreferenceFields),
+    },
+    object({ version, ...teachingPreferenceFields }),
+  ),
+  "/rest/v1/rpc/job_matching_requirements": rpc(
+    "native_job_matching_requirements",
+    "Jobs",
+    "Read mandatory assignment requirements",
+    "Requires current internal job management authority. The receipt includes the current assignment lifecycle version.",
+    { p_job_id: uuid },
+    object({ version, can_edit: boolean, ...jobRequirementFields }),
+  ),
+  "/rest/v1/rpc/save_job_matching_requirements": rpc(
+    "native_save_job_matching_requirements",
+    "Jobs",
+    "Save mandatory assignment requirements",
+    "Requires current internal job management authority and a draft offer. Verified qualifications must remain valid through the last session; all configured languages are required. When requested, the exact current scanned certificate version must be attested. Stale versions return 409.",
+    {
+      p_job_id: uuid,
+      p_expected_version: version,
+      p_payload: object(jobRequirementFields),
+    },
+    object({ version, can_edit: boolean, ...jobRequirementFields }),
+  ),
   "/rest/v1/rpc/manual_assignment_candidates": rpc(
     "native_manual_assignment_candidates",
     "Jobs",
     "Read current instructor candidates for a job",
-    "Requires current job management authority. Eligibility follows the complete block, scheduling conflicts and lecturer requirements. Only finance-authorised callers receive the candidate's quote. The current terms version identifies the terms to review.",
+    "Requires current job management authority. Eligibility follows the complete block, scheduling conflicts and lecturer requirements. Only finance-authorised callers receive the candidate's quote. Eligible candidates are ordered by matching preference reasons and then name and ID. The current terms version identifies the terms to review.",
     { p_job_id: uuid, p_search: { ...text, maxLength: 200, default: "" } },
-    manualAssignmentCandidates,
+    rankedAssignmentCandidates,
     ["p_search"],
   ),
   "/rest/v1/rpc/manual_assign_job": rpc(
