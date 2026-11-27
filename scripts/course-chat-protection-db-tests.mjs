@@ -206,7 +206,7 @@ for (const edition of [
         sql(
           "begin; set local role service_role; " +
             gate("academy_course_material_scan") +
-            `select public.academy_course_material_scan(${q(draft.document_id)},${q(draft.version_id)},${q(action)},${lease ? q(lease) : "null"},${action === "end" ? "null" : q(digest)},${action === "clean" ? "'ClamAV fixture'" : "null"}); commit;`,
+            `select public.academy_course_material_scan(${q(draft.document_id)},${q(draft.version_id)},${q(action)},${lease ? q(lease) : "null"},${action === "end" ? "null" : q(digest)},${action === "clean" ? q("Academy file validation v1 (no malware scan)") : "null"}); commit;`,
         );
       const lease = await scan("begin");
       await scan("clean", lease);

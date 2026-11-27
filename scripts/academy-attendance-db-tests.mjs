@@ -335,7 +335,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     assert.equal((await reservation(manager)).status, "quarantined");
     await assert.rejects(scan(staged, "begin", null, "d".repeat(64)), /42501/);
     const lease = await scan(staged, "begin", null, sha);
-    await scan(staged, "clean", lease, sha, "ClamAV fixture");
+    await scan(
+      staged,
+      "clean",
+      lease,
+      sha,
+      "Academy file validation v1 (no malware scan)",
+    );
     await scan(staged, "end", lease);
     await assert.rejects(attach(teacher, staged.version_id, future), /42501/);
     await assert.rejects(attach(client, staged.version_id), /42501/);

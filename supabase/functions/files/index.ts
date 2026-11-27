@@ -1,6 +1,6 @@
 /**
  * Authenticated file gateway: reserve under caller permissions, store immutable
- * quarantine bytes, scan and promote explicitly. Downloads recheck current
+ * quarantine bytes, verify and promote explicitly. Downloads recheck current
  * resource access around Storage reads; qualification evidence has its own
  * exact-version authorization context.
  */
@@ -11,6 +11,7 @@ import {organisationContractBytes, readExpectedBytes} from './organisation-contr
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
+import {fileVerification} from './file-validation-receipt.ts';
 import {validateAvatar} from './avatar.ts';
 import {uploadAcademyPwaIcon} from './academy-pwa-icon.ts';
 import {academyLogoVersion, verifyAcademyLogo, logoMaxBytes} from './academy-logo.ts';
@@ -45,7 +46,7 @@ interface Document {
     deleted_at: string | null
 }
 
-const scanPortalFile = (bytes: Uint8Array) =>
+const scanForMalware = (bytes: Uint8Array) =>
     scan(bytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
 
 // Each request owns its user client; never share Auth state or other sessions between requests.
@@ -83,6 +84,16 @@ Deno.serve(async (request: Request) => {
         const auth = await user.auth.getUser(token);
         if (auth.error || !auth.data.user) return json(401, {error: 'authentication_required'});
         const actor = auth.data.user.id;
+        const verifyPortalFile = fileVerification(
+            Deno.env.get('PORTAL_ACADEMY_FILE_VALIDATION'),
+            async () => {
+                const result = await service.rpc('installation_capabilities')
+                    .abortSignal(AbortSignal.timeout(3000));
+                if (result.error) throw new Error('installation_unavailable');
+                return result.data?.edition;
+            },
+            scanForMalware,
+        );
         const requireProfile = async () => {
             const profile = await user.from('profiles').select('id,active').eq('id', actor).maybeSingle();
             if (profile.error || !profile.data?.active) throw new Error('access_denied');
@@ -90,7 +101,7 @@ Deno.serve(async (request: Request) => {
         if (requestUrl.searchParams.get('mode') === 'academy-pwa-icon') {
             return await uploadAcademyPwaIcon(request, {
                 check: (version) => user.rpc('check_academy_pwa_icon_write', {p_expected_version: version}),
-                scan: scanPortalFile,
+                scan: verifyPortalFile,
                 publish: (version, icons) => service.rpc('publish_academy_scanned_pwa_icon', {
                     p_actor: actor, p_expected_version: version,
                     p_icon_192_base64: icons.icon_192,
@@ -113,7 +124,7 @@ Deno.serve(async (request: Request) => {
             const before = await check();
             if (before.error) return authorization(before.error);
             const bytes = await boundedBytes(request, logoMaxBytes);
-            const verdict = await verifyAcademyLogo(bytes, scanPortalFile);
+            const verdict = await verifyAcademyLogo(bytes, verifyPortalFile);
             if (typeof verdict === 'number') {
                 if (verdict === 503) return json(503, {error: 'scanner_unavailable'});
                 if (verdict === 422) return json(422, {error: 'scan_rejected'});
@@ -334,7 +345,7 @@ Deno.serve(async (request: Request) => {
                     if (upload.error) return json(503, {error: 'upload_failed'});
                     acknowledgeQuarantine();
                 }
-                // Always scan the immutable stored object, including after an uncertain retry.
+                // Always verify the immutable stored object, including after an uncertain retry.
                 const stored = await service.storage.from('portal-quarantine').download(reservation.object_path);
                 if (stored.error || !stored.data) return json(503, {error: 'upload_failed'});
                 const storedBytes = new Uint8Array(await stored.data.arrayBuffer());
@@ -346,10 +357,10 @@ Deno.serve(async (request: Request) => {
                     await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
                     await service.from('documents').update({status: 'scanning'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
                 }
-                // Scanner failure remains scan_error. Only an actual clean result reaches promotion.
+                // Scanner failure remains scan_error. Only the verification required for this installation reaches promotion.
                 let verdict: { clean: boolean; version: string };
                 try {
-                    verdict = await scanPortalFile(storedBytes);
+                    verdict = await verifyPortalFile(storedBytes);
                 } catch {
                     if (protectedUpload) await protectedScan('scan_error', lease, null, null);
                     else {
@@ -373,7 +384,7 @@ Deno.serve(async (request: Request) => {
                     const permission = await user.rpc('can_finalize_invoice_upload', {p_document_id: doc.id, p_version_id: reservation.version_id});
                     if (permission.error || permission.data !== true) throw new Error('access_denied');
                 }
-                // Recheck access after the long scan and promote exactly the stored bytes that were scanned.
+                // Recheck access after the long scan and promote exactly the stored bytes that were verified.
                 const cleanExisting = await service.storage.from('portal-clean').info(reservation.object_path);
                 if (cleanExisting.error) {
                     if (!('code' in cleanExisting.error) || cleanExisting.error.code !== 'NoSuchKey') return json(503, {error: 'upload_failed'});

@@ -301,7 +301,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       worker(staging, "begin", null, hash("different")),
       /42501/,
     );
-    const fresh = "ClamAV fictional scanner receipt";
+    const fresh = "Academy file validation v1 (no malware scan)";
     const lease = await worker(staging, "begin", null, digest);
     assert.match(lease, /^[0-9a-f-]{36}$/);
     await assert.rejects(worker(staging, "begin", null, digest), /55000/);
@@ -321,6 +321,11 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
       worker(staging, "clean", lease, digest, "untrusted"),
       /42501/,
     );
+    // A format-only receipt cannot be used to report a malware finding.
+    await assert.rejects(
+      worker(staging, "rejected", lease, digest, fresh),
+      /42501/,
+    );
     await worker(staging, "scan_error", lease);
     await worker(staging, "end", lease);
     assert.equal(
@@ -333,6 +338,14 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     const confirmed = await uploadStatus(teacher, staging);
     assert.equal(confirmed.document.status, "clean");
     assert.equal(confirmed.sha256, digest);
+    assert.equal(
+      await sql(`select scanner_version from public.document_versions where id=${q(staging.version_id)}`),
+      fresh,
+    );
+    assert.equal(
+      await sql(`select action from public.audit_events where resource_id=${q(staging.document_id)} and action in ('document.scan_clean', 'document.format_validated')`),
+      "document.format_validated",
+    );
     const { paths } = academyOpenApi("https://academy.example.invalid", {
       name: "Fictional Academy",
       installationId: installation,
@@ -469,7 +482,13 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
     );
     const rejected = await reserve(teacher, randomUUID());
     const rejectedLease = await worker(rejected, "begin", null, digest);
-    await worker(rejected, "rejected", rejectedLease, digest, fresh);
+    await worker(
+      rejected,
+      "rejected",
+      rejectedLease,
+      digest,
+      "ClamAV fictional scanner receipt",
+    );
     await worker(rejected, "end", rejectedLease);
     assert.equal(
       (await uploadStatus(teacher, rejected)).document.status,

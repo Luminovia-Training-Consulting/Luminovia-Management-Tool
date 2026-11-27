@@ -37,7 +37,6 @@ const services = [
   "functions",
   "api-gw",
   "mail-relay",
-  "clamav",
 ];
 
 function setup(t, changes = {}) {
@@ -103,6 +102,7 @@ function setup(t, changes = {}) {
     networks: { [identity.backend_network]: {} },
     ports: {},
     mounts: [],
+    formatOnly: service === "functions",
     fictional_secret_from_inspection: "never output me",
   });
   const observed = services.map(record);
@@ -141,7 +141,6 @@ function setup(t, changes = {}) {
     quota_usage: { occupied_seats: 4, used_storage_bytes: 27182 },
     forbidden_payload: "fictional proprietary database content",
   };
-  let scanner = `ClamAV 1.4.3/12345/${new Date(now - hour).toUTCString()}`;
   let failDatabase = false;
   const calls = [];
   const oracle = (args, input) => {
@@ -156,7 +155,11 @@ function setup(t, changes = {}) {
           args[4],
           /with index \.State "Health".*json \.Status.*else}}null/,
         );
-        assert.doesNotMatch(args[4], /\.Config\.Env|\.State\.Health\.Log/);
+        assert.match(
+          args[4],
+          /range \.Config\.Env.*PORTAL_ACADEMY_FILE_VALIDATION=format-only/,
+        );
+        assert.doesNotMatch(args[4], /json \.Config\.Env|\.State\.Health\.Log/);
         assert.deepEqual(
           args.slice(5),
           observed.map(({ id }) => id),
@@ -174,12 +177,7 @@ function setup(t, changes = {}) {
           assert.doesNotMatch(input, /\b(update|delete|insert|drop)\b/i);
           return failDatabase ? "" : JSON.stringify(db);
         }
-        assert.deepEqual(args.slice(2), [
-          "clamdscan",
-          "--config-file=/etc/clamav/clamd.conf",
-          "--version",
-        ]);
-        return scanner;
+        throw new Error("Unexpected non-database probe");
       default:
         throw new Error("Unexpected Docker command");
     }
@@ -196,9 +194,6 @@ function setup(t, changes = {}) {
     db,
     calls,
     includeIngress,
-    configureScanner: (value) => {
-      scanner = value;
-    },
     failDatabase: () => {
       failDatabase = true;
     },
@@ -237,7 +232,8 @@ test("licensed dedicated self-hosted and managed reports are exact, read-only an
       storage: { state: "available", used: 27182, limit: 100_000 },
       api_requests_per_minute: 80,
     });
-    assert.equal(report.scanner, "fresh");
+    assert.equal(report.file_validation, "format-only");
+    assert.equal(report.services.clamav, undefined);
     assert.deepEqual(report.backup, {
       state: "fresh",
       age_minutes: 60,
@@ -306,20 +302,25 @@ test("exact staged licence drift, read-only grace and a missing ledger are disti
   assert.equal((await fixture.monitor()).database.state, "target_mismatch");
 });
 
-test("missing ingress, out-of-date definitions and unapproved sidecars produce actionable statuses", async (t) => {
+test("missing ingress, unconfigured file validation and orphan services degrade health", async (t) => {
   const fixture = setup(t);
-  fixture.configureScanner(
-    `ClamAV 1.4.3/12345/${new Date(now - 15 * 24 * hour).toUTCString()}`,
-  );
+  fixture.observed.find(({ service }) => service === "functions").formatOnly =
+    false;
+  const unconfigured = await fixture.monitor();
+  assert.equal(unconfigured.file_validation, "unverified");
+  assert.equal(unconfigured.topology, "recognised");
+  assert.equal(unconfigured.status, "degraded");
+  fixture.observed.find(({ service }) => service === "functions").formatOnly =
+    true;
   fixture.observed.push({
     ...fixture.observed[0],
-    service: "third-party-proxy",
+    service: "clamav",
     id: "d".repeat(64),
   });
   const report = await fixture.monitor({ expectIngress: true });
   assert.equal(report.services.web, "missing");
   assert.equal(report.topology, "ownership_mismatch");
-  assert.equal(report.scanner, "stale");
+  assert.equal(report.file_validation, "format-only");
   assert.equal(report.status, "degraded");
 });
 

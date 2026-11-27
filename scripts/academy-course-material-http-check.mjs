@@ -1,4 +1,4 @@
-/** WL-T21 rehearsal with real local Auth, SQL, Edge, Storage and ClamAV. */
+/** WL-T21 rehearsal with real local Auth, SQL, Edge, Storage and Academy upload validation. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
@@ -185,7 +185,7 @@ const run = await rehearseCourseHandover({
 
 const file = "/functions/v1/files?mode=academy-material";
 const bytes = Buffer.from(
-  "Fictional Academy worksheet — scan and exact delivery.\n",
+  "Fictional Academy worksheet — validation and exact delivery.\n",
 );
 function upload(who, body, clientId = randomUUID()) {
   const form = new FormData();
@@ -199,6 +199,11 @@ function upload(who, body, clientId = randomUUID()) {
 }
 const requestId = randomUUID();
 await json(await upload(outside, bytes), 403, "upload_not_allowed");
+await json(
+  await upload(teacher, Buffer.from([65, 0, 66])),
+  415,
+  "unsupported_type",
+);
 await json(
   await upload(teacher, Buffer.alloc(10 * 1024 * 1024 + 1, 97)),
   413,
@@ -228,7 +233,10 @@ const provenance = JSON.parse(
 assert.equal(provenance.document, document.id);
 assert.equal(provenance.status, "clean");
 assert.equal(provenance.sha256, digest);
-assert.match(provenance.scanner, /^ClamAV /);
+assert.equal(
+  provenance.scanner,
+  "Academy file validation v1 (no malware scan)",
+);
 
 const publish = () =>
   request("/rest/v1/rpc/academy_course_material_action", teacher, {
@@ -301,11 +309,12 @@ console.log(
       "publication_requires_assigned_instructor",
       "native_publication_and_enrolment",
       "scoped_course_progress_and_retry",
-      "clamav_clean",
+      "academy_format_verification",
       "exact_http_bytes",
       "same_request_retry",
       "different_bytes_conflict",
       "size_limit",
+      "invalid_format_denied",
       "concurrent_publication",
       "signed_out_denied",
       "outside_course_denied",

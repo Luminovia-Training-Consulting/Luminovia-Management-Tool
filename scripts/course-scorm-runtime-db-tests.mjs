@@ -92,7 +92,9 @@ for (const edition of [
       ),
     );
     await sql(`
-      update public.document_versions set status='clean', sha256=${q(digest)}, scanner_version='ClamAV fixture'
+      update public.document_versions set status='clean', sha256=${q(digest)}, scanner_version=${q(edition === "internal"
+        ? "ClamAV fixture"
+        : "Academy file validation v1 (no malware scan)")}
         where id=${q(version)};
       update public.documents set status='clean', current_version_id=${q(version)}
         where id=(select document_id from public.document_versions where id=${q(version)});

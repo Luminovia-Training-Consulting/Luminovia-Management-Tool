@@ -8,7 +8,6 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, parseEnv } from "node:util";
 import { z } from "zod";
-import { validateClamAvVersion } from "../supabase/functions/files/clamav.ts";
 import {
   academyDatabaseComposeArguments,
   readAcademyInstallationStatus,
@@ -30,7 +29,6 @@ const privateServices = [
   "functions",
   "api-gw",
   "mail-relay",
-  "clamav",
 ];
 const ingressServices = ["api-ingress", "web"];
 const optionalServices = ["mailpit", "notification-mail"];
@@ -45,13 +43,18 @@ const backupReceiptSchema = z.strictObject({
 });
 // Deliberately project a small subset. Raw inspect also contains environment
 // values and recent healthcheck output, neither of which belongs here.
+// Report only whether the exact file-validation setting is enabled.
 const inspectFormat = `{"id":{{json .Id}},
   "project":{{json (index .Config.Labels "com.docker.compose.project")}},
   "service":{{json (index .Config.Labels "com.docker.compose.service")}},
   "image":{{json .Config.Image}},"status":{{json .State.Status}},
   "health":{{with index .State "Health"}}{{json .Status}}{{else}}null{{end}},
   "networks":{{json .NetworkSettings.Networks}},"ports":{{json .NetworkSettings.Ports}},
-  "mounts":{{json .Mounts}}}`.replaceAll("\n", " ");
+  "mounts":{{json .Mounts}},
+  "formatOnly":{{ $enabled := false }}{{ range .Config.Env }}{{ if eq . "PORTAL_ACADEMY_FILE_VALIDATION=format-only" }}{{ $enabled = true }}{{ end }}{{ end }}{{ json $enabled }}}`.replaceAll(
+  "\n",
+  " ",
+);
 
 function runDocker(args, input) {
   const result = spawnSync(
@@ -439,25 +442,12 @@ export async function monitorAcademy(
         database.state = "target_mismatch";
     }
   }
-  let scanner = "unavailable";
-  if (services.clamav === "healthy") {
-    try {
-      const id = records.find((record) => record.service === "clamav").id;
-      validateClamAvVersion(
-        docker([
-          "exec",
-          id,
-          "clamdscan",
-          "--config-file=/etc/clamav/clamd.conf",
-          "--version",
-        ]),
-        now,
-      );
-      scanner = "fresh";
-    } catch (error) {
-      if (error.message === "scanner_definitions_stale") scanner = "stale";
-    }
-  }
+  const fileValidation =
+    services.functions === "healthy" &&
+    records.find((record) => record.service === "functions")?.formatOnly ===
+      true
+      ? "format-only"
+      : "unverified";
   const backup = await backupState(
     root,
     expected,
@@ -471,7 +461,7 @@ export async function monitorAcademy(
     database.course_access === "active" &&
     quotas.seats.state === "available" &&
     quotas.storage.state === "available" &&
-    scanner === "fresh" &&
+    fileValidation === "format-only" &&
     backup.state === "fresh" &&
     topology === "recognised" &&
     watched
@@ -493,7 +483,7 @@ export async function monitorAcademy(
     services,
     database,
     quotas,
-    scanner,
+    file_validation: fileValidation,
     backup,
   };
 }

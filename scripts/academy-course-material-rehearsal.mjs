@@ -171,7 +171,6 @@ for (const edition of editions) {
   let edge;
   let networkReady = false;
   let stackAttempted = false;
-  let scannerAttempted = false;
   const edgeStop = new AbortController();
   try {
     const { config, origin, base } = await localConfig(project);
@@ -200,15 +199,10 @@ for (const edition of editions) {
       "studio,postgres-meta,edge-runtime,logflare,vector,imgproxy,supavisor",
     ]);
     await verifyLoopbackBindings(project);
-    scannerAttempted = true;
-    await run(process.execPath, [
-      join(root, "scripts/local-scanner.mjs"),
-      "start",
-    ]);
     const edgeEnv = join(directory, "edge.env");
     privateWrite(
       edgeEnv,
-      `PORTAL_CLAMAV_HOST=portal_scanner_${project}\nPORTAL_CLAMAV_PORT=3310\nPORTAL_ALLOWED_ORIGINS=${origin}\nPORTAL_APP_ORIGIN=${origin}\n${checkAuthMail ? "PORTAL_INVITES_ENABLED=true\n" : ""}`,
+      `PORTAL_ACADEMY_FILE_VALIDATION=format-only\nPORTAL_ALLOWED_ORIGINS=${origin}\nPORTAL_APP_ORIGIN=${origin}\n${checkAuthMail ? "PORTAL_INVITES_ENABLED=true\n" : ""}`,
     );
     edge = run(
       cli,
@@ -227,7 +221,7 @@ for (const edition of editions) {
         throw error;
       }),
     ]);
-    await verifyLoopbackBindings(project, { edge: true, scanner: true });
+    await verifyLoopbackBindings(project, { edge: true });
     const receipt = await run(process.execPath, [
       join(root, "scripts/academy-course-material-http-check.mjs"),
       edition,
@@ -272,39 +266,12 @@ for (const edition of editions) {
         errors.push(error);
       }
     };
-    if (scannerAttempted)
-      await cleanup(() =>
-        run(
-          process.execPath,
-          [join(root, "scripts/local-scanner.mjs"), "stop"],
-          { signal: undefined },
-        ),
-      );
     if (stackAttempted)
       await cleanup(() =>
         run(cli, ["stop", "--project-id", project, "--no-backup"], {
           signal: undefined,
         }),
       );
-    if (scannerAttempted)
-      await cleanup(async () => {
-        const owned = await run(
-          "docker",
-          [
-            "volume",
-            "ls",
-            "--filter",
-            `label=org.luminovia.portal=${project}`,
-            "--format",
-            "{{.Name}}",
-          ],
-          { signal: undefined },
-        );
-        if (owned.trim().split("\n").includes(`portal_clamav_${project}`))
-          await run("docker", ["volume", "rm", `portal_clamav_${project}`], {
-            signal: undefined,
-          });
-      });
     if (networkReady) await cleanup(() => removeLoopbackNetwork(project));
     rmSync(directory, { recursive: true, force: true });
   }

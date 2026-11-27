@@ -221,7 +221,6 @@ test(
     const privateServiceNames = [
       "api-gw",
       "auth",
-      "clamav",
       "db",
       "functions",
       "mail-relay",
@@ -316,7 +315,12 @@ test(
         identity.portal_origin,
       );
       assert.equal(functions.environment.PORTAL_INVITES_ENABLED, "false");
-      assert.equal(functions.environment.PORTAL_CLAMAV_HOST, "clamav");
+      assert.equal(
+        functions.environment.PORTAL_ACADEMY_FILE_VALIDATION,
+        "format-only",
+      );
+      assert.equal(functions.environment.PORTAL_CLAMAV_HOST, undefined);
+      assert.equal(functions.environment.PORTAL_CLAMAV_PORT, undefined);
       assert.ok(gateway.networks.backend.aliases.includes("api"));
       assert.ok(
         db.volumes.some((volume) =>
@@ -373,10 +377,10 @@ test(
             volume.read_only === true,
         ),
       );
-      assert.ok(
-        host.includes(web.image) &&
-          host.includes(withProfiles.services.clamav.image),
-      );
+      assert.ok(host.includes(web.image));
+      assert.equal(withProfiles.services.clamav, undefined);
+      assert.equal(withProfiles.volumes.clamav_signatures, undefined);
+      assert.match(host, /^ {2}clamav:/m);
       assert.deepEqual(
         Object.entries(withProfiles.services)
           .filter(([, service]) => service.ports?.length)

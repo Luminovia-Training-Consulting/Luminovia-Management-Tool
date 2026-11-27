@@ -331,7 +331,7 @@ export async function planAcademyStaging({
       "gateway public key, DNS, TLS and Auth callback checks",
       "branded Auth templates and SMTP acceptance",
       "reviewed migrations, licensed database and first administrator",
-      "Storage, scanner, realtime, quota and health acceptance",
+      "Storage, file validation, realtime, quota and health acceptance",
       "independent encrypted backup, restore and retained-data upgrade",
     ],
   };

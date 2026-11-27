@@ -23,7 +23,9 @@ RUNTIME_FILES = ("installation.json", "runtime.env", "runtime.env.public.env",
 OPTIONAL_RUNTIME_FILES = ("runtime.env.webhooks.env", "runtime-handoff.json")
 RUNTIME_DIRS = ("browser", "data")
 VOLUMES = ("db-config", "caddy_data", "caddy_config")
-CACHE_VOLUMES = ("deno-cache", "clamav_signatures")
+CACHE_VOLUMES = ("deno-cache",)
+# Existing deployments can retain this disposable cache after the scanner is removed.
+LEGACY_CACHE_VOLUMES = ("clamav_signatures",)
 EDITION = {"customer-managed", "customer-self-hosted"}
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -242,7 +244,7 @@ class Docker:
                 fail("recovery requires digest-pinned database and Storage images")
             images[name] = image
         names = self.volume_names()
-        known_names = {self.project + "_" + kind for kind in (*VOLUMES, *CACHE_VOLUMES)}
+        known_names = {self.project + "_" + kind for kind in (*VOLUMES, *CACHE_VOLUMES, *LEGACY_CACHE_VOLUMES)}
         if any(name.startswith(self.project + "_") and name not in known_names for name in names):
             fail("the installation has an unreviewed persistent volume")
         volumes = {kind: self.volume(kind) for kind in VOLUMES if self.project + "_" + kind in names}

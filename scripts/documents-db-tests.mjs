@@ -392,14 +392,18 @@ try {
             };
             const hash = "a".repeat(64);
             const scanner = "ClamAV fictional-catalogue";
-            const finish = (version, lease) =>
-                `select public.complete_document_upload('${document}','${version}','${lease}','${hash}','${scanner}')`;
+            const finish = (version, lease, receipt = scanner) =>
+                `select public.complete_document_upload('${document}','${version}','${lease}','${hash}',${quote(receipt)})`;
             const oldLease = await startScan(original);
             const current = (await reserveMaterial(document)).version_id;
             const lease = await startScan({version_id: current});
             await assert.rejects(asService(finish(original.version_id, oldLease)), /Upload version is no longer current/);
             await assert.rejects(asService(finish(current, oldLease)), /insufficient_privilege/);
             await assert.rejects(actor(otherOwner, finish(current, lease)), /permission denied/);
+            await assert.rejects(
+                asService(finish(current, lease, "Academy file validation v1 (no malware scan)")),
+                /22023|invalid_parameter_value/,
+            );
 
             // Fail after both metadata writes. The whole verdict must roll back
             // while the exact same lease remains available for a clean retry.

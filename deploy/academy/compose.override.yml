@@ -2,6 +2,11 @@
 # resolved from that reviewed base file. Ingress is separately activated.
 name: ${COMPOSE_PROJECT_NAME:?Set the generated academy Compose name}
 services:
+  functions:
+    environment:
+      PORTAL_ACADEMY_FILE_VALIDATION: format-only
+      PORTAL_CLAMAV_HOST: !reset null
+      PORTAL_CLAMAV_PORT: !reset null
   mail-relay:
     environment:
       PORTAL_MAIL_RELAY_ACADEMY_NOTIFICATIONS: "true"
@@ -96,30 +101,6 @@ services:
     logging:
       driver: json-file
       options: { max-size: "5m", max-file: "2" }
-  clamav:
-    image: clamav/clamav@sha256:12177441d1b40cef3c47b44c4090d59d4babc4c67bedd5af0fa315e603aa6dd8
-    restart: unless-stopped
-    environment:
-      CLAMD_STARTUP_TIMEOUT: "180"
-      # Native clamd VERSION timestamps omit a zone; the shared validator reads UTC.
-      TZ: UTC
-    volumes:
-      - clamav_signatures:/var/lib/clamav
-      - ../clamd.conf:/etc/clamav/clamd.conf:ro
-    networks: [backend]
-    mem_limit: 3g
-    pids_limit: 100
-    security_opt: ["no-new-privileges:true"]
-    healthcheck:
-      test: [CMD, clamdscan, --config-file=/etc/clamav/clamd.conf, --ping=1]
-      interval: 30s
-      timeout: 5s
-      start_period: 180s
-      start_interval: 5s
-      retries: 3
-    logging:
-      driver: json-file
-      options: { max-size: "5m", max-file: "2" }
 networks:
   backend:
     external: false
@@ -127,4 +108,3 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
-  clamav_signatures:
