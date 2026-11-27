@@ -4,7 +4,7 @@
  */
 import { useRequestKey } from "../../lib/request-key";
 import { useSearchParams } from "react-router-dom";
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,9 +13,10 @@ import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { CheckCircle2, Download, FileSignature, Plus } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
+import { hasTeachingRole } from "../auth/internal-capabilities";
 import { saveDownload } from "../files/api";
 import { db } from "../../lib/supabase";
-import { profileQuery } from "../../lib/queries";
+import { profileQuery, userRolesQuery } from "../../lib/queries";
 import { PageNotFound } from "../../components/page-not-found";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -38,6 +39,12 @@ import type { ContractRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import "./i18n";
 import "./commercial.css";
+
+const SubjectDocuments = lazy(() =>
+  import("../files/files").then(({ SubjectDocuments }) => ({
+    default: SubjectDocuments,
+  })),
+);
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
@@ -626,6 +633,7 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
   const actor = session!.user.id;
   const staff = scope === "staff";
   const access = useQuery({ ...commercialAccessQuery(actor), enabled: staff });
+  const roles = useQuery({ ...userRolesQuery(actor), enabled: !staff });
   const profile = useQuery(profileQuery(actor));
   const [params, setParams] = useSearchParams();
   const [all, setAll] = useState(true);
@@ -673,6 +681,30 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
         }
       />
       <div className="section-stack">
+        {!staff &&
+          (roles.isError ? (
+            <ErrorState retry={() => void roles.refetch()} />
+          ) : hasTeachingRole(roles.data) ? (
+            <section
+              aria-labelledby="own-contract-files"
+              className="section-stack"
+            >
+              <div className="panel form-stack">
+                <h2 id="own-contract-files">{t("ownContractFiles")}</h2>
+                <p>{t("ownContractFilesIntro")}</p>
+                <CommercialPdfUpload
+                  key={actor}
+                  kind="contract"
+                  ownerId={actor}
+                  expectedActor={actor}
+                  label={t("ownContractUpload")}
+                />
+              </div>
+              <Suspense fallback={<Loading />}>
+                <SubjectDocuments ownerId={actor} kind="contract" />
+              </Suspense>
+            </section>
+          ) : null)}
         <div className="panel contract-toolbar">
           <Field id="contract-search" label={t("contracts")}>
             <input

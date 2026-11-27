@@ -17,12 +17,14 @@ import "./i18n";
 export function CommercialPdfUpload({
   kind,
   ownerId,
+  expectedActor,
   label,
   onDocument,
   disabled = false,
 }: {
   kind: "contract" | "invoice";
   ownerId: string;
+  expectedActor?: string;
   label: string;
   onDocument?: (document: PortalDocument | null) => void;
   disabled?: boolean;
@@ -61,7 +63,13 @@ export function CommercialPdfUpload({
       const retryId = retry.forInput(signature);
       return uploadDocument(
         file,
-        { scope: "personal", kind, ownerId, clientId: retryId },
+        {
+          scope: "personal",
+          kind,
+          ownerId,
+          clientId: retryId,
+          ...(expectedActor ? { expectedActor } : {}),
+        },
         setProgress,
       );
     },

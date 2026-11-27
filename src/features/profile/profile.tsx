@@ -55,6 +55,11 @@ const ProfileOutlook = lazy(() =>
     default: ProfileOutlook,
   })),
 );
+const ProfileCompanyContracts = lazy(() =>
+  import("./company-contracts").then(({ ProfileCompanyContracts }) => ({
+    default: ProfileCompanyContracts,
+  })),
+);
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
@@ -319,6 +324,14 @@ export function ProfilePage() {
       </p>
       <div className="section-stack profile-sections">
         <AvatarEditor name={profile.data.display_name} />
+        {portalInternalEdition && roles.data?.includes("client") && (
+          <Suspense fallback={<Loading />}>
+            <ProfileCompanyContracts
+              key={session!.user.id}
+              actor={session!.user.id}
+            />
+          </Suspense>
+        )}
         {portalInternalEdition && online && hasTeachingRole(roles.data) && (
           <Suspense fallback={<Loading />}>
             <ProfileOutlook
