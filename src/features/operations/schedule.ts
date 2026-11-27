@@ -114,7 +114,6 @@ export function teachingSchedule(
         count++;
       if (count === days) break;
     }
-    if (days !== null && count !== days) throw new Error("invalid_schedule");
   }
   if (sessions.length === 0) throw new Error("invalid_schedule");
   return sessions;

@@ -105,14 +105,13 @@ export function validScheduleIntervals(
       : [],
   );
   if (intervals.length !== rows.length) return false;
-  intervals.sort(
-    (a, b) => compareScheduleInstants(a.starts_at, b.starts_at) ?? 0,
-  );
+  // Every endpoint has already passed the finite-instant check above.
+  intervals.sort((a, b) => compareScheduleInstants(a.starts_at, b.starts_at)!);
   return intervals.every(
     (item, index) =>
       index === 0 ||
-      (compareScheduleInstants(item.starts_at, intervals[index - 1].ends_at) ??
-        -1) >= 0,
+      compareScheduleInstants(item.starts_at, intervals[index - 1].ends_at)! >=
+        0,
   );
 }
 
