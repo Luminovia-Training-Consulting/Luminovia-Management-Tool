@@ -244,7 +244,16 @@ select pg_temp.assignment_customer_patch('private.course_workspace_before_premiu
   $after$'venue',case when private.can_read_course_customer(r.id) then r.venue else '' end$after$);
 select pg_temp.assignment_customer_patch('private.course_workspace_before_premium(uuid)',
   $before$(select jsonb_build_object('name',oc.name,'email',oc.email,'phone',oc.phone) from public.organisation_contacts oc where oc.id=settings.contact_id and oc.organisation_id=r.organisation_id and oc.archived_at is null)$before$,
-  $after$case when private.can_read_course_customer(r.id) then private.course_job_contact(r.id) end$after$);
+  $after$case
+    when not private.can_read_course_customer(r.id) then null
+    when (c->>'manager')::boolean or (c->>'client')::boolean or exists (
+      select 1 from public.jobs linked_job where linked_job.course_run_id=r.id
+        and private.can_read_assignment_customer(linked_job.id)
+    ) then private.course_job_contact(r.id)
+    else (select jsonb_build_object('name',oc.name,'email',oc.email,'phone',oc.phone)
+      from public.organisation_contacts oc where oc.id=settings.contact_id
+        and oc.organisation_id=r.organisation_id and oc.archived_at is null)
+  end$after$);
 
 select pg_temp.assignment_customer_patch('private.standard_course_workspace(uuid,jsonb)',
   $before$when run.delivery_type = 'onsite' then run.venue$before$,

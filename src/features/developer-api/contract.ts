@@ -3640,6 +3640,7 @@ const nativePaths = {
       can_edit_course_details: boolean,
       can_edit_metadata: boolean,
       replaceable_claim_ids: { type: "array", items: uuid },
+      partial_replaceable_claim_ids: { type: "array", items: uuid },
       can_duplicate: boolean,
       organisation_id: nullableUuid,
       can_reassign_company: boolean,
