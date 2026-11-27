@@ -52,7 +52,9 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
       const accountTrigger = account.locator("summary");
       await accountTrigger.click();
       await expectInsideViewport(account.locator(".account-menu-panel"));
-      await expect(account.locator(".account-menu-signout")).toBeHidden();
+      const signout = { name: /^(Abmelden|Sign out)$/ };
+      await expect(account.getByRole("button", signout)).toHaveCount(0);
+      await expect(header.getByRole("button", signout)).toHaveCount(0);
       await account.getByRole("link").first().focus();
       await page.keyboard.press("Escape");
       await expect(accountTrigger).toBeFocused();
@@ -74,9 +76,8 @@ test("mobile header panels fit a wrapped toolbar and return keyboard focus", asy
       await expect(more.locator("nav")).toHaveCSS("overflow-y", "auto");
       const footer = menuPanel.locator(".mobile-menu-footer");
       await expect(footer).toBeVisible();
-      await expect(
-        menuPanel.getByRole("button", { name: /Abmelden|Sign out/ }),
-      ).toBeVisible();
+      await expect(footer.getByRole("button", signout)).toBeVisible();
+      await expect(page.getByRole("button", signout)).toHaveCount(1);
       const bottomGap = await menuPanel.evaluate((panel) => {
         const panelBottom = panel.getBoundingClientRect().bottom;
         const footerBottom = panel

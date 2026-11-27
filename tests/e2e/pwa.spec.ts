@@ -148,7 +148,7 @@ test("built PWA serves a public help deep link offline without a session", async
     }
 });
 
-test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({page, context}) => {
+test("built PWA registers its shell, supports offline deep links and never caches private API responses", async ({page, context, isMobile}) => {
     await openControlledPwa(page);
     // Authenticated application tests may persist a different locale for the
     // shared seed user. This PWA check owns one account and its default locale.
@@ -204,6 +204,28 @@ test("built PWA registers its shell, supports offline deep links and never cache
         });
         expect(offlineCachedUrls).toEqual(cachedUrls);
         await context.setOffline(false);
+
+        // Check the worker-served shell again online so the actual Auth sign-out can complete.
+        const account = page.locator(".account-menu");
+        await account.locator("summary").click();
+        const logout = {name: /^(Abmelden|Sign out)$/};
+        await expect(account.getByRole("link", {name: "Mein Profil", exact: true})).toBeVisible();
+        await expect(page.locator(".topbar").getByRole("button", logout)).toHaveCount(0);
+        await account.locator("summary").click();
+        if (isMobile) {
+            const navigation = page.locator(".mobile-more");
+            await navigation.locator("summary").click();
+            const footer = navigation.locator(".mobile-menu-panel > .mobile-menu-footer:last-child");
+            await expect(navigation.getByRole("navigation")).toBeVisible();
+            await expect(footer.getByRole("button", logout)).toBeVisible();
+            await expect(page.getByRole("button", logout)).toHaveCount(1);
+            await footer.getByRole("button", logout).click();
+        } else {
+            const sidebar = page.locator(".sidebar");
+            await expect(sidebar.getByRole("button", logout)).toBeVisible();
+            await sidebar.getByRole("button", logout).click();
+        }
+        await expect(page).toHaveURL(/\/login$/);
     } finally {
         await context.setOffline(false);
         await checked(service.auth.admin.deleteUser(lecturer.id));

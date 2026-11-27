@@ -412,14 +412,6 @@ export function Shell() {
                 {!participantOnly && (
                   <NavLink to="/settings">{t("personalSettings")}</NavLink>
                 )}
-                <button
-                  type="button"
-                  className="account-menu-signout"
-                  disabled={signoutPending}
-                  onClick={() => void logout()}
-                >
-                  {t("logout")}
-                </button>
               </div>
             </details>
             <details className="mobile-more" {...mobileDisclosure}>
