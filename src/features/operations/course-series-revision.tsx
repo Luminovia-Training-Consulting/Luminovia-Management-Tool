@@ -1,4 +1,10 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
@@ -286,6 +292,9 @@ function RevisionEditor({
   const [invalid, setInvalid] = useState<number>();
   const [review, setReview] = useState<{ changes: Change[]; result: Result }>();
   const reviewHeading = useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(() => {
+    if (review) reviewHeading.current?.focus();
+  }, [review]);
   const revision = useMutation({
     mutationFn: async ({
       changes,
@@ -325,7 +334,6 @@ function RevisionEditor({
         return;
       }
       setReview({ changes, result });
-      requestAnimationFrame(() => reviewHeading.current?.focus());
     },
   });
 

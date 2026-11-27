@@ -79,8 +79,14 @@ await withTestDatabase("course_overview", async ({ actor, sql }) => {
     actor(learner, `select public.course_gradebook(${q(runA)})`),
     /42501/,
   );
-  await sql(`update private.company_participant_memberships set status='removed'
-    where organisation_id=${q(a)} and user_id=${q(learner)}`);
+  const membershipVersion = await sql(
+    `select version from private.company_participant_memberships
+     where organisation_id=${q(a)} and user_id=${q(learner)}`,
+  );
+  await actor(
+    admin,
+    `select public.remove_company_participant(${q(a)},${q(learner)},${Number(membershipVersion)},${q(randomUUID())})`,
+  );
   assert.deepEqual(
     (await list(learner)).map(({ id }) => id),
     [runB],

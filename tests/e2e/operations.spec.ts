@@ -191,7 +191,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
     const first = DateTime.now()
         .setZone("Europe/Berlin")
         .plus({days: 100})
-        .set({hour: 9, minute: 0, second: 0});
+        .set({hour: 9, minute: 0, second: 0, millisecond: 0});
     await dialog
         .getByLabel("Beginn 1", {exact: true})
         .fill(first.toFormat("yyyy-MM-dd'T'HH:mm"));
@@ -224,7 +224,19 @@ test("admin persists private customer/contact, course template/run and safe unpu
         }),
     ).toBeVisible();
     expect(await dialog.locator("script").count()).toBe(0);
-    await expect(dialog.locator(".session-list li")).toHaveCount(2);
+    const timeline = dialog.getByRole("region", {name: "Kurszeitleiste"});
+    await expect(timeline.getByText("Kurs angelegt", {exact: true})).toBeVisible();
+    const sessions = timeline.getByRole("listitem").filter({
+        hasNotText: "Kurs angelegt",
+    });
+    await expect(sessions).toHaveCount(2);
+    const endDates = await sessions.locator("time").evaluateAll((dates) =>
+        dates.map((date) => Date.parse(date.getAttribute("datetime") ?? "")),
+    );
+    expect(endDates).toEqual([
+        first.plus({hours: 5}).toMillis(),
+        first.plus({days: 1, hours: 5}).toMillis(),
+    ]);
     await dialog.getByRole("button", {name: "Schließen", exact: true}).click();
     await card.locator("summary").getByText("Weitere Aktionen", {exact: true}).click();
     await card
@@ -234,10 +246,15 @@ test("admin persists private customer/contact, course template/run and safe unpu
     await expect(dialog).toContainText(
         "keine Aufträge, Verträge, persönlichen Daten",
     );
-    await dialog
-        .getByRole("button", {name: "Sicher kopieren", exact: true})
-        .click();
-    await expect(dialog).toBeHidden();
+    await dialog.getByRole("button", {name: "Kurskopie prüfen", exact: true}).click();
+    await dialog.getByRole("button", {name: "Kursentwurf erstellen", exact: true}).click();
+    const editor = page.getByRole("dialog", {name: "Bearbeiten", exact: true});
+    await expect(editor).toBeVisible();
+    await page.reload();
+    await expect(editor).toBeVisible();
+    await editor.getByRole("button", {name: "Schließen", exact: true}).click();
+    await page.getByRole("dialog").getByRole("button", {name: "Schließen", exact: true}).click();
+    await page.getByLabel("Suchen", {exact: true}).fill(title);
     await expect(card).toHaveCount(2);
     await page.reload();
     await page.getByLabel("Suchen", {exact: true}).fill(title);
