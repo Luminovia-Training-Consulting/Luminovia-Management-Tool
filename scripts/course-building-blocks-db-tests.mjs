@@ -1076,8 +1076,9 @@ await withTestDatabase("course_test", async ({sql, actor}) => {
         const outsider = randomUUID();
         await sql(`insert into auth.users(id,email) values(${q(outsider)},'staffing-outsider@example.invalid');
           insert into public.user_roles(user_id,role) values(${q(outsider)},'lecturer');`);
-        assert.equal(await actor(outsider, `select count(*) from public.jobs where id in (${q(internal)},${q(external)})`), "1");
-        assert.equal(await actor(outsider, `select count(*) from public.jobs where id = ${q(external)}`), "1");
+        // Raw job rows include protected customer data; lecturers use the scoped offer RPCs.
+        assert.equal(await actor(outsider, `select count(*) from public.jobs where id in (${q(internal)},${q(external)})`), "0");
+        assert.equal(await actor(outsider, `select count(*) from public.jobs where id = ${q(external)}`), "0");
         assert.equal(await sql(`select count(*) from private.job_commission_offers where job_id = ${q(internal)}`), "0");
     });
     console.log(
