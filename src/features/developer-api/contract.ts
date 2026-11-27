@@ -2443,6 +2443,39 @@ const nativePaths = {
     operationsPeriod,
     z.toJSONSchema(controlSchema),
   ),
+  "/rest/v1/rpc/copy_training_course": rpc(
+    "copyTrainingCourse",
+    "Courses",
+    "Preview or create an independent copy of a course",
+    "Requires current course management access. Preview supplies the source revision; save validates the reviewed options and accepts the same request ID on an identical retry. Access credentials and historic records stay with the source.",
+    {
+      p_source_run_id: uuid,
+      p_action: { type: "string", enum: ["preview", "save"] },
+      p_options: { type: "object" },
+      p_expected_revision: {
+        type: ["string", "null"],
+        pattern: "^[a-f0-9]{64}$",
+      },
+      p_request_id: { anyOf: [uuid, { type: "null" }] },
+    },
+    z.toJSONSchema(
+      z.union([
+        z.object({ course_run_id: z.uuid() }),
+        z.object({
+          title: z.string(),
+          revision: z.string().regex(/^[a-f0-9]{64}$/),
+          time_zone: z.string(),
+          sessions: z
+            .array(z.object({ starts_at: z.string(), ends_at: z.string() }))
+            .max(60),
+          structured_delivery: z.boolean(),
+          preparation_count: z.number().int().nonnegative(),
+          material_count: z.number().int().nonnegative(),
+          contact: z.boolean(),
+        }),
+      ]),
+    ),
+  ),
   "/rest/v1/rpc/course_creator_drafts": rpc(
     "listCourseCreatorDrafts",
     "Courses",

@@ -364,3 +364,87 @@ it("rejects impossible and oversized periods before any new data request", () =>
       .success,
   ).toBe(true);
 });
+
+it("acknowledges the exact displayed issue and retains its corrective link", async () => {
+  const user = userEvent.setup();
+  fake.responses.get_my_permissions = [
+    "jobs.manage",
+    "courses.manage",
+    "finance.gross.read",
+  ];
+  const fingerprint = "ab".repeat(16);
+  const issue = {
+    run_id: job,
+    title: "Fiktive Schulung",
+    starts_at: "2030-01-05T08:00:00Z",
+    code: "staffing",
+    fingerprint,
+    acknowledged: false,
+  };
+  fake.responses.training_control_center = {
+    time_zone: "UTC",
+    operations: {
+      upcoming: 2,
+      active: 1,
+      assigned_minutes: 60,
+      unassigned_minutes: 120,
+      unstaffed: 1,
+      partly_staffed: 0,
+      attention: 1,
+      issues: [issue],
+    },
+    capacity: {
+      weeks: [{ week: "2029-12-31", people: 1, free_minutes: 90 }],
+      absences: [],
+    },
+    receivables: {
+      currencies: [
+        { currency: "EUR", invoiced: 100, received: 20, outstanding: 80 },
+        { currency: "AUD", invoiced: 50, received: 0, outstanding: 50 },
+      ],
+      overdue: [],
+    },
+  };
+  const rpc = fake.rpc.getMockImplementation()!;
+  fake.rpc.mockImplementation((name: string, args: unknown) => {
+    if (name === "acknowledge_training_issue") {
+      issue.acknowledged = (args as { p_acknowledged: boolean }).p_acknowledged;
+      return Promise.resolve({ data: true, error: null });
+    }
+    return rpc(name, args);
+  });
+  mount(<ControlCenterPage />);
+  await user.click(await screen.findByText("Kursbetrieb und Forderungen"));
+  const link = await screen.findByRole("link", { name: issue.title });
+  expect(link).toHaveAttribute("href", `/courses?run=${job}`);
+  expect(screen.getByLabelText("EUR")).toHaveTextContent("80,00");
+  expect(screen.getByLabelText("AUD")).toHaveTextContent("50,00");
+
+  await user.click(
+    screen.getByRole("button", {
+      name: /Hinweis zu Fiktive Schulung bestätigen/,
+    }),
+  );
+  await waitFor(() => expect(link).not.toBeInTheDocument());
+  expect(fake.rpc).toHaveBeenCalledWith("acknowledge_training_issue", {
+    p_run_id: job,
+    p_issue: "staffing",
+    p_fingerprint: fingerprint,
+    p_acknowledged: true,
+  });
+  await user.click(
+    screen.getByRole("checkbox", { name: "Bestätigte Hinweise anzeigen" }),
+  );
+  expect(screen.getByRole("link", { name: issue.title })).toBeVisible();
+  await user.click(
+    screen.getByRole("button", {
+      name: /Hinweis zu Fiktive Schulung erneut anzeigen/,
+    }),
+  );
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "acknowledge_training_issue",
+      expect.objectContaining({ p_acknowledged: false }),
+    ),
+  );
+});

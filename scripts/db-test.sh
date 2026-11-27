@@ -11,6 +11,7 @@ node scripts/training-delivery-db-tests.mjs
 node scripts/training-control-db-tests.mjs
 node scripts/lecturer-matching-db-tests.mjs
 node scripts/job-publication-window-db-tests.mjs
+node scripts/training-course-reuse-db-tests.mjs
 node scripts/company-lecturer-access-db-tests.mjs
 node scripts/sales-pipeline-retirement-db-tests.mjs
 node scripts/course-authoring-db-tests.mjs
