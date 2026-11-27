@@ -1443,6 +1443,9 @@ it("uses the clicked clock time in the display zone and leaves the read-only glo
     await screen.findByLabelText("Kalenderanzeige in"),
     "Australia/Brisbane",
   );
+  expect(
+    screen.queryByText("Kurs aus dem Kalender planen"),
+  ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Click time slot" }));
   const dialog = within(
     screen.getByRole("dialog", { name: "Privaten Termin hinzufügen" }),
@@ -1455,6 +1458,51 @@ it("uses the clicked clock time in the display zone and leaves the read-only glo
   expect(
     screen.getByRole("button", { name: "Select date range" }),
   ).toBeDisabled();
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  client.clear();
+});
+
+it("opens a course draft from a selected calendar slot without saving a calendar event", async () => {
+  state.permissions = ["courses.manage"];
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  function CurrentRoute() {
+    const location = useLocation();
+    return (
+      <output aria-label="current route">
+        {location.pathname}
+        {location.search}
+      </output>
+    );
+  }
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/calendar"]}>
+        <CalendarPage />
+        <CurrentRoute />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await user.selectOptions(
+    await screen.findByLabelText("Kalenderanzeige in"),
+    "Australia/Brisbane",
+  );
+  await user.click(await screen.findByText("Kurs aus dem Kalender planen"));
+  await screen.findByText(/Wähle einen Unterrichtstag oder einen Zeitraum/);
+  await user.click(screen.getByRole("button", { name: "Click time slot" }));
+  const current = new URL(
+    screen.getByLabelText("current route").textContent!,
+    "http://localhost",
+  );
+  expect(current.pathname).toBe("/courses");
+  expect(Object.fromEntries(current.searchParams)).toEqual({
+    planFrom: "2030-03-30T09:00",
+    planUntil: "2030-03-30T09:30",
+    planZone: "Australia/Brisbane",
+  });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(state.saveEvent).not.toHaveBeenCalled();
   client.clear();
 });

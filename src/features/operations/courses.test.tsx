@@ -279,6 +279,30 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const calendarPlanPath =
+  "/courses?planFrom=2030-03-30T09%3A00&planUntil=2030-03-30T09%3A30&planZone=Australia%2FBrisbane";
+
+it("opens and cancels a prefilled course draft from the calendar without saving", async () => {
+  renderCourses({ path: calendarPlanPath });
+  const draft = within(await screen.findByRole("dialog"));
+  expect(draft.getByLabelText("Zeitzone")).toHaveValue("Australia/Brisbane");
+  expect(draft.getByLabelText("Beginn 1")).toHaveValue("2030-03-30T09:00");
+  expect(draft.getByLabelText("Ende 1")).toHaveValue("2030-03-30T09:30");
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/);
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_course_run",
+    expect.anything(),
+  );
+});
+
+it("ignores a calendar draft link without course-management permission", async () => {
+  renderCourses({ permissions: [], path: calendarPlanPath });
+  await screen.findByRole("heading", { level: 1 });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
 it("filters the visible course list by time without requiring administrative permission", async () => {
   const user = userEvent.setup();
   const now = Date.now();

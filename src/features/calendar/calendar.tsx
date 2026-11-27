@@ -3,7 +3,7 @@
  * and course sessions. The visible range bounds each read; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
-import { useBlocker, useSearchParams } from "react-router-dom";
+import { useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import { assignmentCalendarMetadataQuery } from "../jobs/discovery-api";
 import { CalendarColorPreferences } from "./calendar-colors";
 import { CalendarInvitationOverview } from "./invitations";
@@ -73,6 +73,7 @@ import {
   zonedInstant,
   zonedInstantForEdit,
 } from "../../lib/dates";
+import { calendarCourseHref } from "../../lib/course-calendar-link";
 import { useRequestKey } from "../../lib/request-key";
 import { RecurrenceFields } from "../../components/recurrence-fields";
 import type { RecurrenceRule } from "../../lib/recurrence";
@@ -613,6 +614,9 @@ export function CalendarPage() {
     window.innerWidth < 700 ? "listMonth" : "dayGridMonth",
   );
   const [calendarParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [planningCourse, setPlanningCourse] = useState(false);
+  const [teachingDate, setTeachingDate] = useState("");
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const calendarColors = useQuery(calendarColorsQuery(session!.user.id));
@@ -990,12 +994,32 @@ export function CalendarPage() {
   const scopeAllowsSelection = !global || canManageGlobal;
   const gridSelectionEnabled =
     scopeAllowsSelection && online && !open && !globalDraft;
+  const planCalendarCourse = useCallback(
+    (range: CalendarDraftRange, allDay: boolean) => {
+      const date = range.starts_at.slice(0, 10);
+      void navigate(
+        calendarCourseHref(
+          allDay
+            ? { ...range, starts_at: `${date}T09:00`, ends_at: `${date}T17:00` }
+            : range,
+        ),
+      );
+    },
+    [navigate],
+  );
   const openGridSelection = useCallback(
-    (range: CalendarDraftRange) => {
-      if (global) setGlobalDraft(range);
+    (range: CalendarDraftRange, allDay: boolean) => {
+      if (planningCourse && canManageGlobal) planCalendarCourse(range, allDay);
+      else if (global) setGlobalDraft(range);
       else openPersonalEditor({ range });
     },
-    [global, openPersonalEditor],
+    [
+      canManageGlobal,
+      global,
+      openPersonalEditor,
+      planCalendarCourse,
+      planningCourse,
+    ],
   );
   const handleSelect = useCallback(
     (info: DateSelectArg) => {
@@ -1003,6 +1027,7 @@ export function CalendarPage() {
       selectedPointer.current = info.jsEvent ?? null;
       openGridSelection(
         calendarSelectionRange(info.startStr, info.endStr, info.allDay, zone),
+        info.allDay,
       );
     },
     [gridSelectionEnabled, openGridSelection, zone],
@@ -1011,7 +1036,10 @@ export function CalendarPage() {
     (info: DateClickArg) => {
       if (!gridSelectionEnabled || selectedPointer.current === info.jsEvent)
         return;
-      openGridSelection(calendarClickRange(info.dateStr, info.allDay, zone));
+      openGridSelection(
+        calendarClickRange(info.dateStr, info.allDay, zone),
+        info.allDay,
+      );
     },
     [gridSelectionEnabled, openGridSelection, zone],
   );
@@ -1240,9 +1268,52 @@ export function CalendarPage() {
             calendarRef.current?.getApi().changeView(view);
           }}
         />
+        {canManageGlobal && (
+          <details
+            className="calendar-course-plan"
+            onToggle={(event) => {
+              setPlanningCourse(event.currentTarget.open);
+              clearGridSelection();
+            }}
+          >
+            <summary>{filterText("planCourse")}</summary>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (teachingDate && online)
+                  planCalendarCourse(
+                    calendarClickRange(teachingDate, true, zone),
+                    true,
+                  );
+              }}
+            >
+              <Field
+                id="calendar-course-date"
+                label={filterText("teachingDate")}
+              >
+                <input
+                  id="calendar-course-date"
+                  type="date"
+                  value={teachingDate}
+                  onChange={(event) =>
+                    setTeachingDate(event.currentTarget.value)
+                  }
+                  required
+                />
+              </Field>
+              <Button type="submit" variant="secondary" disabled={!online}>
+                {filterText("openCourseDraft")}
+              </Button>
+            </form>
+          </details>
+        )}
         {scopeAllowsSelection && online && calendarView !== "listMonth" && (
           <p className="calendar-selection-help">
-            {filterText("selectPeriod")}
+            {filterText(
+              planningCourse && canManageGlobal
+                ? "selectCoursePeriod"
+                : "selectPeriod",
+            )}
           </p>
         )}
         {weekView && (

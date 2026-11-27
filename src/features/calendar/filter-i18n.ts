@@ -24,6 +24,16 @@ const values = {
     "Tippe auf einen freien Zeitpunkt oder ziehe über mehrere Zeiten oder Tage. Auf dem Touchscreen zum Ziehen kurz gedrückt halten.",
     "Tap a free time, or drag across times or days. On touchscreens, press and hold before dragging.",
   ],
+  planCourse: [
+    "Kurs aus dem Kalender planen",
+    "Plan a course from the calendar",
+  ],
+  teachingDate: ["Unterrichtstag", "Teaching date"],
+  openCourseDraft: ["Kursentwurf öffnen", "Open course draft"],
+  selectCoursePeriod: [
+    "Wähle einen Unterrichtstag oder einen Zeitraum im Kalender. Bei einer ganztägigen Auswahl startet der Entwurf am ersten Tag.",
+    "Choose a teaching date or time range on the calendar. An all-day selection starts the draft on the first day.",
+  ],
   customer: ["Unternehmen", "Company"],
   allCustomers: ["Alle Unternehmen", "All companies"],
   calendarColors: ["Kalenderfarben", "Calendar colors"],

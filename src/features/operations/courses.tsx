@@ -66,6 +66,7 @@ import {
   userRolesQuery,
 } from "../../lib/queries";
 import type { Topic } from "../../lib/types";
+import { calendarCourseSchedule } from "../../lib/course-calendar-link";
 import { db } from "../../lib/supabase";
 import {
   dateTime,
@@ -363,6 +364,7 @@ function RunForm({
   templates,
   organisations,
   initialTemplateId,
+  initialSchedule,
   companyOnly,
   focusTarget,
   canPrepareOffer,
@@ -374,6 +376,7 @@ function RunForm({
   templates: Template[];
   organisations: PlanningOrganisation[];
   initialTemplateId?: string;
+  initialSchedule?: ReturnType<typeof calendarCourseSchedule>;
   companyOnly: boolean;
   focusTarget?: "schedule" | "organisation";
   canPrepareOffer: boolean;
@@ -438,7 +441,8 @@ function RunForm({
         templates.find(({ id }) => id === initialTemplateId)
           ?.owner_organisation_id ??
         "",
-      time_zone: original?.time_zone ?? "Europe/Berlin",
+      time_zone:
+        original?.time_zone ?? initialSchedule?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
       venue: original?.venue ?? "",
       archived: Boolean(original?.archived_at),
@@ -454,7 +458,12 @@ function RunForm({
                 .setZone(original.time_zone)
                 .toFormat("yyyy-MM-dd'T'HH:mm"),
             }))
-        : [{ starts_at: "", ends_at: "" }],
+        : [
+            {
+              starts_at: initialSchedule?.starts_at ?? "",
+              ends_at: initialSchedule?.ends_at ?? "",
+            },
+          ],
     },
   });
   const editedSessions = useWatch({ control, name: "sessions" }) ?? [];
@@ -1295,6 +1304,14 @@ export function CoursesPage() {
   const [runSaving, setRunSaving] = useState(false);
   const [focusTarget, setFocusTarget] = useState<"schedule" | "organisation">();
   const [params, setParams] = useSearchParams();
+  const calendarPlan =
+    manage && runEdit === undefined
+      ? calendarCourseSchedule(
+          params.get("planFrom"),
+          params.get("planUntil"),
+          params.get("planZone"),
+        )
+      : undefined;
   const company = `${params.get("company") ?? ""}`;
   const companyOrganisations = companyViewer ? (ownCompanies.data ?? []) : [];
   // Only infer a company when there is exactly one active membership and no explicit request.
@@ -2519,9 +2536,14 @@ export function CoursesPage() {
         />
       </Dialog>
       <Dialog
-        open={mayOpenRunEditor && runEdit !== undefined}
+        open={
+          mayOpenRunEditor && (runEdit !== undefined || Boolean(calendarPlan))
+        }
         onOpenChange={(open) => {
-          if (!open && !runSaving) setRunEdit(undefined);
+          if (!open && !runSaving) {
+            setRunEdit(undefined);
+            if (calendarPlan) setCourseView({}, true);
+          }
         }}
         closeDisabled={runSaving}
         title={t(runEdit ? "edit" : "newCourse")}
@@ -2529,18 +2551,22 @@ export function CoursesPage() {
           runEdit
             ? (findTemplate(runEdit)?.title ?? t("courseRecordUnavailable"))
             : t(
-                initialTemplateId
+                initialTemplateId && !calendarPlan
                   ? "courseDraftFromTemplateHint"
                   : "publishedHint",
               )
         }
       >
         <RunForm
-          key={runEdit?.id ?? `new:${initialTemplateId ?? "default"}`}
+          key={
+            runEdit?.id ??
+            `new:${calendarPlan ? `${calendarPlan.starts_at}/${calendarPlan.ends_at}/${calendarPlan.time_zone}` : (initialTemplateId ?? "default")}`
+          }
           original={runEdit ?? undefined}
           templates={manage ? (templates.data ?? []) : visibleTemplates}
           organisations={planningOrganisations}
-          initialTemplateId={initialTemplateId}
+          initialTemplateId={calendarPlan ? undefined : initialTemplateId}
+          initialSchedule={calendarPlan}
           companyOnly={!manage}
           focusTarget={focusTarget}
           canPrepareOffer={canPrepareOffer}
@@ -2554,7 +2580,7 @@ export function CoursesPage() {
               return;
             }
             setTab(result === "template" ? "templates" : "runs");
-            if (initialTemplateId && !runEdit) {
+            if (initialTemplateId && !calendarPlan && !runEdit) {
               setSearch("");
               setPhase("all");
               setMessage(t("courseDraftCreated"));
