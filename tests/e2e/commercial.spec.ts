@@ -35,7 +35,7 @@ interface Account {
 
 /** Creates a fictional actor for separate browser/API sessions and later scoped cleanup. */
 async function account(
-    role: "lecturer" | "admin",
+    role: "lecturer" | "admin" | "client",
     label: string,
 ): Promise<Account> {
     const tag = randomUUID().slice(0, 8);
@@ -219,6 +219,72 @@ async function uploadContractInRegistration(dialog: Locator, name: string, pdf: 
     await expect(file.locator("option", {hasText: name})).toHaveCount(1);
     await file.selectOption({label: name});
 }
+
+test("lecturers save their own contract PDFs from their profile", async ({page}) => {
+    const lecturer = await account("lecturer", "OwnContract");
+    const filename = `lecturer-contract-${randomUUID().slice(0, 8)}.pdf`;
+    await login(page, lecturer);
+    await page.goto("/profile");
+    await page.getByRole("link", {name: "Meine Verträge", exact: true}).click();
+    const files = page.getByRole("region", {name: "Eigene Vertragsdateien"});
+    await files.getByLabel("Eigenen Vertrag hochladen", {exact: true}).setInputFiles({
+        name: filename,
+        mimeType: "application/pdf",
+        buffer: fictionalPdf(),
+    });
+    await expect(files.getByText(/PDF geprüft und bereit/)).toBeVisible({timeout: 45_000});
+    await page.reload();
+    await expect(files.getByText(filename, {exact: true})).toBeVisible();
+    const saved = await service()
+        .from("documents")
+        .select("owner_id,uploaded_by,scope,kind,status")
+        .eq("original_name", filename)
+        .single();
+    expect(saved.error).toBeNull();
+    expect(saved.data).toEqual({
+        owner_id: lecturer.id,
+        uploaded_by: lecturer.id,
+        scope: "personal",
+        kind: "contract",
+        status: "clean",
+    });
+    const registered = await service()
+        .from("contracts").select("id").eq("user_id", lecturer.id);
+    expect(registered.error).toBeNull();
+    expect(registered.data).toEqual([]);
+});
+
+test("company members save contract PDFs for their own company from their profile", async ({page}) => {
+    const member = await account("client", "CompanyContract");
+    const company = {id: randomUUID(), name: `Fictional company ${randomUUID().slice(0, 8)}`};
+    const other = {id: randomUUID(), name: `Unrelated company ${randomUUID().slice(0, 8)}`};
+    expect((await service().from("organisations").insert([company, other])).error).toBeNull();
+    expect((await service().from("client_organisation_memberships").insert({
+        user_id: member.id,
+        organisation_id: company.id,
+    })).error).toBeNull();
+    await login(page, member);
+    await page.goto("/profile");
+    const section = page.getByRole("region", {name: "Unternehmensverträge"});
+    const companyButton = section.getByRole("button", {name: new RegExp(company.name)});
+    await companyButton.click();
+    await expect(section.getByRole("button", {name: new RegExp(other.name)})).toHaveCount(0);
+    const dialog = page.getByRole("dialog", {name: "Unternehmensverträge"});
+    await expect(dialog).toHaveAccessibleDescription(company.name);
+    const filename = `company-contract-${randomUUID().slice(0, 8)}.pdf`;
+    await dialog.getByLabel(/PDF auswählen/).setInputFiles({
+        name: filename,
+        mimeType: "application/pdf",
+        buffer: fictionalPdf(),
+    });
+    await dialog.getByRole("button", {name: "PDF hochladen", exact: true}).click();
+    await expect(dialog.getByRole("button", {name: new RegExp(filename)})).toBeVisible({timeout: 45_000});
+    await page.reload();
+    await companyButton.click();
+    const download = page.waitForEvent("download");
+    await dialog.getByRole("button", {name: new RegExp(filename)}).click();
+    expect((await download).suggestedFilename()).toBe(filename);
+});
 
 test("executed PDF receipt, original-currency earnings, invoice review and recorded payment corrections work through the UI", async ({
                                                                                                                                          page,

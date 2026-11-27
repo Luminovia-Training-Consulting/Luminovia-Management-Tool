@@ -18,6 +18,7 @@ import type { ContractRecord } from "./types";
 const target = "d415d832-e22e-4e32-bacc-180811de988c";
 const second = "8dfbba01-bc2e-406e-b5d5-86eccfee37c7";
 const fake = vi.hoisted(() => ({
+  roles: vi.fn(),
   rpc: vi.fn(),
   readVersion: vi.fn(),
   saveDownload: vi.fn(),
@@ -43,10 +44,21 @@ vi.mock("../../lib/supabase", () => ({
   }),
 }));
 vi.mock("../../lib/queries", () => ({
+  userRolesQuery: (id: string) => ({
+    queryKey: ["user-roles", id],
+    queryFn: () => fake.roles(id),
+  }),
   profileQuery: (id: string) => ({
     queryKey: ["profile", id],
     queryFn: async () => ({ time_zone: "Europe/Berlin" }),
   }),
+}));
+vi.mock("../files/files", () => ({
+  SubjectDocuments: ({ ownerId, kind }: { ownerId: string; kind: string }) => (
+    <p>
+      {ownerId}/{kind}
+    </p>
+  ),
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
@@ -89,8 +101,10 @@ async function show(
   manager: boolean,
   contextual = false,
   location = `/admin/contracts?user=${target}`,
+  roles: string[] = [],
 ) {
   await i18n.changeLanguage("de");
+  fake.roles.mockResolvedValue(roles);
   fake.rpc.mockImplementation(
     async (name: string, args?: { p_all?: boolean; p_user_id?: string }) => {
       let data: unknown = null;
@@ -182,7 +196,7 @@ it("does not grant management authority to a contract link", async () => {
 });
 
 it.each([false, true])(
-  "shows registered personal contracts without a standalone upload (manager: %s)",
+  "shows registered personal contracts without teaching-role upload or staff registration (manager: %s)",
   async (manager) => {
     await show(manager, false, `/profile/contracts?user=${target}`);
     expect(
@@ -191,7 +205,9 @@ it.each([false, true])(
     expect(
       screen.queryByLabelText("Ausgeführter Vertrag als PDF"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("Meine Vertragsdateien")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Eigenen Vertrag hochladen"),
+    ).not.toBeInTheDocument();
     expect(fake.rpc).not.toHaveBeenCalledWith("commercial_access");
     expect(fake.rpc).not.toHaveBeenCalledWith("contract_records", {
       p_all: true,
@@ -201,6 +217,41 @@ it.each([false, true])(
         name: "Ausgeführten Vertrag hinterlegen",
       }),
     ).not.toBeInTheDocument();
+  },
+);
+
+it.each(["lecturer", "senior_lecturer"])(
+  "saves the contract file in the signed-in %s's personal files without registration",
+  async (role) => {
+    await show(false, false, `/profile/contracts?user=${target}`, [role]);
+    const section = within(
+      await screen.findByRole("region", { name: "Eigene Vertragsdateien" }),
+    );
+    expect(await section.findByText("actor/contract")).toBeVisible();
+    const file = new File(["%PDF-1.5"], "Personal agreement.pdf", {
+      type: "application/pdf",
+    });
+    fake.uploadDocument.mockResolvedValue({ original_name: file.name });
+    await userEvent.upload(
+      section.getByLabelText("Eigenen Vertrag hochladen"),
+      file,
+    );
+    expect(await section.findByText(/Personal agreement\.pdf/)).toBeVisible();
+    expect(fake.uploadDocument).toHaveBeenCalledWith(
+      file,
+      {
+        ownerId: "actor",
+        expectedActor: "actor",
+        scope: "personal",
+        kind: "contract",
+        clientId: expect.any(String),
+      },
+      expect.any(Function),
+    );
+    expect(fake.rpc).not.toHaveBeenCalledWith(
+      "register_executed_contract",
+      expect.anything(),
+    );
   },
 );
 

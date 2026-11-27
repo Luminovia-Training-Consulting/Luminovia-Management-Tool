@@ -79,6 +79,12 @@ const pairs: Record<string, [string, string]> = {
     "The PDF was not uploaded or approved. Check its type, size and connection and retry; repeated failures may mean scanning is unavailable.",
   ],
   fileReady: ["PDF geprüft und bereit.", "PDF checked and ready."],
+  ownContractFiles: ["Eigene Vertragsdateien", "Your contract files"],
+  ownContractFilesIntro: [
+    "Deine geprüften PDFs werden in deiner persönlichen Ablage gespeichert. Die Verwaltung registriert ausgeführte Verträge separat.",
+    "Your checked PDFs are saved in your personal files. Administration registers executed contracts separately.",
+  ],
+  ownContractUpload: ["Eigenen Vertrag hochladen", "Upload your contract"],
   registerSave: ["Vertrag speichern", "Save contract"],
   saved: ["Gespeichert.", "Saved."],
   failed: [
