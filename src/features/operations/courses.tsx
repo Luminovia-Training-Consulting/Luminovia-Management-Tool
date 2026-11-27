@@ -190,13 +190,12 @@ export function CoursesPage() {
   const canPrepareOffer =
     manage && (permissions.data?.includes("jobs.manage") ?? false);
   const roles = useQuery(userRolesQuery(actor));
+  const scopeReady = permissions.isSuccess && roles.isSuccess;
   const companyViewer = !manage && roles.data?.includes("client");
   const ownCompanies = useQuery({
     ...clientOrganisationsQuery(actor),
-    enabled: Boolean(companyViewer),
+    enabled: scopeReady && Boolean(companyViewer),
   });
-  const orgs = useQuery(orgQuery(actor));
-  const topics = useQuery(topicsQuery);
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
@@ -267,6 +266,18 @@ export function CoursesPage() {
     (manage || companyViewer) && params.get("tab") === "templates"
       ? "templates"
       : "runs";
+  // A company library already has its owner names. Taxonomy is needed by run
+  // cards and is loaded separately by editors when their fields are opened.
+  const needsOrganisationDirectory = manage || tab === "runs";
+  const needsTopics = tab === "runs";
+  const orgs = useQuery({
+    ...orgQuery(actor),
+    enabled: scopeReady && needsOrganisationDirectory,
+  });
+  const topics = useQuery({
+    ...topicsQuery,
+    enabled: scopeReady && needsTopics,
+  });
   const recoveredCompany = companyViewer
     ? companyOrganisations.find(
         ({ id }) => id === creatorRecord?.payload?.run.organisation_id,
@@ -289,15 +300,16 @@ export function CoursesPage() {
   const useRunMetadata = !companyViewer || tab === "runs" || params.has("run");
   const templates = useQuery({
     ...templatesQuery(actor),
-    enabled: permissions.isSuccess && roles.isSuccess && useRunMetadata,
+    enabled: scopeReady && useRunMetadata,
   });
+  // Only the manager's template deletion preview needs linked runs.
   const needsRuns =
-    tab === "runs" || params.has("run") || params.has("template");
+    tab === "runs" || params.has("run") || (manage && params.has("template"));
   const runs = useQuery({
     ...runsQuery(actor, canPrepareOffer),
     // Choose the projection once permissions resolve. Otherwise staff first
     // download the basic catalogue and then request it again with assignments.
-    enabled: permissions.isSuccess && needsRuns,
+    enabled: scopeReady && needsRuns,
     refetchInterval: manage ? false : 10000,
     refetchOnMount: manage ? true : "always",
   });
@@ -647,20 +659,20 @@ export function CoursesPage() {
     (companyViewer && ownCompanies.isError) ||
     roles.isError ||
     (needsRuns && runs.isError) ||
-    orgs.isError ||
-    topics.isError ||
+    (needsOrganisationDirectory && orgs.isError) ||
+    (needsTopics && topics.isError) ||
     permissions.isError
   )
     return (
       <ErrorState
         retry={() => {
-          if (useRunMetadata) void templates.refetch();
+          if (scopeReady && useRunMetadata) void templates.refetch();
           if (templateCompany) void companyLibrary.refetch();
           if (companyViewer) void ownCompanies.refetch();
           void roles.refetch();
-          if (needsRuns && permissions.isSuccess) void runs.refetch();
-          void orgs.refetch();
-          void topics.refetch();
+          if (scopeReady && needsRuns) void runs.refetch();
+          if (scopeReady && needsOrganisationDirectory) void orgs.refetch();
+          if (scopeReady && needsTopics) void topics.refetch();
           void permissions.refetch();
         }}
       />
@@ -671,8 +683,8 @@ export function CoursesPage() {
     (companyViewer && ownCompanies.isPending) ||
     roles.isPending ||
     (needsRuns && runs.isPending) ||
-    orgs.isPending ||
-    topics.isPending ||
+    (needsOrganisationDirectory && orgs.isPending) ||
+    (needsTopics && topics.isPending) ||
     permissions.isPending
   )
     return <Loading />;
@@ -689,8 +701,9 @@ export function CoursesPage() {
     (creatorTemplateParam !== null || !manage) &&
     !creatorRecord &&
     !creatorTemplate;
+  const directoryOrganisations = orgs.data ?? [];
   const planningOrganisations = manage
-    ? orgs.data
+    ? directoryOrganisations
     : templateCompany
       ? [templateCompany]
       : [];
@@ -790,7 +803,7 @@ export function CoursesPage() {
           compact={compact}
         />
       );
-    if (!orgs.data.some((org) => !org.archived_at)) {
+    if (!directoryOrganisations.some((org) => !org.archived_at)) {
       return (
         <>
           <p className="muted">{t("offerNeedsActiveOrganisation")}</p>
@@ -945,7 +958,7 @@ export function CoursesPage() {
                             item.title === row.template_title.trim(),
                         );
                         const companyName = row.company_name.trim();
-                        const companies = orgs.data.filter(
+                        const companies = directoryOrganisations.filter(
                           (item) =>
                             !item.archived_at && item.name === companyName,
                         );
@@ -1112,7 +1125,7 @@ export function CoursesPage() {
                       }}
                     >
                       <option value="">{t("allCourseCompanies")}</option>
-                      {orgs.data.map(({ id, name }) => (
+                      {directoryOrganisations.map(({ id, name }) => (
                         <option key={id} value={id}>
                           {name}
                         </option>
