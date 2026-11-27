@@ -8,13 +8,13 @@ import i18n from "../../lib/i18n";
 i18n.addResourceBundle("de", "personRating", {
   rate: "Person bewerten",
   rateShort: "Bewerten",
-  rateName: "{{name}} bewerten",
+  rateName: "Bewerten: {{name}}",
   receivedTitle: "Erhaltene Bewertungen",
 });
 i18n.addResourceBundle("en", "personRating", {
   rate: "Rate person",
   rateShort: "Rate",
-  rateName: "Rate {{name}}",
+  rateName: "Rate: {{name}}",
   receivedTitle: "Ratings received",
 });
 

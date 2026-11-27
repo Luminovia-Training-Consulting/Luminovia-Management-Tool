@@ -434,12 +434,14 @@ test("combined filters find a real job, claim confirms all five sessions and imm
         ends_at: new Date(entry.ends_at).toISOString(),
         released_at: entry.released_at,
     }))).toEqual(sessions.map(({starts_at, ends_at}) => ({starts_at, ends_at, released_at: null})));
-    const {data: storedJob} = await client
-        .from("jobs")
-        .select("status")
-        .eq("id", id)
-        .single();
-    expect(storedJob?.status).toBe("filled");
+    // Raw job rows are hidden from lecturers after claiming until the company
+    // identity reveal window. The authorized detail projection still exposes
+    // lifecycle status without revealing protected columns.
+    const {data: storedJob, error: storedJobError} = await client.rpc("job_detail", {
+        p_job_id: id,
+    });
+    expect(storedJobError).toBeNull();
+    expect((storedJob as {status?: string} | null)?.status).toBe("filled");
     await page.goto("/calendar");
     await expect(
         page.getByRole("heading", {name: /Kalender/}).first(),

@@ -85,6 +85,7 @@ const admin = randomUUID(),
     client = randomUUID(),
     otherClient = randomUUID(),
     lecturer = randomUUID(),
+    customLecturer = randomUUID(),
     senior = randomUUID(),
     org = randomUUID(),
     otherOrg = randomUUID();
@@ -191,7 +192,7 @@ try {
             );
     });
     await sql(
-        `insert into auth.users(id) values ${[admin, owner, management, client, otherClient, lecturer, senior, ...candidates].map((id) => `('${id}')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${management}','management'),('${client}','client'),('${otherClient}','client'),('${lecturer}','lecturer'),('${senior}','senior_lecturer'),${candidates.map((id) => `('${id}','lecturer')`).join(",")};insert into public.organisations(id,name) values('${org}','Fictional customer A'),('${otherOrg}','Fictional customer B');update public.profiles set display_name='Fictional safe name';`,
+        `insert into auth.users(id) values ${[admin, owner, management, client, otherClient, lecturer, customLecturer, senior, ...candidates].map((id) => `('${id}')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${management}','management'),('${client}','client'),('${otherClient}','client'),('${lecturer}','lecturer'),('${customLecturer}','lecturer'),('${senior}','senior_lecturer'),${candidates.map((id) => `('${id}','lecturer')`).join(",")};insert into public.organisations(id,name) values('${org}','Fictional customer A'),('${otherOrg}','Fictional customer B');update public.profiles set display_name='Fictional safe name';`,
     );
     assert.deepEqual(parseCommissionAccess(await value(admin, "commission_access")), {
         can_manage_gross: true,
@@ -353,14 +354,19 @@ try {
                 ),
                 job,
             );
-            const publicJob = JSON.parse(
+            assert.equal(
                 await actor(
                     lecturer,
-                    `select row_to_json(j) from public.jobs j where id='${job}'`,
+                    `select count(*) from public.jobs where id='${job}'`,
                 ),
+                "0",
             );
-            assert.equal(Number(publicJob.amount), 0);
-            assert.equal(Number(publicJob.total_amount), 0);
+            const publicJob = JSON.parse(
+                await value(lecturer, "job_detail", [job]),
+            );
+            assert.equal(Number(publicJob.amount), 31);
+            assert.equal(Number(publicJob.total_amount), 31);
+            assert.equal(publicJob.customer_hidden, true);
             assert.equal(
                 Number((await quoteOffer(lecturer, job)).total_amount),
                 31,
@@ -392,6 +398,18 @@ try {
                 ),
                 "0",
             );
+        },
+    );
+    await check(
+        "Authorized job detail and marketplace offers honor an individual lecturer percentage ahead of the role snapshot",
+        async () => {
+            await value(admin, "save_lecturer_compensation", [
+                customLecturer, "percent", 30, 200, "EUR", 1,
+            ], "aal1");
+            assert.equal(Number((await quoteOffer(customLecturer, job)).total_amount), 30);
+            const detail = JSON.parse(await value(customLecturer, "job_detail", [job]));
+            assert.equal(Number(detail.total_amount), 30);
+            assert.equal(detail.customer_hidden, true);
         },
     );
     await check(

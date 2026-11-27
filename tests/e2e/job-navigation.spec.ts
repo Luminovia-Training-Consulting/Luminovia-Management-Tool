@@ -90,11 +90,13 @@ test("opens only the assigned course, member chat and own assignment calendar", 
     );
     await login(page, teacher.email);
     await page.goto(`/jobs/${job}`);
-    // The authenticated detail must show the company and the confirmed lecturer from the job lifecycle.
+    // The company stays private until the seven-day reveal window; the lecturer
+    // can still see the assigned course and their own confirmed assignment.
     const toolbar = page.locator(".job-detail-toolbar");
     await expect(
-        toolbar.getByText("Unternehmen: Fictional organisation", {exact: true}),
+        toolbar.getByText("Unternehmensangaben ab", {exact: false}),
     ).toBeVisible();
+    await expect(toolbar.getByText("Fictional organisation", {exact: true})).toHaveCount(0);
     await expect(
         toolbar.getByText("Dozierende: Fictional assigned navigation teacher", {exact: true}),
     ).toBeVisible();

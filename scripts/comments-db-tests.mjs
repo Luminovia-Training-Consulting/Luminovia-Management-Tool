@@ -86,12 +86,15 @@ await withTestDatabase("comments_test", async ({sql, actor}) => {
                 sql(`set role anon;select public.resource_comments('job','${job}')`),
                 /permission denied/,
             );
+            // Customer identity policy deliberately removes raw job rows from
+            // lecturer REST reads. The staff discussion RPC remains available
+            // through its separate shared job authorization check above.
             assert.equal(
                 await actor(
                     teacher,
                     `select count(*) from public.jobs where id='${job}'`,
                 ),
-                "1",
+                "0",
             );
             assert.equal(
                 await actor(
