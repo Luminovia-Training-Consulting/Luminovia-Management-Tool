@@ -31,20 +31,37 @@ function phaseFromInstants(
   return begins > now ? "upcoming" : "current";
 }
 
-/** Session order and the form of the UTC offset do not affect classification. */
-export function scheduledCoursePhase(
-  sessions: { starts_at: string; ends_at: string }[],
+type CourseSessionDates = { starts_at: string; ends_at: string };
+
+/** Classify the schedule and retain the first valid instant for its date display. */
+export function scheduledCourseSummary(
+  sessions: CourseSessionDates[],
   now: number,
-): CoursePhase {
+) {
   let first = Infinity;
+  let firstIso: string | null = null;
   let last = -Infinity;
   for (const session of sessions) {
     const start = Date.parse(session.starts_at);
     const end = Date.parse(session.ends_at);
     if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
-      first = Math.min(first, start);
+      if (start < first) {
+        first = start;
+        firstIso = session.starts_at;
+      }
       last = Math.max(last, end);
     }
   }
-  return phaseFromInstants(first, last, now);
+  return {
+    phase: phaseFromInstants(first, last, now),
+    first: firstIso === null ? null : { iso: firstIso, instant: first },
+  };
+}
+
+/** Session order and the form of the UTC offset do not affect classification. */
+export function scheduledCoursePhase(
+  sessions: CourseSessionDates[],
+  now: number,
+): CoursePhase {
+  return scheduledCourseSummary(sessions, now).phase;
 }

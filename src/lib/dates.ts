@@ -146,12 +146,12 @@ function dateTimeFormatter(
 
 /** Format a valid instant, or let semantic time elements omit unconfirmed data. */
 export function dateTimeOrNull(
-  iso: string,
+  value: string | number,
   language: string,
   zone: string,
   dateStyle: "medium" | "short" = "medium",
 ) {
-  const instant = Date.parse(iso);
+  const instant = typeof value === "number" ? value : Date.parse(value);
   return Number.isFinite(instant)
     ? (dateTimeFormatter(language, zone, dateStyle)?.format(instant) ?? null)
     : null;

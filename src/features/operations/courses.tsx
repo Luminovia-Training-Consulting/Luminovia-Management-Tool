@@ -29,7 +29,7 @@ import { ResourceComments } from "../comments/comments";
 import { PublishOfferDraft } from "../jobs/publish-draft";
 import { CoursePhaseFilter } from "../learning/course-phase-filter";
 import {
-  scheduledCoursePhase,
+  scheduledCourseSummary,
   type CoursePhaseSelection,
 } from "../learning/course-phase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,7 @@ import {
   dateTime,
   zonedInstantForScheduleEdit,
   compareScheduleInstants,
+  dateTimeOrNull,
   validZone,
 } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -537,7 +538,7 @@ export function CoursesPage() {
       (runs.data ?? []).map((run) => ({
         run,
         status: courseRunStatus(run),
-        phase: scheduledCoursePhase(run.course_sessions, runs.dataUpdatedAt),
+        ...scheduledCourseSummary(run.course_sessions, runs.dataUpdatedAt),
       })),
     [runs.data, runs.dataUpdatedAt],
   );
@@ -1244,12 +1245,20 @@ export function CoursesPage() {
         </div>
       ) : tab === "runs" ? (
         <div className="operations-courses-grid">
-          {filteredRuns.slice(0, shownCount).map(({ run, status }) => {
+          {filteredRuns.slice(0, shownCount).map(({ run, status, first }) => {
             const template = findTemplate(run);
             const jobs = run.jobs ?? [];
             const offers = courseOfferState(run, runs.dataUpdatedAt);
             const { liveOffers, closedReason } = offers;
-            const first = run.course_sessions[0]?.starts_at;
+            const firstLabel =
+              first && validZone(run.time_zone)
+                ? dateTimeOrNull(
+                    first.instant,
+                    i18n.language,
+                    run.time_zone,
+                    "short",
+                  )
+                : null;
             const customer =
               organisationName(run.organisation_id) ?? t("noCustomer");
             return (
@@ -1343,16 +1352,9 @@ export function CoursesPage() {
                 <p className="operations-session-summary">
                   <CalendarDays size={17} aria-hidden="true" />
                   <span>
-                    {first && validZone(run.time_zone) && (
+                    {first && firstLabel && (
                       <>
-                        <time dateTime={first}>
-                          {dateTime(
-                            first,
-                            i18n.language,
-                            run.time_zone,
-                            "short",
-                          )}
-                        </time>
+                        <time dateTime={first.iso}>{firstLabel}</time>
                         {" · "}
                       </>
                     )}
