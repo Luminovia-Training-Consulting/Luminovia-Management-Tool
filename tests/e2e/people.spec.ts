@@ -157,11 +157,13 @@ test("authored staff profiles connect real course history, company reviews and a
     await login(page, teacher.email);
     await page.goto("/profile");
     const biography = `Authored profile <script>${randomUUID().slice(0, 8)}</script>`;
-    await page.getByLabel("Über mich", {exact: true}).fill(biography);
+    const englishBiography = `English profile ${randomUUID().slice(0, 8)}`;
+    await page.getByLabel("Über mich (Deutsch)", {exact: true}).fill(biography);
+    await page.getByLabel("Über mich (Englisch)", {exact: true}).fill(englishBiography);
     await page
         .getByRole("button", {name: "Profil speichern", exact: true})
         .click();
-    await expect(page.getByLabel("Über mich", {exact: true})).toHaveValue(
+    await expect(page.getByLabel("Über mich (Deutsch)", {exact: true})).toHaveValue(
         biography,
     );
     await expect(
@@ -181,19 +183,23 @@ test("authored staff profiles connect real course history, company reviews and a
     await expect(
         page.getByLabel("Lehrerfahrung (Jahre)", {exact: true}),
     ).toHaveValue("8");
-    await expect(page.getByLabel("Über mich", {exact: true})).toHaveValue(
+    await expect(page.getByLabel("Über mich (Deutsch)", {exact: true})).toHaveValue(
         biography,
     );
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
-    await expect(page.getByLabel("About me", {exact: true})).toHaveValue(
+    await expect(page.getByLabel("About me (German)", {exact: true})).toHaveValue(
         biography,
     );
     await expect(
         page.getByLabel("Teaching experience (years)", {exact: true}),
     ).toHaveValue("8");
-    await page.getByLabel("Language", {exact: true}).selectOption("de");
+    await expect(page.getByLabel("About me (English)", {exact: true})).toHaveValue(englishBiography);
     await page.goto("/people");
+    await page.getByLabel("Search people", {exact: true}).fill(teacher.name);
+    await expect(page.getByText(englishBiography, {exact: true})).toBeVisible();
+    await page.getByLabel("Language", {exact: true}).selectOption("de");
     await page.getByLabel("Person suchen", {exact: true}).fill(teacher.name);
+    await expect(page.getByText(biography, {exact: true})).toBeVisible();
     await expect(page.getByLabel("Label filtern", {exact: true})).toHaveCount(
         0,
     );
@@ -201,6 +207,10 @@ test("authored staff profiles connect real course history, company reviews and a
     await expect(
         page.getByRole("heading", {name: teacher.name, exact: true}),
     ).toBeVisible();
+    await expect(page.getByText(biography, {exact: true})).toBeVisible();
+    await page.getByLabel("Sprache", {exact: true}).selectOption("en");
+    await expect(page.getByText(englishBiography, {exact: true})).toBeVisible();
+    await page.getByLabel("Language", {exact: true}).selectOption("de");
     await expect(
         page.getByRole("heading", {name: "Vergangene Kurse", exact: true}),
     ).toBeVisible();

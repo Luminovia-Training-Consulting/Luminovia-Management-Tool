@@ -49,6 +49,15 @@ import "./people.css";
 const directoryBatchSize = 24;
 const courseStates = ["current", "upcoming", "past"] as const;
 
+function biographyForLanguage(
+  person: Pick<PersonSummary, "bio_de" | "bio_en">,
+  german: boolean,
+) {
+  const primary = german ? person.bio_de : person.bio_en;
+  const fallback = german ? person.bio_en : person.bio_de;
+  return primary.trim() || fallback.trim();
+}
+
 /** Defer card mounts so the avatar lookups for a full directory do not start together. */
 const PeopleDirectoryResults = memo(function PeopleDirectoryResults({
   rows,
@@ -77,7 +86,10 @@ const PeopleDirectoryResults = memo(function PeopleDirectoryResults({
               {t("publicId")}: <code>{person.luminovia_user_id}</code>
             </small>
             <p>
-              {(person.bio_de || person.bio_en).slice(0, 180) || t("noBio")}
+              {biographyForLanguage(
+                person,
+                i18n.language.startsWith("de"),
+              ).slice(0, 180) || t("noBio")}
             </p>
             <small>
               {person.country}
@@ -333,7 +345,7 @@ function BookedPersonProfile({ id }: { id: string }) {
   if (person.isError)
     return <UnavailablePerson id={id} retry={() => void person.refetch()} />;
   const details = person.data;
-  const bio = details.bio_de || details.bio_en;
+  const bio = biographyForLanguage(details, i18n.language.startsWith("de"));
   return (
     <>
       <PageHeading

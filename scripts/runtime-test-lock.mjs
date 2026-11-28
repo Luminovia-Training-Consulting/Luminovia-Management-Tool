@@ -4,7 +4,6 @@
  */
 import {spawnSync} from "node:child_process";
 import {chmodSync, closeSync, constants, fstatSync, ftruncateSync, lstatSync, mkdirSync, openSync, writeSync,} from "node:fs";
-import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {createServer} from "node:net";
 
@@ -56,12 +55,15 @@ export async function allocateTestServicePorts(config) {
     }
 }
 
+/** Locate the shared Linux lock independently of each run's artifact directory. */
+export const sharedTestLockDirectory = join("/tmp", `luminovia-portal-qa-${process.getuid()}`);
+
 /** All checkouts share fixed loopback QA ports, so the owning lock must span
  * worktrees. The kernel owns its lifetime: stale PID metadata cannot retain or
  * steal it, and SIGKILL releases it without a racy lock-directory deletion. */
 
 export function acquireTestLock({
-                                    directory = join(tmpdir(), `luminovia-portal-qa-${process.getuid()}`),
+                                    directory = sharedTestLockDirectory,
                                     checkout = process.cwd(),
                                 } = {}) {
     const uid = process.getuid();

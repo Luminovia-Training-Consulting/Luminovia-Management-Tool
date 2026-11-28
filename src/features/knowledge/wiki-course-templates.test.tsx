@@ -3,7 +3,7 @@
  * model only results the current actor is authorized to receive; SQL tests verify that boundary.
  */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -67,13 +67,16 @@ function view(
   client.setQueryDefaults(["client-organisations", "actor"], {
     staleTime: Infinity,
   });
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <WikiCourseTemplates actor="actor" page={page} canEdit={canEdit} />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return {
+    ...render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <WikiCourseTemplates actor="actor" page={page} canEdit={canEdit} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    ),
+    client,
+  };
 }
 
 afterEach(() => {
@@ -119,6 +122,11 @@ it("adds and removes one authorized template reference using exact revision iden
   view();
   const user = userEvent.setup();
   const section = screen.getByRole("region", { name: "Kursvorlagen" });
+  await user.click(
+    await within(section).findByText("Kursvorlagen durchsuchen", {
+      selector: "summary",
+    }),
+  );
   const chooser = await within(section).findByLabelText(
     "Lesbare Kursvorlage auswählen",
   );
@@ -188,6 +196,11 @@ it("does not report stale changes as saved and refreshes the actor-visible state
   view();
   const section = screen.getByRole("region", { name: "Course templates" });
   const user = userEvent.setup();
+  await user.click(
+    await within(section).findByText("Browse course templates", {
+      selector: "summary",
+    }),
+  );
   await user.selectOptions(
     await within(section).findByLabelText("Choose a readable course template"),
     "template-readable",
@@ -231,6 +244,9 @@ it("passes the selected company on wiki reads, choices, links and draft changes"
   const user = userEvent.setup();
   const scope = screen.getByLabelText("Company context for course templates");
   await user.selectOptions(scope, "company-a");
+  await user.click(
+    await screen.findByText("Browse course templates", { selector: "summary" }),
+  );
   await user.selectOptions(
     await screen.findByLabelText("Choose a readable course template"),
     readableTemplate.id,
@@ -259,4 +275,68 @@ it("passes the selected company on wiki reads, choices, links and draft changes"
     p_page_id: "wiki-page",
     p_organisation_id: "company-b",
   });
+});
+
+it("loads choices only on request while existing references stay visible", async () => {
+  await i18n.changeLanguage("en");
+  fake.rpc.mockResolvedValue({
+    data: [
+      { template_id: "existing", title: "Already linked", archived: false },
+    ],
+    error: null,
+  });
+  fake.choices.mockResolvedValue([readableTemplate]);
+  view();
+  await screen.findByRole("link", { name: "Already linked" });
+  expect(fake.choices).not.toHaveBeenCalled();
+  const toggle = await screen.findByText("Browse course templates", {
+    selector: "summary",
+  });
+  await userEvent.click(toggle);
+  expect(
+    await screen.findByRole("option", { name: readableTemplate.title }),
+  ).toBeVisible();
+  expect(fake.choices).toHaveBeenCalledTimes(1);
+});
+
+it("cannot submit a choice removed during revalidation", async () => {
+  await i18n.changeLanguage("en");
+  fake.rpc.mockResolvedValue({ data: [], error: null });
+  fake.choices.mockResolvedValue([readableTemplate]);
+  const { client } = view();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByText("Browse course templates", { selector: "summary" }),
+  );
+  const picker = await screen.findByLabelText(
+    "Choose a readable course template",
+  );
+  const add = screen.getByRole("button", { name: "Add reference" });
+  await user.selectOptions(picker, readableTemplate.id);
+  expect(add).toBeEnabled();
+  fake.choices.mockResolvedValue([
+    { id: "replacement", title: "Newly available" },
+  ]);
+  await act(() =>
+    client.invalidateQueries({
+      queryKey: [
+        "wiki-course-templates",
+        "actor",
+        "wiki-page",
+        2,
+        "",
+        "choices",
+      ],
+    }),
+  );
+  expect(
+    await screen.findByRole("option", { name: "Newly available" }),
+  ).toBeVisible();
+  expect(add).toBeDisabled();
+  await user.click(add);
+  expect(
+    fake.rpc.mock.calls.some(
+      ([name]) => name === "manage_wiki_course_template",
+    ),
+  ).toBe(false);
 });

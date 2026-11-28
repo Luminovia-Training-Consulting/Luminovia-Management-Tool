@@ -26,7 +26,7 @@ npm ci
 
 `npm run typecheck` uses strict TypeScript projects for the application, Node/Playwright configuration, browser journey specs and helpers, and the public-help Playwright configuration. It checks browser test code without running those journeys; the isolated `test` command remains the functional browser gate.
 
-`./portal github` previews latest main separately; `./portal github test` verifies that source rather than your uncommitted edits. Coordinate the shared QA lock and never terminate foreign services.
+`./portal github` previews latest main separately; `./portal github test` verifies that source rather than your uncommitted edits. The shared QA lock stays in a fixed per-user directory under `/tmp` even when `TMPDIR` moves the larger temporary artifacts to another volume. Never terminate another checkout's services.
 
 Use `npm ci` and the lockfile. Dependency updates must preserve compatible peer families; do not add unrelated upgrades or use blanket `audit fix --force`.
 

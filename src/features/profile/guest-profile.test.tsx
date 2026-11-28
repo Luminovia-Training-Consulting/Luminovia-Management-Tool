@@ -166,59 +166,81 @@ it("saves English as the account language and applies it only after confirmation
   await i18n.changeLanguage("de");
 });
 
-it("saves a new time zone without overwriting an existing biography in another language", async () => {
-  await i18n.changeLanguage("de");
-  fake.rpc.mockResolvedValue({
-    data: { username: "fictional-guest", version: 1 },
-    error: null,
-  });
-  const update = vi.fn(() => ({
-    eq: () => ({
-      select: () => ({
-        single: async () => ({ data: { id: "guest-own" }, error: null }),
+it.each([
+  ["Zeitzone", {}],
+  ["Über mich (Deutsch)", { bio_de: "Updated biography" }],
+  ["Über mich (Englisch)", { bio_en: "Updated biography" }],
+])(
+  "updates %s without overwriting either untouched biography",
+  async (field, biography) => {
+    await i18n.changeLanguage("de");
+    fake.rpc.mockResolvedValue({
+      data: { username: "fictional-guest", version: 1 },
+      error: null,
+    });
+    const update = vi.fn(() => ({
+      eq: () => ({
+        select: () => ({
+          single: async () => ({ data: { id: "guest-own" }, error: null }),
+        }),
       }),
-    }),
-  }));
-  fake.from.mockImplementation(() => ({
-    update,
-    select: () => ({
-      eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }),
-    }),
-  }));
-  const profile = {
-    id: "guest-own",
-    luminovia_user_id: "LV-0001-0002-0003-0004-0005",
-    display_name: "Fictional Guest",
-    phone: "",
-    time_zone: "Europe/Berlin",
-    bio_de: "Deutscher Profiltext",
-    bio_en: "A different English profile",
-    locale: "de",
-    active: true,
-  };
-  client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  });
-  client.setQueryData(["profile", "guest-own"], profile);
-  client.setQueryData(["user-roles", "guest-own"], ["guest"]);
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <ProfilePage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  const user = userEvent.setup();
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: "Zeitzone" }),
-    "Australia/Adelaide",
-  );
-  await user.click(screen.getByRole("button", { name: "Profil speichern" }));
-  await waitFor(() =>
-    expect(update).toHaveBeenCalledWith({
+    }));
+    fake.from.mockImplementation(() => ({
+      update,
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: profile, error: null }),
+        }),
+      }),
+    }));
+    const profile = {
+      id: "guest-own",
+      luminovia_user_id: "LV-0001-0002-0003-0004-0005",
       display_name: "Fictional Guest",
       phone: "",
-      time_zone: "Australia/Adelaide",
-    }),
-  );
-});
+      time_zone: "Europe/Berlin",
+      bio_de: "Deutscher Profiltext",
+      bio_en: "A different English profile",
+      locale: "de",
+      active: true,
+    };
+    client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(["profile", "guest-own"], profile);
+    client.setQueryData(["user-roles", "guest-own"], ["guest"]);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    if (field === "Zeitzone") {
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: field }),
+        "Australia/Adelaide",
+      );
+    } else {
+      const biographyInput = screen.getByRole("textbox", {
+        name: field,
+      });
+      expect(biographyInput).toHaveValue(
+        field.endsWith("(Deutsch)") ? profile.bio_de : profile.bio_en,
+      );
+      await user.clear(biographyInput);
+      await user.type(biographyInput, "Updated biography");
+    }
+    await user.click(screen.getByRole("button", { name: "Profil speichern" }));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith({
+        display_name: "Fictional Guest",
+        phone: "",
+        time_zone:
+          field === "Zeitzone" ? "Australia/Adelaide" : "Europe/Berlin",
+        ...biography,
+      }),
+    );
+  },
+);

@@ -3,7 +3,7 @@
  * Unrelated listeners survive; process exit releases the kernel lock without trusting a PID record.
  */
 import assert from "node:assert/strict";
-import {spawn} from "node:child_process";
+import {execFileSync, spawn} from "node:child_process";
 import {once} from "node:events";
 import {existsSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync,} from "node:fs";
 import {tmpdir} from "node:os";
@@ -55,6 +55,24 @@ test("a legacy occupied port fails before startup and its existing listener surv
     const closed = once(reused, "close");
     reused.close();
     await closed;
+});
+
+test("separate temporary artifact roots still resolve the same shared QA lock", () => {
+    const module = new URL("./runtime-test-lock.mjs", import.meta.url).href;
+    const lockFor = (tempDirectory) =>
+        execFileSync(
+            process.execPath,
+            [
+                "--input-type=module",
+                "-e",
+                `import {sharedTestLockDirectory} from ${JSON.stringify(module)}; process.stdout.write(sharedTestLockDirectory);`,
+            ],
+            {env: {...process.env, TMPDIR: tempDirectory}, encoding: "utf8"},
+        );
+
+    // Resolve the real default in each process without acquiring the outer
+    // acceptance runner's lock or touching its actual test stack.
+    assert.equal(lockFor("/fictional/qa-disk-one"), lockFor("/fictional/qa-disk-two"));
 });
 
 test("different checkout identities cannot hold the shared QA ports concurrently", () => {

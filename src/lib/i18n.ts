@@ -634,7 +634,7 @@ const pairs: Record<string, [string, string]> = {
     "Add and manage expertise labels",
   ],
   bioDe: ["Über mich (Deutsch)", "About me (German)"],
-  bioEn: ["About me (English)", "About me (English)"],
+  bioEn: ["Über mich (Englisch)", "About me (English)"],
   phone: ["Telefon", "Phone"],
   saveProfile: ["Profil speichern", "Save profile"],
   expertiseHelp: [

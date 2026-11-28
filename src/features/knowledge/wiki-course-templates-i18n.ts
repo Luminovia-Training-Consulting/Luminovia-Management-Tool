@@ -12,6 +12,7 @@ const words = {
     "Verknüpfte Vorlagen öffnen sich nur, wenn du sie aktuell lesen darfst.",
     "Linked templates open only when you currently have permission to read them.",
   ],
+  browse: ["Kursvorlagen durchsuchen", "Browse course templates"],
   choose: [
     "Lesbare Kursvorlage auswählen",
     "Choose a readable course template",

@@ -91,6 +91,7 @@ function WikiCourseTemplateReferences({
   const client = useQueryClient();
   const online = useOnline();
   const [selected, setSelected] = useState("");
+  const [choosing, setChoosing] = useState(false);
   const referenceKey = [
     "wiki-course-templates",
     actor,
@@ -116,9 +117,11 @@ function WikiCourseTemplateReferences({
     },
   });
   const canMutate = editable && references.isSuccess;
+  const linked = references.data ?? [];
+  const atLimit = linked.length >= 20;
   const templates = useQuery({
     queryKey: [...referenceKey, "choices"],
-    enabled: canMutate,
+    enabled: canMutate && choosing && !atLimit,
     queryFn: ({ signal }) =>
       readDirectoryPages<{ id: string; title: string }>((from, to) =>
         db()
@@ -167,13 +170,15 @@ function WikiCourseTemplateReferences({
       ]);
     },
   });
-  const linked = references.data ?? [];
   const linkedIds = new Set(linked.map((item) => item.template_id));
   const available = (templates.data ?? []).filter(
     (item) => !linkedIds.has(item.id),
   );
+  const currentSelection = available.some(({ id }) => id === selected)
+    ? selected
+    : "";
+  if (selected && !currentSelection && templates.isSuccess) setSelected("");
   const busy = change.isPending || templates.isFetching;
-  const atLimit = linked.length >= 20;
   const errorCode =
     change.error && typeof change.error === "object" && "code" in change.error
       ? change.error.code
@@ -218,47 +223,63 @@ function WikiCourseTemplateReferences({
       ) : (
         <p>{t("empty")}</p>
       )}
-      {canMutate && (
-        <div className="knowledge-course-template-add">
-          {templates.isPending ? (
-            <p role="status">{t("loading")}</p>
-          ) : templates.isError ? (
-            <ErrorState retry={() => void templates.refetch()} />
-          ) : atLimit ? (
-            <p>{t("limit")}</p>
-          ) : available.length ? (
-            <>
-              <Field id="wiki-course-template-choice" label={t("choose")}>
-                <select
-                  id="wiki-course-template-choice"
-                  value={selected}
-                  disabled={!online || busy}
-                  onChange={(event) => setSelected(event.target.value)}
-                >
-                  <option value="">{t("choose")}</option>
-                  {available.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!online || busy || !selected}
-                onClick={() =>
-                  change.mutate({ templateId: selected, remove: false })
-                }
-              >
-                {t("add")}
-              </Button>
-            </>
-          ) : (
-            <p>{t("none")}</p>
-          )}
-        </div>
-      )}
+      {canMutate &&
+        (atLimit ? (
+          <p>{t("limit")}</p>
+        ) : (
+          <details
+            className="knowledge-course-template-picker"
+            open={choosing}
+            onToggle={(event) => {
+              if (event.target === event.currentTarget)
+                setChoosing(event.currentTarget.open);
+            }}
+          >
+            <summary>{t("browse")}</summary>
+            {choosing && (
+              <div className="knowledge-course-template-add">
+                {templates.isPending ? (
+                  <p role="status">{t("loading")}</p>
+                ) : templates.isError ? (
+                  <ErrorState retry={() => void templates.refetch()} />
+                ) : available.length ? (
+                  <>
+                    <Field id="wiki-course-template-choice" label={t("choose")}>
+                      <select
+                        id="wiki-course-template-choice"
+                        value={currentSelection}
+                        disabled={!online || busy}
+                        onChange={(event) => setSelected(event.target.value)}
+                      >
+                        <option value="">{t("choose")}</option>
+                        {available.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.title}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={!online || busy || !currentSelection}
+                      onClick={() =>
+                        change.mutate({
+                          templateId: currentSelection,
+                          remove: false,
+                        })
+                      }
+                    >
+                      {t("add")}
+                    </Button>
+                  </>
+                ) : (
+                  <p>{t("none")}</p>
+                )}
+              </div>
+            )}
+          </details>
+        ))}
       {canEdit && !editable && <p>{t("draftFirst")}</p>}
       {change.isPending && <p role="status">{t("loading")}</p>}
       {change.isError && (

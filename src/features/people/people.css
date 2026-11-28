@@ -4,9 +4,13 @@
  */
 .people-filters {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+
+.people-filters > .field {
+  margin-block-end: 0;
 }
 
 /* Adapt the authorized directory's card count to available width. */
@@ -33,6 +37,7 @@
 .person-card p {
   margin: 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .people-details-grid {

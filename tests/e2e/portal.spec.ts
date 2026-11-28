@@ -307,13 +307,17 @@ test("lecturer signs in, edits bilingual profile and persists it on reload", asy
     });
     await page.goto("/profile");
     const text = `Lokale QA ${testInfo.project.name}`;
-    await page.locator("#bio-de").fill(text);
-    await page
+    const english = `Local QA ${testInfo.project.name}`;
+    const form = page.locator("form.profile-form").filter({has: page.locator("#bio-de")});
+    await form.getByLabel("Über mich (Deutsch)", {exact: true}).fill(text);
+    await form.getByLabel("Über mich (Englisch)", {exact: true}).fill(english);
+    await form
         .getByRole("button", {name: "Profil speichern", exact: true})
         .click();
-    await expect(page.getByRole("status")).toContainText(/gespeichert/i);
+    await expect(form.getByRole("status")).toContainText(/gespeichert/i);
     await page.reload();
-    await expect(page.locator("#bio-de")).toHaveValue(text);
+    await expect(form.getByLabel("Über mich (Deutsch)", {exact: true})).toHaveValue(text);
+    await expect(form.getByLabel("Über mich (Englisch)", {exact: true})).toHaveValue(english);
     await a11y(page);
 });
 
@@ -523,9 +527,9 @@ test("language changes preserve input, themes render accessibly, offline mutatio
     await login(page, lecturer.email);
     await page.goto("/profile");
     const draft = `Ungespeicherter Sprachtest ${randomUUID().slice(0, 8)}`;
-    await page.getByLabel("Über mich", {exact: true}).fill(draft);
+    await page.getByLabel("Über mich (Deutsch)", {exact: true}).fill(draft);
     await page.getByLabel("Sprache", {exact: true}).selectOption("en");
-    await expect(page.getByLabel("About me", {exact: true})).toHaveValue(draft);
+    await expect(page.getByLabel("About me (German)", {exact: true})).toHaveValue(draft);
     await page.getByLabel("Theme", {exact: true}).selectOption("dark");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await a11y(page);
@@ -540,7 +544,7 @@ test("language changes preserve input, themes render accessibly, offline mutatio
     await page.getByLabel("Theme", {exact: true}).selectOption("system");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await context.setOffline(true);
-    await expect(page.getByRole("status")).toContainText(/You are offline/);
+    await expect(page.getByRole("status").filter({hasText: /You are offline/})).toBeVisible();
     await expect(
         page.getByRole("button", {name: "Save profile", exact: true}),
     ).toBeDisabled();

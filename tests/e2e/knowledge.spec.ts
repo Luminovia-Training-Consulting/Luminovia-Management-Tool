@@ -239,6 +239,11 @@ test("wiki template references preserve publication revisions and current templa
         .getByRole("button", {name: "Entwurf speichern", exact: true})
         .click();
     const references = page.getByRole("region", {name: "Kursvorlagen"});
+    await expect(references.getByLabel("Lesbare Kursvorlage auswählen", {exact: true})).toHaveCount(0);
+    const browse = references.locator("summary").filter({hasText: /^Kursvorlagen durchsuchen$/});
+    await expect(browse).toBeVisible();
+    expect((await browse.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await browse.press("Enter");
     await page
         .getByLabel("Lesbare Kursvorlage auswählen", {exact: true})
         .selectOption(template.id);

@@ -97,3 +97,16 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.profile-form-fields {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+@media (max-width: 700px) {
+  .profile-biographies {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -154,6 +154,47 @@ it("mounts avatars for 24 results at a time without refetching the directory", a
   expect(fixture.rpc).toHaveBeenCalledTimes(1);
 });
 
+it.each(["directory", "profile"] as const)(
+  "selects the reader language and falls back in the %s",
+  async (surface) => {
+    const bilingual = {
+      ...person,
+      bio_de: "Deutscher Profiltext",
+      bio_en: "English biography",
+      rating_average: 0,
+      review_count: 0,
+    };
+    const onlyGerman = {
+      ...bilingual,
+      id: "german-only",
+      display_name: "German only",
+      bio_en: "",
+    };
+    fixture.rpc.mockImplementation((name: string) => {
+      const response = Promise.resolve({
+        data:
+          name === "people_directory"
+            ? [bilingual, onlyGerman]
+            : name === "person_profile"
+              ? bilingual
+              : [],
+        error: null,
+      });
+      return Object.assign(response, { abortSignal: () => response });
+    });
+    setup(surface === "directory" ? "/people" : "/people/target").show();
+    expect(await screen.findByText("English biography")).toBeVisible();
+    expect(screen.queryAllByText("Deutscher Profiltext")).toHaveLength(
+      surface === "directory" ? 1 : 0,
+    );
+    await act(() => i18n.changeLanguage("de"));
+    expect(screen.queryByText("English biography")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Deutscher Profiltext")).toHaveLength(
+      surface === "directory" ? 2 : 1,
+    );
+  },
+);
+
 it("uses the active chat contact cache for a verified person", async () => {
   fixture.rpc.mockImplementation(async (name: string) => ({
     data: name === "person_profile" ? person : [],

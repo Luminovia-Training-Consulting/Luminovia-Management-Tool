@@ -65,6 +65,7 @@ const ProfileCompanyContracts = lazy(() =>
 const schema = z.object({
   display_name: z.string().trim().min(1).max(120),
   bio_de: z.string().max(4000),
+  bio_en: z.string().max(4000),
   phone: z.string().max(50),
   time_zone: z.string().refine(validZone),
 });
@@ -75,33 +76,41 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const online = useOnline();
   const client = useQueryClient();
   const [done, setDone] = useState(false);
-  const biography = profile.bio_de || profile.bio_en || "";
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, dirtyFields },
   } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...profile,
-      bio_de: biography,
+      bio_de: profile.bio_de ?? "",
+      bio_en: profile.bio_en ?? "",
       phone: profile.phone ?? "",
     },
   });
   const mutation = useMutation({
-    mutationFn: async ({ bio_de, ...values }: z.infer<typeof schema>) => {
+    mutationFn: async ({
+      bio_de,
+      bio_en,
+      ...values
+    }: z.infer<typeof schema>) => {
       requireOnline();
-      const biographyUpdate =
-        bio_de === biography ? {} : { bio_de, bio_en: bio_de };
       const { data, error } = await db()
         .from("profiles")
-        .update({ ...values, ...biographyUpdate })
+        .update({
+          ...values,
+          ...(dirtyFields.bio_de && { bio_de }),
+          ...(dirtyFields.bio_en && { bio_en }),
+        })
         .eq("id", profile.id)
         .select("id")
         .single();
       if (error || !data) throw error ?? new Error("not_saved");
     },
-    onSuccess: async () => {
+    onSuccess: async (_, submitted) => {
+      reset(submitted);
       await client.invalidateQueries({ queryKey: ["profile", profile.id] });
       await client.invalidateQueries({
         queryKey: ["contact-visibility", profile.id],
@@ -114,47 +123,67 @@ function ProfileForm({ profile }: { profile: Profile }) {
       className="panel profile-form"
       noValidate
       onSubmit={handleSubmit((values) => {
+        if (mutation.isPending || !online) return;
         setDone(false);
         mutation.mutate(values);
       })}
     >
       <h2>{t("profile")}</h2>
-      <Field
-        id="display-name"
-        label={t("displayName")}
-        error={Boolean(errors.display_name)}
-      >
-        <input
+      <fieldset className="profile-form-fields" disabled={mutation.isPending}>
+        <Field
           id="display-name"
-          autoComplete="name"
-          {...register("display_name")}
-          aria-invalid={Boolean(errors.display_name)}
-        />
-      </Field>
-      <Field id="phone" label={t("phone")} error={Boolean(errors.phone)}>
-        <input
-          id="phone"
-          type="tel"
-          autoComplete="tel"
-          {...register("phone")}
-        />
-      </Field>
-      <Field
-        id="profile-zone"
-        label={t("timezone")}
-        hint={t("profileTimeZoneHint")}
-        error={Boolean(errors.time_zone)}
-      >
-        <select {...register("time_zone")}>
-          <option value="" disabled>
-            {t("chooseTimeZone")}
-          </option>
-          <TimeZoneOptions current={profile.time_zone} />
-        </select>
-      </Field>
-      <Field id="bio-de" label={t("aboutMe")} error={Boolean(errors.bio_de)}>
-        <textarea id="bio-de" rows={5} {...register("bio_de")} />
-      </Field>
+          label={t("displayName")}
+          error={Boolean(errors.display_name)}
+        >
+          <input
+            id="display-name"
+            autoComplete="name"
+            {...register("display_name")}
+            aria-invalid={Boolean(errors.display_name)}
+          />
+        </Field>
+        <Field id="phone" label={t("phone")} error={Boolean(errors.phone)}>
+          <input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            {...register("phone")}
+          />
+        </Field>
+        <Field
+          id="profile-zone"
+          label={t("timezone")}
+          hint={t("profileTimeZoneHint")}
+          error={Boolean(errors.time_zone)}
+        >
+          <select {...register("time_zone")}>
+            <option value="" disabled>
+              {t("chooseTimeZone")}
+            </option>
+            <TimeZoneOptions current={profile.time_zone} />
+          </select>
+        </Field>
+        <div className="form-row profile-biographies">
+          <Field id="bio-de" label={t("bioDe")} error={Boolean(errors.bio_de)}>
+            <textarea
+              id="bio-de"
+              lang="de"
+              rows={5}
+              maxLength={4000}
+              {...register("bio_de")}
+            />
+          </Field>
+          <Field id="bio-en" label={t("bioEn")} error={Boolean(errors.bio_en)}>
+            <textarea
+              id="bio-en"
+              lang="en"
+              rows={5}
+              maxLength={4000}
+              {...register("bio_en")}
+            />
+          </Field>
+        </div>
+      </fieldset>
       <Button disabled={!online || mutation.isPending}>
         {t(mutation.isPending ? "saving" : "saveProfile")}
       </Button>
