@@ -1,6 +1,6 @@
 /** Participant course rooms use scoped history, scan-gated uploads and confirmed posting. */
 import { useRequestKey } from "../../lib/request-key";
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
@@ -131,7 +131,7 @@ export function CourseChat({
             </Field>
           )}
           <CourseChatThread
-            key={room.id}
+            key={`${actor}:${run}:${room.id}`}
             room={room}
             actor={actor}
             run={run}
@@ -157,6 +157,14 @@ function CourseChatThread({
   readOnly: boolean;
 }) {
   const { t, i18n } = useTranslation("courseChat");
+  const messageDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
+    [i18n.language],
+  );
   const client = useQueryClient();
   const heading = useRef<HTMLHeadingElement>(null);
   const messageField = useId();
@@ -173,7 +181,7 @@ function CourseChatThread({
   const uploadRetry = useRef<{ file: File; key: string } | null>(null);
   const retry = useRequestKey();
   const historyKey = ["course-chat-messages", actor, run, room.id];
-  useCourseChatLive(actor, run, room.id);
+  const liveConnected = useCourseChatLive(actor, run, room.id);
   const messages = useQuery({
     queryKey: [...historyKey, before],
     queryFn: async () => {
@@ -193,10 +201,12 @@ function CourseChatThread({
       };
     },
     staleTime: 0,
-    // The open course is revalidated frequently. Discard its private cache on exit.
+    // The room list continues to check access every three seconds. With live
+    // activity working, reconcile history periodically for missed signals and
+    // projection changes that do not produce a message event.
     gcTime: 0,
     retry: false,
-    refetchInterval: 3000,
+    refetchInterval: liveConnected ? 30_000 : 3_000,
   });
   const upload = useMutation({
     mutationFn: async (file: File) => {
@@ -330,10 +340,7 @@ function CourseChatThread({
             <li key={message.id}>
               <strong>{message.sender_name}</strong>
               <time dateTime={message.created_at}>
-                {new Intl.DateTimeFormat(i18n.language, {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                }).format(new Date(message.created_at))}
+                {messageDate.format(new Date(message.created_at))}
               </time>
               {message.deleted_at ? (
                 <p>{t("deleted")}</p>

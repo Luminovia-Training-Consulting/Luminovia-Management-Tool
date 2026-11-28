@@ -1,6 +1,6 @@
 /** Component checks for scoped course chat and scan/confirmation boundaries. */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CourseChat } from "./course-chat";
@@ -399,4 +399,87 @@ it("uses a bounded date and id cursor to show older history and can return to th
     screen.getByRole("button", { name: "Back to latest messages" }),
   );
   expect(await screen.findByText("Fictional message 2")).toBeVisible();
+});
+
+it("keeps the three-second access check while cutting idle history reads tenfold", async () => {
+  vi.useFakeTimers();
+  const advance = async (ms: number) => {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  };
+  const roomReads = () =>
+    fake.rpc.mock.calls.filter(([name]) => name === "course_chat_rooms").length;
+  const historyReads = () =>
+    fake.rpc.mock.calls.filter(([name]) => name === "course_chat_messages")
+      .length;
+  show();
+  await advance(50);
+  const status = fake.subscribe.mock.calls[0][0];
+  expect(historyReads()).toBe(1);
+  await advance(3_000);
+  expect(historyReads()).toBe(2);
+
+  status("SUBSCRIBED");
+  await advance(200);
+  expect(historyReads()).toBe(3);
+  const roomBaseline = roomReads();
+  await advance(29_000);
+  expect(historyReads()).toBe(3);
+  expect(roomReads() - roomBaseline).toBe(9);
+  await advance(1_000);
+  expect(historyReads()).toBe(4);
+
+  status("CHANNEL_ERROR");
+  await advance(200);
+  expect(historyReads()).toBe(5);
+  await advance(3_000);
+  expect(historyReads()).toBe(6);
+
+  status("SUBSCRIBED");
+  await advance(200);
+  expect(historyReads()).toBe(7);
+  fake.revoked = true;
+  await advance(3_100);
+  expect(screen.queryByText("Fictional course question")).toBeNull();
+  expect(screen.getByText(/course chat is unavailable/i)).toBeVisible();
+  expect(fake.removeChannel).toHaveBeenCalledOnce();
+  expect(historyReads()).toBe(7);
+});
+
+it("keeps an in-flight history response and runs one trailing refresh for a burst", async () => {
+  vi.useFakeTimers();
+  const advance = async (ms: number) => {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  };
+  show();
+  await advance(50);
+  const status = fake.subscribe.mock.calls[0][0];
+  status("SUBSCRIBED");
+  await advance(200);
+
+  const original = fake.rpc.getMockImplementation()!;
+  let resolve!: (value: unknown) => void;
+  const slow = new Promise((done) => {
+    resolve = done;
+  });
+  fake.rpc.mockImplementation((name, args) =>
+    name === "course_chat_messages" ? slow : original(name, args),
+  );
+  const activity = fake.on.mock.calls[1][2];
+  const historyReads = () =>
+    fake.rpc.mock.calls.filter(([name]) => name === "course_chat_messages")
+      .length;
+  activity();
+  await advance(200);
+  const beforeBurst = historyReads();
+  for (let i = 0; i < 5; i++) activity();
+  await advance(500);
+  expect(historyReads()).toBe(beforeBurst);
+  fake.rpc.mockImplementation(original);
+  resolve(await original("course_chat_messages", {}));
+  await advance(200);
+  expect(historyReads()).toBe(beforeBurst + 1);
 });
