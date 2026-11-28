@@ -46,6 +46,45 @@ test("delegates a staffing issue and opens the shared task after a reload", asyn
     await page.getByLabel(/^(Sprache|Language)$/).selectOption("de");
     await page.getByLabel(/^(Farbschema|Theme)$/).selectOption("dark");
     await page.goto("/control-center");
+    const period = page.locator(".finance-period");
+    const from = period.getByLabel("Zeitraum von", { exact: true });
+    const until = period.getByLabel("Zeitraum bis (ausschließlich)", {
+      exact: true,
+    });
+    const originalFrom = await from.inputValue();
+    const originalUntil = await until.inputValue();
+    const applied = period.getByRole("status");
+    const originalPeriod = await applied.innerText();
+
+    await until.fill(originalFrom);
+    await period.getByRole("button", { name: "Zeitraum anzeigen" }).click();
+    await expect(until).toBeFocused();
+    await expect(period.getByRole("alert")).toContainText("höchstens 93 Tagen");
+    await expect(applied).toContainText(originalPeriod);
+    await expect(applied).toContainText("Änderung noch nicht übernommen");
+    await period
+      .getByRole("button", { name: "Datumseingaben zurücksetzen" })
+      .click();
+    await expect(from).toBeFocused();
+    await expect(until).toHaveValue(originalUntil);
+    await expect(applied).toHaveText(originalPeriod);
+
+    await from.fill("2026-03-02");
+    await until.fill("2026-03-05");
+    const filtered = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/rest/v1/rpc/control_center") &&
+        response.request().postDataJSON().p_from === "2026-03-02",
+    );
+    await period.getByRole("button", { name: "Zeitraum anzeigen" }).click();
+    expect((await filtered).ok()).toBe(true);
+    await expect(applied).not.toContainText("Änderung noch nicht übernommen");
+    await expect(applied).not.toHaveText(originalPeriod);
+
+    await from.fill(originalFrom);
+    await until.fill(originalUntil);
+    await period.getByRole("button", { name: "Zeitraum anzeigen" }).click();
+
     await page
       .getByText("Kursbetrieb und Forderungen", { exact: true })
       .click();

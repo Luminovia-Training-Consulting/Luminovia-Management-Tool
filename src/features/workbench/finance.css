@@ -6,6 +6,13 @@
   margin-bottom: 1.25rem;
 }
 
+.finance-period-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .finance-period p {
   flex-basis: 100%;
   margin: 0;

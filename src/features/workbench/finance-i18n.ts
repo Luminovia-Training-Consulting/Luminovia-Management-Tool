@@ -11,6 +11,10 @@ const de = {
   from: "Zeitraum von",
   until: "Zeitraum bis (ausschließlich)",
   apply: "Zeitraum anzeigen",
+  appliedPeriod:
+    "Angewendeter Zeitraum vom {{from}} bis {{until}} (Enddatum ausgeschlossen)",
+  unappliedPeriod: "Änderung noch nicht übernommen",
+  resetPeriodDraft: "Datumseingaben zurücksetzen",
   periodHelp:
     "Bis zu 93 Tage. Alle Datumsgrenzen verwenden deine angezeigte Kontozeitzone.",
   periodError:
@@ -147,6 +151,9 @@ const en: Record<keyof typeof de, string> = {
   from: "Period from",
   until: "Period until (exclusive)",
   apply: "Show period",
+  appliedPeriod: "Applied period {{from}} to {{until}} (end date excluded)",
+  unappliedPeriod: "Changes haven’t been applied",
+  resetPeriodDraft: "Reset date inputs",
   periodHelp:
     "Up to 93 days. All date boundaries use your displayed account time zone.",
   periodError: "Choose a valid period of up to 93 days with a later end date.",
