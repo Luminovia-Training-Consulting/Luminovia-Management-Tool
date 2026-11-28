@@ -1,5 +1,12 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
-import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -39,6 +46,7 @@ export function DocumentExplorer({
     pending: boolean,
     epoch?: string,
     renewalEpoch?: string,
+    emptyMessage?: string,
   ) => ReactNode;
 }) {
   const { t } = useTranslation("files"),
@@ -56,6 +64,11 @@ export function DocumentExplorer({
     tag: "",
     folder: null,
   }));
+  const searchInput = useRef<HTMLInputElement>(null);
+  const hasDraft = Boolean(search || tag || folder || unfiled);
+  const isFiltered = Boolean(
+    filters.search.trim() || filters.tag || filters.folder !== null,
+  );
   useEffect(() => {
     const timer = setTimeout(
       () =>
@@ -97,6 +110,7 @@ export function DocumentExplorer({
           <div className="file-discovery-search">
             <Search size={18} aria-hidden="true" />
             <input
+              ref={searchInput}
               aria-label={t("search")}
               placeholder={t("search")}
               type="search"
@@ -146,7 +160,26 @@ export function DocumentExplorer({
             />
             {t("unfiledOnly")}
           </label>
-          <small id={`${id}-exact-filter`}>{t("exactFilter")}</small>
+          <div className="file-discovery-filter-help">
+            <small id={`${id}-exact-filter`}>{t("exactFilter")}</small>
+            {hasDraft && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setTag("");
+                  setFolder("");
+                  setUnfiled(false);
+                  setFilters({ search: "", tag: "", folder: null });
+                  searchInput.current?.focus();
+                }}
+              >
+                {t("clearFilters")}
+              </Button>
+            )}
+          </div>
         </div>
       </section>
       {!online && <Notice kind="error">{t("discoveryOffline")}</Notice>}
@@ -157,7 +190,13 @@ export function DocumentExplorer({
           {/* Keep captured dialogs mounted while this filter loads, without
               retaining rows from a different query key. Errors above still
               unmount the entire child and discard protected metadata. */}
-          {children(rows, query.isPending, epoch, renewalEpoch)}
+          {children(
+            rows,
+            query.isPending,
+            epoch,
+            renewalEpoch,
+            isFiltered ? t("noMatches") : undefined,
+          )}
           {query.isPending ? (
             <Loading />
           ) : (

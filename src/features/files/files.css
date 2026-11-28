@@ -92,8 +92,13 @@
   flex: 0 0 18px;
 }
 
-.file-discovery-filters > small {
+.file-discovery-filter-help {
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
   color: var(--muted);
 }
 
@@ -156,18 +161,14 @@
   font-size: 0.85rem;
 }
 
-.file-drop label {
-  font-weight: 650;
-  font-size: 13px;
+.file-drop .button,
+.file-discovery-filter-help .button,
+.selected-file .button {
+  min-height: 44px;
 }
 
 .file-drop small {
   color: var(--muted);
-}
-
-.file-drop input {
-  max-width: 100%;
-  font-size: 12px;
 }
 
 .file-drop.is-dragging {
@@ -176,8 +177,18 @@
 }
 
 .selected-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.selected-file > span {
+  min-width: 0;
 }
 
 /* Show network progress while keeping final clearance tied to the actual server response. */

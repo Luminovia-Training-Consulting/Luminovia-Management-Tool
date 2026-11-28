@@ -66,6 +66,15 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
             .getByRole("button", {name: "Datei hochladen", exact: true})
             .click();
         const upload = page.getByRole("dialog");
+        const choose = upload.getByRole("button", {name: "Datei auswählen", exact: true});
+        const openChooser = page.waitForEvent("filechooser");
+        if (testInfo.project.use.isMobile) await choose.click();
+        else await choose.press("Enter");
+        await (await openChooser).setFiles({name, mimeType: "text/plain", buffer: contents});
+        await expect(upload.getByRole("status")).toContainText(name);
+        await upload.getByRole("button", {name: "Auswahl entfernen", exact: true}).click();
+        await expect(choose).toBeFocused();
+        await expect(upload.getByRole("button", {name: "Datei hochladen", exact: true})).toBeDisabled();
         await upload
             .getByLabel("Datei auswählen", {exact: true})
             .setInputFiles({name, mimeType: "text/plain", buffer: contents});
@@ -158,6 +167,12 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
         await login(other, peer.email);
         await other.goto("/files");
         await other.getByLabel("Eigenes Tag filtern", {exact: true}).fill(tag);
+        await expect(
+            other.getByText("Keine Dateien für diese Suche oder Filter gefunden.", {exact: true}),
+        ).toBeVisible();
+        await other.getByRole("button", {name: "Suche und Filter zurücksetzen", exact: true}).press("Enter");
+        await expect(other.getByRole("searchbox", {name: "Dateien suchen", exact: true})).toBeFocused();
+        await expect(other.getByLabel("Eigenes Tag filtern", {exact: true})).toHaveValue("");
         await expect(
             other.getByText("Noch keine Dateien vorhanden.", {exact: true}),
         ).toBeVisible();

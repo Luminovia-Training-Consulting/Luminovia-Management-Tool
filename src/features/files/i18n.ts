@@ -25,6 +25,8 @@ const pairs: Record<string, [string, string]> = {
   upload: ["Datei hochladen", "Upload file"],
   contractsReference: ["Verträge öffnen", "Open contracts"],
   choose: ["Datei auswählen", "Choose file"],
+  chooseAnother: ["Andere Datei auswählen", "Choose another file"],
+  removeSelection: ["Auswahl entfernen", "Remove selection"],
   types: [
     "PDF, Bilder, TXT und Office-Dateien · bis 100 MiB. Jede Datei wird vor der Freigabe geprüft.",
     "PDF, images, TXT and Office files · up to 100 MiB. Every file is scanned before release.",
@@ -82,6 +84,11 @@ const pairs: Record<string, [string, string]> = {
   scan_error: ["Prüfung ausstehend", "Scan pending"],
   rejected: ["Gesperrt", "Rejected"],
   empty: ["Noch keine Dateien vorhanden.", "No files yet."],
+  noMatches: [
+    "Keine Dateien für diese Suche oder Filter gefunden.",
+    "No files match this search or these filters.",
+  ],
+  clearFilters: ["Suche und Filter zurücksetzen", "Clear search and filters"],
   search: ["Dateien suchen", "Search files"],
   tagFilter: ["Eigenes Tag filtern", "Filter by your tag"],
   folderFilter: ["Eigenen Ordner filtern", "Filter by your folder"],

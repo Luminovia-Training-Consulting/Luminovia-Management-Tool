@@ -3,7 +3,13 @@
  * Controlled UI transport does not establish server file authorization.
  */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   QueryClient,
@@ -102,6 +108,43 @@ it("clears the previous selection when a newly selected file is rejected", async
   expect(upload).toBeDisabled();
   await user.click(upload);
   expect(state.uploadDocument).not.toHaveBeenCalled();
+});
+it("presents the dropped file as the only pending selection and allows removing it by keyboard", async () => {
+  const user = userEvent.setup();
+  state.uploadDocument.mockResolvedValue(file);
+  setup(<FileUpload context={{ scope: "personal" }} />);
+  const input = screen.getByLabelText<HTMLInputElement>("Datei auswählen");
+  const upload = screen.getByRole("button", { name: "Datei hochladen" });
+  const picked = new File(["first"], "picked.txt", { type: "text/plain" });
+  const dropped = new File(["second"], "dropped.txt", { type: "text/plain" });
+
+  await user.upload(input, picked);
+  expect(screen.getByRole("status")).toHaveTextContent(picked.name);
+  fireEvent.drop(
+    screen.getByRole("button", { name: "Andere Datei auswählen" }),
+    {
+      dataTransfer: { files: [dropped] },
+    },
+  );
+  expect(input.files).toHaveLength(0);
+  expect(screen.getByRole("status")).toHaveTextContent(dropped.name);
+  expect(screen.queryByText(/picked\.txt/)).not.toBeInTheDocument();
+
+  screen.getByRole("button", { name: "Auswahl entfernen" }).focus();
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("button", { name: "Datei auswählen" })).toHaveFocus();
+  expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  expect(upload).toBeDisabled();
+  expect(state.uploadDocument).not.toHaveBeenCalled();
+
+  await user.upload(input, picked);
+  await user.click(upload);
+  await screen.findByText("Datei gespeichert und geprüft.");
+  expect(state.uploadDocument).toHaveBeenCalledWith(
+    picked,
+    expect.objectContaining({ scope: "personal" }),
+    expect.any(Function),
+  );
 });
 it("refreshes a file list whose first read predates a confirmed upload", async () => {
   const user = userEvent.setup();

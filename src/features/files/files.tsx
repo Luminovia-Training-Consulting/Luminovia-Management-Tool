@@ -94,6 +94,7 @@ export function FileUpload({
   const client = useQueryClient();
   const inputId = useId();
   const input = useRef<HTMLInputElement>(null);
+  const chooseButton = useRef<HTMLButtonElement>(null);
   const clientId = useRef(crypto.randomUUID());
   const [file, setFile] = useState<File | null>(null);
   const [sourceScope, setSourceScope] = useState<"job_before" | "job_after">(
@@ -142,14 +143,17 @@ export function FileUpload({
       onDone?.(document);
     },
   });
-  const choose = (value: File | undefined) => {
-    if (!value) return;
+  const choose = (value: File | null) => {
     setError("");
     upload.reset();
     setProgress(0);
+    if (input.current) input.current.value = "";
+    if (!value) {
+      setFile(null);
+      return;
+    }
     if (value.size < 1 || value.size > maximumFileSize) {
       setFile(null);
-      if (input.current) input.current.value = "";
       setError("file_size");
       return;
     }
@@ -181,36 +185,66 @@ export function FileUpload({
         className={`file-drop ${drag ? "is-dragging" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
-          if (!upload.isPending) setDrag(true);
+          if (online && !upload.isPending) setDrag(true);
         }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => {
           e.preventDefault();
           setDrag(false);
-          if (!upload.isPending) choose(e.dataTransfer.files[0]);
+          const dropped = e.dataTransfer.files[0];
+          if (online && !upload.isPending && dropped) choose(dropped);
         }}
       >
-        <FileUp size={28} />
-        <label htmlFor={inputId}>{t("choose")}</label>
+        <FileUp size={28} aria-hidden="true" />
+        <Button
+          ref={chooseButton}
+          type="button"
+          variant="secondary"
+          aria-describedby={`${inputId}-types`}
+          disabled={!online || upload.isPending}
+          onClick={() => input.current?.click()}
+        >
+          {t(file ? "chooseAnother" : "choose")}
+        </Button>
         <input
           id={inputId}
           ref={input}
+          hidden
+          aria-label={t("choose")}
           type="file"
           accept={sourceSha256 ? "application/pdf,.pdf" : acceptedFiles}
           disabled={!online || upload.isPending}
-          onChange={(e) => choose(e.target.files?.[0])}
+          onChange={(e) => {
+            const selected = e.target.files?.[0];
+            if (selected) choose(selected);
+          }}
         />
-        <small>{t(sourceSha256 ? "sourceTypes" : "types")}</small>
+        <small id={`${inputId}-types`}>
+          {t(sourceSha256 ? "sourceTypes" : "types")}
+        </small>
       </div>
-      {file && (
-        <p className="selected-file">
-          {file.name} ·{" "}
-          {(file.size / 1024).toLocaleString(undefined, {
-            maximumFractionDigits: 1,
-          })}{" "}
-          KB
-        </p>
-      )}
+      <div className={file ? "selected-file" : undefined}>
+        <span role="status">
+          {file &&
+            `${file.name} · ${(file.size / 1024).toLocaleString(undefined, {
+              maximumFractionDigits: 1,
+            })} KB`}
+        </span>
+        {file && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={upload.isPending}
+            onClick={() => {
+              choose(null);
+              chooseButton.current?.focus();
+            }}
+          >
+            {t("removeSelection")}
+          </Button>
+        )}
+      </div>
       {upload.isPending && (
         <div role="status" className="upload-progress">
           <progress max={100} value={progress} aria-label={t("upload")} />
@@ -481,6 +515,7 @@ export function DocumentDetails({
 const DocumentList = memo(function DocumentList({
   files,
   pending = false,
+  emptyMessage,
   verificationEpoch,
   renewalEpoch,
   managedJobId,
@@ -488,6 +523,7 @@ const DocumentList = memo(function DocumentList({
 }: {
   files: PortalDocument[];
   pending?: boolean;
+  emptyMessage?: string;
   verificationEpoch?: string;
   renewalEpoch?: string;
   managedJobId?: string;
@@ -634,7 +670,7 @@ const DocumentList = memo(function DocumentList({
       {!visibleFiles.length && !pending && (
         <div className="empty-state">
           <FolderOpen size={32} />
-          <p>{t("empty")}</p>
+          <p>{emptyMessage ?? t("empty")}</p>
         </div>
       )}
       <ul className="document-list">
@@ -1119,10 +1155,11 @@ export function FilesPage() {
           actor={session!.user.id}
           archiveAction={<ArchivedPersonalMaterials actor={session!.user.id} />}
         >
-          {(rows, pending, epoch, renewalEpoch) => (
+          {(rows, pending, epoch, renewalEpoch, emptyMessage) => (
             <DocumentList
               files={rows}
               pending={pending}
+              emptyMessage={emptyMessage}
               verificationEpoch={epoch}
               renewalEpoch={renewalEpoch}
             />
