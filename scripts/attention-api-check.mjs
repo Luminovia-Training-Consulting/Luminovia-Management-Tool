@@ -117,9 +117,9 @@ await withApiFixture(
         assert.deepEqual(
             await checked(
                 owner.client.rpc("notification_preferences"),
-                "Four-flag contract unchanged by attention",
+                "Notification categories remain unchanged by attention",
             ),
-            legacy,
+            categories,
         );
         const critical = Array.from({length: 3}, (_, i) => ({
             id: randomUUID(),
