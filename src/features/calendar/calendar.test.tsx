@@ -1299,7 +1299,7 @@ it("centres a job deep link only on an own confirmed assignment session", async 
 it("filters confirmed course sessions by customer and any selected topic while retaining title/type search", async () => {
   const jobA = "d7000000-0000-4000-8000-000000000011",
     jobB = "d7000000-0000-4000-8000-000000000012";
-  const customerA = "c7000000-0000-4000-8000-000000000011",
+  const customerA = "name:Fictional Alpha",
     customerB = "c7000000-0000-4000-8000-000000000012";
   const topicA = "a7000000-0000-4000-8000-000000000011",
     topicB = "a7000000-0000-4000-8000-000000000012";
@@ -1328,7 +1328,7 @@ it("filters confirmed course sessions by customer and any selected topic while r
         {
           id: jobA,
           title: "Python course",
-          organisation_id: customerA,
+          organisation_id: null,
           organisation_name: "Fictional Alpha",
           topics: [{ id: topicA, label_de: "Python", label_en: "Python" }],
         },
@@ -1362,6 +1362,56 @@ it("filters confirmed course sessions by customer and any selected topic while r
     screen.queryByRole("link", { name: "Linux course" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Dein privater Kalender" }),
+  );
+  expect(screen.getByLabelText("Unternehmen")).toHaveValue(customerA);
+
+  // The next range has no authorised company data. The dropdown must not
+  // claim that all companies are shown, or carry the previous company name.
+  const previousClaims = state.claims;
+  state.claims = [];
+  act(() => {
+    const changeRange = state.callbacks.at(-1) as (range: {
+      start: Date;
+      end: Date;
+    }) => void;
+    changeRange({
+      start: new Date("2060-02-01T00:00Z"),
+      end: new Date("2060-02-28T00:00Z"),
+    });
+  });
+  expect(
+    await screen.findByText("Keine geladenen Termine passen zu den Filtern."),
+  ).toBeVisible();
+  expect(screen.getByLabelText("Unternehmen")).toHaveValue("unavailable");
+  expect(screen.getByLabelText("Unternehmen").innerHTML).not.toContain(
+    "Fictional Alpha",
+  );
+  expect(
+    screen.getByRole("option", {
+      name: "Gewähltes Unternehmen ohne sichtbare Termine",
+    }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("option", { name: "Fictional Alpha" }),
+  ).not.toBeInTheDocument();
+
+  state.claims = previousClaims;
+  act(() => {
+    const changeRange = state.callbacks.at(-1) as (range: {
+      start: Date;
+      end: Date;
+    }) => void;
+    changeRange({
+      start: new Date("2060-01-01T00:00Z"),
+      end: new Date("2060-01-31T00:00Z"),
+    });
+  });
+  expect(
+    await screen.findByRole("link", { name: "Python course" }),
+  ).toBeVisible();
+  expect(screen.getByLabelText("Unternehmen")).toHaveValue(customerA);
   await user.selectOptions(screen.getByLabelText("Unternehmen"), "");
   await user.selectOptions(screen.getByLabelText("Themen & Tags"), topicB);
   expect(screen.getByRole("link", { name: "Linux course" })).toBeVisible();
@@ -1378,6 +1428,7 @@ it("filters confirmed course sessions by customer and any selected topic while r
     screen.queryByRole("link", { name: "Linux course" }),
   ).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+  expect(screen.getByLabelText("Kalendertermine suchen")).toHaveFocus();
   expect(screen.getByText("Private planning")).toBeVisible();
   expect(screen.queryByText(/Kalender-Abonnements/)).not.toBeInTheDocument();
   expect(

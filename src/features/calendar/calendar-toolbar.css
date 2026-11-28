@@ -51,6 +51,11 @@
   background: var(--blue-soft);
 }
 
+.calendar-range {
+  min-width: 0;
+  text-align: center;
+}
+
 .calendar-range-title {
   margin: 0;
   color: var(--ink);
@@ -220,7 +225,7 @@
     gap: 12px;
   }
 
-  .calendar-range-title {
+  .calendar-range {
     grid-column: 1 / -1;
     grid-row: 1;
   }

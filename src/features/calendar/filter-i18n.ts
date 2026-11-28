@@ -1,3 +1,4 @@
+/** Bilingual labels for calendar navigation, display and filters. */
 import i18n from "../../lib/i18n";
 
 const values = {
@@ -5,6 +6,13 @@ const values = {
   previous: ["Vorheriger Zeitraum", "Previous date range"],
   next: ["Nächster Zeitraum", "Next date range"],
   today: ["Heute", "Today"],
+  chooseDate: ["Datum wählen", "Choose date"],
+  date: ["Datum", "Date"],
+  jumpDateHelp: [
+    "Springe in der aktuellen Kalenderansicht zu einem Datum.",
+    "Jump to a date in the current calendar view.",
+  ],
+  goToDate: ["Datum anzeigen", "Show date"],
   view: ["Kalenderansicht", "Calendar view"],
   dayGridMonth: ["Monat", "Month"],
   timeGridWeek: ["Woche", "Week"],
@@ -36,6 +44,14 @@ const values = {
   ],
   customer: ["Unternehmen", "Company"],
   allCustomers: ["Alle Unternehmen", "All companies"],
+  unavailableCustomer: [
+    "Gewähltes Unternehmen ohne sichtbare Termine",
+    "Selected company has no visible events",
+  ],
+  noFilterMatches: [
+    "Keine geladenen Termine passen zu den Filtern.",
+    "No loaded events match the filters.",
+  ],
   calendarColors: ["Kalenderfarben", "Calendar colors"],
   calendarColorsHelp: [
     "Diese privaten Farben gelten nur für dein Kalenderkonto. Von Unternehmen erstellte Einträge behalten einen gut lesbaren hellen Hintergrund.",

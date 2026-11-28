@@ -605,6 +605,7 @@ export function CalendarPage() {
   const confirmText = useTranslation("calendarConfirmation").t;
   const filterText = useTranslation("calendarFilter").t;
   const [search, setSearch] = useState("");
+  const searchField = useRef<HTMLInputElement>(null);
   const [eventType, setEventType] = useState("all");
   const [customer, setCustomer] = useState("");
   const [topicIds, setTopicIds] = useState<string[]>([]);
@@ -976,6 +977,20 @@ export function CalendarPage() {
   );
   const searchTerm = useDeferredValue(search.trim().toLocaleLowerCase());
   const selectedTopics = useMemo(() => new Set(topicIds), [topicIds]);
+  const customerUnavailable = Boolean(customer && !customers.has(customer));
+  const filtersActive = Boolean(
+    customer || topicIds.length || search || eventType !== "all",
+  );
+  const filtersReady = global
+    ? publicRuns.isSuccess &&
+      templates.isSuccess &&
+      (!topicIds.length || !topics.isPending) &&
+      !globals.isPending &&
+      !globalsFailed
+    : !waitingForAnchor &&
+      personal.isSuccess &&
+      assignments.isSuccess &&
+      (!jobOptions.enabled || jobs.isSuccess);
   const visibleEvents = useMemo(() => {
     if (eventType === "all" && !customer && !selectedTopics.size && !searchTerm)
       return events;
@@ -1098,6 +1113,7 @@ export function CalendarPage() {
             variant={!global ? "default" : "ghost"}
             aria-pressed={!global}
             onClick={() => {
+              if (!global) return;
               setGlobal(false);
               closeGlobalDraft();
               setEventType("all");
@@ -1111,6 +1127,7 @@ export function CalendarPage() {
             variant={global ? "default" : "ghost"}
             aria-pressed={global}
             onClick={() => {
+              if (global) return;
               setGlobal(true);
               clearGridSelection();
               setEventType("all");
@@ -1139,10 +1156,17 @@ export function CalendarPage() {
         <Field id="calendar-customer" label={filterText("customer")}>
           <select
             id="calendar-customer"
-            value={customer}
+            value={customerUnavailable ? "unavailable" : customer}
             onChange={(event) => setCustomer(event.target.value)}
           >
             <option value="">{filterText("allCustomers")}</option>
+            {/* Report the active filter without putting a previously authorised
+                name in the DOM. Some legacy company keys include that name. */}
+            {customerUnavailable && (
+              <option value="unavailable" disabled>
+                {filterText("unavailableCustomer")}
+              </option>
+            )}
             {customerOptions.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
@@ -1176,6 +1200,7 @@ export function CalendarPage() {
         <Field id="calendar-search" label={filterText("search")}>
           <input
             id="calendar-search"
+            ref={searchField}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -1232,7 +1257,7 @@ export function CalendarPage() {
       )}
       <div className="calendar-filter-summary">
         <p>{filterText("scope")}</p>
-        {(customer || topicIds.length > 0 || search || eventType !== "all") && (
+        {filtersActive && (
           <Button
             type="button"
             variant="ghost"
@@ -1241,6 +1266,7 @@ export function CalendarPage() {
               setTopicIds([]);
               setSearch("");
               setEventType("all");
+              searchField.current?.focus();
             }}
           >
             {filterText("clear")}
@@ -1258,6 +1284,12 @@ export function CalendarPage() {
               .toFormat("LLLL yyyy")
           }
           view={calendarView}
+          waitingForDate={waitingForAnchor}
+          getDate={() => {
+            const api = calendarRef.current?.getApi();
+            return api?.formatIso(api.getDate(), true);
+          }}
+          onGoToDate={(date) => calendarRef.current?.getApi().gotoDate(date)}
           onNavigate={(direction) => {
             const api = calendarRef.current?.getApi();
             if (direction === "prev") api?.prev();
@@ -1268,6 +1300,11 @@ export function CalendarPage() {
             calendarRef.current?.getApi().changeView(view);
           }}
         />
+        {filtersActive && filtersReady && visibleEvents.length === 0 && (
+          <p className="calendar-selection-help" role="status">
+            {filterText("noFilterMatches")}
+          </p>
+        )}
         {canManageGlobal && (
           <details
             className="calendar-course-plan"
