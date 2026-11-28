@@ -583,6 +583,26 @@ try {
         },
     );
     await check(
+        "History applies hiding and cursor ties before limiting both normal and searched pages",
+        async () => {
+            const ids = [
+                await msg(a, dm, "Tied synthetic history match one"),
+                await msg(a, dm, "Tied synthetic history match two"),
+                await msg(a, dm, "Tied synthetic history match three"),
+            ].sort().reverse();
+            await sql(`update public.messages set created_at=now() where id in (${ids.map(quote).join(",")})`);
+            await value(b, "hide_chat_message", [ids[0]]);
+            for (const search of ["", "Tied synthetic history match"]) {
+                const firstPage = await rows(b, "chat_messages_with_mentions", [dm, null, null, search, 1]);
+                assert.deepEqual(firstPage.map((message) => message.id), [ids[1]]);
+                const nextPage = await rows(b, "chat_messages_with_mentions", [
+                    dm, firstPage[0].created_at, firstPage[0].id, search, 1,
+                ]);
+                assert.deepEqual(nextPage.map((message) => message.id), [ids[2]]);
+            }
+        },
+    );
+    await check(
         "Only sender edits within15minutes; immutable original request key survives edit",
         async () => {
             await assert.rejects(value(b, "edit_message", [first, "No"]), /denied/);
