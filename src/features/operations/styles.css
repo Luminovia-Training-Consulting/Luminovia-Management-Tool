@@ -635,6 +635,17 @@
   gap: 8px;
 }
 
+@media (min-width: 761px) {
+  .page-heading:has(> .operations-header-actions) > div:first-child {
+    flex: 1 0 auto;
+  }
+
+  .page-heading > .operations-header-actions {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+  }
+}
+
 .course-card-actions {
   display: flex;
   flex-wrap: wrap;
