@@ -144,8 +144,8 @@ function dateTimeFormatter(
   return formatter;
 }
 
-/** Format an instant in the requested language and explicit display zone. */
-export function dateTime(
+/** Format a valid instant, or let semantic time elements omit unconfirmed data. */
+export function dateTimeOrNull(
   iso: string,
   language: string,
   zone: string,
@@ -153,8 +153,18 @@ export function dateTime(
 ) {
   const instant = Date.parse(iso);
   return Number.isFinite(instant)
-    ? (dateTimeFormatter(language, zone, dateStyle)?.format(instant) ?? "–")
-    : "–";
+    ? (dateTimeFormatter(language, zone, dateStyle)?.format(instant) ?? null)
+    : null;
+}
+
+/** Format an instant in the requested language and explicit display zone. */
+export function dateTime(
+  iso: string,
+  language: string,
+  zone: string,
+  dateStyle: "medium" | "short" = "medium",
+) {
+  return dateTimeOrNull(iso, language, zone, dateStyle) ?? "–";
 }
 
 /** Format an ordered range; imports with unreadable timestamps render a placeholder. */
