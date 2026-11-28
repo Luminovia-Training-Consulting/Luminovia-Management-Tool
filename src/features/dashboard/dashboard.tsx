@@ -45,7 +45,11 @@ export function Dashboard() {
   const appeals = useTranslation("removalAppeals").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
-  const roles = useQuery(userRolesQuery(session!.user.id));
+  const roles = useQuery({
+    ...userRolesQuery(session!.user.id),
+    // Shell polls this shared key and resets private data when authorization changes.
+    refetchInterval: false,
+  });
   const staff = hasJobStaffRole(roles.data);
   const teaching = hasTeachingRole(roles.data);
   const clientAccount = Boolean(roles.data?.includes("client"));

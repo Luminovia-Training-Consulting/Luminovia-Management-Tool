@@ -59,7 +59,28 @@ test("dashboard previews show actual own activity, scanned files and private app
             p_client_id: randomUUID(),
         }),
     );
+    const financialRequests: string[] = [];
+    const financeRpcNames = new Set([
+        "dashboard_financial_summary",
+        "commission_access",
+        "commercial_access",
+        "finance_earnings",
+        "commission_report",
+        "client_spend_summary",
+    ]);
+    page.on("requestfinished", (request) => {
+        const path = new URL(request.url()).pathname;
+        const operation = path.split("/").at(-1);
+        if (operation && path.includes("/rpc/") && financeRpcNames.has(operation))
+            financialRequests.push(operation);
+    });
+    const financialResponse = page.waitForResponse(
+        (response) => new URL(response.url()).pathname.endsWith("/rpc/dashboard_financial_summary"),
+    );
     await login(page, teacher.email);
+    const totals = await financialResponse;
+    expect(totals.ok()).toBe(true);
+    expect(await totals.json()).toEqual([]);
     const calendar = page.getByRole("region", {
         name: "Mein Kalender im Blick",
         exact: true,
@@ -88,6 +109,8 @@ test("dashboard previews show actual own activity, scanned files and private app
             exact: true,
         }),
     ).toHaveCount(0);
+
+    expect(financialRequests).toEqual(["dashboard_financial_summary"]);
 
     await page.goto("/files");
     const filename = `Dashboard-${token}.txt`;

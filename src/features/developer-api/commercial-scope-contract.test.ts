@@ -14,6 +14,7 @@ const rpcs = [
   "company_invoice_reviews",
   "company_lecturer_decisions",
   "company_rejected_lecturers",
+  "dashboard_financial_summary",
   "lecturer_compensation",
   "save_lecturer_compensation",
 ] as const;

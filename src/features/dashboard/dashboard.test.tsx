@@ -19,6 +19,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
+import { userRolesQuery } from "../../lib/queries";
 import { Dashboard } from "./dashboard";
 import { DashboardWidgets } from "./widgets";
 import { notificationPreviewQuery } from "../notifications/api";
@@ -208,9 +209,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** Observe the shell's actual inbox key to detect extra dashboard requests. */
+/** Observe the shell's actual inbox and role keys to detect extra dashboard requests. */
 function SharedShellObserver() {
   useQuery(notificationPreviewQuery(fake.actor));
+  useQuery(userRolesQuery(fake.actor));
   return null;
 }
 
@@ -607,6 +609,23 @@ describe("role-aware dashboard previews", () => {
     });
     expect(rpcCalls("notification_inbox")).toHaveLength(1);
   });
+  it.each([false, true])(
+    "keeps role polling owned by the shell (present: %s)",
+    async (sharedObserver) => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+      setup(false, sharedObserver);
+      await screen.findByText("Fictional course update");
+      const roleReads = () =>
+        fake.calls.filter(
+          (call) => call.method === "from" && call.table === "user_roles",
+        );
+      expect(roleReads()).toHaveLength(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(31000);
+      });
+      expect(roleReads()).toHaveLength(sharedObserver ? 2 : 1);
+    },
+  );
   it("loads the teaching day once it is opened, preserving it across closing and reopening", async () => {
     fake.rpcData.teaching_day = {
       day: "2026-11-24",

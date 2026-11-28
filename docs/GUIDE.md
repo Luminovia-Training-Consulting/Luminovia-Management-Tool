@@ -950,9 +950,11 @@ The dashboard can also show the permission-aware [welcome guide](GUIDE.md#sectio
 
 ## Freshness without extra history queries
 
-The notification preview uses exactly the same actor key and API as the shell. Only the shell runs the 30-second interval; the dashboard observer creates no second polling timer. The room preview also loads neither message history nor an additional three-second interval. Focus and reconnect use normal stale-data revalidation.
+The notification preview uses exactly the same actor key and API as the shell. Only the shell runs the 30-second intervals for notifications and roles. The dashboard observes the shared results. The room preview also loads neither message history nor an additional three-second interval. Focus and reconnect use normal stale-data revalidation.
 
 File and private-calendar queries are limited to five metadata records and have no polling interval. Their keys use the existing `documents` and `events` invalidation prefixes, so own file mutations and calendar changes continue to update the preview. The calendar preview also has a labelled refresh button. Published content or additional notices may appear at the next normal revalidation; the preview does not claim immediate synchronisation of all data.
+
+The finance cards request `dashboard_financial_summary` once per dashboard visit. PostgreSQL selects the existing authorised platform, client or lecturer projection and returns only the card totals in their original currencies. It combines amounts before the REST row limit applies. The detailed finance and client pages still request their own data when opened.
 
 All previews remain in the existing in-memory cache. A failed optional area offers its own retry without hiding other dashboard sections. Retained old preview values are not displayed after an error. Switching accounts uses different actor keys; the existing Auth boundary also clears the cache and resets private local state.
 

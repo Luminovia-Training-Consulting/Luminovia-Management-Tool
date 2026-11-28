@@ -10,6 +10,7 @@ const parseCommissionAccess = rpcResponse("commission_access");
 const parseCommercialAccess = rpcResponse("commercial_access");
 const parseOfferPolicy = rpcResponse("commission_offer_policy");
 const parseSpend = rpcResponse("client_spend_summary");
+const parseDashboardFinance = rpcResponse("dashboard_financial_summary");
 
 const container =
     process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal";
@@ -582,6 +583,43 @@ try {
                     .teachers.some((x) => x.id === lecturer),
             );
             assert.deepEqual(await rows(otherClient, "client_spend_summary"), []);
+            assert.deepEqual(
+                await rows(client, "dashboard_financial_summary"),
+                [...summary].sort((a, b) => a.currency.localeCompare(b.currency)).map(
+                    ({ organisation_id, organisation_name, currency, gross_assigned_amount }) => ({
+                        kind: "client", organisation_id, organisation_name, currency,
+                        amount: gross_assigned_amount, accepted_gross: null,
+                    }),
+                ),
+            );
+            for (const who of [otherClient, management])
+                assert.deepEqual(await rows(who, "dashboard_financial_summary"), []);
+            const report = await rows(owner, "commission_report");
+            const gross = parseDashboardFinance(JSON.stringify(await rows(owner, "dashboard_financial_summary")));
+            assert.deepEqual(gross.map((row) => row.currency), [...new Set(report.map((r) => r.currency))].sort());
+            for (const row of gross) {
+                const known = report.filter((r) => r.currency === row.currency && r.claim_id &&
+                    r.gross_total_amount !== null && r.platform_total_amount !== null);
+                assert.deepEqual(row, {
+                    kind: "platform", currency: row.currency,
+                    amount: known.reduce((sum, r) => sum + Math.round(r.platform_total_amount * 100), 0) / 100,
+                    accepted_gross: known.reduce((sum, r) => sum + Math.round(r.gross_total_amount * 100), 0) / 100,
+                    organisation_id: null, organisation_name: null,
+                });
+            }
+            assert.ok(JSON.stringify(gross).length < JSON.stringify(report).length);
+            for (const who of [senior, lecturer]) {
+                const earnings = await rows(who, "finance_earnings", [false]);
+                const totals = await rows(who, "dashboard_financial_summary");
+                assert.deepEqual(totals.map((row) => row.currency), [...new Set(earnings.map((r) => r.currency))].sort());
+                for (const row of totals)
+                    assert.deepEqual(row, {
+                        kind: "lecturer", currency: row.currency,
+                        amount: earnings.filter((r) => r.currency === row.currency && r.stage !== "review")
+                            .reduce((sum, r) => sum + Math.round(r.total_amount * 100), 0) / 100,
+                        accepted_gross: null, organisation_id: null, organisation_name: null,
+                    });
+            }
             // Business receipts are private; only the reduced activity projection is readable.
             await assert.rejects(
                 actor(management, "select details from public.audit_events"),
@@ -902,6 +940,7 @@ try {
             );
             assert.deepEqual(await rows(client, "client_requests"), []);
             assert.deepEqual(await rows(client, "client_spend_summary"), []);
+            assert.deepEqual(await rows(client, "dashboard_financial_summary"), []);
             await assert.rejects(
                 request(client, org, payload(9)),
                 /Organisation access required/,
@@ -917,6 +956,12 @@ try {
             );
             assert.deepEqual(await rows(client, "client_requests"), []);
             await sql(`update public.profiles set active=false where id='${owner}'`);
+            assert.deepEqual(await rows(owner, "dashboard_financial_summary"), []);
+            for (const role of ["anon", "service_role"])
+                await assert.rejects(
+                    sql(`set role ${role};select * from public.dashboard_financial_summary()`),
+                    /permission denied/,
+                );
             await assert.rejects(
                 rows(owner, "commission_report", [], "aal1"),
                 /Gross finance permission/,

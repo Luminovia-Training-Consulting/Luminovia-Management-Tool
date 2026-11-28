@@ -22,6 +22,7 @@ import {
   peerReadRound,
 } from "./peer-feedback-contract.ts";
 import { currencyCodes } from "../../lib/currencies.ts";
+import { dashboardFinancialSummarySchema } from "../commercial/financial-summary-schema.ts";
 import { administrationAuditPaths } from "./administration-audit-contract.ts";
 import { withPortalHttpAliases } from "./portal-http-contract.ts";
 import { legacyHandoverOperations } from "../jobs/handover-schema.ts";
@@ -1918,6 +1919,14 @@ const nativePaths = {
     "Company contacts see current memberships. finance.gross.read can view all organisations in the spending projection. Totals use original currencies. The teacher list covers confirmed positions and contains only teacher IDs and display names.",
     {},
     z.toJSONSchema(clientSpendSummarySchema),
+  ),
+  "/rest/v1/rpc/dashboard_financial_summary": rpc(
+    "native_dashboard_financial_summary",
+    "Finance",
+    "Read original-currency financial totals for the dashboard",
+    "Returns a single current authority's totals: accepted platform fees for gross-finance actors, confirmed spending for current company memberships or own earnings for active lecturers. Records with no known gross or platform amount contribute no gross revenue. Company totals contain no teacher list. Unsupported roles receive an empty summary.",
+    {},
+    z.toJSONSchema(dashboardFinancialSummarySchema),
   ),
   "/rest/v1/rpc/commercial_access": rpc(
     "native_commercial_access",

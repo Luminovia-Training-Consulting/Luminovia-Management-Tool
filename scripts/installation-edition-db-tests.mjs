@@ -236,6 +236,7 @@ for (const edition of ["customer-self-hosted", "customer-managed"]) {
 
     for (const [path, method] of [
       ["/rpc/commission_report", "POST"],
+      ["/rpc/dashboard_financial_summary", "POST"],
       ["/rpc/accounting_settlement_journal", "POST"],
       ["/rpc/set_company_premium", "POST"],
       ["/rpc/company_course_webhook_subscribe", "POST"],
