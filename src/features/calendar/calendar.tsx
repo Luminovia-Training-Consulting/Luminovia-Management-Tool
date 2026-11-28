@@ -529,38 +529,35 @@ function EventForm({
   );
 }
 
-/** Keep secondary calendar actions in one collapsed group while preserving each control's own state. */
-function CalendarTools({
-  actor,
-  zone,
-  showIcs = true,
-}: {
-  actor: string;
-  zone: string;
-  showIcs?: boolean;
-}) {
+/** Mount secondary actions on first use and retain their state when collapsed. */
+function CalendarTools({ actor, zone }: { actor: string; zone: string }) {
   const { t } = useTranslation();
+  const [used, setUsed] = useState(false);
   return (
-    <details className="panel calendar-tools">
+    <details
+      className="panel calendar-tools"
+      onToggle={(event) => {
+        if (event.target === event.currentTarget && event.currentTarget.open)
+          setUsed(true);
+      }}
+    >
       <summary>{t("calendarTools")}</summary>
-      <div className="calendar-tools-content">
-        <CalendarSubscriptions
-          key={`subscriptions-${actor}`}
-          actor={actor}
-          zone={zone}
-        />
-        {showIcs && (
-          <>
-            <CalendarImport
-              key={`import-${actor}-${zone}`}
-              actor={actor}
-              zone={zone}
-            />
-            <CalendarExport key={actor} actor={actor} zone={zone} />
-          </>
-        )}
-        <OfflineSchedule key={`offline-${actor}`} actor={actor} zone={zone} />
-      </div>
+      {used && (
+        <div className="calendar-tools-content">
+          <CalendarSubscriptions
+            key={`subscriptions-${actor}`}
+            actor={actor}
+            zone={zone}
+          />
+          <CalendarImport
+            key={`import-${actor}-${zone}`}
+            actor={actor}
+            zone={zone}
+          />
+          <CalendarExport key={actor} actor={actor} zone={zone} />
+          <OfflineSchedule key={`offline-${actor}`} actor={actor} zone={zone} />
+        </div>
+      )}
     </details>
   );
 }

@@ -54,6 +54,7 @@ const de = {
     "Das gemeinsame Kontoprofil wird von der Verwaltung gepflegt. Die Kurszuweisungen und die Firmenreferenz kannst du hier bearbeiten.",
   hint: "Eigene Konten, nachvollziehbare Rollen und klar zugeordnete Unternehmen.",
   search: "Konten suchen",
+  searchEmpty: "Keine passenden Konten gefunden.",
   roles: "Rollen bearbeiten",
   ownRoles: "Meine Rollen",
   ownRoleHint:
@@ -179,6 +180,7 @@ const en: typeof de = {
     "Staff manage the shared account profile. You can edit course assignments and the company reference here.",
   hint: "Individual accounts, audited roles and clearly assigned companies.",
   search: "Search accounts",
+  searchEmpty: "No matching accounts found.",
   roles: "Edit roles",
   ownRoles: "My roles",
   ownRoleHint:

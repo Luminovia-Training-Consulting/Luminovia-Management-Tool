@@ -40,6 +40,7 @@ export function CalendarToolbar({
           size="icon"
           aria-label={t("previous")}
           title={t("previous")}
+          disabled={waitingForDate}
           onClick={() => onNavigate("prev")}
         >
           <ChevronLeft aria-hidden="true" />
@@ -47,6 +48,7 @@ export function CalendarToolbar({
         <Button
           type="button"
           variant="secondary"
+          disabled={waitingForDate}
           onClick={() => onNavigate("today")}
         >
           <CalendarDays size={18} aria-hidden="true" />
@@ -58,6 +60,7 @@ export function CalendarToolbar({
           size="icon"
           aria-label={t("next")}
           title={t("next")}
+          disabled={waitingForDate}
           onClick={() => onNavigate("next")}
         >
           <ChevronRight aria-hidden="true" />
@@ -120,6 +123,7 @@ export function CalendarToolbar({
             type="button"
             variant="ghost"
             aria-pressed={view === kind}
+            disabled={waitingForDate}
             onClick={() => onView(kind)}
           >
             {t(kind)}

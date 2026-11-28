@@ -34,7 +34,23 @@ test("individual account roles, scoped invitations and linked status management 
         name: "Konten suchen",
         exact: true,
     });
-    await search.fill(teacher.name);
+    const searchRequests: string[] = [];
+    const recordSearch = (request: {url: () => string}) => {
+        const url = new URL(request.url());
+        const searchTerm = url.searchParams.get("q");
+        if (searchTerm && url.pathname.endsWith("/accounts/v1/users"))
+            searchRequests.push(searchTerm);
+    };
+    page.on("request", recordSearch);
+    const searched = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname.endsWith("/accounts/v1/users")
+            && url.searchParams.get("q") === teacher.name && response.ok();
+    });
+    await search.pressSequentially(teacher.name);
+    await searched;
+    page.off("request", recordSearch);
+    expect(searchRequests).toEqual([teacher.name]);
     await expect(search).toBeFocused();
     // A debounced search can still display other accounts when the action is found.
     const teacherRow = page.getByRole("listitem").filter({

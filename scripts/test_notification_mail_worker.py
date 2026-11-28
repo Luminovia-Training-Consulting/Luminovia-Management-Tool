@@ -642,6 +642,56 @@ class OutboxTests(unittest.TestCase):
         self.assertEqual(rpc.call.call_count, 3)
         sender.assert_not_called()
 
+    def test_interrupted_prepare_response_keeps_processing_the_next_lease(self):
+        next_lease = {"id": TOKEN, "lease_token": IDENTITY}
+        next_delivery = {
+            **DELIVERY,
+            **next_lease,
+            "message_id": f"<luminovia-notification.{TOKEN}@luminovia.org>",
+        }
+        finished = []
+
+        class Outbox(BaseHTTPRequestHandler):
+            def do_POST(self):
+                payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                name = self.path.rsplit("/", 1)[-1]
+                if name == "prepare_notification_email" and payload["p_id"] == IDENTITY:
+                    self.send_response(200)
+                    self.send_header("Transfer-Encoding", "chunked")
+                    self.end_headers()
+                    self.wfile.write(b"8\r\n{")
+                    return
+                if name == "finish_notification_email":
+                    finished.append(payload)
+                body = json.dumps({
+                    "refresh_notification_reminders": 0,
+                    "lease_notification_emails": [LEASE, next_lease],
+                    "prepare_notification_email": next_delivery,
+                    "finish_notification_email": True,
+                }[name]).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                pass
+
+        config = self.config
+        sender = Mock(return_value=("accepted", None))
+        with server_context(ThreadingHTTPServer(("127.0.0.1", 0), Outbox)) as server:
+            config = replace(config, api_url=f"http://127.0.0.1:{server.server_port}")
+            result = worker.run(config, sender=sender)
+        self.assertEqual(result["rpc_errors"], 1)
+        self.assertEqual(result["accepted"], 1)
+        sender.assert_called_once_with(config, next_delivery)
+        self.assertEqual(finished, [{
+            "p_id": TOKEN,
+            "p_lease_token": IDENTITY,
+            "p_outcome": "accepted",
+            "p_error_code": None,
+        }])
+
     def test_finish_failure_after_acceptance_never_resends(self):
         rpc, sender = Mock(), Mock(return_value=("accepted", None))
         rpc.call.side_effect = [0, [LEASE], DELIVERY, worker.RpcError("unavailable")]

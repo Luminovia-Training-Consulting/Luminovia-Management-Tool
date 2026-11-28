@@ -23,6 +23,7 @@ from decimal import Decimal
 from email.message import EmailMessage
 from email.policy import SMTP
 from email.utils import formatdate
+from http.client import HTTPException
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
@@ -187,7 +188,7 @@ class RpcClient:
         except HTTPError as error:
             error.close()
             raise RpcError("rpc_unavailable") from None
-        except (URLError, OSError, ValueError):
+        except (HTTPException, URLError, OSError, ValueError):
             raise RpcError("rpc_unavailable") from None
 
 

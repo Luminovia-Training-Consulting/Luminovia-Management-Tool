@@ -88,10 +88,12 @@ export async function accountRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
   body?: Record<string, unknown>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const { data, error } = await db().functions.invoke(`accounts/v1/${path}`, {
     method,
     ...(body === undefined ? {} : { body }),
+    ...(signal && { signal }),
   });
   if (error) {
     let code = "service_unavailable";
@@ -116,14 +118,17 @@ export const accountListQuery = (
   search: string,
   offset: number,
 ) =>
-  queryOptions({
+  queryOptions<AccountList>({
     queryKey: ["accounts", actor, search, offset],
     // Keep the previous page visible while the same actor changes the search.
     // An actor change must never reuse another person's directory placeholder.
     placeholderData: (previous, query) =>
       query?.queryKey[1] === actor ? previous : undefined,
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       accountRequest<AccountList>(
         `users?q=${encodeURIComponent(search)}&limit=25&offset=${offset}`,
+        "GET",
+        undefined,
+        signal,
       ),
   });

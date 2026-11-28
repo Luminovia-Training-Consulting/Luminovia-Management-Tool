@@ -38,6 +38,24 @@ test("calendar jumps to a civil date, keeps the view and restores keyboard focus
     expect(requestedWindows.personal_events).toHaveLength(1);
     expect(requestedWindows.assignment_sessions).toHaveLength(1);
 
+    const tools = page.locator(".calendar-tools");
+    const toolsToggle = tools.locator("summary").first();
+    await expect(tools.locator("details")).toHaveCount(0);
+    if (page.viewportSize()!.width <= 640) {
+      expect((await toolsToggle.boundingBox())!.height).toBeGreaterThanOrEqual(
+        44,
+      );
+    }
+    await toolsToggle.press("Enter");
+    await expect(
+      tools.locator(".calendar-tools-content > details"),
+    ).toHaveCount(5);
+    await toolsToggle.press("Enter");
+    await expect(tools).not.toHaveAttribute("open");
+    await expect(
+      tools.locator(".calendar-tools-content > details"),
+    ).toHaveCount(5);
+
     const dayView = page
       .getByRole("group", { name: "Kalenderansicht" })
       .getByRole("button", { name: "Tag", exact: true });

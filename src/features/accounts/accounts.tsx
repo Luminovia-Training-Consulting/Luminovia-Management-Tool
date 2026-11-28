@@ -3,7 +3,7 @@
  * using the accounts API; a visible role selector or submitted user ID grants no authority.
  */
 import { Link, useSearchParams } from "react-router-dom";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
@@ -160,7 +160,8 @@ function AccountsDirectory({
   const online = useOnline();
   const cache = useQueryClient();
   const [params] = useSearchParams();
-  const [search, setSearch] = useState(params.get("q") ?? "");
+  const [search, setSearch] = useState((params.get("q") ?? "").slice(0, 120));
+  const [appliedSearch, setAppliedSearch] = useState(search.trim());
   const [openAccount, setOpenAccount] = useState<AccountPerson | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -170,7 +171,19 @@ function AccountsDirectory({
   const [organisationSearch, setOrganisationSearch] = useState("");
   const [placement, setPlacement] = useState(emptyParticipantPlacement);
   const [confirm, setConfirm] = useState(false);
-  const accounts = useQuery(accountListQuery(actorId, search, offset));
+  const filter = search.trim();
+  const searchPending = filter !== appliedSearch;
+  useEffect(() => {
+    if (!searchPending) return;
+    const timer = setTimeout(() => {
+      setAppliedSearch(filter);
+      setOffset(0);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [filter, searchPending]);
+  const accounts = useQuery(accountListQuery(actorId, appliedSearch, offset));
+  const accountPage = accounts.isError ? undefined : accounts.data;
+  const paginationPending = searchPending || accounts.isPlaceholderData;
   const clientAccess = useQuery({
     ...commissionAccessQuery(actorId),
     enabled: canAssign,
@@ -392,9 +405,6 @@ function AccountsDirectory({
       </section>
     );
 
-  if (accounts.isPending) return <Loading />;
-  if (accounts.isError)
-    return <ErrorState retry={() => void accounts.refetch()} />;
   return (
     <div className="section-stack account-directory">
       <section className="panel">
@@ -405,10 +415,7 @@ function AccountsDirectory({
               type="search"
               maxLength={120}
               value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setOffset(0);
-              }}
+              onChange={(event) => setSearch(event.target.value)}
             />
           </Field>
           {canAssign && (
@@ -421,13 +428,23 @@ function AccountsDirectory({
           )}
         </div>
         <p className="account-directory-count">
-          {t("count", { count: accounts.data.total })}
+          {accountPage && t("count", { count: accountPage.total })}
         </p>
       </section>
       <InviteForm allRoles canAssignRoles={canAssign} />
-      <section className="panel">
+      <section
+        className="panel"
+        aria-busy={searchPending || accounts.isFetching}
+      >
+        {accounts.isPending && <Loading />}
+        {accounts.isError && (
+          <ErrorState retry={() => void accounts.refetch()} />
+        )}
+        {accountPage?.items.length === 0 && (
+          <p className="empty-state">{t("searchEmpty")}</p>
+        )}
         <ul className="account-list">
-          {accounts.data.items.map((person) => (
+          {accountPage?.items.map((person) => (
             <li key={person.id}>
               <div>
                 <Button
@@ -499,14 +516,18 @@ function AccountsDirectory({
         <div className="form-actions">
           <Button
             variant="secondary"
-            disabled={offset === 0}
+            disabled={!accountPage || paginationPending || offset === 0}
             onClick={() => setOffset(Math.max(0, offset - 25))}
           >
             {t("previous")}
           </Button>
           <Button
             variant="secondary"
-            disabled={offset + 25 >= accounts.data.total}
+            disabled={
+              !accountPage ||
+              paginationPending ||
+              offset + 25 >= accountPage.total
+            }
             onClick={() => setOffset(offset + 25)}
           >
             {t("next")}
@@ -695,6 +716,7 @@ export function AccountsPage() {
         <Notice>{t("denied")}</Notice>
       ) : (
         <AccountsDirectory
+          key={session!.user.id}
           actorId={session!.user.id}
           canAssign={permissions.data.includes("users.roles.manage")}
           canVerify={permissions.data.includes("qualifications.verify")}

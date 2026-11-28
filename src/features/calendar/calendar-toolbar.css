@@ -465,3 +465,14 @@
 .calendar-utilities .calendar-color-form {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
 }
+
+@media (max-width: 640px) {
+  .calendar-utilities > .panel {
+    padding-block: 5px;
+  }
+
+  .calendar-utilities > .panel > summary {
+    min-block-size: 44px;
+    align-content: center;
+  }
+}

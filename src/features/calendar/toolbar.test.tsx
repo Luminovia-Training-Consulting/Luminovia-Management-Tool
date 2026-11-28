@@ -102,3 +102,33 @@ it("jumps to a civil date by keyboard and restores focus to the date action", as
     "true",
   );
 });
+
+it("disables calendar navigation until the grid has an initial date", async () => {
+  await i18n.changeLanguage("en");
+  const navigate = vi.fn();
+  const changeView = vi.fn();
+  const toolbar = {
+    title: "November 2026",
+    view: "dayGridMonth" as const,
+    onNavigate: navigate,
+    onView: changeView,
+    getDate: () => "2026-11-18",
+    onGoToDate: vi.fn(),
+  };
+  const user = userEvent.setup();
+  const { rerender } = render(<CalendarToolbar {...toolbar} waitingForDate />);
+  const today = screen.getByRole("button", { name: "Today" });
+  const week = screen.getByRole("button", { name: "Week" });
+  for (const button of screen.getAllByRole("button")) {
+    expect(button).toBeDisabled();
+  }
+  await user.click(today);
+  await user.click(week);
+  expect(navigate).not.toHaveBeenCalled();
+  expect(changeView).not.toHaveBeenCalled();
+  rerender(<CalendarToolbar {...toolbar} waitingForDate={false} />);
+  await user.click(today);
+  await user.click(week);
+  expect(navigate).toHaveBeenCalledExactlyOnceWith("today");
+  expect(changeView).toHaveBeenCalledExactlyOnceWith("timeGridWeek");
+});

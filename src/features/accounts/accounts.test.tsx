@@ -293,6 +293,74 @@ describe("Account administration", () => {
       screen.getByText("LV-ABCD-1234-5678-9ABC-DEF0", { exact: true }),
     ).toBeVisible();
   });
+  it("coalesces rapid typing into one directory request and cancels a superseded read", async () => {
+    fake.capabilities = ["users.manage"];
+    const previous = fake.invoke.getMockImplementation()!;
+    let pendingSignal: AbortSignal | undefined;
+    fake.invoke.mockImplementation(
+      (path: string, options?: { signal?: AbortSignal }) => {
+        if (path.includes("q=Anna")) {
+          pendingSignal = options?.signal;
+          return new Promise((resolve) => {
+            options?.signal?.addEventListener("abort", () =>
+              resolve({ data: null, error: new Error("aborted") }),
+            );
+            if (!options?.signal)
+              resolve({ data: null, error: new Error("missing signal") });
+          });
+        }
+        return previous(path);
+      },
+    );
+    const directoryRequests = () =>
+      fake.invoke.mock.calls
+        .map(([path]) => path)
+        .filter((path) => String(path).startsWith("accounts/v1/users?"));
+    page();
+    const input = await screen.findByRole("searchbox", {
+      name: "Konten suchen",
+    });
+    await userEvent.type(input, "Anna");
+    expect(directoryRequests()).toEqual([
+      "accounts/v1/users?q=&limit=25&offset=0",
+    ]);
+    await waitFor(() => expect(pendingSignal).toBeInstanceOf(AbortSignal));
+    await userEvent.clear(input);
+    await userEvent.type(input, "Other");
+    await waitFor(() => expect(pendingSignal?.aborted).toBe(true));
+    expect(directoryRequests()).toEqual([
+      "accounts/v1/users?q=&limit=25&offset=0",
+      "accounts/v1/users?q=Anna&limit=25&offset=0",
+      "accounts/v1/users?q=Other&limit=25&offset=0",
+    ]);
+    expect(input).toHaveFocus();
+  });
+
+  it("keeps the search usable after a failed directory request", async () => {
+    fake.capabilities = ["users.manage"];
+    const previous = fake.invoke.getMockImplementation()!;
+    fake.invoke.mockImplementation((path: string) =>
+      path.includes("q=missing")
+        ? Promise.resolve({ data: null, error: new Error("request failed") })
+        : previous(path),
+    );
+    page();
+    const input = await screen.findByRole("searchbox", {
+      name: "Konten suchen",
+    });
+    await userEvent.type(input, "missing");
+    await screen.findByRole("alert");
+    expect(input).toBeVisible();
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue("missing");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Anna");
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByText("anna@example.invalid")).toBeVisible();
+  });
+
   it("offers only server-approved subordinate roles in editing and invitations", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
     page();
