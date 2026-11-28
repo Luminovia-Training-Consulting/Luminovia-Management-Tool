@@ -40,7 +40,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     );
     await adminLogin(page, manager);
     await page.goto("/admin?create=job");
-    const title = `Fictional capacity UI ${testInfo.project.name}`;
+    const title = `Fictional capacity UI ${testInfo.project.name} ${randomUUID().slice(0, 8)}`;
     await page.getByLabel("Titel", {exact: true}).fill(title);
     await page
         .getByLabel("Unternehmen", {exact: true})
