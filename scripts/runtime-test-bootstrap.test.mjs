@@ -212,9 +212,9 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     assert.ok(
         persistence >= 0 &&
         persistence < bootstrap &&
-        bootstrap < database &&
-        database < template &&
-        template < api,
+        bootstrap < template &&
+        template < database &&
+        database < api,
     );
     assert.equal(seed.file, process.execPath);
     assert.equal(seed.cwd, "/owned-qa/run/source");
@@ -235,6 +235,10 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     assert.match(
         result.calls[template].env.PORTAL_TEST_DB_TEMPLATE,
         /^portal_test_template_[a-f0-9]{8}$/,
+    );
+    assert.equal(
+        result.calls[database].env.PORTAL_TEST_DB_TEMPLATE,
+        result.calls[template].env.PORTAL_TEST_DB_TEMPLATE,
     );
     const cleanupTemplate = result.calls.findIndex(
         (call) =>

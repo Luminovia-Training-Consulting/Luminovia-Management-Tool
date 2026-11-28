@@ -495,19 +495,21 @@ try {
         },
     );
     if (phase.system) {
-        // This entry point runs the complete serial PostgreSQL suite and advisors.
+        // Snapshot migrations once before the serial SQL suites. Without the
+        // template, each full-schema fixture replays every migration and the
+        // complete acceptance stage exceeds its 40-minute CI deadline.
+        env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
+        await step(
+            "Create one isolated migration snapshot for PostgreSQL fixtures",
+            process.execPath,
+            ["scripts/testing/prepare-database-template.mjs"],
+        );
         await step(
             "PostgreSQL, RLS and 50 concurrent claims",
             "npm",
             ["run", "test:db"],
-            {},
+            {PORTAL_TEST_DB_TEMPLATE: env.PORTAL_TEST_DB_TEMPLATE},
             40 * 60 * 1000,
-        );
-        env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
-        await step(
-            "Create one isolated migration snapshot for SQL fixtures",
-            process.execPath,
-            ["scripts/testing/prepare-database-template.mjs"],
         );
         const databaseSuites = readdirSync(join(scratch, "scripts"))
             .filter((name) => name.endsWith("-db-tests.mjs"))
