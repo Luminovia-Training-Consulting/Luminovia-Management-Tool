@@ -18,6 +18,13 @@ import "./question-bank-i18n";
 type Quiz = NonNullable<CourseWorkspace["quiz"]>;
 type Answers = (number | null)[];
 
+function sameAnswers(left: Answers, right: Answers) {
+  return (
+    left.length === right.length &&
+    left.every((answer, index) => answer === right[index])
+  );
+}
+
 /** Start from the server-confirmed revision, or allocate a stable first request ID. */
 function attemptDraft(quiz: Quiz) {
   return (
@@ -45,7 +52,7 @@ export function QuizAttempt({
   const [draft, setDraft] = useState(() => attemptDraft(quiz));
   const [answers, setAnswers] = useState<Answers>(() => draft.answers);
   const canAttempt = quiz.attempts < quiz.max_attempts && !quiz.passed;
-  const dirty = answers !== draft.answers;
+  const dirty = !sameAnswers(answers, draft.answers);
   const workspaceKey = courseWorkspaceKey(actor, course.id);
 
   const save = useMutation({
@@ -74,7 +81,8 @@ export function QuizAttempt({
       cache.setQueryData<CourseWorkspace>(workspaceKey, (current) => {
         if (
           current?.quiz?.version !== quiz.version ||
-          current.quiz.attempts !== quiz.attempts
+          current.quiz.attempts !== quiz.attempts ||
+          (current.quiz.draft?.revision ?? 0) > revision
         )
           return current;
         return { ...current, quiz: { ...current.quiz, draft: accepted } };
@@ -111,11 +119,25 @@ export function QuizAttempt({
     },
   });
   const { mutate: saveDraft, isError: draftError, isPending: saving } = save;
+  const newerDraft =
+    quiz.draft &&
+    (quiz.draft.revision > draft.revision ||
+      quiz.draft.request_id !== draft.request_id)
+      ? quiz.draft
+      : null;
+  const newerAnswersConflict =
+    newerDraft && dirty && !sameAnswers(answers, newerDraft.answers);
+  if (newerDraft && !newerAnswersConflict && !saving) {
+    setDraft(newerDraft);
+    setAnswers(newerDraft.answers);
+  }
   const conflict =
-    typeof save.error === "object" &&
-    save.error !== null &&
-    "code" in save.error &&
-    save.error.code === "PT409";
+    Boolean(newerAnswersConflict) ||
+    (dirty &&
+      typeof save.error === "object" &&
+      save.error !== null &&
+      "code" in save.error &&
+      save.error.code === "PT409");
 
   // Only a settled prior revision may be the base for another write. Debounce
   // within a tab and keep any newer edits while the earlier snapshot finishes.
@@ -126,6 +148,7 @@ export function QuizAttempt({
       !dirty ||
       saving ||
       draftError ||
+      conflict ||
       reload.isPending ||
       attempt.isPending
     )
@@ -136,6 +159,7 @@ export function QuizAttempt({
     answers,
     attempt.isPending,
     canAttempt,
+    conflict,
     dirty,
     draftError,
     online,
@@ -177,13 +201,14 @@ export function QuizAttempt({
                 required
                 name={`quiz-question-${index}`}
                 checked={answers[index] === number}
-                onChange={() =>
+                onChange={() => {
+                  if (!dirty && draftError) save.reset();
                   setAnswers((current) =>
                     current.map((answer, position) =>
                       position === index ? number : answer,
                     ),
-                  )
-                }
+                  );
+                }}
               />
               {option}
             </label>
@@ -208,7 +233,7 @@ export function QuizAttempt({
         <p role="status">{t("quizDraftSaved")}</p>
       )}
       {!online && dirty && <p role="status">{t("quizDraftOffline")}</p>}
-      {draftError && (
+      {(conflict || (draftError && dirty)) && (
         <Notice kind="error">
           {t(conflict ? "quizDraftConflict" : "quizDraftFailure")}
           <Button

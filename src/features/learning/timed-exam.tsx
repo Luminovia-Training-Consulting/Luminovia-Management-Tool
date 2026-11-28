@@ -322,7 +322,7 @@ export function LearnerExam({
   );
   const [prepared, setPrepared] = useState<string>();
   const [receipt, setReceipt] = useState<string>();
-  const [confirm, setConfirm] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
   const refresh = () =>
     client.invalidateQueries({ queryKey: timedExamKey(actor, run) });
   const upload = useMutation({
@@ -348,7 +348,7 @@ export function LearnerExam({
     },
     onSuccess: (submitted) => {
       setReceipt(submitted);
-      setConfirm(false);
+      setConfirmation(null);
       setFile(null);
       return refresh();
     },
@@ -358,6 +358,9 @@ export function LearnerExam({
   const busy = upload.isPending || submit.isPending;
   const deadline = exam.learner_ends_at ?? exam.ends_at;
   const available = online && exam.can_submit && now < Date.parse(deadline);
+  const reviewed =
+    confirmation && confirmation === ready && available && !submitted;
+  if (confirmation && !reviewed && !submit.isPending) setConfirmation(null);
   return (
     <section className="panel learning-panel">
       <h2>{exam.title}</h2>
@@ -406,7 +409,7 @@ export function LearnerExam({
               <Button
                 type="button"
                 disabled={busy}
-                onClick={() => setConfirm(true)}
+                onClick={() => setConfirmation(ready)}
               >
                 {t("submit")}
               </Button>
@@ -416,17 +419,17 @@ export function LearnerExam({
       )}
       {upload.isError && <Notice kind="error">{t("failed")}</Notice>}
       <Dialog
-        open={confirm && Boolean(ready)}
+        open={Boolean(reviewed || (confirmation && submit.isPending))}
         onOpenChange={(open) => {
-          if (!submit.isPending) setConfirm(open);
+          if (!open && !submit.isPending) setConfirmation(null);
         }}
         title={t("submit")}
         description={t("scanReady")}
       >
         <Button
-          disabled={submit.isPending || !online}
+          disabled={submit.isPending || !reviewed}
           onClick={() => {
-            if (ready) submit.mutate(ready);
+            if (reviewed && confirmation) submit.mutate(confirmation);
           }}
         >
           {t(submit.isPending ? "working" : "submit")}

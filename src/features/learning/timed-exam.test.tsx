@@ -262,3 +262,76 @@ it("shows the published percentage, pass status and cross-course average", async
   expect(screen.getByText(/82%.*Passed/)).toBeVisible();
   expect(screen.getByText(/69%.*Did not pass/)).toBeVisible();
 });
+
+it.each(["deadline", "replacement"] as const)(
+  "invalidates an open exam confirmation after %s",
+  async (reason) => {
+    await i18n.changeLanguage("en");
+    const now = Date.now();
+    const ends = now + 60_000;
+    const replacement = "d3d92cee-8d9e-4345-bcb5-95bcd72a9ea1";
+    const exam: TimedExam = {
+      title: "Fictional exam",
+      visible_from: new Date(now - 60_000).toISOString(),
+      starts_at: new Date(now - 30_000).toISOString(),
+      ends_at: new Date(ends).toISOString(),
+      pass_percent: 60,
+      version: 1,
+      required: true,
+      published: false,
+      open: true,
+      grading_open: false,
+      can_submit: true,
+      can_grade: false,
+      submitted_at: null,
+      draft: { version_id: version, name: "reviewed.pdf" },
+      rows: [],
+    };
+    const view = (snapshot: TimedExam, currentTime: number) => (
+      <QueryClientProvider client={client}>
+        <LearnerExam
+          actor={actor}
+          run={run}
+          zone="UTC"
+          exam={snapshot}
+          now={currentTime}
+        />
+      </QueryClientProvider>
+    );
+    const rendered = render(view(exam, now));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Submit exam" }));
+    expect(screen.getByRole("dialog")).toBeVisible();
+
+    if (reason === "deadline") {
+      rendered.rerender(view(exam, ends));
+      expect(
+        screen.queryByRole("button", { name: "Submit exam" }),
+      ).not.toBeInTheDocument();
+    } else {
+      rendered.rerender(
+        view(
+          { ...exam, draft: { version_id: replacement, name: "new.pdf" } },
+          now,
+        ),
+      );
+    }
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(rpc).not.toHaveBeenCalled();
+
+    if (reason === "replacement") {
+      rpc.mockResolvedValue({ data: new Date(now).toISOString(), error: null });
+      await user.click(screen.getByRole("button", { name: "Submit exam" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Submit exam",
+        }),
+      );
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("submit_course_exam", {
+        p_run_id: run,
+        p_version_id: replacement,
+      });
+      expect(await screen.findByText(/^Submitted on /)).toBeVisible();
+    }
+  },
+);
