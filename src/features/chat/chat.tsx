@@ -144,6 +144,7 @@ function ChatDirectory({ actor }: { actor: string }) {
   const directoryHeading = useRef<HTMLHeadingElement>(null);
   const threadHeading = useRef<HTMLHeadingElement>(null);
   const roomTrigger = useRef<HTMLButtonElement | null>(null);
+  const contactNavigation = useRef<symbol | null>(null);
   const restoreDirectoryFocus = useRef(false);
   const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
   const previousRooms = useRef(new Set<string>());
@@ -162,7 +163,9 @@ function ChatDirectory({ actor }: { actor: string }) {
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
     ) ?? false;
   const selectRoom = (room: string | null, trigger?: HTMLButtonElement) => {
+    contactNavigation.current = null;
     const next = new URLSearchParams(params);
+    next.delete("contact");
     next.delete("message");
     if (room) {
       next.set("room", room);
@@ -202,15 +205,24 @@ function ChatDirectory({ actor }: { actor: string }) {
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data as string;
     },
-    onSuccess: async (id) => {
-      await client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
-      setParams({ room: id }, { replace: true });
-    },
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
   useEffect(() => {
-    if (contact && /^[0-9a-f-]{36}$/i.test(contact) && online)
-      openContactDm(contact);
-  }, [contact, online, openContactDm]);
+    if (!contact || !/^[0-9a-f-]{36}$/i.test(contact) || !online) return;
+    const opening = Symbol();
+    contactNavigation.current = opening;
+    openContactDm(contact, {
+      onSuccess: (id) => {
+        // A completed request may refresh the catalogue after leaving its link.
+        if (contactNavigation.current === opening)
+          setParams({ room: id }, { replace: true });
+      },
+    });
+    return () => {
+      contactNavigation.current = null;
+    };
+  }, [contact, online, openContactDm, setParams]);
   useEffect(() => {
     if (!rooms.data) return;
     const current = new Set(rooms.data.map((room) => room.id));
@@ -381,7 +393,7 @@ function ChatDirectory({ actor }: { actor: string }) {
     <section
       className={`chat-page ${selectedId ? "chat-page-has-selection" : ""}`}
     >
-      {contactFailed && <Notice kind="error">{t("error")}</Notice>}
+      {contact && contactFailed && <Notice kind="error">{t("error")}</Notice>}
       <header className="chat-page-heading">
         <h1>{t("title")}</h1>
         <div className="chat-page-actions">

@@ -1,6 +1,6 @@
 /** Check communication navigation and legacy links against the existing knowledge permissions. */
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   roles: ["client"] as string[],
   rooms: [] as ChatRoom[],
   facets: [] as ChatDirectoryFacet[],
+  openContact: vi.fn(),
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: state.actor } } }),
@@ -29,10 +30,12 @@ vi.mock("../../lib/online", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: async (name: string) =>
-      name === "knowledge_access"
-        ? { data: { can_author: state.canAuthor }, error: null }
-        : { data: [], error: null },
+    rpc: async (name: string) => {
+      if (name === "knowledge_access")
+        return { data: { can_author: state.canAuthor }, error: null };
+      if (name === "create_dm") return await state.openContact();
+      return { data: [], error: null };
+    },
   }),
 }));
 vi.mock("../../lib/queries", () => ({
@@ -102,6 +105,7 @@ afterEach(() => {
   clients.length = 0;
   state.rooms = [];
   state.facets = [];
+  state.openContact.mockReset();
   vi.clearAllMocks();
 });
 
@@ -126,6 +130,7 @@ function renderPage(path = "/chats") {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 it("shows the canonical forum link only to actors allowed by knowledge_access", async () => {
@@ -384,3 +389,54 @@ it("keeps independent drafts when switching between two rooms", async () => {
   );
   await i18n.changeLanguage("de");
 });
+
+it.each([true, false])(
+  "opening a direct message respects later explicit navigation: %s",
+  async (chooseRoom) => {
+    await i18n.changeLanguage("en");
+    state.canAuthor = true;
+    state.rooms = [
+      { id: "linked-room", title: "Linked conversation" },
+      { id: "chosen-room", title: "Chosen conversation" },
+    ].map(({ id, title }) => ({
+      id,
+      title,
+      kind: "dm",
+      job_id: null,
+      owner_id: null,
+      unread_count: 0,
+      muted: false,
+      last_message_at: null,
+    }));
+    let complete!: (result: { data: string; error: null }) => void;
+    state.openContact.mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const client = renderPage(
+      "/chats?contact=47000000-0000-4000-8000-000000000001",
+    );
+    await waitFor(() => expect(state.openContact).toHaveBeenCalledTimes(1));
+    if (chooseRoom) {
+      await userEvent
+        .setup()
+        .click(await screen.findByText("Chosen conversation", { exact: true }));
+      await screen.findByRole("heading", { name: "Open: Chosen conversation" });
+    }
+    await act(async () => complete({ data: "linked-room", error: null }));
+    await waitFor(() =>
+      expect(
+        client
+          .getMutationCache()
+          .getAll()
+          .map(({ state }) => state.status),
+      ).toEqual(["success"]),
+    );
+    const expected = chooseRoom ? "Chosen conversation" : "Linked conversation";
+    expect(
+      await screen.findByRole("heading", { name: `Open: ${expected}` }),
+    ).toBeVisible();
+    expect(state.openContact).toHaveBeenCalledTimes(1);
+  },
+);
