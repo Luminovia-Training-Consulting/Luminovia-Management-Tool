@@ -484,12 +484,14 @@ function ProgramManager({
   organisations,
   candidates,
   refresh,
+  refreshing,
 }: {
   actor: string;
   program: LearningProgramDetail;
   candidates: (PickerOption & { reference: string })[];
   organisations: PickerOption[];
   refresh: () => void;
+  refreshing: boolean;
 }) {
   const { t } = useTranslation("learningPrograms");
   const [editing, setEditing] = useState(false);
@@ -646,6 +648,7 @@ function ProgramManager({
               <Button
                 type="button"
                 variant="secondary"
+                disabled={refreshing}
                 onClick={() => {
                   setPublishedCurriculum(false);
                   setEditingCurriculum(true);
@@ -975,6 +978,7 @@ export function LearningPrograms({ actor }: { actor: string }) {
             candidates={candidates}
             organisations={organisations}
             refresh={refresh}
+            refreshing={query.fetchStatus !== "idle"}
           />
         )}
         {detail.progress && (

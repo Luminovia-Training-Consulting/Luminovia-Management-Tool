@@ -21,6 +21,8 @@ const firstReceipt = "b585a406-3b4d-421e-8a13-817655fc466b";
 const secondReceipt = "73b010dc-3e98-4f37-a0e4-a9d3e57ced12";
 const fixture = vi.hoisted(() => ({
   detail: undefined as LearningProgramDetail | undefined,
+  detailRead: undefined as Promise<void> | undefined,
+  configure: vi.fn(),
   start: vi.fn(),
   save: vi.fn(),
   gate: vi.fn(),
@@ -30,17 +32,20 @@ vi.mock("./learning-program-api", () => ({
   learningProgramsKey: (actor: string) => ["programmes", actor],
   learningProgramsQuery: (actor: string, args: object) => ({
     queryKey: ["programmes", actor, args],
-    queryFn: async () => ({
-      programs: [],
-      detail: fixture.detail ?? null,
-      organisations: [{ id: organisation, name: "Fictional Academy" }],
-      courses: [
-        { id: first, title: "Foundation", starts_at: null },
-        { id: second, title: "Workshop", starts_at: null },
-      ],
-      candidates: [],
-      writable: true,
-    }),
+    queryFn: async () => {
+      await fixture.detailRead;
+      return {
+        programs: [],
+        detail: fixture.detail ?? null,
+        organisations: [{ id: organisation, name: "Fictional Academy" }],
+        courses: [
+          { id: first, title: "Foundation", starts_at: null },
+          { id: second, title: "Workshop", starts_at: null },
+        ],
+        candidates: [],
+        writable: true,
+      };
+    },
   }),
   learningProgramClassProgressQuery: (actor: string, program: string) => ({
     queryKey: ["programmes", actor, "class-progress", program],
@@ -63,6 +68,7 @@ vi.mock("./learning-program-api", () => ({
       },
     ],
   }),
+  configureLearningProgramCurriculum: fixture.configure,
   startLearningProgramCourse: fixture.start,
   placeLearningProgramParticipant: fixture.place,
   saveLearningProgram: fixture.save,
@@ -125,6 +131,8 @@ const learner = (): LearningProgramDetail => ({
 beforeEach(async () => {
   vi.clearAllMocks();
   fixture.detail = undefined;
+  fixture.detailRead = undefined;
+  fixture.configure.mockReset();
   fixture.start.mockResolvedValue(undefined);
   fixture.save.mockResolvedValue(id);
   fixture.place.mockResolvedValue(undefined);
@@ -166,6 +174,64 @@ it("saves an ordered programme of distinct selected course runs", async () => {
       expect.anything(),
     ),
   );
+});
+
+it("waits for the published version before allowing the curriculum to reopen", async () => {
+  const manage = {
+    ...learner(),
+    manage: true,
+    can_write: true,
+    can_edit: true,
+    progress: null,
+    steps: [
+      { course_id: first, title: "Foundation" },
+      { course_id: second, title: "Workshop" },
+    ],
+  };
+  fixture.detail = manage;
+  let releaseRefresh!: () => void;
+  fixture.configure.mockImplementationOnce(async () => {
+    fixture.detailRead = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+  });
+  mount(id);
+  const edit = () =>
+    screen.getByRole("button", { name: "Lehrplan bearbeiten" });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Lehrplan bearbeiten" }),
+  );
+  fireEvent.change(await screen.findByLabelText("Lernziele des Programms"), {
+    target: { value: "Published programme objectives" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Lehrplan veröffentlichen" }),
+  );
+
+  await screen.findByText("Die Lehrplanfassung wurde veröffentlicht.");
+  expect(edit()).toBeDisabled();
+  fixture.detail = {
+    ...manage,
+    version: 2,
+    curriculum: {
+      revision: 1,
+      overview: "Published programme objectives",
+      elective_count: 0,
+      steps: {
+        [first]: { required: true, objectives: "", remediation: "" },
+        [second]: { required: true, objectives: "", remediation: "" },
+      },
+    },
+  };
+  releaseRefresh();
+  await waitFor(() => expect(edit()).toBeEnabled());
+  fireEvent.click(edit());
+  expect(await screen.findByLabelText("Lernziele des Programms")).toHaveValue(
+    "Published programme objectives",
+  );
+  expect(
+    screen.getByRole("button", { name: "Lehrplan zurücksetzen" }),
+  ).toBeEnabled();
 });
 
 it("shows locked prerequisites without exposing a link or completion proof", async () => {
