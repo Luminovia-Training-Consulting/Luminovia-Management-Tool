@@ -30,18 +30,9 @@
 }
 
 .support-ticket-card {
-  border-left: 5px solid #b8edd9;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
   gap: 20px;
-}
-
-.support-ticket-card:nth-child(3n + 2) {
-  border-left-color: #ffc68e;
-}
-
-.support-ticket-card:nth-child(3n) {
-  border-left-color: #7d88d8;
 }
 
 .support-ticket-card h2 {
@@ -200,4 +191,32 @@
 
 .support-filters > .field {
   margin: 0;
+}
+
+.support-related-disclosure {
+  margin-block: 1rem;
+}
+
+.support-related-disclosure > summary {
+  width: fit-content;
+  min-height: 44px;
+  padding-block: 0.55rem;
+  cursor: pointer;
+}
+
+.support-empty > p,
+.support-selection > p {
+  margin: 0 0 0.5rem;
+}
+
+.support-selection {
+  margin-block-start: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.support-selection .support-actions {
+  margin-block-start: 0.75rem;
 }

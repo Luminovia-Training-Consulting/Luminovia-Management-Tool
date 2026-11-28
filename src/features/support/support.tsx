@@ -1,6 +1,5 @@
 /** Ticket ownership and current support capability govern replies, internal notes and dedicated scanned attachments; support never grants unrelated private-resource access. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useRequestKey } from "../../lib/request-key";
-import { installationBrand } from "../../lib/installation-brand";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -120,7 +119,6 @@ function NewTicket({
         create.mutate();
       }}
     >
-      <p className="muted">{t("privacy")}</p>
       <Field
         id="support-title"
         label={t("titleLabel")}
@@ -170,12 +168,21 @@ function NewTicket({
           }
         />
       </Field>
-      <RelatedFields
-        context={context}
-        values={values}
-        disabled={create.isPending}
-        onChange={(key, value) => setValues({ ...values, [key]: value })}
-      />
+      {Boolean(
+        context.courses.length ||
+        context.claims.length ||
+        context.organisations.length,
+      ) && (
+        <details className="support-related-disclosure">
+          <summary>{t("related")}</summary>
+          <RelatedFields
+            context={context}
+            values={values}
+            disabled={create.isPending}
+            onChange={(key, value) => setValues({ ...values, [key]: value })}
+          />
+        </details>
+      )}
       <Button
         disabled={
           !online ||
@@ -207,15 +214,25 @@ function TicketList({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [filter, setFilter] = useState({ search: "", status: "" });
-  const [cursor, setCursor] = useState<{ at: string; id: string } | null>(null);
+  const [pages, setPages] = useState<{ at: string; id: string }[]>([]);
+  const cursor = pages.at(-1) ?? null;
+  const searchField = useRef<HTMLInputElement>(null);
   const [creating, setCreating] = useState(false);
   const tickets = useQuery(
     supportTicketsQuery(actor, filter.search, filter.status, cursor),
   );
+  const filtered = Boolean(filter.search || filter.status);
+  function resetFilters() {
+    setSearch("");
+    setStatus("");
+    setFilter({ search: "", status: "" });
+    setPages([]);
+    searchField.current?.focus();
+  }
+
   return (
     <>
       <PageHeading
-        eyebrow={installationBrand.name}
         title={t("title")}
         description={t("description")}
         action={
@@ -228,12 +245,17 @@ function TicketList({
         className="panel support-filters"
         onSubmit={(event) => {
           event.preventDefault();
-          setCursor(null);
-          setFilter({ search, status });
+          const term = search.trim();
+          if (!cursor && filter.search === term && filter.status === status)
+            void tickets.refetch();
+          setPages([]);
+          setFilter({ search: term, status });
         }}
       >
         <Field id="support-search" label={t("search")}>
           <input
+            ref={searchField}
+            type="search"
             value={search}
             maxLength={200}
             onChange={(event) => setSearch(event.target.value)}
@@ -260,7 +282,10 @@ function TicketList({
             type="button"
             variant="secondary"
             disabled={!online || tickets.isFetching}
-            onClick={() => void tickets.refetch()}
+            onClick={() => {
+              if (cursor) setPages([]);
+              else void tickets.refetch();
+            }}
           >
             {t("refresh")}
           </Button>
@@ -298,22 +323,43 @@ function TicketList({
               </li>
             ))}
           </ul>
-          {!tickets.data.items.length && <p className="panel">{t("empty")}</p>}
+          {!tickets.data.items.length && (
+            <div className="panel support-empty">
+              <p role="status">
+                {t(cursor ? "emptyPage" : filtered ? "empty" : "emptyInbox")}
+              </p>
+              {filtered && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={resetFilters}
+                >
+                  {t("clearFilters")}
+                </Button>
+              )}
+            </div>
+          )}
           {(cursor || tickets.data.has_more) && (
             <div className="support-actions">
               <Button
                 variant="secondary"
                 disabled={!cursor || tickets.isFetching || !online}
-                onClick={() => setCursor(null)}
+                onClick={() => setPages((previous) => previous.slice(0, -1))}
               >
-                {t("first")}
+                {t("newer")}
               </Button>
               <Button
                 variant="secondary"
                 disabled={
-                  !tickets.data.has_more || tickets.isFetching || !online
+                  !tickets.data.next_cursor ||
+                  !tickets.data.has_more ||
+                  tickets.isFetching ||
+                  !online
                 }
-                onClick={() => setCursor(tickets.data.next_cursor)}
+                onClick={() => {
+                  const next = tickets.data.next_cursor;
+                  if (next) setPages([...pages, next]);
+                }}
               >
                 {t("older")}
               </Button>
@@ -425,9 +471,6 @@ function TicketActionForm({
     >
       {(action === "reply" || action === "internal_note") && (
         <>
-          <p className="muted">
-            {t(action === "internal_note" ? "internalHint" : "privacy")}
-          </p>
           <Field id="support-message" label={t("body")}>
             <textarea
               required
@@ -545,7 +588,9 @@ function SupportUpload({
   const { t } = useTranslation("support");
   const online = useOnline();
   const input = useRef<HTMLInputElement>(null);
+  const chooseFile = useRef<HTMLButtonElement>(null);
   const [internal, setInternal] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const retry = useRef<{
     signature: string;
@@ -593,6 +638,7 @@ function SupportUpload({
     },
     onSuccess: async () => {
       retry.current = null;
+      setFile(null);
       setProgress(0);
       await onDone();
     },
@@ -608,7 +654,7 @@ function SupportUpload({
             disabled={upload.isPending}
             onChange={(event) => setInternal(event.target.checked)}
           />
-          {t("internal")}
+          {t("internalOnly")}
         </label>
       )}
       <input
@@ -616,23 +662,58 @@ function SupportUpload({
         type="file"
         hidden
         accept={acceptedFiles}
-        aria-label={t("attachment")}
+        aria-label={t("chooseAttachment")}
         disabled={!online || upload.isPending}
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
-          if (file) upload.mutate(file);
+          if (file) {
+            retry.current = null;
+            upload.reset();
+            setProgress(0);
+            setFile(file);
+          }
         }}
       />
       <Button
         variant="secondary"
         type="button"
         disabled={!online || upload.isPending}
+        ref={chooseFile}
         onClick={() => input.current?.click()}
       >
         <Upload size={18} aria-hidden="true" />
-        {t("attachment")}
+        {t("chooseAttachment")}
       </Button>
+      {file && (
+        <div className="support-selection">
+          <p>
+            <strong>{file.name}</strong>
+          </p>
+          <p>{t(internal ? "internalAttachment" : "sharedAttachment")}</p>
+          <div className="support-actions">
+            <Button
+              disabled={!online || upload.isPending}
+              onClick={() => upload.mutate(file)}
+            >
+              {t("attachment")}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={upload.isPending}
+              onClick={() => {
+                setFile(null);
+                retry.current = null;
+                upload.reset();
+                setProgress(0);
+                chooseFile.current?.focus();
+              }}
+            >
+              {t("removeAttachment")}
+            </Button>
+          </div>
+        </div>
+      )}
       {upload.isPending && (
         <p role="status">
           {t("uploadPending")} {Math.round(progress)}%

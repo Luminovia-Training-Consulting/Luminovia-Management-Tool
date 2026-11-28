@@ -2042,6 +2042,9 @@ Ticket creation and updates hold the current caller profile while waiting for re
 ## Access and lifecycle
 
 Every active signed-in account can open and search its own tickets at `/support`.
+Use **Ältere Tickets / Older tickets** and **Neuere Tickets / Newer tickets**
+to move between pages. If a search returns no matches, **Filter zurücksetzen /
+Clear filters** returns to the unfiltered list.
 Only the explicit `support.manage` capability with current MFA permits reading
 other people's tickets, assigning support staff, choosing priority, adding
 restricted notes or changing workflow status. The migration initially assigns
@@ -2070,7 +2073,9 @@ grant access to the underlying record; later projections recheck access.
 Tickets, messages, events and request ledgers live in RLS-enabled private tables
 without browser table privileges. Public functions are invoker wrappers around
 reviewed private routines with an empty search path and current actor checks.
-Internal notes and their history are removed on the server from requester
+In the ticket detail, **Datei auswählen / Choose file** displays the filename
+and who can see it. Remove the selection or confirm the upload after reviewing
+that information. Internal notes and their history are removed on the server from requester
 projections. They do not notify the requester. Staff-capability loss immediately
 redacts retained staff UI projections while detailed permission checks refresh.
 

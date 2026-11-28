@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { SupportDeskPage } from "./support";
+import { uploadDocument } from "../files/api";
 import { newTicketSchema, supportError } from "./api";
 
 const state = vi.hoisted(() => ({
@@ -272,12 +273,113 @@ describe("connected private support desk", () => {
       screen.getByRole("button", { name: "Antwort senden" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Geprüften Anhang hochladen" }),
+      screen.getByRole("button", { name: "Datei auswählen" }),
     ).toBeDisabled();
     expect(
       state.rpc.mock.calls.some(([name]) => name === "update_support_ticket"),
     ).toBe(false);
   });
+  it("distinguishes no tickets from no matches and puts focus back on the cleared search", async () => {
+    mount("/support");
+    expect(
+      await screen.findByText("Hier sind noch keine Supporttickets."),
+    ).toBeVisible();
+    const user = userEvent.setup();
+    const search = screen.getByRole("searchbox");
+    await user.type(search, "Fictional outage");
+    await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+    expect(
+      await screen.findByText("Keine Tickets passen zu deiner Suche."),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Filter zurücksetzen" }),
+    );
+    expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
+    expect(
+      await screen.findByText("Hier sind noch keine Supporttickets."),
+    ).toBeVisible();
+  });
+
+  it("returns to the previous cursor instead of jumping to the first page", async () => {
+    const ids = [
+      id,
+      "22222222-2222-4222-8222-222222222223",
+      "22222222-2222-4222-8222-222222222224",
+    ];
+    state.rpc.mockImplementation((name, params) => {
+      if (name !== "support_tickets") return response(activeContext);
+      const page = ids.indexOf(params.p_before_id) + 1;
+      return response({
+        items: [
+          { ...ticket, id: ids[page], title: `Fictional page ${page + 1}` },
+        ],
+        has_more: page < 2,
+        next_cursor: page < 2 ? { id: ids[page], at: ticket.updated_at } : null,
+      });
+    });
+    mount("/support");
+    const user = userEvent.setup();
+    for (const page of [1, 2]) {
+      expect(
+        await screen.findByRole("link", { name: `Fictional page ${page}` }),
+      ).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "Ältere Tickets" }));
+    }
+    expect(
+      await screen.findByRole("link", { name: "Fictional page 3" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Neuere Tickets" }));
+    expect(
+      await screen.findByRole("link", { name: "Fictional page 2" }),
+    ).toBeVisible();
+  });
+
+  it("lets staff review the file and audience before starting a scoped upload", async () => {
+    activeContext = { ...context, can_manage: true };
+    activeTicket = { ...ticket, can_manage: true };
+    const upload = vi.mocked(uploadDocument);
+    upload.mockReset();
+    upload.mockRejectedValueOnce(new Error("Fictional failure"));
+    mount();
+    await screen.findByRole("heading", { name: ticket.title });
+    const user = userEvent.setup();
+    const chooser = screen.getByLabelText("Datei auswählen", {
+      selector: "input",
+    });
+    const file = new File(["Fictional trace"], "trace.txt", {
+      type: "text/plain",
+    });
+    await user.upload(chooser, file);
+    expect(screen.getByText(file.name)).toBeVisible();
+    expect(
+      screen.getByText(
+        "Sichtbar für die anfragende Person und berechtigtes Supportpersonal",
+      ),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("checkbox", { name: "Nur intern anhängen" }),
+    );
+    expect(
+      screen.getByText("Nur für berechtigtes Supportpersonal sichtbar"),
+    ).toBeVisible();
+    expect(upload).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Dateiauswahl entfernen" }),
+    );
+    expect(screen.queryByText(file.name)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Datei auswählen" }),
+    ).toHaveFocus();
+    await user.upload(chooser, file);
+    await user.click(
+      screen.getByRole("button", { name: "Geprüften Anhang hochladen" }),
+    );
+    await screen.findByText(/Der Anhang wurde nicht bestätigt/);
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(file.name)).toBeVisible();
+  });
+
   it("validates payload types and reports conflicts without treating denials as successes", () => {
     const base = {
       title: "  fictional  ",

@@ -47,6 +47,13 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
         try {
             await login(page, requester.email);
             await page.goto("/support");
+            await expect(page.getByText("Hier sind noch keine Supporttickets.", {exact: true})).toBeVisible();
+            const search = page.getByRole("searchbox", {name: "Betreff und Beschreibung durchsuchen", exact: true});
+            await search.fill("Fictional missing ticket");
+            await page.getByRole("button", {name: "Filter anwenden", exact: true}).click();
+            await expect(page.getByText("Keine Tickets passen zu deiner Suche.", {exact: true})).toBeVisible();
+            await page.getByRole("button", {name: "Filter zurücksetzen", exact: true}).click();
+            await expect(search).toHaveValue("");
             await page
                 .getByRole("button", {name: "Supportticket erstellen", exact: true})
                 .click();
@@ -63,6 +70,16 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
                 page.getByRole("heading", {name: title, exact: true}),
             ).toBeVisible();
             const path = new URL(page.url()).pathname;
+            await page.locator('input[type="file"][aria-label="Datei auswählen"]').setInputFiles({
+                name: "fictional-trace.txt",
+                mimeType: "text/plain",
+                buffer: Buffer.from("Fictional support trace"),
+            });
+            await expect(page.getByText("fictional-trace.txt", {exact: true})).toBeVisible();
+            await expect(page.getByText("Sichtbar für die anfragende Person und berechtigtes Supportpersonal", {exact: true})).toBeVisible();
+            await page.getByRole("button", {name: "Dateiauswahl entfernen", exact: true}).click();
+            await expect(page.getByText("fictional-trace.txt", {exact: true})).toHaveCount(0);
+
             await page
                 .getByRole("button", {name: "Antwort senden", exact: true})
                 .click();
