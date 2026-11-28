@@ -183,6 +183,26 @@ test("lesson library copies a published lesson into an independent destination d
         (await read(destination)).draft_content?.modules[0]?.lessons[0]?.title,
     )
     .toBe("Edited destination lesson");
+  const pendingTitle = `Edited during a disconnect ${suffix}`;
+  const savePath = "**/rest/v1/rpc/course_content_action";
+  await page.route(savePath, (route) => route.abort());
+  try {
+    const lessonTitleField = page.getByLabel("Lektionstitel", { exact: true });
+    await lessonTitleField.fill(pendingTitle);
+    await page.context().setOffline(true);
+    await expect(lessonTitleField).toHaveCount(0);
+    expect((await read(destination)).draft_content.modules[0].lessons[0].title)
+      .toBe("Edited destination lesson");
+  } finally {
+    await page.unroute(savePath);
+    await page.context().setOffline(false);
+  }
+  await expect
+    .poll(
+      async () =>
+        (await read(destination)).draft_content?.modules[0]?.lessons[0]?.title,
+    )
+    .toBe(pendingTitle);
   expect((await read(source)).published_content).toEqual(originalPublication);
 });
 
