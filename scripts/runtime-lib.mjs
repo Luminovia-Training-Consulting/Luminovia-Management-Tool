@@ -257,17 +257,19 @@ export function localUrl(value, label = "URL") {
 /** Waits within a deadline for the required actual HTTP status, not merely a started process. */
 export async function waitForHttp(
     url,
-    {timeoutMs = 45000, status = 200} = {},
+    {timeoutMs = 45000, status = 200, signal} = {},
 ) {
     const target = localUrl(url, "Readiness URL");
     const deadline = performance.now() + timeoutMs;
     while (true) {
+        signal?.throwIfAborted();
         const remaining = Math.floor(deadline - performance.now());
         if (remaining <= 0) break;
         try {
+            const timeout = AbortSignal.timeout(Math.min(remaining, 2000));
             const response = await fetch(target, {
                 redirect: "manual",
-                signal: AbortSignal.timeout(Math.min(remaining, 2000)),
+                signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
             });
             // Readiness uses only the status. Release an unread response body
             // so an incomplete transfer cannot hold a connection.
@@ -278,7 +280,7 @@ export async function waitForHttp(
         }
         const pause = Math.floor(deadline - performance.now());
         if (pause <= 0) break;
-        await delay(Math.min(pause, 500));
+        await delay(Math.min(pause, 500), undefined, {signal});
     }
     throw new Error(
         `Local service did not become ready at ${target.origin}.`,

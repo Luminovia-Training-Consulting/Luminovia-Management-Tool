@@ -25,7 +25,10 @@ let stackTouched = false;
 let scannerTouched = false;
 let migrations;
 let network;
-const children = [];
+const children = new Set();
+const startup = new AbortController();
+const startupFinished = Promise.withResolvers();
+const signal = startup.signal;
 /** Binds every state record to supervisor PID, session and startup time. */
 const state = (extra) =>
     writeState({
@@ -43,6 +46,7 @@ const state = (extra) =>
 
 /** Persists the current startup stage so CLI status and private diagnostics show the same progress. */
 function stage(message) {
+    signal.throwIfAborted();
     log(message + "\n");
     state({message});
 }
@@ -51,15 +55,25 @@ function stage(message) {
 async function stop(exitCode = 0, failureMessage) {
     if (stopping) return;
     stopping = true;
+    startup.abort();
     phase = "stopping";
     state({message: "Stopping local services while preserving data."});
-    for (const child of children) {
-        try {
-            child.kill("SIGTERM");
-        } catch {
-            /* exited */
-        }
-    }
+    const closing = [...children].map(({pid, closed}) => {
+        const kill = (signal) => {
+            if (!pid) return;
+            try {
+                process.kill(-pid, signal);
+            } catch {
+                /* exited */
+            }
+        };
+        kill("SIGTERM");
+        const force = setTimeout(() => kill("SIGKILL"), 5000);
+        return closed.finally(() => clearTimeout(force));
+    });
+    // Startup commands can otherwise recreate services while Docker cleanup runs.
+    await startupFinished.promise;
+    await Promise.all(closing);
     try {
         if (scannerTouched && existsSync(join(root, "scripts/local-scanner.mjs")))
             await command(process.execPath, ["scripts/local-scanner.mjs", "stop"], {
@@ -106,8 +120,14 @@ function background(file, args, env) {
         cwd: root,
         env,
         stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
     });
-    children.push(child);
+    const worker = {
+        pid: child.pid,
+        closed: new Promise((resolve) => child.once("close", resolve)),
+    };
+    children.add(worker);
+    void worker.closed.then(() => children.delete(worker));
     child.stdout.on("data", (data) => log(data.toString()));
     child.stderr.on("data", (data) => log(data.toString()));
     child.on("error", (error) => {
@@ -138,11 +158,13 @@ try {
             await command(process.execPath, ["scripts/local-scanner.mjs", "stop"], {
                 quiet: true,
                 log,
+                signal,
             });
         await supabase(["stop", "--project-id", config.id], {
             quiet: true,
             log,
             timeoutMs: 120000,
+            signal,
         });
         network = await ensureLoopbackNetwork(config.id);
     }
@@ -155,19 +177,20 @@ try {
             "--exclude",
             "studio,postgres-meta,edge-runtime,logflare,vector,imgproxy,supavisor",
         ],
-        {quiet: true, log, timeoutMs: 300000},
+        {quiet: true, log, timeoutMs: 300000, signal},
     );
     await verifyLoopbackBindings(config.id);
     stage("Applying new local migrations without resetting data …");
-    await supabase(["db", "push", "--yes"], {quiet: true, log});
+    await supabase(["db", "push", "--yes"], {quiet: true, log, signal});
     await command("docker", [
         "exec", `supabase_db_${config.id}`, "psql", "-X", "-qAt", "-U", "supabase_admin",
         "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
         "select private.ensure_administration_activity_schedule(); select private.ensure_course_curriculum_schedule(); select private.ensure_job_publication_schedule(); select private.ensure_chat_retention_schedule()",
-    ], {quiet: true, log, timeoutMs: 10000});
+    ], {quiet: true, log, timeoutMs: 10000, signal});
     await command(process.execPath, ["scripts/local-env.mjs"], {
         quiet: true,
         log,
+        signal,
     });
     const local = readEnvFile(join(root, ".env.test.local"));
     await ensureLocalAccounts({
@@ -175,15 +198,21 @@ try {
         serviceRoleKey: local.SUPABASE_SERVICE_ROLE_KEY,
         projectId: config.id,
         markerPath: join(runtimeDir, "bootstrap.json"),
+        request: (url, options) => fetch(url, {
+            ...options,
+            signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+        }),
         seed: () =>
             command(process.execPath, ["scripts/local-seed.mjs"], {
                 quiet: true,
                 log,
+                signal,
             }),
         log: stage,
     });
     if (/^luminovia-portal-github-[a-f0-9]{12}$/.test(config.id ?? "")) {
         const {ensurePreviewAdmin} = await import("./local-preview-admin.mjs");
+        signal.throwIfAborted();
         await ensurePreviewAdmin(root);
     }
     if (existsSync(join(root, "scripts/local-scanner.mjs"))) {
@@ -193,8 +222,10 @@ try {
             quiet: true,
             log,
             timeoutMs: 300000,
+            signal,
         });
     }
+    signal.throwIfAborted();
     const origin = config.site;
     const extra = readEnvFile(join(runtimeDir, "services.env"));
     // Only the opt-in LTI settings flow to the worker; never add them to browser or status state.
@@ -234,6 +265,7 @@ try {
         quiet: true,
         log,
         env: cleanEnvironment({PORTAL_APP_ORIGIN: origin}),
+        signal,
     });
     await verifyLoopbackBindings(config.id, {
         scanner: scannerTouched,
@@ -251,13 +283,18 @@ try {
                 : {}),
         }),
     );
-    await waitForHttp(`${origin}/login`);
+    await waitForHttp(`${origin}/login`, {signal});
+    signal.throwIfAborted();
     phase = "ready";
     state({
         message: "Ready. Changes are stored persistently in local Docker volumes.",
     });
 } catch (error) {
-    log(`ERROR: ${error.message}\n`);
-    const actionable = ["PORTAL_BIND_FAILED", "PORTAL_PROJECT_RUNNING"].includes(error.code);
-    await stop(1, actionable ? error.message : undefined);
+    if (!stopping) {
+        log(`ERROR: ${error.message}\n`);
+        const actionable = ["PORTAL_BIND_FAILED", "PORTAL_PROJECT_RUNNING"].includes(error.code);
+        void stop(1, actionable ? error.message : undefined);
+    }
+} finally {
+    startupFinished.resolve();
 }
