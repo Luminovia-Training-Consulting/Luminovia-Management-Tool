@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { notificationCategory, type NotificationCategory } from "./categories";
 import { isGuestOnly, isParticipantOnly } from "../auth/guest-navigation";
 import { PushSettings } from "./push-settings";
+import { usePreferenceEditorData } from "./preference-read";
 import { PreferenceSaveControls } from "./preference-save-controls";
 import { useAuth } from "../auth/auth-context";
 import { AuthenticatorSettings } from "../auth/authenticator";
@@ -321,6 +322,7 @@ export function SettingsPage() {
   const de = i18n.language.startsWith("de");
   const actor = useAuth().session!.user.id;
   const [showGuide, setShowGuide] = useState(false);
+  const [deliveryOpened, setDeliveryOpened] = useState(false);
   const roles = useQuery(userRolesQuery(actor));
   const guestOnly = isGuestOnly(roles.data);
   const operational = !roles.isPending && !roles.isError && !guestOnly;
@@ -332,6 +334,7 @@ export function SettingsPage() {
     ...permissionsQuery(actor),
     enabled: operational,
   });
+  const preferenceData = usePreferenceEditorData(preferences);
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   if (guestOnly)
@@ -379,29 +382,42 @@ export function SettingsPage() {
         <summary>{de ? "Benachrichtigungen" : "Notifications"}</summary>
         {preferences.isPending ? (
           <Loading />
-        ) : preferences.isError ? (
+        ) : !preferenceData ? (
           <ErrorState retry={() => void preferences.refetch()} />
         ) : (
-          <PreferencesForm
-            key={actor}
-            actor={actor}
-            initial={preferences.data}
-            reload={async () => {
-              const result = await preferences.refetch();
-              return result.isSuccess ? result.data : undefined;
-            }}
-          />
+          <>
+            {preferences.isError && (
+              <ErrorState retry={() => void preferences.refetch()} />
+            )}
+            <PreferencesForm
+              key={actor}
+              actor={actor}
+              initial={preferenceData}
+              reload={async () => {
+                const result = await preferences.refetch();
+                return result.isSuccess ? result.data : undefined;
+              }}
+            />
+          </>
         )}
       </details>
-      <details className="panel settings-section">
+      <details
+        className="panel settings-section"
+        onToggle={(event) => {
+          if (event.target === event.currentTarget && event.currentTarget.open)
+            setDeliveryOpened(true);
+        }}
+      >
         <summary>
           {de ? "Ruhezeiten & Zustellung" : "Quiet hours & delivery"}
         </summary>
-        <div className="section-stack notification-delivery-stack">
-          <QuietHoursSettings />
-          <DeliverySettings actor={actor} />
-          <PushSettings key={actor} actor={actor} />
-        </div>
+        {deliveryOpened && (
+          <div className="section-stack notification-delivery-stack">
+            <QuietHoursSettings />
+            <DeliverySettings actor={actor} />
+            <PushSettings key={actor} actor={actor} />
+          </div>
+        )}
       </details>
       <details
         className="panel settings-section"

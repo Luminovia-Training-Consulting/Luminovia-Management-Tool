@@ -4,9 +4,11 @@ import { commercialAccessQuery } from "../commercial/api";
 /** Accounting UI: scoped invoice selection, scanned external evidence and
  * server-confirmed exports; business mutations require an online response. */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { mergeCursorItems } from "../../lib/cursor-rows";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { useRequestKey } from "../../lib/request-key";
 import { installationBrand } from "../../lib/installation-brand";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import {
   useInfiniteQuery,
@@ -31,6 +33,7 @@ import {
   ErrorState,
   Field,
   Loading,
+  NextPageError,
   Notice,
   PageHeading,
 } from "../../components/common";
@@ -566,10 +569,15 @@ export function AccountingPage({
     ...accountingInvoicesQuery(actor, source),
     enabled: sourceAllowed,
   });
-  const rows =
-    sourceAllowed && !invoices.isError
-      ? (invoices.data?.pages.flatMap((page) => page.items) ?? [])
-      : [];
+  const retryNext = canRetryNextPage(invoices);
+  const invoicesFailed = invoices.isError && !retryNext;
+  const invoicesDenied = isDatabasePermissionDenied(invoices.error);
+  if (invoicesDenied && !denied) setDenied(true);
+  const pages =
+    sourceAllowed && !invoicesFailed ? invoices.data?.pages : undefined;
+  const rows = useMemo(() => mergeCursorItems(pages), [pages]);
+  const loadNextPage = () =>
+    void invoices.fetchNextPage({ cancelRefetch: false });
   const retry = useRequestKey();
   const exportRecords = useMutation({
     mutationFn: async (format: "json" | "csv") => {
@@ -607,7 +615,7 @@ export function AccountingPage({
   });
   if (access.isPending) return <Loading />;
   if (access.isError) return <ErrorState retry={() => void access.refetch()} />;
-  if (denied)
+  if (denied || invoicesDenied)
     return (
       <ErrorState
         retry={() =>
@@ -723,6 +731,7 @@ export function AccountingPage({
           disabled={
             !online ||
             !sourceAllowed ||
+            invoicesFailed ||
             !selected.length ||
             exportRecords.isPending
           }
@@ -736,6 +745,7 @@ export function AccountingPage({
           disabled={
             !online ||
             !sourceAllowed ||
+            invoicesFailed ||
             !selected.length ||
             exportRecords.isPending
           }
@@ -744,7 +754,7 @@ export function AccountingPage({
           {t("exportCsv")}
         </Button>
       </div>
-      {snapshot && sourceAllowed && (
+      {snapshot && sourceAllowed && !invoicesFailed && (
         <Notice>
           <span>
             {t("exportReady", {
@@ -762,7 +772,7 @@ export function AccountingPage({
           <ErrorState retry={() => void access.refetch()} />
         ) : invoices.isPending ? (
           <Loading />
-        ) : invoices.isError ? (
+        ) : invoicesFailed ? (
           <ErrorState retry={() => void invoices.refetch()} />
         ) : !rows.length ? (
           <p>{t("empty")}</p>
@@ -880,15 +890,24 @@ export function AccountingPage({
           ))
         )}
       </div>
-      {invoices.hasNextPage && (
-        <Button
-          variant="secondary"
-          disabled={invoices.isFetchingNextPage}
-          onClick={() => void invoices.fetchNextPage()}
-        >
-          {t("more")}
-        </Button>
-      )}
+      {sourceAllowed &&
+        (retryNext ? (
+          <NextPageError
+            retry={loadNextPage}
+            disabled={!online || invoices.isFetching}
+          />
+        ) : (
+          !invoicesFailed &&
+          invoices.hasNextPage && (
+            <Button
+              variant="secondary"
+              disabled={!online || invoices.isFetching}
+              onClick={loadNextPage}
+            >
+              {t("more")}
+            </Button>
+          )
+        ))}
       <Dialog
         open={register && canManageCustomer}
         onOpenChange={setRegister}

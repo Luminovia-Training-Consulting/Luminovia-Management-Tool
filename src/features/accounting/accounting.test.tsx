@@ -200,6 +200,134 @@ it("offers CSV and JSON exports and requires accessible external-document confir
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Record invoice" })).toBeDisabled();
 });
+const pagedInvoice = {
+  id: "b749e404-89bf-4c7d-9a89-5dfdf029b0b8",
+  kind: "lecturer_invoice",
+  number: "FICTIONAL-PAGE-ONE",
+  created_at: "2026-11-30T11:00:00Z",
+  issued_on: "2026-11-30",
+  due_on: "2026-12-01",
+  currency: "EUR",
+  recorded_total: "100.00",
+  paid_total: "0.00",
+  outstanding_total: "100.00",
+  status: "approved",
+  document_id: "b749e404-89bf-4c7d-9a89-5dfdf029b0b9",
+  document_version_id: "b749e404-89bf-4c7d-9a89-5dfdf029b0ba",
+  document_sha256: "a".repeat(64),
+  organisation_id: null,
+  organisation_name: null,
+  accepted_charge_total: null,
+  difference_reason: null,
+  assignments: [],
+  payments: [],
+  tax: {
+    status: "not_recorded",
+    net: null,
+    gross: null,
+    vat_amount: null,
+    vat_rate: null,
+  },
+  credit_note_reference: null,
+};
+
+async function openNextInvoicePage() {
+  const { client } = show();
+  client.setQueryData([...accountingKeys.all("teacher"), "invoices", "own"], {
+    pages: [{ items: [pagedInvoice], has_more: true }],
+    pageParams: [null],
+  });
+  const user = userEvent.setup();
+  await screen.findByRole("heading", { name: pagedInvoice.number });
+  await user.click(
+    screen.getByRole("checkbox", { name: new RegExp(pagedInvoice.number) }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Weitere Rechnungen laden" }),
+  );
+  return user;
+}
+
+it("keeps confirmed invoice pages and export selection while retrying a temporary continuation failure", async () => {
+  rpc.mockReset();
+  rpc
+    .mockReturnValueOnce({
+      abortSignal: async () => ({
+        data: null,
+        error: { message: "temporarily unavailable" },
+        status: 503,
+      }),
+    })
+    .mockReturnValueOnce({
+      abortSignal: async () => ({
+        data: {
+          items: [
+            {
+              ...pagedInvoice,
+              id: "b749e404-89bf-4c7d-9a89-5dfdf029b0bb",
+              number: "FICTIONAL-PAGE-TWO",
+              created_at: "2026-11-29T11:00:00Z",
+            },
+          ],
+          has_more: false,
+        },
+        error: null,
+        status: 200,
+      }),
+    });
+
+  const user = await openNextInvoicePage();
+  const retry = await screen.findByRole("button", {
+    name: "Weitere Ergebnisse erneut laden",
+  });
+  expect(
+    screen.getByRole("heading", { name: pagedInvoice.number }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("checkbox", { name: new RegExp(pagedInvoice.number) }),
+  ).toBeChecked();
+  expect(
+    screen.getByRole("button", { name: "CSV-Export erstellen" }),
+  ).toBeEnabled();
+  await user.click(retry);
+  expect(
+    await screen.findByRole("heading", { name: "FICTIONAL-PAGE-TWO" }),
+  ).toBeVisible();
+  expect(rpc.mock.calls).toEqual(
+    Array.from({ length: 2 }, () => [
+      "accounting_invoices",
+      {
+        p_source: "own",
+        p_before_at: pagedInvoice.created_at,
+        p_before_id: pagedInvoice.id,
+        p_limit: 40,
+      },
+    ]),
+  );
+});
+
+it("discards visible invoices and selection actions when a continuation denies access", async () => {
+  rpc.mockReset();
+  rpc.mockReturnValueOnce({
+    abortSignal: async () => ({
+      data: null,
+      error: { code: "42501" },
+      status: 403,
+    }),
+  });
+  await openNextInvoicePage();
+  await screen.findByRole("button", { name: "Erneut versuchen" });
+  expect(
+    screen.queryByRole("heading", { name: pagedInvoice.number }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Weitere Rechnungen laden" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "CSV-Export erstellen" }),
+  ).not.toBeInTheDocument();
+});
+
 it("disables online writes and new exports when connectivity is lost", async () => {
   show(true);
   Object.defineProperty(navigator, "onLine", {

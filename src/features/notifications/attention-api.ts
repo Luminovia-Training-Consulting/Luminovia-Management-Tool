@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { throwPagedReadError } from "../../lib/paged-read";
 
 import {
   attentionSchema,
@@ -14,10 +15,10 @@ export const attentionQuery = (actor: string) =>
   queryOptions({
     queryKey: attentionKey(actor),
     queryFn: async ({ signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("attention_preferences")
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return attentionSchema.parse(data);
     },
     staleTime: 15000,

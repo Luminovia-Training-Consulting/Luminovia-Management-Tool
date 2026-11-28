@@ -15,6 +15,7 @@ import {
   attentionSchema,
   saveAttentionPreferences,
 } from "./attention-api";
+import { usePreferenceEditorData } from "./preference-read";
 import { PreferenceSaveControls } from "./preference-save-controls";
 import "./attention-i18n";
 
@@ -103,25 +104,29 @@ export function QuietHoursSettings() {
   const { t } = useTranslation("attention");
   const actor = useAuth().session!.user.id;
   const query = useQuery(attentionQuery(actor));
+  const preferences = usePreferenceEditorData(query);
   return (
     <section className="attention-settings" aria-label={t("title")}>
       {query.isPending ? (
         <Loading />
-      ) : query.isError ? (
+      ) : !preferences ? (
         <>
           <h2>{t("title")}</h2>
           <ErrorState retry={() => void query.refetch()} />
         </>
       ) : (
-        <QuietHoursForm
-          key={actor}
-          actor={actor}
-          initial={query.data}
-          reload={async () => {
-            const result = await query.refetch();
-            return result.isSuccess ? result.data : undefined;
-          }}
-        />
+        <>
+          {query.isError && <ErrorState retry={() => void query.refetch()} />}
+          <QuietHoursForm
+            key={actor}
+            actor={actor}
+            initial={preferences}
+            reload={async () => {
+              const result = await query.refetch();
+              return result.isSuccess ? result.data : undefined;
+            }}
+          />
+        </>
       )}
     </section>
   );

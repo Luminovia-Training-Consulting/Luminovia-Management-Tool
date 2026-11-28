@@ -5,6 +5,7 @@ import { saveBlob } from "../../lib/blob-download";
 import { csvText } from "../../lib/csv";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import { throwPagedReadError } from "../../lib/paged-read";
 
 import {
   accountingAccessSchema,
@@ -79,7 +80,7 @@ export const accountingInvoicesQuery = (
     queryKey: [...accountingKeys.all(actor), "invoices", source],
     initialPageParam: null as Cursor | null,
     queryFn: async ({ pageParam, signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("accounting_invoices", {
           p_source: source,
           p_before_at: pageParam?.at ?? null,
@@ -87,7 +88,7 @@ export const accountingInvoicesQuery = (
           p_limit: 40,
         })
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return accountingPageSchema.parse(data);
     },
     getNextPageParam: nextInvoiceCursor,

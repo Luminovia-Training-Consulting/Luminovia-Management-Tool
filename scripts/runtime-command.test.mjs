@@ -10,6 +10,27 @@ import {setTimeout as delay} from "node:timers/promises";
 import test from "node:test";
 import {command} from "./runtime-lib.mjs";
 
+for (const stream of ["stdout", "stderr"]) {
+    test(`preserves multibyte text across fragmented child ${stream} writes`, async () => {
+        const value = JSON.stringify({label: "Grüße aus Köln 🌱"});
+        const output = await command(
+            process.execPath,
+            [
+                "--input-type=module",
+                "-e",
+                `const stream = process.${stream};
+const bytes = Buffer.from(${JSON.stringify(value)});
+const split = bytes.indexOf(0xc3) + 1;
+stream.write(bytes.subarray(0, split));
+await new Promise((resolve) => setTimeout(resolve, 50));
+stream.write(bytes.subarray(split));`,
+            ],
+            {quiet: true, timeoutMs: 5000},
+        );
+        assert.equal(output, value);
+    });
+}
+
 test("a timed-out child cannot report success by exiting zero after SIGTERM", async () => {
     await assert.rejects(
         command(

@@ -171,9 +171,12 @@ test("local readiness checks require their own direct HTTP response", async (t) 
         waitForHttp(origin + "/redirect", {timeoutMs: 100}),
         /Local service did not become ready/,
     );
-    assert.deepEqual(requests, ["/redirect"]);
+    // Poll retries can deliver more than one request near the deadline.
+    // None may follow the redirect before the explicit healthy probe.
+    assert.ok(requests.includes("/redirect"));
+    assert.ok(requests.every((path) => path === "/redirect"));
     await waitForHttp(origin + "/healthy");
-    assert.deepEqual(requests, ["/redirect", "/healthy"]);
+    assert.equal(requests.filter((path) => path === "/healthy").length, 1);
 });
 
 test("local readiness cancels a slow request within its deadline", async (t) => {

@@ -20,6 +20,7 @@ import { NotificationsPage, SettingsPage } from "./notifications";
 import { NotificationsMenu } from "./notifications-menu";
 import {
   mergeNotificationPages,
+  notificationKeys,
   notificationInboxQuery,
   notificationPreviewQuery,
 } from "./api";
@@ -388,6 +389,78 @@ describe("connected notification inbox", () => {
   });
 });
 describe("versioned notification preferences", () => {
+  it("keeps the same draft and focus on a temporary reload error, then hides it on access denial", async () => {
+    view(<SettingsPage />);
+    const chat = await screen.findByRole("checkbox", {
+      name: "Neue Chatnachrichten",
+    });
+    await userEvent.click(chat);
+    const previous = state.rpc.getMockImplementation()!;
+    let status = 503;
+    state.rpc.mockImplementation((name, payload) =>
+      name === "notification_preferences"
+        ? {
+            abortSignal: async () => ({
+              data: null,
+              error: { code: status === 403 ? "42501" : "" },
+              status,
+            }),
+          }
+        : previous(name, payload),
+    );
+    const reload = () =>
+      clients.at(-1)!.refetchQueries({
+        queryKey: notificationKeys.preferences(state.actor),
+      });
+    await act(reload);
+    const section = screen
+      .getByText("Benachrichtigungen", { selector: "summary" })
+      .closest("details")!;
+    expect(await within(section).findByRole("alert")).toBeVisible();
+    expect(chat).toBeVisible();
+    expect(chat).toHaveFocus();
+    expect(chat).not.toBeChecked();
+    status = 403;
+    await act(reload);
+    await waitFor(() => expect(chat).not.toBeInTheDocument());
+    status = 503;
+    await act(reload);
+    expect(
+      screen.queryByRole("checkbox", { name: "Neue Chatnachrichten" }),
+    ).not.toBeInTheDocument();
+    state.rpc.mockImplementation(previous);
+    await act(reload);
+    expect(
+      await screen.findByRole("checkbox", { name: "Neue Chatnachrichten" }),
+    ).toBeChecked();
+  });
+
+  it("loads delivery, attention and push preferences only after opening their section", async () => {
+    view(<SettingsPage />);
+    await screen.findByRole("checkbox", { name: "Neue Chatnachrichten" });
+    const deliveryReads = () =>
+      state.rpc.mock.calls.filter(([name]) =>
+        [
+          "attention_preferences",
+          "delivery_preferences",
+          "my_push_devices",
+        ].includes(name),
+      );
+    expect(deliveryReads()).toHaveLength(0);
+    const disclosure = screen.getByText("Ruhezeiten & Zustellung");
+    await userEvent.click(disclosure);
+    await screen.findByRole("checkbox", {
+      name: "Tägliche Ruhezeit aktivieren",
+    });
+    expect(deliveryReads().map(([name]) => name)).toEqual(
+      expect.arrayContaining([
+        "attention_preferences",
+        "delivery_preferences",
+        "my_push_devices",
+      ]),
+    );
+  });
+
   it("keeps unsaved choices across language changes and saves only current-account fields", async () => {
     view(<SettingsPage />);
     const chat = await screen.findByRole("checkbox", {

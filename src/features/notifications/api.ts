@@ -84,10 +84,10 @@ export const notificationPreferencesQuery = (actor: string) =>
   queryOptions({
     queryKey: notificationKeys.preferences(actor),
     queryFn: async ({ signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("notification_preferences")
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return notificationPreferencesSchema.parse(data);
     },
     staleTime: 15000,

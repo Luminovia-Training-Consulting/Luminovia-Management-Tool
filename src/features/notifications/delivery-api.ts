@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { throwPagedReadError } from "../../lib/paged-read";
 
 import { deliveryPreferencesSchema, type DeliveryPreferences } from "./schema";
 export { deliveryPreferencesSchema, type DeliveryPreferences } from "./schema";
@@ -9,10 +10,10 @@ export const deliveryPreferencesQuery = (actor: string) =>
   queryOptions({
     queryKey: deliveryKey(actor),
     queryFn: async ({ signal }) => {
-      const { data, error } = await db()
+      const { data, error, status } = await db()
         .rpc("delivery_preferences")
         .abortSignal(signal);
-      if (error) throw error;
+      if (error) throwPagedReadError(error, status);
       return deliveryPreferencesSchema.parse(data);
     },
     staleTime: 15000,

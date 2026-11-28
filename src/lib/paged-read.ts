@@ -12,14 +12,16 @@ export function throwPagedReadError(error: unknown, status: number): never {
   throw error;
 }
 
+/** Identify a recoverable transport error without treating access denial as stale data. */
+export function isTemporaryReadError(error: unknown): boolean {
+  return error instanceof PageTemporarilyUnavailable;
+}
+
 export function canRetryNextPage(query: {
   error: unknown;
   isFetchNextPageError: boolean;
 }) {
-  return (
-    query.isFetchNextPageError &&
-    query.error instanceof PageTemporarilyUnavailable
-  );
+  return query.isFetchNextPageError && isTemporaryReadError(query.error);
 }
 
 /** Read past the configured REST response cap using a stable order and abortable pages. */

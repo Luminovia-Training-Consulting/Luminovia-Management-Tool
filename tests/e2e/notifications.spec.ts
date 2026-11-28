@@ -181,12 +181,22 @@ test("email channel and IANA quiet hours persist across language, reload and off
             }),
         );
         await login(page, owner.email);
+        const deliveryCalls = new Set<string>();
+        page.on("request", (request) => {
+            const endpoint = new URL(request.url()).pathname.split("/").at(-1);
+            if (endpoint && ["attention_preferences", "delivery_preferences", "my_push_devices"].includes(endpoint))
+                deliveryCalls.add(endpoint);
+        });
         await page.goto("/settings");
+        await expect(page.getByRole("checkbox", {name: "Neue Chatnachrichten", exact: true})).toBeVisible();
         const delivery = page
             .locator("details.settings-section")
             .filter({hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/});
-        await delivery.locator("summary").click();
+        await expect(delivery.locator("form")).toHaveCount(0);
+        expect(deliveryCalls.size).toBe(0);
+        await delivery.locator("summary").press("Enter");
         await expect(delivery).toHaveJSProperty("open", true);
+        await expect.poll(() => deliveryCalls.size).toBe(3);
         // The form owning the named email fieldset includes its save button and
         // confirmation; in-app attention quiet hours are a separate region.
         const emailSettings = page.locator("form").filter({

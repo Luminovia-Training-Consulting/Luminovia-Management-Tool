@@ -11,6 +11,7 @@ import {
   saveDeliveryPreferences,
 } from "./delivery-api";
 import "./delivery-i18n";
+import { usePreferenceEditorData } from "./preference-read";
 import { PreferenceSaveControls } from "./preference-save-controls";
 
 /** Edit the current actor's email delivery and quiet-hour preferences. */
@@ -133,19 +134,23 @@ function DeliveryForm({
 /** Bind the editor and its reload action to the current actor's query. */
 export function DeliverySettings({ actor }: { actor: string }) {
   const query = useQuery(deliveryPreferencesQuery(actor));
+  const preferences = usePreferenceEditorData(query);
   return query.isPending ? (
     <Loading />
-  ) : query.isError ? (
+  ) : !preferences ? (
     <ErrorState retry={() => void query.refetch()} />
   ) : (
-    <DeliveryForm
-      key={actor}
-      actor={actor}
-      initial={query.data}
-      reload={async () => {
-        const result = await query.refetch();
-        return result.isSuccess ? result.data : undefined;
-      }}
-    />
+    <>
+      {query.isError && <ErrorState retry={() => void query.refetch()} />}
+      <DeliveryForm
+        key={actor}
+        actor={actor}
+        initial={preferences}
+        reload={async () => {
+          const result = await query.refetch();
+          return result.isSuccess ? result.data : undefined;
+        }}
+      />
+    </>
   );
 }

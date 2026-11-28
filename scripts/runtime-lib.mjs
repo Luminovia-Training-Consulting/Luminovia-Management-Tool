@@ -175,11 +175,13 @@ export async function command(
         const timer = setTimeout(() => terminate("timed out"), timeoutMs);
         signal?.addEventListener("abort", cancel, {once: true});
         /** Bounds captured subprocess output until the final logging path redacts it. */
-        const receive = (data) => {
-            output = (output + data.toString()).slice(-1000000);
+        const receive = (text) => {
+            output = (output + text).slice(-1000000);
         };
-        child.stdout.on("data", receive);
-        child.stderr.on("data", receive);
+        // Decode each pipe independently before merging its text. Node retains
+        // the bytes of any incomplete UTF-8 character until the next chunk.
+        child.stdout.setEncoding("utf8").on("data", receive);
+        child.stderr.setEncoding("utf8").on("data", receive);
         child.on("error", (error) => {
             // Node emits close after a spawn error too; use one settlement/cleanup
             // path so no cancellation timer is cleared while a child is still live.
