@@ -322,7 +322,7 @@ function ExamWorkspace({ actor, course, zone }: Props) {
           />
         ) : (
           <LearnerPaper
-            key={paper.revision + ":" + state.attempt?.revision}
+            key={paper.revision}
             state={state}
             paper={paper}
             disabled={disabled}
@@ -734,17 +734,20 @@ function LearnerPaper({
   const { t } = useTranslation("textExam");
   const id = useId();
   const now = useExamClock(state.now, loadedAt);
-  const [changed, setChanged] = useState<string[]>();
+  const [draft, setDraft] = useState<{ answers: string[]; revision: number }>();
   const attempt = state.attempt;
+  const revision = attempt?.revision ?? 0;
   const submitted = attempt?.submitted_at;
   const closed = now >= Date.parse(paper.deadline);
-  const dirty = Boolean(
+  const saved = attempt?.answers ?? paper.questions?.map(() => "") ?? [];
+  const changed =
     !submitted &&
-    !closed &&
-    changed?.some(
-      (answer, index) => answer !== (attempt?.answers[index] ?? ""),
-    ),
-  );
+    draft?.answers.some((answer, index) => answer !== saved[index])
+      ? draft
+      : undefined;
+  if (draft && !changed) setDraft(undefined);
+  const dirty = !closed && !!changed;
+  const conflict = dirty && changed.revision !== revision;
   // Keep private answers in memory. The browser's normal reload warning
   // protects edits until PostgreSQL confirms a saved draft or submission.
   useEffect(() => {
@@ -756,14 +759,16 @@ function LearnerPaper({
 
   if (!paper.questions) return <p>{t("notOpen")}</p>;
 
-  const answers = changed ?? attempt?.answers ?? paper.questions.map(() => "");
+  const answers = changed?.answers ?? saved;
   const save = (command: "save_answers" | "submit") =>
     run({
       p_action: command,
       p_revision: paper.revision,
-      p_expected: attempt?.revision ?? 0,
+      p_expected: changed?.revision ?? revision,
       p_payload: { answers },
-    });
+    }).then(() =>
+      setDraft((current) => (current === changed ? undefined : current)),
+    );
   return (
     <div className="space-y-3">
       <p role="status">
@@ -775,6 +780,18 @@ function LearnerPaper({
         <ExamTimeRemaining deadline={paper.deadline} now={now} />
       )}
       {dirty && <p>{t("unsavedAnswers")}</p>}
+      {conflict && (
+        <Notice kind="error">
+          <p>{t("answerConflict")}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setDraft(undefined)}
+          >
+            {t("useSavedAnswers")}
+          </Button>
+        </Notice>
+      )}
       {paper.questions.map((question, index) => {
         const questionId = `${id}-question-${index}`;
         return (
@@ -797,7 +814,10 @@ function LearnerPaper({
                 onChange={(event) => {
                   const updated = [...answers];
                   updated[index] = event.target.value;
-                  setChanged(updated);
+                  setDraft({
+                    answers: updated,
+                    revision: changed?.revision ?? revision,
+                  });
                 }}
               />
             </Field>
@@ -809,7 +829,7 @@ function LearnerPaper({
           <Button
             type="button"
             variant="secondary"
-            disabled={disabled}
+            disabled={disabled || conflict}
             onClick={() => void save("save_answers").catch(() => undefined)}
           >
             {t("saveDraft")}
@@ -817,7 +837,9 @@ function LearnerPaper({
           <Confirm
             label={t("submit")}
             details={t("submitPrompt")}
-            disabled={disabled || answers.some((answer) => !answer.trim())}
+            disabled={
+              disabled || conflict || answers.some((answer) => !answer.trim())
+            }
             submit={() => save("submit")}
           />
         </div>

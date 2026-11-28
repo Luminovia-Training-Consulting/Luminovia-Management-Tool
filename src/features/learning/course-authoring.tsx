@@ -1,5 +1,12 @@
 /** Course-run authoring and participant projection for versioned curricula. */
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -39,6 +46,10 @@ import {
   type CourseLesson,
   type CourseModule,
 } from "./course-authoring-schema";
+import {
+  CourseDraftContext,
+  type LocalCourseDraft,
+} from "./course-draft-context";
 import "../knowledge/knowledge.css";
 import "./i18n";
 
@@ -426,13 +437,15 @@ export function CourseAuthoring({
   const online = useOnline();
   const cache = useQueryClient();
   const key = courseContentStudioKey(actor, courseId);
-  const query = useQuery(courseContentStudioQuery(actor, courseId));
-  const [localDraft, setLocalDraft] = useState<{
-    content: CourseCurriculum;
-    base: CourseCurriculum;
-    published_version: number;
-    draft_version: number;
-  } | null>(null);
+  const query = useQuery({
+    ...courseContentStudioQuery(actor, courseId),
+    refetchOnMount: "always",
+  });
+  const retainedDraft = useContext(CourseDraftContext);
+  const fallbackDraft = useState<LocalCourseDraft | null>(null);
+  const [localDraft, setLocalDraft] = retainedDraft ?? fallbackDraft;
+  const studio =
+    query.isFetchedAfterMount && query.isSuccess ? query.data : null;
   const [mergeBlocked, setMergeBlocked] = useState(false);
   const [preview, setPreview] = useState(false);
   const [compactPreview, setCompactPreview] = useState(false);
@@ -442,17 +455,20 @@ export function CourseAuthoring({
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState("");
   const [pendingLocation, setPendingLocation] = useState<string | null>(null);
-  const authoring = editable && query.data?.can_edit === true;
+  const authoring = editable && studio?.can_edit === true;
   const dirty = authoring && localDraft !== null;
+  useEffect(() => {
+    if (studio && !authoring) setLocalDraft(null);
+  }, [authoring, setLocalDraft, studio]);
 
   const curriculum = useMemo(() => {
     if (dirty) return localDraft.content;
-    if (!query.data) return emptyCurriculum;
+    if (!studio) return emptyCurriculum;
     const content = authoring
-      ? (query.data.draft_content ?? query.data.published_content)
-      : query.data.published_content;
+      ? (studio.draft_content ?? studio.published_content)
+      : studio.published_content;
     return normalizeCourseCurriculum(content);
-  }, [authoring, dirty, localDraft, query.data]);
+  }, [authoring, dirty, localDraft, studio]);
 
   const activeModuleIndex = curriculum.modules.findIndex(
     (item) => item.id === moduleId,
@@ -574,11 +590,10 @@ export function CourseAuthoring({
     };
   }, [dirty, location.pathname, location.search, mutation.isPending]);
 
-  if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
-  if (!query.data) return null;
+  if (!studio) return <Loading />;
 
-  const state = query.data;
+  const state = studio;
   const reviewState = state.review?.state;
   const draftLocked =
     reviewState === "requested" ||

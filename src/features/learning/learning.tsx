@@ -2,7 +2,15 @@ import { CourseCloseout } from "./course-closeout";
 import { CourseTimeline } from "../../components/course-timeline";
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
-import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -75,6 +83,11 @@ import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
+import {
+  ClearCourseDraftContext,
+  CourseDraftContext,
+  type LocalCourseDraft,
+} from "./course-draft-context";
 import { CourseGradebook } from "./course-gradebook";
 import {
   CompletionRequirements,
@@ -2193,8 +2206,35 @@ function StandardCourseWorkspace({
   );
 }
 
-/** Remount the protected course query on reconnect so cached panels wait for a current entitlement check. */
+function CourseDraftSession({ children }: { children: ReactNode }) {
+  const draft = useState<LocalCourseDraft | null>(null);
+  const [, setDraft] = draft;
+  const clearDraft = useCallback(() => setDraft(null), [setDraft]);
+  return (
+    <ClearCourseDraftContext.Provider value={clearDraft}>
+      <CourseDraftContext.Provider value={draft}>
+        {children}
+      </CourseDraftContext.Provider>
+    </ClearCourseDraftContext.Provider>
+  );
+}
+
+/** Remount protected content on reconnect. Keep unsaved curriculum edits only in the same actor/course route. */
 export function CourseWorkspacePage({
+  academy,
+}: {
+  academy?: "active" | "grace";
+}) {
+  const { id } = useParams();
+  const actor = useAuth().session!.user.id;
+  return (
+    <CourseDraftSession key={actor + ":" + id}>
+      <CourseWorkspaceConnection academy={academy} />
+    </CourseDraftSession>
+  );
+}
+
+function CourseWorkspaceConnection({
   academy,
 }: {
   academy?: "active" | "grace";
@@ -2223,8 +2263,20 @@ function ConnectedCourseWorkspace({
     refetchOnMount: "always",
     refetchInterval: 10_000,
   });
+  const clearDraft = useContext(ClearCourseDraftContext);
+  const premiumDenied = query.error?.message?.includes(
+    "company_premium_lms_off",
+  );
+  const revoked =
+    premiumDenied ||
+    (query.error && "code" in query.error && query.error.code === "42501") ||
+    (query.isSuccess && (!query.data.access.staff || academy === "grace"));
+  useEffect(() => {
+    if (query.isFetchedAfterMount && revoked) clearDraft?.();
+  }, [clearDraft, query.isFetchedAfterMount, revoked]);
+
   if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
-  if (query.error?.message?.includes("company_premium_lms_off")) {
+  if (premiumDenied) {
     return (
       <section className="panel">
         <PageHeading title={t("workspaceDisabledTitle")} />

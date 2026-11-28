@@ -87,6 +87,11 @@ const labels = {
     "Gespeicherte Entwürfe gelten als offen, bis du sie verbindlich abgibst.",
     "Saved drafts remain open until you submit them.",
   ],
+  answerConflict: [
+    "Die gespeicherten Antworten wurden in einer anderen Sitzung geändert. Deine Eingaben sind weiterhin sichtbar und können kopiert werden.",
+    "Saved answers changed in another session. Your edits are still visible and can be copied.",
+  ],
+  useSavedAnswers: ["Gespeicherte Antworten laden", "Use saved answers"],
   unsavedAnswers: [
     "Du hast ungespeicherte Antworten. Speichere den Entwurf, bevor du die Seite verlässt.",
     "You have unsaved answers. Save your draft before leaving the page.",

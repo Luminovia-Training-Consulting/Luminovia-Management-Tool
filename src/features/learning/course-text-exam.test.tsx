@@ -1,6 +1,7 @@
 /** Native exam state, disclosure and read-only policies at the component boundary. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -45,8 +46,9 @@ const beforeOpening: TextExamState = {
 };
 
 function openExam() {
+  const client = new QueryClient();
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <CourseTextExam actor="learner" course={run} zone="Australia/Brisbane" />
     </QueryClientProvider>,
   );
@@ -55,6 +57,7 @@ function openExam() {
   if (!details) throw new Error("Missing exam disclosure");
   details.open = true;
   fireEvent(details, new Event("toggle"));
+  return client;
 }
 
 function backend(data: TextExamState) {
@@ -150,6 +153,81 @@ it("gives every answer a distinct name and associates the correct prompt", async
   ).not.toBeInTheDocument();
   const reverted = new Event("beforeunload", { cancelable: true });
   expect(window.dispatchEvent(reverted)).toBe(true);
+});
+
+it("preserves unsaved answers and blocks writes after another browser updates a draft", async () => {
+  const open: TextExamState = {
+    ...beforeOpening,
+    now: "2026-11-26T05:15:00+00:00",
+    exam: {
+      ...beforeOpening.exam!,
+      questions: [{ prompt: "Describe the default route.", max_points: 10 }],
+    },
+    attempt: { revision: 2, answers: ["Previously saved"], submitted_at: null },
+  };
+  backend(open);
+  const client = openExam();
+  const answer = await screen.findByRole("textbox", {
+    name: "Answer to question 1",
+  });
+  fireEvent.change(answer, { target: { value: "My current edit" } });
+
+  backend({
+    ...open,
+    attempt: {
+      revision: 3,
+      answers: ["Other browser edit"],
+      submitted_at: null,
+    },
+  });
+  await act(async () =>
+    client.invalidateQueries({
+      queryKey: ["course-text-exam", "learner", run],
+    }),
+  );
+  expect(answer).toHaveValue("My current edit");
+  expect(
+    await screen.findByText(/Saved answers changed in another session/),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  expect(
+    fake.rpc.mock.calls.every(([name]) => name === "course_text_exam"),
+  ).toBe(true);
+
+  fireEvent.click(screen.getByRole("button", { name: "Use saved answers" }));
+  expect(answer).toHaveValue("Other browser edit");
+  fireEvent.change(answer, {
+    target: { value: "Reconciled at revision three" },
+  });
+  const revisionFour: TextExamState = {
+    ...open,
+    attempt: {
+      revision: 4,
+      answers: ["Reconciled at revision three"],
+      submitted_at: null,
+    },
+  };
+  fake.rpc.mockImplementation((name: string) =>
+    name === "course_text_exam_action"
+      ? Promise.resolve({ data: 4, error: null })
+      : { abortSignal: async () => ({ data: revisionFour, error: null }) },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  await waitFor(() =>
+    expect(fake.rpc).toHaveBeenCalledWith("course_text_exam_action", {
+      p_run_id: run,
+      p_action: "save_answers",
+      p_revision: 1,
+      p_expected: 3,
+      p_payload: { answers: ["Reconciled at revision three"] },
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByText(/You have unsaved answers/),
+    ).not.toBeInTheDocument(),
+  );
+  expect(answer).toHaveValue("Reconciled at revision three");
 });
 
 it("accepts only the action-specific schema and exact revision input", () => {

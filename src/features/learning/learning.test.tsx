@@ -1158,3 +1158,65 @@ it("hides the loaded Premium workspace offline and rechecks it on reconnect", as
     connectivity.mockRestore();
   }
 });
+
+it.each([false, true])(
+  "holds the curriculum draft offscreen until reconnect is authorized (revoked: %s)",
+  async (revoked) => {
+    const connectivity = vi.spyOn(window.navigator, "onLine", "get");
+    connectivity.mockReturnValue(true);
+    try {
+      fake.workspace.lms_enabled = false;
+      fake.workspace.access.lms_enabled = false;
+      const client = setup();
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Modul hinzufügen" }),
+      );
+      const title = "Ungespeichertes fiktives Modul";
+      fireEvent.change(screen.getByLabelText("Modultitel"), {
+        target: { value: title },
+      });
+      expect(screen.getByRole("button", { name: title })).toBeVisible();
+
+      connectivity.mockReturnValue(false);
+      act(() => window.dispatchEvent(new Event("offline")));
+      expect(screen.queryByText(title)).not.toBeInTheDocument();
+
+      let completeRead!: () => void;
+      fake.workspaceRead = new Promise((resolve) => {
+        completeRead = resolve;
+      });
+      fake.error = revoked
+        ? { code: "42501", message: "Course access denied" }
+        : null;
+      connectivity.mockReturnValue(true);
+      act(() => window.dispatchEvent(new Event("online")));
+      expect(screen.queryByText(title)).not.toBeInTheDocument();
+      expect(
+        fake.rpc.mock.calls.some(([name]) => name === "course_content_action"),
+      ).toBe(false);
+      await act(async () => completeRead());
+
+      if (revoked) {
+        await waitFor(() =>
+          expect(
+            client.getQueryState(["course-workspace", "learner-a", "course-a"])
+              ?.status,
+          ).toBe("error"),
+        );
+        expect(screen.queryByText(title)).not.toBeInTheDocument();
+        fake.error = null;
+        await act(async () =>
+          client.invalidateQueries({ queryKey: ["course-workspace"] }),
+        );
+        await screen.findByRole("button", { name: "Modul hinzufügen" });
+        expect(screen.queryByText(title)).not.toBeInTheDocument();
+      } else {
+        expect(
+          await screen.findByRole("button", { name: title }),
+        ).toBeVisible();
+      }
+    } finally {
+      connectivity.mockRestore();
+    }
+  },
+);
