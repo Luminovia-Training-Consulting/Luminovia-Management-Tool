@@ -467,6 +467,63 @@ describe("safe marketplace interactions", () => {
     );
   });
 
+  it("offers a retry when the availability request fails and keeps claim disabled until it recovers", async () => {
+    const user = userEvent.setup();
+    const client = setup();
+    const key = calendarAssignmentsQuery(
+      "lecturer-a",
+      jobSessionWindow(job.job_sessions)!.window,
+    ).queryKey;
+    const assignments = {
+      select: () => assignments,
+      eq: () => assignments,
+      lt: () => assignments,
+      gt: () => assignments,
+      is: () => assignments,
+      order: () => assignments,
+      range: () => assignments,
+      abortSignal: vi
+        .fn()
+        .mockResolvedValueOnce({ data: null, error: new Error("offline") })
+        .mockResolvedValueOnce({ data: [], error: null }),
+    };
+    from.mockReturnValue(assignments);
+    await user.click(
+      screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    await act(async () =>
+      client.refetchQueries({ queryKey: key, exact: true }),
+    );
+    const claim = screen.getByRole("button", { name: "Auftrag übernehmen" });
+    expect(
+      await screen.findByText(
+        "Die Verfügbarkeit für diesen Auftrag konnte nicht geprüft werden.",
+      ),
+    ).toBeVisible();
+    expect(claim).toBeDisabled();
+    await user.click(
+      screen.getByRole("button", { name: "Verfügbarkeit erneut prüfen" }),
+    );
+    await waitFor(() => expect(claim).toBeEnabled());
+    expect(rpc.mock.calls.some(([name]) => name === "claim_job")).toBe(false);
+  });
+
+  it("keeps an offer with unreadable legacy dates visible and blocks claiming", async () => {
+    setup("/jobs/job-a", false, {
+      job_sessions: [{ ...job.job_sessions[0], ends_at: "infinity" }],
+    });
+    expect(screen.getByRole("heading", { name: job.title })).toBeVisible();
+    expect(
+      screen.getByText(
+        "Die Verfügbarkeit für diesen Auftrag konnte nicht geprüft werden.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeDisabled();
+    expect(from).not.toHaveBeenCalledWith("assignment_sessions");
+  });
+
   it("retains the protected quote state in a paged discovery card", () => {
     setup("/jobs", true, { amount: null, total_amount: null });
     expect(screen.getByText("Honorar geschützt")).toBeVisible();

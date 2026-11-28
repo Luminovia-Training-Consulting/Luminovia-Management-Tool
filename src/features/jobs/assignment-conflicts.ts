@@ -4,12 +4,15 @@ export function jobSessionWindow(
 ) {
   if (!sessions?.length) return null;
   let latest = Number.NEGATIVE_INFINITY;
-  const slots = sessions.map(({ starts_at, ends_at }) => {
+  const slots = [];
+  for (const { starts_at, ends_at } of sessions) {
     const start = Date.parse(starts_at);
     const end = Date.parse(ends_at);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end)
+      return null;
     latest = Math.max(latest, end);
-    return { start, end };
-  });
+    slots.push({ start, end });
+  }
   slots.sort((a, b) => a.start - b.start);
   return {
     slots,

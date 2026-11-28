@@ -542,6 +542,14 @@ const pairs: Record<string, [string, string]> = {
     "Mindestens ein Termin überschneidet sich mit deinem Kalender.",
     "At least one session overlaps with your calendar.",
   ],
+  claimAvailabilityUnavailable: [
+    "Die Verfügbarkeit für diesen Auftrag konnte nicht geprüft werden.",
+    "Availability for this job could not be checked.",
+  ],
+  retryClaimAvailability: [
+    "Verfügbarkeit erneut prüfen",
+    "Check availability again",
+  ],
   claim_not_eligible: [
     "Wähle im Profil einen passenden Themenbereich für diesen Auftrag.",
     "Choose a matching subject area for this job in your profile.",

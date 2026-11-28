@@ -117,6 +117,11 @@ it("requires a positive published window with valid endpoints", () => {
   ).toBeNull();
 });
 
+it("renders a placeholder for an unreadable date or unsupported display zone", () => {
+  expect(dateTime("infinity", "en", "UTC")).toBe("–");
+  expect(dateTime("2027-01-18T20:00:00Z", "en", "Legacy/Zone")).toBe("–");
+});
+
 it("reuses the exact display formatter across long lists and varies it by language, zone and style", () => {
   const constructor = vi.spyOn(Intl, "DateTimeFormat");
   try {

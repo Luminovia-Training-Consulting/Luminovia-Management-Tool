@@ -34,7 +34,7 @@ import { CalendarDays, CheckCircle2, ChevronLeft, MapPin } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
-import { dateTime, money } from "../../lib/dates";
+import { dateTime, dateTimeRange, money } from "../../lib/dates";
 import type { Job } from "../../lib/types";
 import { calendarAssignmentsQuery } from "../calendar/calendar-window-api";
 import {
@@ -177,7 +177,11 @@ export function JobDetail() {
       overlapsTeachingAssignments(job.id, offered.slots, assignments.data),
     [offered, job, assignments.isSuccess, assignments.data],
   );
-  const canCheckOverlap = !offered || assignments.isSuccess;
+  const invalidSchedule = Boolean(job?.job_sessions.length && !offered);
+  const canCheckOverlap =
+    !invalidSchedule && (!offered || assignments.isSuccess);
+  const availabilityCheckFailed =
+    invalidSchedule || claimDetail.isError || assignments.isError;
   // Bind consent to the actor-authorized detail and every displayed quote field.
   // A role or offer refresh may replace the price without changing the route.
   const consent = job
@@ -266,13 +270,11 @@ export function JobDetail() {
   );
   const period =
     sessions.length > 0
-      ? new Intl.DateTimeFormat(i18n.language, {
-          dateStyle: "medium",
-          timeStyle: "short",
-          timeZone: job.time_zone,
-        }).formatRange(
-          new Date(sessions[0].starts_at),
-          new Date(sessions.at(-1)!.ends_at),
+      ? dateTimeRange(
+          sessions[0].starts_at,
+          sessions.at(-1)!.ends_at,
+          i18n.language,
+          job.time_zone,
         )
       : null;
   const deliveryFallback = job.delivery_summary ? (
@@ -535,6 +537,27 @@ export function JobDetail() {
                 <p>{t("claimHelp")}</p>
                 {assignmentConflict && (
                   <Notice kind="error">{t("claim_conflict")}</Notice>
+                )}
+                {job.status === "published" && availabilityCheckFailed && (
+                  <Notice kind="error">
+                    <p>{t("claimAvailabilityUnavailable")}</p>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        !online ||
+                        jobs.isFetching ||
+                        claimDetail.isFetching ||
+                        assignments.isFetching
+                      }
+                      onClick={() => {
+                        if (invalidSchedule) void jobs.refetch();
+                        if (claimDetail.isError) void claimDetail.refetch();
+                        if (assignments.isError) void assignments.refetch();
+                      }}
+                    >
+                      {t("retryClaimAvailability")}
+                    </Button>
+                  </Notice>
                 )}
                 <label className="checkbox-label">
                   <input

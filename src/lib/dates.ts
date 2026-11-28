@@ -119,6 +119,31 @@ export function validScheduleIntervals(
 const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
 const maxDateTimeFormatters = 32;
 
+function dateTimeFormatter(
+  language: string,
+  zone: string,
+  dateStyle: "medium" | "short",
+) {
+  const key = JSON.stringify([language, zone, dateStyle]);
+  let formatter = dateTimeFormatters.get(key);
+  if (!formatter) {
+    try {
+      formatter = new Intl.DateTimeFormat(language, {
+        dateStyle,
+        timeStyle: "short",
+        timeZone: zone,
+      });
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      return null;
+    }
+    if (dateTimeFormatters.size >= maxDateTimeFormatters)
+      dateTimeFormatters.delete(dateTimeFormatters.keys().next().value!);
+    dateTimeFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 /** Format an instant in the requested language and explicit display zone. */
 export function dateTime(
   iso: string,
@@ -126,19 +151,25 @@ export function dateTime(
   zone: string,
   dateStyle: "medium" | "short" = "medium",
 ) {
-  const key = JSON.stringify([language, zone, dateStyle]);
-  let formatter = dateTimeFormatters.get(key);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat(language, {
-      dateStyle,
-      timeStyle: "short",
-      timeZone: zone,
-    });
-    if (dateTimeFormatters.size >= maxDateTimeFormatters)
-      dateTimeFormatters.delete(dateTimeFormatters.keys().next().value!);
-    dateTimeFormatters.set(key, formatter);
-  }
-  return formatter.format(new Date(iso));
+  const instant = Date.parse(iso);
+  return Number.isFinite(instant)
+    ? (dateTimeFormatter(language, zone, dateStyle)?.format(instant) ?? "–")
+    : "–";
+}
+
+/** Format an ordered range; imports with unreadable timestamps render a placeholder. */
+export function dateTimeRange(
+  start: string,
+  end: string,
+  language: string,
+  zone: string,
+) {
+  const from = Date.parse(start);
+  const to = Date.parse(end);
+  return Number.isFinite(from) && Number.isFinite(to) && from <= to
+    ? (dateTimeFormatter(language, zone, "medium")?.formatRange(from, to) ??
+        "–")
+    : "–";
 }
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>();
