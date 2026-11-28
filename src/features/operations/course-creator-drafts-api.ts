@@ -43,6 +43,8 @@ export function courseCreatorDraftsQuery(actor: string, id?: string) {
   };
 }
 
+class UnconfirmedDraftWrite extends Error {}
+
 export async function actOnCourseCreatorDraft(
   action: Action,
   id: string,
@@ -50,13 +52,26 @@ export async function actOnCourseCreatorDraft(
   payload: unknown,
 ) {
   requireOnline();
-  const { data, error } = await db().rpc("course_creator_draft_action", {
-    p_action: action,
-    p_draft_id: id,
-    p_expected_revision: revision,
-    p_payload: payload,
-  });
-  if (error) throw error;
+  const { data, error, status } = await db().rpc(
+    "course_creator_draft_action",
+    {
+      p_action: action,
+      p_draft_id: id,
+      p_expected_revision: revision,
+      p_payload: payload,
+    },
+  );
+  if (error) {
+    if (
+      action === "save" &&
+      error.code !== "40001" &&
+      (status === 0 || status >= 500)
+    )
+      throw new UnconfirmedDraftWrite("Course draft save was not confirmed", {
+        cause: error,
+      });
+    throw error;
+  }
   return courseCreatorReceiptSchema.parse(data);
 }
 
@@ -71,6 +86,7 @@ export function useCourseCreatorDraftSaver(
     revision,
     tail: Promise.resolve(),
     saved: "",
+    pendingSave: "",
     closed: false,
     conflict: false,
   });
@@ -87,17 +103,33 @@ export function useCourseCreatorDraftSaver(
         if (state.closed || state.conflict)
           throw new Error("course_draft_closed");
         setStatus("saving");
-        try {
-          if (state.saved !== snapshotKey || !state.revision) {
+        const save = async (serialized: string) => {
+          state.pendingSave = serialized;
+          try {
             const receipt = await actOnCourseCreatorDraft(
               "save",
               id,
               state.revision,
-              snapshot,
+              JSON.parse(serialized),
             );
             state.revision = receipt.revision;
-            state.saved = snapshotKey;
+            state.saved = serialized;
+            state.pendingSave = "";
+          } catch (error) {
+            if (!(
+              error instanceof UnconfirmedDraftWrite ||
+              error instanceof z.ZodError
+            ))
+              state.pendingSave = "";
+            throw error;
           }
+        };
+        try {
+          // The server can acknowledge the previous revision only for an
+          // exact replay. Recover it before sending the user's newer edits.
+          if (state.pendingSave) await save(state.pendingSave);
+          if (state.saved !== snapshotKey || !state.revision)
+            await save(snapshotKey);
           if (confirmation === undefined) {
             setStatus("saved");
             return undefined;
