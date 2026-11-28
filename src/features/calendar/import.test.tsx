@@ -1,16 +1,51 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { CalendarImport } from "./import";
+import { parseCalendarImport } from "./import-ical";
+import type {
+  CalendarImportInput,
+  CalendarImportReply,
+} from "./import-ical-preview";
+
+const processFile =
+  vi.fn<(input: CalendarImportInput) => Promise<CalendarImportReply>>();
+const terminate = vi.fn();
+
+class TestCalendarWorker {
+  onmessage?: (event: { data: CalendarImportReply }) => void;
+  postMessage(input: CalendarImportInput) {
+    void processFile(input).then((data) => this.onmessage?.({ data }));
+  }
+  terminate = terminate;
+}
 
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   rpc.mockReset();
+  terminate.mockClear();
+  vi.stubGlobal("Worker", TestCalendarWorker);
+  processFile.mockReset().mockImplementation(async (input) => {
+    try {
+      return { appointments: parseCalendarImport(...input) };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "invalid_file" };
+    }
+  });
 });
 const content =
   "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:fictional-review\r\nDTSTART:20400101T090000Z\r\nDTEND:20400101T100000Z\r\nSUMMARY:Fiktiver Testtermin\r\nEND:VEVENT\r\nEND:VCALENDAR";
@@ -96,5 +131,21 @@ it("clears a previous window error when the user edits the dates", async () => {
     screen.getByRole("button", { name: "Vorschau aktualisieren" }),
   );
   expect(await screen.findByText("Fiktiver Testtermin")).toBeVisible();
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it("terminates a pending import when the calendar is dismissed", async () => {
+  processFile.mockReturnValue(new Promise(() => undefined));
+  await setup();
+  expect(processFile).toHaveBeenCalledWith([
+    content,
+    "Europe/Berlin",
+    "2040-01-01",
+    "2040-01-01",
+    expect.any(String),
+  ]);
+  expect(terminate).not.toHaveBeenCalled();
+  cleanup();
+  await waitFor(() => expect(terminate).toHaveBeenCalledOnce());
   expect(rpc).not.toHaveBeenCalled();
 });

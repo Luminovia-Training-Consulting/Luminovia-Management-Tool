@@ -1,5 +1,5 @@
 /** Review local calendar content before one atomic owner-scoped database import. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
@@ -10,7 +10,8 @@ import { dateTime, validZone } from "../../lib/dates";
 import { TableImport } from "../../components/table-import";
 import { Button } from "../../components/ui/button";
 import { Field, Notice } from "../../components/common";
-import { type ImportedAppointment, parseCalendarImport } from "./import-ical";
+import type { ImportedAppointment } from "./import-ical";
+import { previewCalendarImport } from "./import-ical-preview";
 import { calendarImportReceipt } from "./schema";
 import "./import-i18n";
 import "./import.css";
@@ -69,6 +70,14 @@ export function CalendarImport({
   const [preview, setPreview] = useState<ImportedAppointment[] | null>(null);
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
+  const pending = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      pending.current?.abort();
+      pending.current = null;
+    },
+    [],
+  );
   async function saveAppointments(events: ImportedAppointment[]) {
     requireOnline();
     const { data, error } = await db().rpc("import_my_calendar", {
@@ -97,11 +106,24 @@ export function CalendarImport({
     setPreview(null);
   }
 
-  function review(text = source) {
+  async function review(input: File | string) {
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
     clearReview();
+    setReading(true);
     try {
-      setPreview(parseCalendarImport(text, zone, from, until, t("untitled")));
+      const text = typeof input === "string" ? input : await input.text();
+      controller.signal.throwIfAborted();
+      setSource(text);
+      const appointments = await previewCalendarImport(
+        [text, zone, from, until, t("untitled")],
+        controller.signal,
+      );
+      controller.signal.throwIfAborted();
+      setPreview(appointments);
     } catch (cause) {
+      if (controller.signal.aborted) return;
       setError(
         cause instanceof Error &&
           [
@@ -113,6 +135,11 @@ export function CalendarImport({
           ? cause.message
           : "invalid_file",
       );
+    } finally {
+      if (pending.current === controller) {
+        pending.current = null;
+        setReading(false);
+      }
     }
   }
 
@@ -175,7 +202,7 @@ export function CalendarImport({
             type="file"
             accept=".ics,text/calendar"
             disabled={reading || save.isPending}
-            onChange={async (e) => {
+            onChange={(e) => {
               const file = e.currentTarget.files?.[0];
               if (!file) return;
               e.currentTarget.value = "";
@@ -188,16 +215,7 @@ export function CalendarImport({
                 setError("invalid_file");
                 return;
               }
-              setReading(true);
-              try {
-                const text = await file.text();
-                setSource(text);
-                review(text);
-              } catch {
-                setError("invalid_file");
-              } finally {
-                setReading(false);
-              }
+              void review(file);
             }}
           />
         </Field>
@@ -205,7 +223,7 @@ export function CalendarImport({
           <Button
             variant="secondary"
             disabled={reading || save.isPending}
-            onClick={() => review()}
+            onClick={() => void review(source)}
           >
             {t("review")}
           </Button>

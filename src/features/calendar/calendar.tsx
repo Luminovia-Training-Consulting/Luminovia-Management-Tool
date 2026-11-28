@@ -551,7 +551,11 @@ function CalendarTools({
         />
         {showIcs && (
           <>
-            <CalendarImport key={`import-${actor}`} actor={actor} zone={zone} />
+            <CalendarImport
+              key={`import-${actor}-${zone}`}
+              actor={actor}
+              zone={zone}
+            />
             <CalendarExport key={actor} actor={actor} zone={zone} />
           </>
         )}
