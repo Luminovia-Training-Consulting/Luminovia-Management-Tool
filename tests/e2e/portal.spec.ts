@@ -230,8 +230,12 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
         await page.getByRole("navigation", {name: "Meine Finanzen", exact: true})
             .getByRole("link", {name: /^Analysen(?: |$)/}).click();
         expect((await personalReport).postDataJSON()).toMatchObject({p_scope: "personal"});
-        await page.goto("/admin/finance");
+        const scopes = page.getByRole("navigation", {name: "Finanzbereich", exact: true});
+        await expect(scopes.getByRole("link", {name: "Eigene Honorare", exact: true})).toHaveAttribute("aria-current", "page");
+        await scopes.getByRole("link", {name: "Plattformfinanzen", exact: true}).click();
+        await expect(page).toHaveURL(/\/admin\/finance$/);
         await expect(page.getByRole("heading", {name: "Plattformfinanzen", exact: true})).toBeVisible();
+        await expect(scopes.getByRole("link", {name: "Plattformfinanzen", exact: true})).toHaveAttribute("aria-current", "page");
         const finance = page.getByRole("main").getByRole("navigation", {name: "Plattformfinanzen", exact: true});
         const staffReport = page.waitForRequest((request) =>
             new URL(request.url()).pathname.endsWith("/rpc/analytics_report"),
@@ -243,6 +247,9 @@ test("dual-role finance keeps personal and platform reports separate", async ({p
         const source = page.getByLabel("Rechnungsquelle", {exact: true});
         await expect(source).toHaveValue("lecturer_all");
         await expect(source.locator('option[value="own"]')).toHaveCount(0);
+        await scopes.getByRole("link", {name: "Eigene Honorare", exact: true}).click();
+        await expect(page).toHaveURL(/\/finance$/);
+        await expect(page.getByRole("heading", {name: "Meine Finanzen", exact: true})).toBeVisible();
     } finally {
         await checked(control.auth.admin.deleteUser(manager.id));
     }

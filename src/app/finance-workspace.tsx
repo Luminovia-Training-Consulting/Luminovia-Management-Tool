@@ -137,8 +137,21 @@ export function FinanceWorkspace({ scope }: { scope: FinanceScope }) {
       />
     );
   }
+  const platformPath = access.staff.overview
+    ? financeRoots.staff
+    : access.staff.analytics
+      ? financeRoots.staff + "/analytics"
+      : undefined;
   return (
     <>
+      {scope !== "company" && access.personal.overview && platformPath && (
+        <nav className="section-navigation" aria-label={t("financeScope")}>
+          <NavLink to={financeRoots.personal}>
+            {t("financePersonalFees")}
+          </NavLink>
+          <NavLink to={platformPath}>{t("platformFinance")}</NavLink>
+        </nav>
+      )}
       <nav
         className={scope === "company" ? "admin-tabs" : "section-navigation"}
         aria-label={t(

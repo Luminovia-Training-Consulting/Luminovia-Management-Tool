@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { FinanceWorkspace, LegacyFinanceRoute } from "./finance-workspace";
@@ -109,17 +110,80 @@ it("keeps management tabs together and forwards query and fragment from legacy a
   expect(screen.getByRole("link", { name: /^analytics(?: |$)/ })).toBeVisible();
 });
 
-it("keeps a manager who also teaches in personal finance unless opening a platform link", async () => {
+it.each(["admin", "management"])(
+  "lets a teaching %s switch between personal and platform finance",
+  async (role) => {
+    state.roles = [role, "lecturer"];
+    state.permissions = ["finance.manage"];
+    const user = userEvent.setup();
+    open("/finance");
+    await screen.findByRole("heading", { name: "Overview" });
+    const personal = screen.getByRole("navigation", { name: "myFinance" });
+    expect(
+      within(personal).getByRole("link", { name: /^analytics(?: |$)/ }),
+    ).toHaveAttribute("href", "/finance/analytics");
+    expect(
+      within(personal).queryByRole("link", {
+        name: /^accountingExports(?: |$)/,
+      }),
+    ).toBeNull();
+
+    const scopes = () =>
+      screen.getByRole("navigation", { name: "financeScope" });
+    expect(within(scopes()).getByText("financePersonalFees")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await user.click(
+      within(scopes()).getByRole("link", { name: "platformFinance" }),
+    );
+    await screen.findByRole("heading", { name: "Platform overview" });
+    expect(
+      within(scopes()).getByRole("link", { name: "platformFinance" }),
+    ).toHaveAttribute("aria-current", "page");
+
+    const platform = screen.getByRole("navigation", {
+      name: "platformFinance",
+    });
+    expect(
+      within(platform).getByRole("link", { name: /^analytics(?: |$)/ }),
+    ).toHaveAttribute("href", "/admin/finance/analytics");
+    await user.click(
+      within(scopes()).getByRole("link", { name: "financePersonalFees" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Overview" }),
+    ).toBeVisible();
+  },
+);
+
+it("opens the first permitted platform report for a dual-role manager with analytics access only", async () => {
   state.roles = ["management", "lecturer"];
-  state.permissions = ["finance.manage"];
+  state.permissions = ["jobs.manage"];
+  const user = userEvent.setup();
+  open("/finance");
+  const scopes = await screen.findByRole("navigation", {
+    name: "financeScope",
+  });
+  const link = within(scopes).getByRole("link", { name: "platformFinance" });
+  expect(link).toHaveAttribute("href", "/admin/finance/analytics");
+  await user.click(link);
+  expect(
+    await screen.findByRole("heading", { name: "Platform analytics" }),
+  ).toBeVisible();
+  const staff = screen.getByRole("navigation", { name: "platformFinance" });
+  expect(
+    within(staff).queryByRole("link", { name: /^financeOverview(?: |$)/ }),
+  ).toBeNull();
+});
+
+it("retains only personal links without live staff finance rights", async () => {
+  state.roles = ["management", "lecturer"];
+  state.permissions = ["courses.manage"];
   open("/finance");
   await screen.findByRole("heading", { name: "Overview" });
-  expect(
-    screen.getByRole("link", { name: /^analytics(?: |$)/ }),
-  ).toHaveAttribute("href", "/finance/analytics");
-  expect(
-    screen.queryByRole("link", { name: /^accountingExports(?: |$)/ }),
-  ).toBeNull();
+  expect(screen.queryByRole("navigation", { name: "financeScope" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "platformFinance" })).toBeNull();
 });
 
 it("forwards management invoice-series bookmarks for dual-role users to the platform view", async () => {

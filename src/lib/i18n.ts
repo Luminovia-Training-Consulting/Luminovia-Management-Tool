@@ -70,6 +70,8 @@ const pairs: Record<string, [string, string]> = {
     "Kennzahlen, Vergleiche und Prognosen",
     "Metrics, comparisons and forecasts",
   ],
+  financeScope: ["Finanzbereich", "Finance workspace"],
+  financePersonalFees: ["Eigene Honorare", "Personal fees"],
   myFinance: ["Meine Finanzen", "My finances"],
   myInvoiceExports: ["Rechnungsexporte", "Invoice exports"],
   companyFinance: ["Unternehmensfinanzen", "Company finances"],
