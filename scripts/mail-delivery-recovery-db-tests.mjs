@@ -5,7 +5,7 @@ import { signAcademyLicence } from "./academy-licence.mjs";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
 await withTestDatabase("mail_recovery_test", async ({sql, actor}) => {
-    const [admin, teacher, course, claim, session, notice, outbox] = Array.from({length: 7}, randomUUID);
+    const [admin, teacher, course, claim, session, notice] = Array.from({length: 6}, randomUUID);
     const call = async (user, name, args = []) =>
         JSON.parse(await actor(user, `select to_jsonb(public.${name}(${args.join(",")}))`));
     const reject = (id, definite) => sql(`begin;set local role service_role;
@@ -103,10 +103,11 @@ await withTestDatabase("mail_recovery_test", async ({sql, actor}) => {
       insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at)
       values(${q(session)},${q(claim)},${q(teacher)},now()+interval '2 hours',now()+interval '3 hours');
       insert into public.notifications(id,user_id,kind,resource_id) values(${q(notice)},${q(teacher)},'session_reminder',${q(session)});
-      update private.delivery_preferences set email_enabled=true where user_id=${q(teacher)};
-      insert into private.notification_email_outbox(id,notification_id,occurrence_at,state,attempts,finished_at,error_code)
-      select ${q(outbox)},id,created_at,'failed',3,${q(finished)},'smtp_recipient_rejected'
-      from public.notifications where id=${q(notice)};`);
+      update private.delivery_preferences set email_enabled=true where user_id=${q(teacher)};`);
+    const outbox = await sql(`update private.notification_email_outbox
+      set state='failed',attempts=3,finished_at=${q(finished)},error_code='smtp_recipient_rejected'
+      where notification_id=${q(notice)} returning id`);
+    assert.match(outbox, /^[0-9a-f-]{36}$/i);
     const courseArgs = (request) => [q(outbox), q(finished), q(request)];
     const receiptKey = randomUUID();
     await assert.rejects(call(teacher, "retry_course_mail_delivery", courseArgs(receiptKey)), /42501/);
