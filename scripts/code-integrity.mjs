@@ -101,6 +101,27 @@ export function auditFrontend(root) {
         /** Carries the enclosing JSX route path into nested Route declarations. */
         function visit(node, routeBase = "") {
             if (
+                ts.isNewExpression(node) &&
+                ts.isIdentifier(node.expression) &&
+                ["SharedWorker", "Worker"].includes(node.expression.text)
+            ) {
+                const moduleUrl = node.arguments?.[0];
+                if (
+                    moduleUrl &&
+                    ts.isNewExpression(moduleUrl) &&
+                    ts.isIdentifier(moduleUrl.expression) &&
+                    moduleUrl.expression.text === "URL"
+                ) {
+                    const specifier = moduleUrl.arguments?.[0];
+                    if (
+                        specifier &&
+                        (ts.isStringLiteral(specifier) ||
+                            ts.isNoSubstitutionTemplateLiteral(specifier))
+                    )
+                        registerImport(specifier, specifier.text);
+                }
+            }
+            if (
                 (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
                 node.moduleSpecifier &&
                 ts.isStringLiteral(node.moduleSpecifier)

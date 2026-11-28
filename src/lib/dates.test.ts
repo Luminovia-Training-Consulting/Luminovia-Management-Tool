@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   compareScheduleInstants,
   dateTime,
+  dateTimeRange,
   formatUtcDate,
   money,
   resolveScheduleWindow,
@@ -157,6 +158,29 @@ it("parses each schedule endpoint once even when sorting an unordered series", (
 it("renders a placeholder for an unreadable date or unsupported display zone", () => {
   expect(dateTime("infinity", "en", "UTC")).toBe("–");
   expect(dateTime("2027-01-18T20:00:00Z", "en", "Legacy/Zone")).toBe("–");
+  expect(
+    dateTimeRange(
+      "2027-01-18T20:00:00Z",
+      "2027-01-18T21:00:00Z",
+      "en",
+      "Legacy/Zone",
+    ),
+  ).toBe("–");
+});
+
+it("rethrows unexpected formatter failures", () => {
+  const constructor = vi
+    .spyOn(Intl, "DateTimeFormat")
+    .mockImplementation(() => {
+      throw new Error("unexpected formatter failure");
+    });
+  try {
+    expect(() => dateTime("2027-01-18T20:00:00Z", "en-x-throw", "UTC")).toThrow(
+      "unexpected formatter failure",
+    );
+  } finally {
+    constructor.mockRestore();
+  }
 });
 
 it("reuses the exact display formatter across long lists and varies it by language, zone and style", () => {

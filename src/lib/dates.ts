@@ -65,9 +65,9 @@ export function resolveScheduleWindow(
     original?.ends_at,
     original?.time_zone,
   );
-  return starts_at &&
-    ends_at &&
-    (compareScheduleInstants(starts_at, ends_at) ?? 0) < 0
+  if (!starts_at || !ends_at) return null;
+  // Both endpoints were produced by the validated zoned-time conversion above.
+  return compareScheduleInstants(starts_at, ends_at)! < 0
     ? { starts_at, ends_at }
     : null;
 }

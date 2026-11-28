@@ -226,6 +226,26 @@ test("delivered modules are reachable from the browser or the Vite build", () =>
     assert.deepEqual(report.unreachable, []);
 });
 
+test("module worker URLs count as runtime imports", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "luminovia-worker-graph-"));
+    try {
+        mkdirSync(join(fixture, "src"));
+        writeFileSync(
+            join(fixture, "src/main.tsx"),
+            `
+                new Worker(new URL("./dedicated.ts", import.meta.url), { type: "module" });
+                new SharedWorker(new URL("./shared.ts", import.meta.url), { type: "module" });
+            `,
+        );
+        writeFileSync(join(fixture, "src/dedicated.ts"), "export {};");
+        writeFileSync(join(fixture, "src/shared.ts"), "export {};");
+        writeFileSync(join(fixture, "src/unused.ts"), "export {};");
+        assert.deepEqual(auditFrontend(fixture).unreachable, ["src/unused.ts"]);
+    } finally {
+        rmSync(fixture, {recursive: true, force: true});
+    }
+});
+
 test("a build-time contract is reachable through the Vite entry without making an unused peer reachable", () => {
     const fixture = mkdtempSync(join(tmpdir(), "luminovia-build-graph-"));
     try {
