@@ -13,6 +13,16 @@ const pairs: Record<string, [string, string]> = {
   courseMoreActions: ["Weitere Aktionen", "More actions"],
   courseFilters: ["Filter", "Filters"],
   courseActiveFilters: ["Filter ({{count}})", "Filters ({{count}})"],
+  courseNoMatches: [
+    "Keine Kurse oder Vorlagen entsprechen der aktuellen Auswahl.",
+    "No courses or templates match the current selection.",
+  ],
+  courseResetList: [
+    "Suche und Filter zurücksetzen",
+    "Clear search and filters",
+  ],
+  courseSessionCount_one: ["{{count}} Termin", "{{count}} session"],
+  courseSessionCount_other: ["{{count}} Termine", "{{count}} sessions"],
   loadMoreRuns: ["Weitere Kurse laden", "Load more courses"],
   loadMoreTemplates: ["Weitere Vorlagen laden", "Load more templates"],
   courseDraftCount: ["Entwürfe ({{count}})", "Drafts ({{count}})"],

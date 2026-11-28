@@ -255,6 +255,7 @@ export const runsQuery = (actor: string, withAssignments = false) =>
           )
           .order("created_at", { ascending: false })
           .order("id")
+          .order("starts_at", { referencedTable: "course_sessions" })
           .order("starts_at", { referencedTable: "jobs.first_session" })
           .limit(1, { referencedTable: "jobs.first_session" });
         if (withAssignments) query.eq("jobs.job_claims.status", "confirmed");

@@ -635,6 +635,7 @@ export function RunForm({
       );
       if (!sessions) {
         setTimeError(true);
+        schedule.current?.focus();
         throw new Error("time");
       }
       if (creator) {
@@ -1105,8 +1106,18 @@ export function RunForm({
           })}
         />
       </Field>
-      <fieldset className="operations-topic-field" ref={schedule} tabIndex={-1}>
+      <fieldset
+        className="operations-topic-field"
+        ref={schedule}
+        tabIndex={-1}
+        aria-describedby={timeError ? "run-schedule-error" : undefined}
+      >
         <legend>{t("sessions")}</legend>
+        {timeError && (
+          <div id="run-schedule-error">
+            <Notice kind="error">{t("timeInvalid")}</Notice>
+          </div>
+        )}
         {canEditSchedule ? (
           <>
             <CourseSchedulePlanner
@@ -1327,9 +1338,7 @@ export function RunForm({
         )}
         <Button
           type="submit"
-          variant={
-            original && focusTarget !== "organisation" ? "default" : "secondary"
-          }
+          variant={focusTarget === "organisation" ? "secondary" : "default"}
           disabled={
             !online ||
             save.isPending ||
@@ -1348,6 +1357,7 @@ export function RunForm({
           (activeOrganisation || focusTarget === "organisation") && (
             <Button
               type="button"
+              variant={focusTarget === "organisation" ? "default" : "secondary"}
               disabled={
                 !online ||
                 !activeOrganisation ||
@@ -1389,7 +1399,7 @@ export function RunForm({
       {save.isError && needsContent && templateRetained && (
         <Notice>{t("courseTemplateRetained")}</Notice>
       )}
-      {(save.isError || timeError) && (
+      {save.isError && !timeError && save.error?.message !== "time" && (
         <Notice kind="error">
           {creator?.saved?.from_enquiry &&
           save.error &&
@@ -1401,14 +1411,12 @@ export function RunForm({
             </>
           ) : (
             t(
-              timeError
-                ? "timeInvalid"
-                : save.error?.message === "course_locked" ||
-                    (save.error &&
-                      "code" in save.error &&
-                      save.error.code === "40001")
-                  ? "linkedRunConflict"
-                  : "error",
+              save.error?.message === "course_locked" ||
+                (save.error &&
+                  "code" in save.error &&
+                  save.error.code === "40001")
+                ? "linkedRunConflict"
+                : "error",
             )
           )}
         </Notice>
