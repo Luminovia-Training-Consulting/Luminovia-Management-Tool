@@ -95,7 +95,7 @@ test("built PWA WebKit refuses notification permission without registering a dev
             });
             await page.goto("/settings");
             const delivery = page.locator("details.settings-section").filter({
-                hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/,
+                hasText: /E-Mail, Push & Ruhezeiten|Email, push & quiet hours/,
             });
             await delivery.locator("summary").press("Enter");
             await expect(delivery).toHaveJSProperty("open", true);

@@ -43,6 +43,14 @@ class WorkerDeadline(Exception):
     """Interrupt even a peer that keeps a per-socket timeout alive."""
 
 
+SCOPED_NOTICE_SUBJECTS = {
+    "calendar_invitation": ("Neue Kalendereinladung", "New calendar invitation"),
+    "chat_message": ("Neue Chatnachricht", "New chat message"),
+    "claim_cancelled": ("Ein Auftrag wurde abgesagt", "An assignment was cancelled"),
+    "invoice_received_for_review": ("Neue Rechnung zur Prüfung", "New invoice to review"),
+    "invoice_review_requested": ("Rechnungsprüfung angefragt", "Invoice review requested"),
+}
+
 CUSTOMER_ORDER_RECEIPT_COPY = {
     "customer_order_submitted": {
         "de": ("Ihr Kursauftrag ist eingegangen", "Wir haben Ihren Kursauftrag erhalten. Den aktuellen Stand sehen Sie im Unternehmensportal."),
@@ -269,12 +277,10 @@ def course_offer_content(offer: dict[str, Any], portal_url: str, german: bool) -
 
 def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
     german = delivery["locale"] == "de"
-    cancelled = delivery.get("kind") == "claim_cancelled"
-    subject = (
-        "Luminovia: Ein Auftrag wurde abgesagt" if cancelled else "Luminovia: Neue Benachrichtigung"
-    ) if german else (
-        "Luminovia: An assignment was cancelled" if cancelled else "Luminovia: New notification"
+    localized_subjects = SCOPED_NOTICE_SUBJECTS.get(
+        delivery.get("kind"), ("Neue Benachrichtigung", "New notification"),
     )
+    subject = f"Luminovia: {localized_subjects[0 if german else 1]}"
     intro = "In deinem Luminovia-Portal gibt es eine neue Meldung." if german else "There is a new update in your Luminovia portal."
     closing = "Melde dich an, um die Meldung sicher zu öffnen. Deine E-Mail-Einstellungen kannst du im Portal ändern." if german else "Sign in to open the update securely. You can change your email preferences in the portal."
     message = EmailMessage(policy=SMTP)

@@ -55,7 +55,8 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
             .join(",")},(${q(manager)},'admin');
         update public.profiles set active = false where id = ${q(inactive)};
         update public.profiles set locale = 'en' where id = ${q(matching)};
-        update private.delivery_preferences set email_enabled = true where user_id <> ${q(optedOut)};
+        update private.delivery_preferences set email_enabled = false, version = 2
+          where user_id = ${q(optedOut)};
         update private.notification_preferences set job_updates = false where user_id = ${q(noUpdates)};
         update private.push_configuration set enabled = true;
         insert into private.push_subscriptions(user_id,endpoint,p256dh,auth_secret,device_token,label)

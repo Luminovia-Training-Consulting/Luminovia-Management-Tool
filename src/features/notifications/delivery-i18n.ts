@@ -3,13 +3,13 @@ import i18n from "../../lib/i18n";
 const de = {
   title: "E-Mail-Benachrichtigungen",
   intro:
-    "Erhalte Hinweise zu neuen Portal-Meldungen an die E-Mail-Adresse deines Kontos. Inhalte und vertrauliche Unterlagen bleiben im Portal.",
+    "Neue versandfähige Hinweise gehen an die bestätigte E-Mail-Adresse deines Kontos. Ohne eigene Auswahl ist der E-Mail-Versand für dein Konto aktiviert. Du kannst ihn hier ausschalten. Vertrauliche Unterlagen bleiben im Portal.",
   enabled: "Zusätzliche Hinweise per E-Mail erhalten",
-  quiet: "Ruhezeiten für E-Mails verwenden",
+  quiet: "Versand-Ruhezeiten verwenden",
   start: "Ruhezeit von",
   end: "Ruhezeit bis",
   zone: "Zeitzone der Ruhezeiten",
-  help: "Während der Ruhezeit bleiben Meldungen im Portal sichtbar. E-Mails warten bis zum nächsten Versandfenster. Bei aktivierter Zustellung verarbeitet der Server neue Meldungen automatisch.",
+  help: "Während der Versand-Ruhezeit bleiben Meldungen im Portal sichtbar. E-Mail und Push warten bis zum nächsten Versandfenster.",
   validation:
     "Wähle zwei unterschiedliche Uhrzeiten und eine gültige IANA-Zeitzone, zum Beispiel Europe/Berlin.",
   save: "E-Mail-Einstellungen speichern",
@@ -23,13 +23,13 @@ const de = {
 const en: Record<keyof typeof de, string> = {
   title: "Email notifications",
   intro:
-    "Receive alerts for new portal notifications at your account email address. Content and confidential documents remain in the portal.",
+    "Eligible new alerts go to your confirmed account email address. Email is enabled for accounts without a saved choice. You can switch it off here. Confidential documents stay in the portal.",
   enabled: "Receive additional alerts by email",
-  quiet: "Use email quiet hours",
+  quiet: "Use delivery quiet hours",
   start: "Quiet hours from",
   end: "Quiet hours until",
   zone: "Quiet hours time zone",
-  help: "Notifications remain visible in the portal during quiet hours. Emails wait until the next delivery window. When delivery is enabled, the server processes new notifications automatically.",
+  help: "Notifications remain visible in the portal during delivery quiet hours. Email and push wait until the next delivery window.",
   validation:
     "Choose two different times and a valid IANA time zone, such as Europe/Berlin.",
   save: "Save email preferences",

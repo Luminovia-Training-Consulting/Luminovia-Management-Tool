@@ -614,6 +614,21 @@ class DeliveryTests(unittest.TestCase):
             self.assertEqual(worker.smtp_delivery(self.config, DELIVERY), ("accepted", None))
         connection.data.assert_called_once()
 
+    def test_scoped_subjects_keep_private_details_in_the_portal(self):
+        cases = (
+            ("calendar_invitation", "de", "Luminovia: Neue Kalendereinladung"),
+            ("chat_message", "en", "Luminovia: New chat message"),
+            ("invoice_received_for_review", "en", "Luminovia: New invoice to review"),
+        )
+        for kind, locale, subject in cases:
+            with self.subTest(kind=kind, locale=locale):
+                message = worker.make_message(self.config, {
+                    **DELIVERY, "kind": kind, "locale": locale, "title": "PRIVATE",
+                })
+                self.assertEqual(message["Subject"], subject)
+                self.assertIn("/notifications", message.get_content())
+                self.assertNotIn("PRIVATE", message.as_string())
+
     def test_generic_bilingual_message_does_not_include_resource_body(self):
         for locale in ("de", "en"):
             message = worker.make_message(self.config, {**DELIVERY, "locale": locale, "title": "PRIVATE CONTRACT", "body": "PRIVATE CHAT", "kind": "unknown-private-kind"})

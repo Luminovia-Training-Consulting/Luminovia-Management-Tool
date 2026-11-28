@@ -24,7 +24,7 @@ import i18n from "../../lib/i18n";
 
 const de = {
   title: "Push auf deinen Geräten",
-  help: "Aktiviere Hinweise ausdrücklich auf diesem Gerät. Auf dem Sperrbildschirm erscheint nur ein allgemeiner Portal-Hinweis. Ruhezeiten gelten auch für Push.",
+  help: "Aktiviere Push auf jedem Gerät, auf dem du Hinweise erhalten möchtest. Der Browser fragt nach deiner Freigabe. Auf dem Sperrbildschirm erscheint nur ein allgemeiner Portal-Hinweis. Die Zustell-Ruhezeiten gelten auch für Push.",
   unsupported:
     "Dieser Browser unterstützt Push hier nicht. Auf iPhone und iPad ist dafür eine unterstützte, zum Home-Bildschirm hinzugefügte Web-App erforderlich.",
   unavailable:
@@ -46,7 +46,7 @@ const de = {
 };
 const en: Record<keyof typeof de, string> = {
   title: "Push on your devices",
-  help: "Explicitly enable alerts on this device. The lock screen shows only a generic portal update. Quiet hours also apply to push.",
+  help: "Enable push on each device where you want alerts. Your browser asks for permission. The lock screen shows only a generic portal update. Delivery quiet hours also apply to push.",
   unsupported:
     "This browser does not support push here. iPhone and iPad require a supported web app added to the Home Screen.",
   unavailable: "Push delivery has not been configured on this server yet.",

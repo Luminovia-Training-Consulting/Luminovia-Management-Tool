@@ -162,7 +162,7 @@ export const notificationPaths = {
   "/rest/v1/rpc/save_notification_preferences": operation(
     "saveNotificationPreferences",
     "Save own notification category preferences",
-    "Submit the four category switches and the version from the last read. The response contains the committed values and new version.",
+    "Submit the category switches and the version from the last read. Older clients may omit events and invoices to retain their saved values. The response contains the committed values and new version.",
     versioned(notificationPreferencesPayloadSchema),
     notificationPreferencesSchema,
     { versioned: true },
@@ -186,7 +186,7 @@ export const notificationPaths = {
   "/rest/v1/rpc/delivery_preferences": operation(
     "readDeliveryPreferences",
     "Read own email delivery preferences",
-    "Returns the email delivery switch, daily quiet-hour range, IANA time zone and expected version.",
+    "Returns the email delivery switch, shared email and push quiet hours, IANA time zone and expected version. Email defaults to enabled for accounts without a saved choice.",
     noBody,
     deliveryWireSchema,
     { optionalBody: true },

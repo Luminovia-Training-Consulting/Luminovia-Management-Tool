@@ -62,7 +62,7 @@ test("push device consent is private, removable, bilingual and online-confirmed"
         await page.goto("/settings");
         const delivery = page
             .locator("details.settings-section")
-            .filter({hasText: "Ruhezeiten & Zustellung"});
+            .filter({hasText: "E-Mail, Push & Ruhezeiten"});
         await delivery.locator("summary").click();
         await expect(delivery).toHaveJSProperty("open", true);
         const panel = page.locator("section").filter({

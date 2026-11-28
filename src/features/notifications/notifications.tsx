@@ -296,12 +296,23 @@ function PreferencesForm({
       <input type="hidden" {...register("version", { valueAsNumber: true })} />
       <fieldset disabled={save.isPending}>
         <legend>{t("title")}</legend>
-        {(["chat", "forum", "job_updates", "reminders"] as const).map((key) => (
-          <label key={key} className="notification-preference">
-            <input type="checkbox" {...register(key)} />
-            <span>{t(key)}</span>
-          </label>
-        ))}
+        {(
+          [
+            "chat",
+            "forum",
+            "job_updates",
+            "events",
+            "invoices",
+            "reminders",
+          ] as const
+        )
+          .filter((key) => formState.defaultValues?.[key] !== undefined)
+          .map((key) => (
+            <label key={key} className="notification-preference">
+              <input type="checkbox" {...register(key)} />
+              <span>{t(key)}</span>
+            </label>
+          ))}
       </fieldset>
       <p>{t("preferenceHelp")}</p>
       <PreferenceSaveControls
@@ -408,9 +419,7 @@ export function SettingsPage() {
             setDeliveryOpened(true);
         }}
       >
-        <summary>
-          {de ? "Ruhezeiten & Zustellung" : "Quiet hours & delivery"}
-        </summary>
+        <summary>{t("deliverySettings")}</summary>
         {deliveryOpened && (
           <div className="section-stack notification-delivery-stack">
             <QuietHoursSettings />

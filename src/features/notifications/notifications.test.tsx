@@ -447,7 +447,7 @@ describe("versioned notification preferences", () => {
         ].includes(name),
       );
     expect(deliveryReads()).toHaveLength(0);
-    const disclosure = screen.getByText("Ruhezeiten & Zustellung");
+    const disclosure = screen.getByText("E-Mail, Push & Ruhezeiten");
     await userEvent.click(disclosure);
     await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
@@ -484,6 +484,54 @@ describe("versioned notification preferences", () => {
       p_expected_version: 1,
     });
   });
+  it("saves the finance and calendar choices separately without changing the email channel", async () => {
+    const previous = state.rpc.getMockImplementation()!;
+    state.rpc.mockImplementation((name: string, payload) => {
+      if (name !== "notification_preferences") return previous(name, payload);
+      const request = Promise.resolve({
+        data: { ...initialPreferences, events: true, invoices: false },
+        error: null,
+      });
+      return Object.assign(request, { abortSignal: () => request });
+    });
+
+    view(<SettingsPage />);
+    const events = await screen.findByRole("checkbox", {
+      name: "Kalendereinladungen",
+    });
+    const invoices = screen.getByRole("checkbox", {
+      name: "Rechnungen und Rechnungsprüfung",
+    });
+    expect(events).toBeChecked();
+    expect(invoices).not.toBeChecked();
+    await userEvent.click(events);
+    await act(() => i18n.changeLanguage("en"));
+    expect(screen.getByRole("checkbox", { name: "Calendar invitations" })).toBe(
+      events,
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "Invoices and invoice review" }),
+    ).toBe(invoices);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Preferences saved.")).toBeVisible();
+    expect(state.rpc).toHaveBeenCalledWith("save_notification_preferences", {
+      p_payload: {
+        chat: true,
+        forum: true,
+        job_updates: true,
+        reminders: true,
+        events: false,
+        invoices: false,
+      },
+      p_expected_version: 1,
+    });
+    expect(
+      state.rpc.mock.calls.some(
+        ([name]) => name === "save_delivery_preferences",
+      ),
+    ).toBe(false);
+  });
+
   it("stale writes preserve the draft until the user explicitly reloads", async () => {
     state.staleSave = true;
     view(<SettingsPage />);
@@ -659,7 +707,7 @@ describe("effective quiet-hour settings", () => {
         <SettingsPage />
       </>,
     );
-    await userEvent.click(screen.getByText("Quiet hours & delivery"));
+    await userEvent.click(screen.getByText("Email, push & quiet hours"));
     const enabled = await screen.findByRole("checkbox", {
       name: "Enable daily quiet hours",
     });
@@ -683,7 +731,7 @@ describe("effective quiet-hour settings", () => {
   });
   it("retains an unsaved time/checkbox across language changes and saves its independent version", async () => {
     view(<SettingsPage />);
-    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
+    await userEvent.click(screen.getByText("E-Mail, Push & Ruhezeiten"));
     const enabled = await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
     });
@@ -717,7 +765,7 @@ describe("effective quiet-hour settings", () => {
   });
   it("a stale server version keeps the quiet draft until explicit reload", async () => {
     view(<SettingsPage />);
-    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
+    await userEvent.click(screen.getByText("E-Mail, Push & Ruhezeiten"));
     const enabled = await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
     });
@@ -750,7 +798,7 @@ describe("effective quiet-hour settings", () => {
   it("offline edits remain a local draft and cannot issue a preference mutation", async () => {
     state.online = false;
     view(<SettingsPage />);
-    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
+    await userEvent.click(screen.getByText("E-Mail, Push & Ruhezeiten"));
     await userEvent.click(
       await screen.findByRole("checkbox", {
         name: "Tägliche Ruhezeit aktivieren",
@@ -768,7 +816,7 @@ describe("effective quiet-hour settings", () => {
   it("offers valid time zones and preserves an existing alias until the user chooses another zone", async () => {
     state.attention.time_zone = "US/Eastern";
     view(<SettingsPage />);
-    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
+    await userEvent.click(screen.getByText("E-Mail, Push & Ruhezeiten"));
     const zone = await screen.findByRole("combobox", {
       name: "Zeitzone der Ruhezeit",
     });
@@ -829,7 +877,9 @@ it("guest settings load only appearance and own-profile links without notificati
   expect(
     await screen.findByRole("link", { name: "Profil bearbeiten" }),
   ).toBeVisible();
-  expect(screen.queryByText("Ruhezeiten & Zustellung")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("E-Mail, Push & Ruhezeiten"),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByText("Benachrichtigungen einstellen"),
   ).not.toBeInTheDocument();
@@ -983,6 +1033,38 @@ it.each([
     }
   },
 );
+
+it("shows an eligible staff invoice submission under finance with its server-resolved link", async () => {
+  const previous = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name: string, payload) => {
+    if (name !== "notification_inbox") return previous(name, payload);
+    const request = Promise.resolve({
+      data: {
+        items: [
+          {
+            ...notice,
+            kind: "invoice_received_for_review",
+            title: "",
+            href: "/finance",
+          },
+        ],
+        unread_count: 1,
+        as_of: "2026-11-15T11:00:00Z",
+      },
+      error: null,
+    });
+    return Object.assign(request, { abortSignal: () => request });
+  });
+  view(<NotificationsPage />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Finanzen" }),
+  );
+  const row = (
+    await screen.findByText("Neue Rechnung zur Prüfung eingereicht")
+  ).closest("li")!;
+  expect(within(row).getByRole("link")).toHaveAttribute("href", "/finance");
+  expect(row.querySelector("p")).not.toBeInTheDocument();
+});
 
 it("dismisses the bell popover when opening an own correction on the current Finance page", async () => {
   state.rpc.mockImplementation((name: string) => {

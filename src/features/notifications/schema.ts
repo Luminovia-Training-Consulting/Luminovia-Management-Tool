@@ -60,12 +60,16 @@ export const inboxPageSchema = inboxProjection
         page.attention_count <= page.unread_count
       : page.attention_count === undefined,
   );
-/** Four category flags retain their independent positive CAS version; quiet-hour settings use a separate API. */
+/** Category switches use a separate version from delivery and quiet-hour settings. */
 const categoryFields = {
   chat: z.boolean(),
   forum: z.boolean(),
   job_updates: z.boolean(),
   reminders: z.boolean(),
+  // Older clients omit these switches. Older installations may also omit them
+  // from reads, in which case the browser must leave them out of its write.
+  events: z.boolean().optional(),
+  invoices: z.boolean().optional(),
 };
 export const notificationPreferencesPayloadSchema =
   z.strictObject(categoryFields);

@@ -18,6 +18,7 @@ it.each([
   ["readiness_task", "tasks"],
   ["course_preparation_updated", "tasks"],
   ["invoice_review_requested", "finance"],
+  ["invoice_received_for_review", "finance"],
   ["invoice_exception_available", "finance"],
   ["invoice_exception_revoked", "finance"],
   ["invoice_series_available", "finance"],

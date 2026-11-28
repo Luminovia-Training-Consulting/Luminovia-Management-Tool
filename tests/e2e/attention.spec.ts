@@ -84,7 +84,7 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
         // settings section; open it before targeting the actual attention region.
         const delivery = page
             .locator("details.settings-section")
-            .filter({hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/});
+            .filter({hasText: /E-Mail, Push & Ruhezeiten|Email, push & quiet hours/});
         await delivery.locator("summary").click();
         await expect(delivery).toHaveJSProperty("open", true);
         const quietSettings = page.getByRole("region", {

@@ -90,23 +90,24 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
             "Remove own email notification fixtures",
         );
     });
-    // This fixture uses service-wide leases. Refuse any pre-existing opted-in
-    // account rather than ever deliver another fixture's pending notification.
+    // Service-wide leases must start with an empty unrelated queue. All SMTP
+    // submissions from the isolated fixture go to the loopback capture.
     assert.equal(
         await sql(
             `select count(*)
-             from private.delivery_preferences
-             where email_enabled
-               and user_id not in (${q(owner.id)}, ${q(peer.id)})`,
+             from private.notification_email_outbox o
+             left join public.notifications n on n.id = o.notification_id
+             where o.state in ('pending', 'leased', 'sending')
+               and (n.user_id is null or n.user_id not in (${q(owner.id)}, ${q(peer.id)}))`,
         ),
         "0",
-        "No unrelated email-opted-in account belongs in this disposable fixture",
+        "No unrelated delivery belongs in this disposable fixture",
     );
     const preferences = await checked(
         owner.client.rpc("delivery_preferences"),
         "Read actual channel defaults",
     );
-    assert.equal(preferences.email_enabled, false);
+    assert.equal(preferences.email_enabled, true);
     let current = await checked(
         owner.client.rpc("save_delivery_preferences", {
             p_expected_version: preferences.version,
@@ -117,7 +118,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
                 time_zone: "Australia/Brisbane",
             },
         }),
-        "Opt own fictional account in using real Auth",
+        "Set own delivery time zone using real Auth",
     );
     for (const rpc of [
         ["lease_notification_emails", {p_limit: 1}],
@@ -144,7 +145,7 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
     assert.equal(
         (await checked(peer.client.rpc("delivery_preferences"), "Peer isolation"))
             .email_enabled,
-        false,
+        true,
     );
 
     async function createNotice() {

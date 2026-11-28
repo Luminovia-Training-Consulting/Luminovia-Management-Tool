@@ -64,6 +64,7 @@ const groups: Record<
   ],
   finance: [
     "invoice_review_requested",
+    "invoice_received_for_review",
     "invoice_exception_available",
     "invoice_exception_revoked",
     "invoice_series_available",

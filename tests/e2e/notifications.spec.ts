@@ -93,6 +93,16 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
         });
         await expect(chat).toBeChecked();
         await chat.uncheck();
+        const invoices = categorySettings.getByRole("checkbox", {
+            name: "Rechnungen und Rechnungsprüfung",
+            exact: true,
+        });
+        await expect(invoices).toBeChecked();
+        await invoices.uncheck();
+        await expect(categorySettings.getByRole("checkbox", {
+            name: "Kalendereinladungen",
+            exact: true,
+        })).toBeChecked();
         await page
             .locator(".settings-section .preferences select[aria-label='Sprache']")
             .selectOption("en");
@@ -115,6 +125,14 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
                 exact: true,
             }),
         ).not.toBeChecked();
+        await expect(categorySettings.getByRole("checkbox", {
+            name: "Invoices and invoice review",
+            exact: true,
+        })).not.toBeChecked();
+        await expect(categorySettings.getByRole("checkbox", {
+            name: "Calendar invitations",
+            exact: true,
+        })).toBeChecked();
         expect((await checked(reader.rpc("notification_preferences"))).chat).toBe(
             false,
         );
@@ -191,7 +209,7 @@ test("email channel and IANA quiet hours persist across language, reload and off
         await expect(page.getByRole("checkbox", {name: "Neue Chatnachrichten", exact: true})).toBeVisible();
         const delivery = page
             .locator("details.settings-section")
-            .filter({hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/});
+            .filter({hasText: /E-Mail, Push & Ruhezeiten|Email, push & quiet hours/});
         await expect(delivery.locator("form")).toHaveCount(0);
         expect(deliveryCalls.size).toBe(0);
         await delivery.locator("summary").press("Enter");
@@ -211,7 +229,7 @@ test("email channel and IANA quiet hours persist across language, reload and off
         await email.check();
         await emailSettings
             .getByRole("checkbox", {
-                name: "Ruhezeiten für E-Mails verwenden",
+                name: "Versand-Ruhezeiten verwenden",
                 exact: true,
             })
             .check();
