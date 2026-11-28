@@ -197,13 +197,25 @@ await withTestDatabase("job_capacity", async ({sql, actor}) => {
                            where id = '${job}'`),
                 "published",
             );
-            await actor(
+            const [startsAt, endsAt] = JSON.parse(
+                await sql(`select json_build_array(starts_at, ends_at)::text
+                           from public.job_sessions
+                           where job_id = '${job}'
+                           order by starts_at limit 1`),
+            );
+            const eventId = await actor(
                 teachers[1],
-                `insert into public.personal_events(title, starts_at, ends_at)
-                 select 'Fictional position conflict', starts_at, ends_at
-                 from public.job_sessions
-                 where job_id = '${job}'
-                 order by starts_at limit 1`,
+                `insert into public.personal_events(user_id, title, starts_at, ends_at, time_zone)
+                 values ('${teachers[1]}', 'Fictional position conflict',
+                         ${quoteSql(startsAt)}::timestamptz, ${quoteSql(endsAt)}::timestamptz, 'UTC')
+                 returning id`,
+            );
+            assert.match(eventId, /^[0-9a-f-]{36}$/i);
+            assert.equal(
+                await sql(`select count(*) from public.personal_events
+                           where id = '${eventId}' and user_id = '${teachers[1]}'`),
+                "1",
+                "The lecturer's private conflict event must be persisted before claiming",
             );
             assert.equal((await claim(job, teachers[1])).status, "conflict");
             assert.equal((await meta(job)).confirmed_count, 1);
