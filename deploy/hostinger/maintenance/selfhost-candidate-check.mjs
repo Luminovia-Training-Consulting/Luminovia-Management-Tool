@@ -539,6 +539,7 @@ const unacceptedMainMigrations = new Set([
   "20261128123800_lecturer_expense_local_dates.sql",
   "20261128123900_dashboard_financial_summary.sql",
   "20261128124000_bound_encrypted_chat_history.sql",
+    "20261128124100_notification_defaults_and_scoped_delivery.sql",
 ]);
 
 /** Build the last accepted baseline, excluding only migrations that never passed candidate acceptance. */

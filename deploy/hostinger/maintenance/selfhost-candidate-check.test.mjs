@@ -24,6 +24,8 @@ test("only exact unaccepted migrations are deferred from the previous deployment
     const unacceptedExpenseDates = "20261128123800_lecturer_expense_local_dates.sql";
     const unacceptedFinancialSummary = "20261128123900_dashboard_financial_summary.sql";
     const unacceptedChatHistory = "20261128124000_bound_encrypted_chat_history.sql";
+    const unacceptedNotificationDelivery =
+        "20261128124100_notification_defaults_and_scoped_delivery.sql";
     const previousBaseline = [old];
     const repairedBaseline = [old, broken, repair, unknown];
     assert.equal(baselineFixtureMigrations(previousBaseline), previousBaseline);
@@ -39,6 +41,7 @@ test("only exact unaccepted migrations are deferred from the previous deployment
         acceptedBaselineMigrations([
             old, unacceptedPredecessor, unaccepted, unacceptedRepair,
             unacceptedExpenseDates, unacceptedFinancialSummary, unacceptedChatHistory,
+            unacceptedNotificationDelivery,
         ]),
         [old],
     );
