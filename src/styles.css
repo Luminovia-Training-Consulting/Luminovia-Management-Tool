@@ -2,7 +2,10 @@
  * Global brand tokens, shared controls and desktop/mobile shell. Dark mode uses deliberate
  * contrast values; responsive layouts preserve business actions and share brand variables.
  */
-@import "tailwindcss";
+/* QA reports and adjacent build folders must not add utilities to the app cache. */
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
 /* Locally bundled brand font: no external font request or blocked text rendering. */
 @font-face {
   font-family: "Space Grotesk";
