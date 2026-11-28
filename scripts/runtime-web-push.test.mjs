@@ -113,7 +113,7 @@ test("endpoint and public-IP guard blocks SSRF, suffix tricks and credentials", 
     assert.equal(publicAddress("2607:f8b0:400a::1"), true);
 });
 
-function provider(status) {
+function provider(status, retryAfter = "90") {
     let options;
     const request = (given, callback) => {
         options = given;
@@ -122,7 +122,7 @@ function provider(status) {
             queueMicrotask(() => {
                 const res = new EventEmitter();
                 res.statusCode = status;
-                res.headers = {"retry-after": "90"};
+                res.headers = {"retry-after": retryAfter};
                 res.resume = () => {
                 };
                 callback(res);
@@ -172,6 +172,24 @@ test("mock provider receives encrypted bytes through pinned verified TLS and cla
             },
         );
         if (status === 429) assert.equal(result.retryAfter, 90);
+    }
+});
+test("honors dated Retry-After values and caps the queue delay", async () => {
+    const future = new Date(Date.now() + 48 * 60 * 60_000).toUTCString();
+    const expired = "Sat, 01 Jan 2000 00:00:00 GMT";
+    for (const [header, expected] of [
+        [future, 86400],
+        [expired, 0],
+        ["12.5", null],
+        [" ", null],
+    ]) {
+        const {request} = provider(429, header);
+        const result = await transmit(config, row, {
+            request,
+            resolve: async () => [{address: "142.250.190.10", family: 4}],
+        });
+        assert.equal(result.outcome, "retry");
+        assert.equal(result.retryAfter, expected);
     }
 });
 test("DNS private address or mixed rebinding candidates never contact provider", async () => {

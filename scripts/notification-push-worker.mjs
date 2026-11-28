@@ -181,6 +181,17 @@ export async function rpc(config, name, payload, signal) {
     return JSON.parse(text);
 }
 
+/** Map the provider's delay or UTC HTTP date into the outbox retry bound. */
+function retryAfterSeconds(value) {
+    if (typeof value !== "string") return null;
+    const header = value.trim();
+    if (/^\d+$/.test(header)) return Math.min(86400, Number(header));
+    const date = new Date(header);
+    const seconds = (date.getTime() - Date.now()) / 1000;
+    if (!Number.isFinite(seconds) || date.toUTCString() !== header) return null;
+    return Math.max(0, Math.min(86400, Math.ceil(seconds)));
+}
+
 export async function transmit(
     config,
     row,
@@ -251,14 +262,11 @@ export async function transmit(
                 else if (status === 404 || status === 410)
                     done({outcome: "gone", code: "subscription_gone"});
                 else if (status === 429 || status >= 500) {
-                    const retry = Number(response.headers["retry-after"]);
                     done({
                         outcome: "retry",
                         code:
                             status === 429 ? "provider_rate_limited" : "provider_rejected",
-                        retryAfter: Number.isFinite(retry)
-                            ? Math.max(0, Math.min(86400, Math.ceil(retry)))
-                            : null,
+                        retryAfter: retryAfterSeconds(response.headers["retry-after"]),
                     });
                 } else done({outcome: "failed", code: "provider_rejected"});
                 response.destroy?.();
