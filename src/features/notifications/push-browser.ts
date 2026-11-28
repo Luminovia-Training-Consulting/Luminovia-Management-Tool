@@ -8,6 +8,7 @@ interface Binding {
 const database = "luminovia-push-binding";
 let revision = 0;
 let currentActor: string | null | undefined;
+let actorSyncNeeded = true;
 const transactions = new Set<IDBTransaction>();
 
 function cancelTransactions() {
@@ -93,7 +94,10 @@ export function pushCapability() {
 
 /** Auth calls this before exposing the next session; late old-device writes fail. */
 export async function synchronizePushActor(actor: string | null) {
+  // Refresh and repeated sign-in events can report the same actor during an explicit device change.
+  if (currentActor === actor && !actorSyncNeeded) return;
   currentActor = actor;
+  actorSyncNeeded = false;
   const stamp = ++revision;
   cancelTransactions();
   if (!pushSupported()) return;
@@ -114,7 +118,8 @@ export async function synchronizePushActor(actor: string | null) {
     if (stamp === revision)
       notifications?.forEach((notification) => notification.close());
   } catch {
-    /* A missing binding suppresses push; no private fallback cache. */
+    // Allow another event for this actor to retry failed browser cleanup.
+    if (valid()) actorSyncNeeded = true;
   }
 }
 

@@ -73,6 +73,37 @@ it("rejects a delayed old binding write after a new actor has bound its own devi
   expect(await browser.currentPushToken(owner)).toBeNull();
 });
 
+it("does not cancel a binding when Auth repeats the current actor", async () => {
+  await Promise.all([
+    browser.bindPushDevice(owner, "own-token"),
+    browser.synchronizePushActor(owner),
+  ]);
+  expect(await browser.currentPushToken(owner)).toBe("own-token");
+  expect(unsubscribe).not.toHaveBeenCalled();
+});
+
+it("does not interrupt explicit device removal when Auth refreshes the current actor", async () => {
+  await browser.bindPushDevice(owner, "own-token");
+  await Promise.all([
+    browser.clearPushDevice(owner),
+    browser.synchronizePushActor(owner),
+  ]);
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(await browser.currentPushToken(owner)).toBeNull();
+});
+
+it("retries cleanup for the same actor after a transient browser storage error", async () => {
+  await browser.bindPushDevice(owner, "own-token");
+  vi.spyOn(indexedDB, "open").mockImplementationOnce(() => {
+    throw new Error("Browser storage temporarily unavailable");
+  });
+  await browser.synchronizePushActor(peer);
+  expect(unsubscribe).not.toHaveBeenCalled();
+  await browser.synchronizePushActor(peer);
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(await browser.currentPushToken(owner)).toBeNull();
+});
+
 it("ignores stale current-device cleanup after switching accounts", async () => {
   await browser.synchronizePushActor(peer);
   await browser.bindPushDevice(peer, "new-token");
