@@ -90,17 +90,16 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
             "Remove own email notification fixtures",
         );
     });
-    // The disposable seed can enqueue job notices for its sample lecturers.
-    // Park pre-existing pending deliveries so the real service-wide worker
-    // leases only this fixture's notices, and restore their exact schedule.
+    // The disposable seed can enqueue notifications for sample accounts.
+    // Park every pre-existing pending delivery so the real service-wide
+    // worker leases only this fixture's notices, then restore exact schedules.
     const parked = await sql(`
         with prior as (
             select o.id, o.available_at
             from private.notification_email_outbox o
-            join public.notifications n on n.id = o.notification_id
-            join auth.users u on u.id = n.user_id
-            where o.state = 'pending' and n.kind = 'job_matching'
-              and u.email ~ '^lecturer[0-9]{2}@example[.]invalid$'
+            left join public.notifications n on n.id = o.notification_id
+            where o.state = 'pending'
+              and (n.user_id is null or n.user_id not in (${q(owner.id)}, ${q(peer.id)}))
             for update of o
         ), moved as (
             update private.notification_email_outbox o
