@@ -56,20 +56,24 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
-/** Read only the actor's currently confirmed allocations and immutable assignment-session snapshots. */
-export const claimsQuery = (id: string) =>
+/** Read the actor’s currently confirmed allocation for this job and its session snapshots. */
+export const ownJobClaimQuery = (actor: string, jobId: string) =>
   queryOptions({
-    queryKey: ["claims", id],
-    queryFn: async () => {
+    queryKey: ["claims", actor, "job", jobId],
+    queryFn: async ({ signal }) => {
       const { data, error } = await db()
         .from("job_claims")
-        .select("*,assignment_sessions(*)")
+        .select(
+          "id,job_id,lecturer_id,status,amount,currency,rate_unit,total_amount,terms,terms_version,created_at,assignment_sessions(id,claim_id,released_at,starts_at,ends_at)",
+        )
         .is("assignment_sessions.released_at", null)
-        .eq("lecturer_id", id)
+        .eq("lecturer_id", actor)
+        .eq("job_id", jobId)
         .eq("status", "confirmed")
-        .order("created_at", { ascending: false });
+        .abortSignal(signal)
+        .maybeSingle<Claim>();
       if (error) throw error;
-      return data as Claim[];
+      return data;
     },
   });
 /** Read user_roles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */

@@ -170,8 +170,16 @@ describe("Account administration", () => {
         return { data: { can_manage_contracts: true }, error: null };
       if (name === "commercial_people")
         return {
-          data: [{ id: "teacher-id", display_name: "Anna" }],
-          error: null,
+          select: () => ({
+            eq: (_column: string, id: string) => ({
+              abortSignal: () => ({
+                maybeSingle: async () => ({
+                  data: id === "teacher-id" ? { id } : null,
+                  error: null,
+                }),
+              }),
+            }),
+          }),
         };
       if (name === "contract_records") return { eq: filter };
       return previous(name);

@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import {
   commercialAccessQuery,
-  commercialPeopleQuery,
+  commercialPersonEligibleQuery,
 } from "../commercial/api";
 import { LecturerContracts } from "../commercial/contracts";
 import "./i18n";
@@ -21,16 +21,11 @@ export function PersonContractAction({
 }: PersonContractTarget) {
   const access = useQuery(commercialAccessQuery(actor));
   const permitted = access.isSuccess && access.data.can_manage_contracts;
-  const people = useQuery({
-    ...commercialPeopleQuery(actor),
+  const target = useQuery({
+    ...commercialPersonEligibleQuery(actor, id),
     enabled: permitted,
   });
-  if (
-    !permitted ||
-    !people.isSuccess ||
-    !people.data.some((person) => person.id === id)
-  )
-    return null;
+  if (!permitted || !target.isSuccess || !target.data) return null;
 
   // A change of person discards any open dialog and its registration draft.
   return (

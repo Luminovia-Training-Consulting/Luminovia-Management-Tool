@@ -140,20 +140,27 @@ it("offers delegated evidence and expertise management from the selected person'
   expect(await screen.findByText("Managed evidence for target")).toBeVisible();
 });
 
+/** Simulate the projected PostgREST RPC and assert the exact target sent to the server. */
+function commercialEligibility(id: string | null) {
+  const response = {
+    select: vi.fn(() => response),
+    eq: vi.fn(() => response),
+    abortSignal: vi.fn(() => response),
+    maybeSingle: async () => ({ data: id ? { id } : null, error: null }),
+  };
+  return response;
+}
+
 it("opens lecturer contracts by keyboard and restores focus to the selected person's action", async () => {
   await i18n.changeLanguage("de");
   const filter = vi.fn(() => ({
     abortSignal: async () => ({ data: [], error: null }),
   }));
+  const eligibility = commercialEligibility(lecturer);
   fake.rpc.mockImplementation((name: string) => {
     if (name === "contract_records") return { eq: filter };
-    return {
-      data:
-        name === "commercial_access"
-          ? { can_manage_contracts: true }
-          : [{ id: lecturer, display_name: "Fictional person" }],
-      error: null,
-    };
+    if (name === "commercial_people") return eligibility;
+    return { data: { can_manage_contracts: true }, error: null };
   });
   mount(lecturer);
   const user = userEvent.setup();
@@ -176,6 +183,8 @@ it("opens lecturer contracts by keyboard and restores focus to the selected pers
     }),
   ).toBeVisible();
   expect(filter).toHaveBeenCalledWith("user_id", lecturer);
+  expect(eligibility.select).toHaveBeenCalledWith("id");
+  expect(eligibility.eq).toHaveBeenCalledWith("id", lecturer);
   await user.keyboard("{Escape}");
   await waitFor(() => expect(action).toHaveFocus());
 });
@@ -204,13 +213,16 @@ it("does not offer lecturer contracts or read their records with only account ma
 
 it("does not offer the action for a target outside the permitted lecturer list", async () => {
   await i18n.changeLanguage("de");
-  fake.rpc.mockImplementation(async (name: string) => ({
-    data: name === "commercial_access" ? { can_manage_contracts: true } : [],
-    error: null,
-  }));
+  fake.rpc.mockImplementation((name: string) =>
+    name === "commercial_people"
+      ? commercialEligibility(null)
+      : { data: { can_manage_contracts: true }, error: null },
+  );
   mount(lecturer);
   await waitFor(() =>
-    expect(client.getQueryData(["commercial-people", "actor"])).toEqual([]),
+    expect(client.getQueryData(["commercial-people", "actor", lecturer])).toBe(
+      false,
+    ),
   );
   expect(
     screen.queryByRole("button", { name: /Verträge verwalten/ }),

@@ -65,7 +65,26 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({
   db: () => ({
-    rpc: state.rpc,
+    rpc: (name: string, args?: Record<string, unknown>) => {
+      const result = state.rpc(name, args);
+      if (name !== "commercial_people") return result;
+      return {
+        select: () => ({
+          eq: (_column: string, id: string) => ({
+            abortSignal: () => ({
+              maybeSingle: async () => {
+                const { data, error } = await result;
+                const people = Array.isArray(data) ? data : [];
+                return {
+                  data: people.find((person) => person.id === id) ?? null,
+                  error,
+                };
+              },
+            }),
+          }),
+        }),
+      };
+    },
     from: (table: string) => {
       state.from(table);
       const rows =

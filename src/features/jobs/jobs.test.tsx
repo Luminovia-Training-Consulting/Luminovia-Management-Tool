@@ -23,19 +23,23 @@ import {
   jobDiscoveryQuery,
 } from "./discovery-api";
 import { lifecycleQuery, type LifecycleClaim } from "./lifecycle-api";
-import type { Job } from "../../lib/types";
+import { ownJobClaimQuery } from "../../lib/queries";
+import { calendarAssignmentsQuery } from "../calendar/calendar-window-api";
+import { jobSessionWindow } from "./assignment-conflicts";
+import type { Claim, Job } from "../../lib/types";
 
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "lecturer-a" } } }),
 }));
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+const { rpc, from } = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn() }));
+vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc, from }) }));
 const failedDetailClients: QueryClient[] = [];
 afterEach(async () => {
   cleanup();
   failedDetailClients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
   rpc.mockReset();
+  from.mockReset();
   await i18n.changeLanguage("de");
 });
 const job: Job & {
@@ -131,10 +135,16 @@ function setup(
     );
   }
   client.setQueryData(["topics"], []);
-  client.setQueryData(["claims", "lecturer-a"], []);
+  client.setQueryData(ownJobClaimQuery("lecturer-a", job.id).queryKey, null);
   client.setQueryData(["profile", "lecturer-a"], {
     time_zone: "Europe/Berlin",
   });
+  const offered = jobSessionWindow(offer.job_sessions);
+  if (offered)
+    client.setQueryData(
+      calendarAssignmentsQuery("lecturer-a", offered.window).queryKey,
+      [],
+    );
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
@@ -329,18 +339,24 @@ describe("safe marketplace interactions", () => {
       expect(
         screen.queryByRole("checkbox", { name: "Konditionen akzeptieren" }),
       ).not.toBeInTheDocument();
+      const retained: Claim = {
+        id: "retained-claim",
+        job_id: job.id,
+        lecturer_id: "lecturer-a",
+        status: "confirmed",
+        amount: 400,
+        currency: "EUR",
+        rate_unit: "fixed_total",
+        total_amount: 2_000,
+        terms: "Version one",
+        terms_version: 1,
+        created_at: job.created_at,
+        assignment_sessions: [],
+      };
       await act(async () =>
         client.setQueryData(
-          ["claims", "lecturer-a"],
-          [
-            {
-              ...job,
-              id: "retained-claim",
-              job_id: job.id,
-              status: "confirmed",
-              assignment_sessions: [],
-            },
-          ],
+          ownJobClaimQuery("lecturer-a", job.id).queryKey,
+          retained,
         ),
       );
       expect(
@@ -402,26 +418,17 @@ describe("safe marketplace interactions", () => {
   it("disables a conflicting offer from confirmed assignment instants before consent", async () => {
     const user = userEvent.setup();
     const client = setup();
-    await act(async () =>
-      client.setQueryData(
-        ["claims", "lecturer-a"],
-        [
-          {
-            id: "confirmed-other",
-            job_id: "other-job",
-            status: "confirmed",
-            assignment_sessions: [
-              {
-                id: "assigned-session",
-                claim_id: "confirmed-other",
-                starts_at: job.job_sessions[0].starts_at,
-                ends_at: job.job_sessions[0].ends_at,
-              },
-            ],
-          },
-        ],
-      ),
-    );
+    const assignmentsKey = calendarAssignmentsQuery(
+      "lecturer-a",
+      jobSessionWindow(job.job_sessions)!.window,
+    ).queryKey;
+    const assigned = {
+      id: "assigned-session",
+      starts_at: job.job_sessions[0].starts_at,
+      ends_at: job.job_sessions[0].ends_at,
+      job_claims: { job_id: "other-job" },
+    };
+    await act(async () => client.setQueryData(assignmentsKey, [assigned]));
     expect(
       await screen.findByText(
         "Mindestens ein Termin überschneidet sich mit deinem Kalender.",
@@ -434,26 +441,24 @@ describe("safe marketplace interactions", () => {
       screen.getByRole("button", { name: "Auftrag übernehmen" }),
     ).toBeDisabled();
     expect(rpc.mock.calls.some(([name]) => name === "claim_job")).toBe(false);
+    // On release the active projection drops the conflicting interval. A slot
+    // sharing the offered end, and a slot within the gap, remain compatible.
     await act(async () =>
-      client.setQueryData(
-        ["claims", "lecturer-a"],
-        [
-          {
-            id: "released-other",
-            job_id: "other-job",
-            status: "confirmed",
-            assignment_sessions: [
-              {
-                id: "released-session",
-                claim_id: "released-other",
-                starts_at: job.job_sessions[0].starts_at,
-                ends_at: job.job_sessions[0].ends_at,
-                released_at: "2026-11-17T00:00:00Z",
-              },
-            ],
-          },
-        ],
-      ),
+      client.setQueryData(assignmentsKey, [
+        { ...assigned, job_claims: { job_id: job.id } },
+        {
+          ...assigned,
+          id: "touching-session",
+          starts_at: job.job_sessions[0].ends_at,
+          ends_at: "2027-01-01T16:00:00Z",
+        },
+        {
+          ...assigned,
+          id: "gap-session",
+          starts_at: "2027-01-05T08:00:00Z",
+          ends_at: "2027-01-05T14:00:00Z",
+        },
+      ]),
     );
     await waitFor(() =>
       expect(
@@ -608,7 +613,7 @@ async function setupFailedDetail(
   client.setQueryData(["permissions", "lecturer-a"], []);
   client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
   client.setQueryData(["topics"], []);
-  client.setQueryData(["claims", "lecturer-a"], []);
+  client.setQueryData(ownJobClaimQuery("lecturer-a", job.id).queryKey, null);
   client.setQueryData(["profile", "lecturer-a"], {
     time_zone: "Europe/Berlin",
   });
@@ -753,4 +758,47 @@ it("uses the scoped company detail without querying private material or renderin
     "job_building_block_reference",
     expect.anything(),
   );
+});
+
+it("reads at most one own claim and only active assignment intervals in the offer window", async () => {
+  const exact = {
+    select: vi.fn(() => exact),
+    is: vi.fn(() => exact),
+    eq: vi.fn(() => exact),
+    abortSignal: vi.fn(() => exact),
+    maybeSingle: async () => ({ data: null, error: null }),
+  };
+  const window = {
+    select: vi.fn(() => window),
+    eq: vi.fn(() => window),
+    lt: vi.fn(() => window),
+    gt: vi.fn(() => window),
+    is: vi.fn(() => window),
+    order: vi.fn(() => window),
+    range: vi.fn(() => window),
+    abortSignal: vi.fn(async () => ({ data: [], error: null })),
+  };
+  from.mockImplementation((table) => (table === "job_claims" ? exact : window));
+  const client = new QueryClient();
+  failedDetailClients.push(client);
+  const offered = jobSessionWindow(job.job_sessions)!;
+  await Promise.all([
+    client.fetchQuery(ownJobClaimQuery("lecturer-a", job.id)),
+    client.fetchQuery(calendarAssignmentsQuery("lecturer-a", offered.window)),
+  ]);
+  expect(from.mock.calls).toEqual([["job_claims"], ["assignment_sessions"]]);
+  expect(exact.eq.mock.calls).toEqual([
+    ["lecturer_id", "lecturer-a"],
+    ["job_id", job.id],
+    ["status", "confirmed"],
+  ]);
+  expect(window.eq).toHaveBeenCalledWith("lecturer_id", "lecturer-a");
+  expect(window.eq).toHaveBeenCalledWith("job_claims.status", "confirmed");
+  expect(window.is).toHaveBeenCalledWith("released_at", null);
+  expect(window.lt).toHaveBeenCalledWith(
+    "starts_at",
+    "2027-01-10T14:00:00.000Z",
+  );
+  expect(window.gt).toHaveBeenCalledWith("ends_at", "2027-01-01T08:00:00.000Z");
+  expect(window.range).toHaveBeenCalledWith(0, 249);
 });

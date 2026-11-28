@@ -3,7 +3,7 @@
  * Changes require confirmed server responses and invalidate related queries;
  * private profile fields retain their resource-specific database access controls.
  */
-import { commercialPeopleQuery } from "../commercial/api";
+import { commercialPersonEligibleQuery } from "../commercial/api";
 import { qualificationKey } from "../qualifications/api";
 import { QualificationEvidenceReview } from "../qualifications/evidence";
 import { ProfileEvidence } from "../files/profile-evidence";
@@ -346,9 +346,9 @@ export function ManagedExpertise({
     },
   });
   const topics = useQuery({ ...topicsQuery, enabled: allowed });
-  const lecturers = useQuery({
-    ...commercialPeopleQuery(actorId),
-    enabled: allowed,
+  const lecturer = useQuery({
+    ...commercialPersonEligibleQuery(actorId, accountId),
+    enabled: allowed && accountId !== actorId,
   });
   const activation = useMutation({
     mutationFn: async (change: AccountChange) => {
@@ -392,8 +392,8 @@ export function ManagedExpertise({
   const canEditEvidence =
     selected.active &&
     selected.id !== actorId &&
-    lecturers.isSuccess &&
-    lecturers.data.some(({ id }) => id === selected.id);
+    lecturer.isSuccess &&
+    lecturer.data;
   return (
     <>
       {updated && (
@@ -469,8 +469,8 @@ export function ManagedExpertise({
           onBehalf
           readOnly={!canEditEvidence}
         />
-        {lecturers.isError && (
-          <ErrorState retry={() => void lecturers.refetch()} />
+        {lecturer.isError && (
+          <ErrorState retry={() => void lecturer.refetch()} />
         )}
         {showAccountDetails && <h3>{t("peopleExpertiseTitle")}</h3>}
         <p>{t("intro", { ns: "qualifications" })}</p>

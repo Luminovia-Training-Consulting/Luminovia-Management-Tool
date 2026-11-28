@@ -113,12 +113,24 @@ async function show(
         case "commercial_access":
           data = { can_manage_contracts: manager };
           break;
-        case "commercial_people":
-          data = [
+        case "commercial_people": {
+          const people = [
             { id: target, display_name: "Fictional lecturer" },
             { id: second, display_name: "Another lecturer" },
           ];
-          break;
+          return Object.assign(Promise.resolve({ data: people, error: null }), {
+            select: () => ({
+              eq: (_column: string, id: string) => ({
+                abortSignal: () => ({
+                  maybeSingle: async () => ({
+                    data: people.find((person) => person.id === id) ?? null,
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          });
+        }
         case "contract_records": {
           const records = args?.p_all
             ? [

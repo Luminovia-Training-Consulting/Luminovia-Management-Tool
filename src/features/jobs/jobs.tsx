@@ -20,13 +20,13 @@ import { JobBuildingBlockReference } from "../operations/building-blocks";
 import "../commercial/platform-i18n";
 import { JobDocuments } from "../files/files";
 import {
-  claimsQuery,
+  ownJobClaimQuery,
   permissionsQuery,
   profileQuery,
   topicsQuery,
   userRolesQuery,
 } from "../../lib/queries";
-import { lazy, Suspense, useRef, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -36,6 +36,11 @@ import { hasTeachingRole } from "../auth/internal-capabilities";
 import { db } from "../../lib/supabase";
 import { dateTime, money } from "../../lib/dates";
 import type { Job } from "../../lib/types";
+import { calendarAssignmentsQuery } from "../calendar/calendar-window-api";
+import {
+  jobSessionWindow,
+  overlapsTeachingAssignments,
+} from "./assignment-conflicts";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -139,9 +144,40 @@ export function JobDetail() {
   if (!teaching && accepted !== null) setAccepted(null);
   const jobs = useQuery(jobDetailQuery(session!.user.id, id ?? ""));
   const topics = useQuery(topicsQuery);
-  const claims = useQuery(claimsQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
   const job = jobs.data;
+  const claimDetail = useQuery({
+    ...ownJobClaimQuery(session!.user.id, job?.id ?? ""),
+    enabled: jobs.isSuccess && !!job && !job.dispatch_only,
+  });
+  const ownClaim = claimDetail.isSuccess ? claimDetail.data : null;
+  const offered = useMemo(
+    () => jobSessionWindow(job?.job_sessions),
+    [job?.job_sessions],
+  );
+  const assignments = useQuery({
+    ...calendarAssignmentsQuery(
+      session!.user.id,
+      offered?.window ?? { from: "", to: "" },
+    ),
+    enabled:
+      jobs.isSuccess &&
+      teaching &&
+      !ownClaim &&
+      !job?.dispatch_only &&
+      job?.status === "published" &&
+      !!offered,
+  });
+  // The atomic RPC still checks every interval, including concurrent claims.
+  const assignmentConflict = useMemo(
+    () =>
+      !!offered &&
+      !!job &&
+      assignments.isSuccess &&
+      overlapsTeachingAssignments(job.id, offered.slots, assignments.data),
+    [offered, job, assignments.isSuccess, assignments.data],
+  );
+  const canCheckOverlap = !offered || assignments.isSuccess;
   // Bind consent to the actor-authorized detail and every displayed quote field.
   // A role or offer refresh may replace the price without changing the route.
   const consent = job
@@ -155,25 +191,6 @@ export function JobDetail() {
         job.terms,
       ])
     : null;
-  const ownClaim = claims.data?.find((c) => c.job_id === id);
-  // This is guidance from current server-confirmed assignments. The claim RPC
-  // still rechecks every instant atomically, including concurrent allocations.
-  const assignmentConflict = Boolean(
-    job &&
-    claims.data?.some(
-      (existing) =>
-        existing.job_id !== job.id &&
-        existing.assignment_sessions.some(
-          (assigned) =>
-            !assigned.released_at &&
-            job.job_sessions.some(
-              (offered) =>
-                Date.parse(offered.starts_at) < Date.parse(assigned.ends_at) &&
-                Date.parse(offered.ends_at) > Date.parse(assigned.starts_at),
-            ),
-        ),
-    ),
-  );
   const claim = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -182,7 +199,9 @@ export function JobDetail() {
         !teaching ||
         accepted !== consent ||
         assignmentConflict ||
-        !claims.isSuccess
+        !claimDetail.isSuccess ||
+        !!ownClaim ||
+        !canCheckOverlap
       )
         throw new Error("invalid");
       // The browser submits no winner/lecturer ID. The server atomically checks
@@ -290,7 +309,7 @@ export function JobDetail() {
               showReadiness={
                 permissions.data?.includes("courses.manage") ||
                 (teaching &&
-                  claims.isSuccess &&
+                  claimDetail.isSuccess &&
                   ownClaim?.status === "confirmed")
               }
               afterWorkspace={<div ref={setEditButtonTarget} />}
@@ -533,7 +552,8 @@ export function JobDetail() {
                   disabled={
                     accepted !== consent ||
                     assignmentConflict ||
-                    !claims.isSuccess ||
+                    !claimDetail.isSuccess ||
+                    !canCheckOverlap ||
                     !online ||
                     claim.isPending ||
                     job.status !== "published" ||

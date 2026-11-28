@@ -54,6 +54,24 @@ export const commercialPeopleQuery = (actor: string) =>
       return (data ?? []) as CommercialPerson[];
     },
   });
+/** Check one target against the same server-authorized directory without transferring its other rows. */
+export const commercialPersonEligibleQuery = (
+  actor: string,
+  personId: string,
+) =>
+  queryOptions({
+    queryKey: ["commercial-people", actor, personId],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("commercial_people")
+        .select("id")
+        .eq("id", personId)
+        .abortSignal(signal)
+        .maybeSingle<{ id: string }>();
+      if (error) throw error;
+      return data?.id === personId;
+    },
+  });
 /** Read the contract_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const contractsQuery = (
   actor: string,
