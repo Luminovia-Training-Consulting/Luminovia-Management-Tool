@@ -21,7 +21,7 @@ import {
   commissionAccessQuery,
   commissionKeys,
   type CommissionRecord,
-  commissionReportQuery,
+  commissionReportJobQuery,
   offerPolicyQuery,
   parseCourseCommission,
   splitFee,
@@ -353,7 +353,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
   const scopedPricing = Boolean(access.data?.can_manage_own_course_pricing);
   const canPrice = fullFinance || scopedPricing;
   const report = useQuery({
-    ...commissionReportQuery(actor),
+    ...commissionReportJobQuery(actor, job.id),
     enabled: fullFinance,
   });
   const policy = useQuery({
@@ -385,9 +385,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
         }}
       />
     );
-  const record = fullFinance
-    ? report.data?.find((row) => row.job_id === job.id)
-    : undefined;
+  const record = fullFinance ? report.data?.[0] : undefined;
   const scopePolicy =
     policy.data?.gross_amount != null && policy.data.gross_total_amount != null
       ? {
@@ -400,11 +398,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
     lifecycle.isError ||
     !lifecycle.data?.can_edit ||
     (job.status !== "draft" && job.status !== "published") ||
-    Boolean(
-      report.data?.some(
-        (row) => row.job_id === job.id && Boolean(row.claim_id),
-      ),
-    );
+    Boolean(fullFinance && report.data?.some((row) => row.claim_id));
   return (
     <section className="panel platform-pricing">
       <h2>{t("pricingTitle")}</h2>

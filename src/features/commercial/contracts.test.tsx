@@ -219,6 +219,44 @@ it("preselects the lecturer and loads the scanned-file candidates in the registr
   );
 });
 
+it("avoids a platform-wide contract history read and scopes addendum parents to the current person", async () => {
+  await show(true);
+  await screen.findByRole("heading", { name: "Delegated contract" });
+  const user = userEvent.setup();
+  const registration = await openRegistration(user, within(document.body));
+  const fileField = registration.getByLabelText("Hochgeladene Vertragsdatei");
+  const save = registration.getByRole("button", { name: "Vertrag speichern" });
+  await registration.findByRole("option", { name: "Scanned contract.pdf" });
+  await user.selectOptions(fileField, `scan-${target}`);
+  expect(save).toBeEnabled();
+  expect(
+    fake.rpc.mock.calls.filter(([name]) => name === "contract_records"),
+  ).toHaveLength(1);
+
+  await user.selectOptions(registration.getByLabelText("Art"), "addendum");
+  expect(save).toBeDisabled();
+  let parent = registration.getByLabelText("Zugehöriger Vertrag");
+  await user.selectOptions(parent, "delegated");
+  expect(save).toBeEnabled();
+
+  await user.selectOptions(registration.getByLabelText("Dozent:in"), second);
+  parent = registration.getByLabelText("Zugehöriger Vertrag");
+  expect(parent).toHaveValue("");
+  expect(
+    within(parent).queryByRole("option", { name: /Delegated contract/ }),
+  ).toBeNull();
+  expect(
+    await within(parent).findByRole("option", {
+      name: /Other person's contract/,
+    }),
+  ).toBeVisible();
+  expect(save).toBeDisabled();
+  expect(fake.contractFilter).toHaveBeenLastCalledWith("user_id", second);
+  expect(
+    fake.rpc.mock.calls.filter(([name]) => name === "contract_records"),
+  ).toHaveLength(fake.contractFilter.mock.calls.length);
+});
+
 it("does not grant management authority to a contract link", async () => {
   await show(false);
   await waitFor(() =>

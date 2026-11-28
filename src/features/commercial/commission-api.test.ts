@@ -2,13 +2,19 @@
  * Regressions for cent-exact shares, capacity offers and unchanged historical gross values. Pure
  * projection tests do not replace native commercial permission checks.
  */
-import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 import {
+  commissionReportJobQuery,
+  commissionReportQuery,
   type CommissionRecord,
   revenueTotals,
   splitFee,
 } from "./commission-api";
 import { parseInvoiceLabels } from "./api";
+
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 
 /** Create a fictional commission record with explicit overrides for boundary cases. */
 function record(overrides: Partial<CommissionRecord> = {}): CommissionRecord {
@@ -141,5 +147,74 @@ describe("commission previews and truthful original-currency reporting", () => {
       ),
     ).toThrow();
     expect(() => parseInvoiceLabels("unsafe\nlabel")).toThrow();
+  });
+});
+
+describe("commission report request scope", () => {
+  it("totals authorized pages beyond the REST cap in an explicit stable order", async () => {
+    const records = Array.from({ length: 1002 }, (_, index) =>
+      record({
+        job_id: `fictional-job-${index}`,
+        gross_total_amount: 10,
+        platform_total_amount: 5,
+        lecturer_net_total_amount: 5,
+      }),
+    );
+    const read = vi.fn((from: number, to: number) => ({
+      abortSignal: async () => ({
+        data: records.slice(from, to + 1),
+        error: null,
+      }),
+    }));
+    const claimOrder = vi.fn(() => ({ range: read }));
+    const jobOrder = vi.fn(() => ({ order: claimOrder }));
+    rpc.mockReset().mockReturnValue({ order: jobOrder });
+
+    const rows = await new QueryClient().fetchQuery(
+      commissionReportQuery("finance", "fictional-company"),
+    );
+
+    expect(rpc).toHaveBeenNthCalledWith(1, "commission_report", {
+      p_organisation_id: "fictional-company",
+    });
+    expect(jobOrder).toHaveBeenCalledWith("job_id");
+    expect(claimOrder).toHaveBeenCalledWith("claim_id");
+    expect(read.mock.calls).toEqual([
+      [0, 249],
+      [250, 499],
+      [500, 749],
+      [750, 999],
+      [1000, 1249],
+    ]);
+    expect(rows).toEqual(records);
+    expect(revenueTotals(rows)[0]).toMatchObject({
+      accepted: 10020,
+      platform: 5010,
+      count: 1002,
+    });
+  });
+
+  it("filters a job on the server before applying the REST response cap", async () => {
+    const selected = record({ job_id: "older-job" });
+    const abortSignal = vi
+      .fn()
+      .mockResolvedValue({ data: [selected], error: null });
+    const eq = vi.fn(() => ({ abortSignal }));
+    rpc.mockReset().mockReturnValue({ eq });
+
+    const client = new QueryClient();
+    const query = commissionReportJobQuery("finance", selected.job_id);
+    expect(await client.fetchQuery(query)).toEqual([selected]);
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("commission_report", {
+      p_organisation_id: null,
+    });
+    expect(eq).toHaveBeenCalledExactlyOnceWith("job_id", selected.job_id);
+    expect(abortSignal).toHaveBeenCalledExactlyOnceWith(
+      expect.any(AbortSignal),
+    );
+    expect(query.queryKey).not.toEqual(
+      commissionReportQuery("finance").queryKey,
+    );
   });
 });

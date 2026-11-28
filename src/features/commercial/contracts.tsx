@@ -60,14 +60,12 @@ const schema = z.object({
 function RegisterContract({
   actor,
   zone,
-  records,
   initialUser = "",
   boundUser,
   onDone,
 }: {
   actor: string;
   zone: string;
-  records: ContractRecord[];
   initialUser?: string;
   boundUser?: string;
   onDone: () => void;
@@ -103,6 +101,18 @@ function RegisterContract({
     Boolean(boundUser) ||
     (people.isSuccess && people.data.some(({ id }) => id === person));
   const kind = useWatch({ control: form.control, name: "kind" });
+  const parent = useWatch({ control: form.control, name: "parent" });
+  const previousContracts = useQuery({
+    ...contractsQuery(actor, true, person),
+    enabled: kind === "addendum" && eligiblePerson,
+  });
+  const parentOptions = (previousContracts.data ?? []).filter(
+    (record) =>
+      record.user_id === person && Boolean(record.document_version_id),
+  );
+  const currentParent = (id: string) =>
+    previousContracts.isSuccess &&
+    parentOptions.some((record) => record.id === id);
   const candidates = useQuery({
     queryKey: ["contract-registration-candidates", actor, person],
     enabled: eligiblePerson,
@@ -133,7 +143,7 @@ function RegisterContract({
       if (
         !eligiblePerson ||
         !document ||
-        (values.kind === "addendum" && !values.parent)
+        (values.kind === "addendum" && !currentParent(values.parent))
       )
         throw new Error("document_required");
       const payload = {
@@ -216,26 +226,25 @@ function RegisterContract({
         </select>
       </Field>
       {kind === "addendum" && (
-        <Field id="contract-parent" label={t("parent")}>
-          <select
-            id="contract-parent"
-            {...form.register("parent")}
-            disabled={save.isPending}
-          >
-            <option value="">{t("selectParent")}</option>
-            {records
-              .filter(
-                (record) =>
-                  record.user_id === person &&
-                  Boolean(record.document_version_id),
-              )
-              .map((record) => (
+        <>
+          <Field id="contract-parent" label={t("parent")}>
+            <select
+              id="contract-parent"
+              {...form.register("parent")}
+              disabled={!previousContracts.isSuccess || save.isPending}
+            >
+              <option value="">{t("selectParent")}</option>
+              {parentOptions.map((record) => (
                 <option key={record.id} value={record.id}>
                   {record.title} · {t("version", { version: record.version })}
                 </option>
               ))}
-          </select>
-        </Field>
+            </select>
+          </Field>
+          {previousContracts.isError && (
+            <ErrorState retry={() => void previousContracts.refetch()} />
+          )}
+        </>
       )}
       <div className="form-row">
         <Field
@@ -302,7 +311,13 @@ function RegisterContract({
       {candidates.isError && <Notice kind="error">{t("failed")}</Notice>}
       <div className="form-actions">
         <Button
-          disabled={!online || save.isPending || !eligiblePerson || !document}
+          disabled={
+            !online ||
+            save.isPending ||
+            !eligiblePerson ||
+            !document ||
+            (kind === "addendum" && !currentParent(parent))
+          }
         >
           {t("registerSave")}
         </Button>
@@ -613,7 +628,6 @@ export function LecturerContracts({
         <RegisterContract
           actor={actor}
           zone={zone}
-          records={records.data}
           boundUser={lecturer}
           onDone={() => setRegistering(false)}
         />
@@ -643,10 +657,6 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
     enabled: !staff || manager,
   });
   const [registering, setRegistering] = useState(false);
-  const allRecords = useQuery({
-    ...contractsQuery(actor, true),
-    enabled: manager && registering,
-  });
   const [search, setSearch] = useState("");
   const term = search.toLocaleLowerCase();
   const filtered = term
@@ -755,20 +765,15 @@ export function ContractsPage({ scope }: { scope: "personal" | "staff" }) {
         title={t("register")}
         description={t("registerHint")}
       >
-        {manager &&
-          (allRecords.isPending ? (
-            <Loading />
-          ) : allRecords.isError ? (
-            <ErrorState retry={() => void allRecords.refetch()} />
-          ) : (
-            <RegisterContract
-              actor={actor}
-              zone={profile.data?.time_zone ?? "Europe/Berlin"}
-              records={allRecords.data ?? []}
-              initialUser={selectedUser}
-              onDone={() => setRegistering(false)}
-            />
-          ))}
+        {manager && (
+          <RegisterContract
+            key={`${actor}:${selectedUser}`}
+            actor={actor}
+            zone={profile.data?.time_zone ?? "Europe/Berlin"}
+            initialUser={selectedUser}
+            onDone={() => setRegistering(false)}
+          />
+        )}
       </Dialog>
     </>
   );

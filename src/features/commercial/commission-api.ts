@@ -5,6 +5,7 @@
 import type { CurrencyCode } from "../../lib/currencies.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+import { readDirectoryPages } from "../../lib/paged-read";
 
 /** Server-derived capabilities for gross-price management, client memberships and course requests. */
 export interface CommissionAccess {
@@ -175,17 +176,33 @@ export const clientRequestsQuery = (
     },
     refetchInterval: 10000,
   });
-/** Read the commission_report server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
+/** Read every authorized report row in a stable order for totals, search and export. */
 export const commissionReportQuery = (
   actor: string,
   organisation: string | null = null,
 ) =>
   queryOptions({
     queryKey: [...commissionKeys.report(actor), organisation],
-    queryFn: async () => {
-      const { data, error } = await db().rpc("commission_report", {
-        p_organisation_id: organisation,
-      });
+    queryFn: ({ signal }) =>
+      readDirectoryPages<CommissionRecord>((from, to) =>
+        db()
+          .rpc("commission_report", { p_organisation_id: organisation })
+          .order("job_id")
+          .order("claim_id")
+          .range(from, to)
+          .abortSignal(signal),
+      ),
+  });
+
+/** Transfer only commission rows for this job, before the REST row cap applies. */
+export const commissionReportJobQuery = (actor: string, job: string) =>
+  queryOptions({
+    queryKey: [...commissionKeys.report(actor), "job", job],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("commission_report", { p_organisation_id: null })
+        .eq("job_id", job)
+        .abortSignal(signal);
       if (error) throw error;
       return (data ?? []) as CommissionRecord[];
     },
