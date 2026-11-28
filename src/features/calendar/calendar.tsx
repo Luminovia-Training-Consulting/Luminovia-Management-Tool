@@ -804,6 +804,12 @@ export function CalendarPage() {
   const accountZone = profile.data?.time_zone ?? "";
   const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
   const zone = displayZone || profileZone;
+  function currentCalendarDate() {
+    const api = calendarRef.current?.getApi();
+    // FullCalendar only omits time at midnight. Keep its display-zone date
+    // without passing an offset-bearing instant to a native date input.
+    return api?.formatIso(api.getDate()).split("T")[0];
+  }
   if (viewAnchor && viewAnchor.assignment !== assignment)
     setViewAnchor(undefined);
   const personalRows = personal.isError ? undefined : personal.data;
@@ -1142,12 +1148,8 @@ export function CalendarPage() {
           profileZone={profileZone}
           value={displayZone}
           onChange={(nextZone) => {
-            const api = calendarRef.current?.getApi();
-            if (api)
-              setViewAnchor({
-                assignment,
-                date: api.formatIso(api.getDate(), true),
-              });
+            const date = currentCalendarDate();
+            if (date) setViewAnchor({ assignment, date });
             setDisplayZone(nextZone);
           }}
         />
@@ -1285,10 +1287,7 @@ export function CalendarPage() {
           }
           view={calendarView}
           waitingForDate={waitingForAnchor}
-          getDate={() => {
-            const api = calendarRef.current?.getApi();
-            return api?.formatIso(api.getDate(), true);
-          }}
+          getDate={currentCalendarDate}
           onGoToDate={(date) => calendarRef.current?.getApi().gotoDate(date)}
           onNavigate={(direction) => {
             const api = calendarRef.current?.getApi();
