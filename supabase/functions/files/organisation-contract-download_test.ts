@@ -18,9 +18,9 @@ async function fixture() {
             calls.push('version');
             return Promise.resolve(version);
         },
-        download: (_path: string) => {
+        download: (_path: string): Promise<ReadableStream<Uint8Array>> => {
             calls.push('download');
-            return Promise.resolve(object);
+            return Promise.resolve(object.stream());
         },
     }};
 }
@@ -46,7 +46,7 @@ Deno.test('inaccessible or unscanned company files do not read the object', asyn
 Deno.test('company downloads fail closed on content mismatch or changed access', async () => {
     const {deps, expected, object} = await fixture();
     const download = deps.download;
-    deps.download = () => Promise.resolve(new Blob([new Uint8Array(object.size)]));
+    deps.download = () => Promise.resolve(new Blob([new Uint8Array(object.size)]).stream());
     await assertRejects(() => organisationContractBytes('agreement', 1024, deps), Error, 'access_denied');
     deps.download = download;
     let checks = 0;
@@ -67,20 +67,33 @@ Deno.test('company download rejects a short Storage stream and aborts an overlon
     let sent = false;
     overlong.deps.download = (_path) => {
         overlong.calls.push('download');
-        return Promise.resolve({
-            stream: () => new ReadableStream<Uint8Array>({
-                pull(controller) {
-                    if (sent) return;
-                    sent = true;
-                    controller.enqueue(new Uint8Array(overlong.version.size_bytes + 1));
-                },
-                cancel() {
-                    cancelled = true;
-                },
-            }),
-        } as Blob);
+        return Promise.resolve(new ReadableStream<Uint8Array>({
+            pull(controller) {
+                if (sent) return;
+                sent = true;
+                controller.enqueue(new Uint8Array(overlong.version.size_bytes + 1));
+            },
+            cancel() {
+                cancelled = true;
+            },
+        }));
     };
     await assertRejects(() => organisationContractBytes('agreement', 1024, overlong.deps), Error, 'access_denied');
     assertEquals(cancelled, true);
     assertEquals(overlong.calls, ['selection', 'version', 'download']);
+});
+
+Deno.test('company download does not release bytes if Storage fails before completion', async () => {
+    const result = await fixture();
+    result.deps.download = () => Promise.resolve(new ReadableStream<Uint8Array>({
+        pull(controller) {
+            controller.error(new Error('upstream connection closed'));
+        },
+    }));
+    await assertRejects(
+        () => organisationContractBytes('agreement', 1024, result.deps),
+        Error,
+        'access_denied',
+    );
+    assertEquals(result.calls, ['selection', 'version']);
 });

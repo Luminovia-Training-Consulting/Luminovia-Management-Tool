@@ -1,5 +1,5 @@
 /** Release only the exact clean PDF allowed by the caller's company contract projection. */
-import {sha256FileHex} from '../_shared/file-bytes.ts';
+import {readMatchingFileBytes} from '../_shared/file-bytes.ts';
 
 interface Selection {
     document_id: string;
@@ -21,38 +21,24 @@ interface Version {
 interface Dependencies {
     selection: (id: string) => Promise<Selection | null>;
     version: (id: string) => Promise<Version | null>;
-    download: (path: string) => Promise<Blob | null>;
+    download: (path: string) => Promise<ReadableStream<Uint8Array> | null>;
 }
 
-/** Read no more than the already-authorized byte count from private Storage. */
-export async function readExpectedBytes(object: Blob, expectedSize: number) {
-    const bytes = new Uint8Array(expectedSize);
-    const reader = object.stream().getReader();
-    let offset = 0;
-    try {
-        while (true) {
-            const {done, value} = await reader.read();
-            if (done) break;
-            if (value.byteLength > expectedSize - offset) {
-                await reader.cancel();
-                throw new Error('access_denied');
-            }
-            bytes.set(value, offset);
-            offset += value.byteLength;
-        }
-    } catch (error) {
-        if (error instanceof Error && error.message === 'access_denied') throw error;
+/** Return only verified bytes, translating Storage faults to the protected download response. */
+export async function verifiedDownloadBytes(
+    object: ReadableStream<Uint8Array> | null,
+    size: number,
+    digest: string,
+) {
+    if (object) {
         try {
-            await reader.cancel();
+            const bytes = await readMatchingFileBytes(object, size, digest);
+            if (bytes) return bytes;
         } catch {
-            // Preserve the fail-closed response when the underlying stream has failed.
+            // Neither transport details nor a partial response should leave the gateway.
         }
-        throw new Error('access_denied');
-    } finally {
-        reader.releaseLock();
     }
-    if (offset !== expectedSize) throw new Error('access_denied');
-    return bytes;
+    throw new Error('access_denied');
 }
 
 /** Recheck the caller's current grant after fetching and verifying the bounded object. */
@@ -66,10 +52,9 @@ export async function organisationContractBytes(id: string, maxBytes: number, de
         !Number.isSafeInteger(version.size_bytes) || version.size_bytes < 1 || version.size_bytes > maxBytes) {
         throw new Error('access_denied');
     }
-    const object = await deps.download(version.object_path);
-    if (!object) throw new Error('access_denied');
-    const bytes = await readExpectedBytes(object, version.size_bytes);
-    if (await sha256FileHex(bytes) !== selected.sha256) throw new Error('access_denied');
+    const bytes = await verifiedDownloadBytes(
+        await deps.download(version.object_path), version.size_bytes, selected.sha256,
+    );
     const current = await deps.selection(id);
     if (!current || current.document_id !== id || current.version_id !== version.id ||
         current.sha256 !== selected.sha256 || current.file_name !== selected.file_name) {

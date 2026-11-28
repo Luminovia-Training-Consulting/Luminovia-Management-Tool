@@ -7,7 +7,7 @@
 import {readMatchingFileBytes, sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
 import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
-import {organisationContractBytes, readExpectedBytes} from './organisation-contract-download.ts';
+import {organisationContractBytes, verifiedDownloadBytes} from './organisation-contract-download.ts';
 import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
@@ -48,6 +48,16 @@ interface Document {
 
 const scanForMalware = (bytes: Uint8Array) =>
     scan(bytes, Deno.env.get('PORTAL_CLAMAV_HOST') ?? '', Number(Deno.env.get('PORTAL_CLAMAV_PORT') ?? 3310), {url: Deno.env.get('PORTAL_SCANNER_URL'), token: Deno.env.get('PORTAL_SCANNER_TOKEN')});
+
+// Scoped callers already checked the grant's version, digest and maximum size.
+async function readCleanObjectStream(path: string): Promise<ReadableStream<Uint8Array> | null> {
+    try {
+        const result = await service.storage.from('portal-clean').download(path).asStream();
+        return result.error ? null : result.data;
+    } catch {
+        return null;
+    }
+}
 
 // Each request owns its user client; never share Auth state or other sessions between requests.
 Deno.serve(async (request: Request) => {
@@ -549,10 +559,7 @@ Deno.serve(async (request: Request) => {
                         .select('id,document_id,object_path,status,mime_type,size_bytes,sha256').eq('id', versionId).maybeSingle();
                     return r.error ? null : r.data;
                 },
-                download: async (path) => {
-                    const r = await service.storage.from('portal-clean').download(path);
-                    return r.error ? null : r.data;
-                },
+                download: readCleanObjectStream,
             });
             const audit = await service.from('audit_events').insert({actor_id: actor, action: 'organisation.contract_downloaded', resource_id: id});
             if (audit.error) return json(503, {error: 'download_unavailable'});
@@ -577,10 +584,9 @@ Deno.serve(async (request: Request) => {
                 grant.size_bytes > academyMaterialMaxBytes) throw new Error('access_denied');
             const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
             if (version.error || !version.data?.object_path) throw new Error('access_denied');
-            const file = await service.storage.from('portal-clean').download(version.data.object_path);
-            if (file.error || !file.data) throw new Error('access_denied');
-            const bytes = await readExpectedBytes(file.data, grant.size_bytes);
-            if (await sha256FileHex(bytes) !== grant.sha256) throw new Error('access_denied');
+            const bytes = await verifiedDownloadBytes(
+                await readCleanObjectStream(version.data.object_path), grant.size_bytes, grant.sha256,
+            );
             const after = await authorize();
             if (after.error || after.data?.version_id !== id || after.data.sha256 !== grant.sha256)
                 throw new Error('access_denied');
@@ -601,10 +607,9 @@ Deno.serve(async (request: Request) => {
                 throw new Error('access_denied');
             const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
             if (version.error || !version.data?.object_path) throw new Error('access_denied');
-            const file = await service.storage.from('portal-clean').download(version.data.object_path);
-            if (file.error || !file.data) throw new Error('access_denied');
-            const bytes = await readExpectedBytes(file.data, grant.size_bytes);
-            if (await sha256FileHex(bytes) !== grant.sha256) throw new Error('access_denied');
+            const bytes = await verifiedDownloadBytes(
+                await readCleanObjectStream(version.data.object_path), grant.size_bytes, grant.sha256,
+            );
             const after = await authorize();
             if (after.error || after.data?.version_id !== id || after.data.sha256 !== grant.sha256)
                 throw new Error('access_denied');
@@ -626,10 +631,9 @@ Deno.serve(async (request: Request) => {
                 before.data.size_bytes > academyMaterialMaxBytes) throw new Error('access_denied');
             const version = await service.from('document_versions').select('object_path').eq('id', id).maybeSingle();
             if (version.error || !version.data?.object_path) throw new Error('access_denied');
-            const file = await service.storage.from('portal-clean').download(version.data.object_path);
-            if (file.error || !file.data) throw new Error('access_denied');
-            const bytes = await readExpectedBytes(file.data, before.data.size_bytes);
-            if (await sha256FileHex(bytes) !== before.data.sha256) throw new Error('access_denied');
+            const bytes = await verifiedDownloadBytes(
+                await readCleanObjectStream(version.data.object_path), before.data.size_bytes, before.data.sha256,
+            );
             const after = await authorize();
             if (after.error || after.data?.version_id !== id || after.data.sha256 !== before.data.sha256)
                 throw new Error('access_denied');
