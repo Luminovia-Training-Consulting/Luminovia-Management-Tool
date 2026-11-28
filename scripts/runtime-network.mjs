@@ -143,19 +143,24 @@ async function projectContainers(project) {
         .trim()
         .split("\n")
         .filter(Boolean);
-    return await Promise.all(ids.map(containerInfo));
+    return inspectContainers(ids);
 }
 
-/** Reads only network/ownership fields; full container inspection could expose secrets. */
-async function containerInfo(id) {
-    // Inspect only networking/ownership fields: a full container inspection includes credentials.
+/** Reads projected fields for the whole inventory without spawning Docker once per container. */
+async function inspectContainers(ids) {
+    if (!ids.length) return [];
+    // Full container inspection includes credentials. Keep this projection bounded.
     const format =
         '{"Name":{{json .Name}},"Labels":{{json .Config.Labels}},"Networks":{{json .NetworkSettings.Networks}},"Ports":{{json .NetworkSettings.Ports}},"Running":{{json .State.Running}}}';
-    return JSON.parse(
-        await command("docker", ["inspect", "--format", format, id], {
-            quiet: true,
-        }),
+    const output = await command(
+        "docker",
+        ["inspect", "--type", "container", "--format", format, "--", ...ids],
+        {quiet: true},
     );
+    const lines = output.trim().split("\n");
+    if (lines.length !== ids.length)
+        throw new Error("Incomplete Docker container inspection.");
+    return lines.map((line) => JSON.parse(line));
 }
 
 /** Requires exactly one owned network and only permitted host bindings; scanner ports stay internal. */
@@ -217,7 +222,7 @@ export async function verifyLoopbackBindings(
             throw new Error(`Expected local service ${service} is not running.`);
     }
     if (scanner) {
-        const container = await containerInfo(`portal_scanner_${project}`);
+        const [container] = await inspectContainers([`portal_scanner_${project}`]);
         if (!container.Running)
             throw new Error("The internal scanner is not running.");
         assertContainerBindings(container, project, {scanner: true});

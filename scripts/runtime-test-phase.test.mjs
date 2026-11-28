@@ -141,9 +141,12 @@ async function runFixture({
                     "beta-db-tests.mjs",
                     "beta-api-check.mjs",
                 ];
-            if (path.endsWith("supabase/functions")) return [directory("invites")];
+            if (path.endsWith("supabase/functions"))
+                return [directory("invites"), directory("course-documents")];
             if (path.endsWith("supabase/functions/invites"))
                 return [file("index.ts"), file("index_test.ts")];
+            if (path.endsWith("supabase/functions/course-documents"))
+                return [file("index.ts")];
             if (path.endsWith("deploy/hostinger"))
                 return [
                     "reviewed-backup.test.mjs",
@@ -292,6 +295,27 @@ test("GitHub acceptance failures annotate the stage without publishing child err
                 : [],
         );
     }
+});
+
+test("Edge type checking batches every discovered entry and fails the system phase on error", async () => {
+    const result = await runFixture({
+        args: ["--phase", "system"],
+        fail: ({args}) => args[1] === "check" && args[0].endsWith("/deno/bin.cjs"),
+    });
+    const checks = result.calls.filter(
+        ({args}) => args[1] === "check" && args[0].endsWith("/deno/bin.cjs"),
+    );
+    assert.equal(checks.length, 1);
+    assert.deepEqual(checks[0].args.slice(2), [
+        "/owned-qa/run/source/supabase/functions/course-documents/index.ts",
+        "/owned-qa/run/source/supabase/functions/invites/index.ts",
+    ]);
+    assert.ok(result.error);
+    assert.equal(acceptance(result).status, "failed");
+    assert.equal(
+        acceptance(result).stages.find((stage) => stage.label === "Edge type checks").status,
+        "failed",
+    );
 });
 
 test("a browser lane cannot reduce complete or system acceptance before acquiring any resource", async () => {

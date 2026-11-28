@@ -260,18 +260,25 @@ export async function waitForHttp(
     {timeoutMs = 45000, status = 200} = {},
 ) {
     const target = localUrl(url, "Readiness URL");
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
+    const deadline = performance.now() + timeoutMs;
+    while (true) {
+        const remaining = Math.floor(deadline - performance.now());
+        if (remaining <= 0) break;
         try {
             const response = await fetch(target, {
                 redirect: "manual",
-                signal: AbortSignal.timeout(2000),
+                signal: AbortSignal.timeout(Math.min(remaining, 2000)),
             });
-            if (response.status === status) return;
+            // Readiness uses only the status. Release an unread response body
+            // so an incomplete transfer cannot hold a connection.
+            void response.body?.cancel().catch(() => {});
+            if (response.status === status && performance.now() < deadline) return;
         } catch {
             /* not ready */
         }
-        await delay(500);
+        const pause = Math.floor(deadline - performance.now());
+        if (pause <= 0) break;
+        await delay(Math.min(pause, 500));
     }
     throw new Error(
         `Local service did not become ready at ${target.origin}.`,

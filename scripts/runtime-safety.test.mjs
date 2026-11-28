@@ -5,12 +5,13 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {once} from "node:events";
-import {mkdirSync, mkdtempSync, rmSync, writeFileSync,} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,} from "node:fs";
 import {createServer} from "node:http";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import {pathToFileURL} from "node:url";
 import {cleanEnvironment, localUrl, migrationDigest, privateWrite, processIsOurs, readEnvFile, redact, waitForHttp,} from "./runtime-lib.mjs";
-import {assertContainerBindings, assertNetworkDefinition, networkName,} from "./runtime-network.mjs";
+import {assertContainerBindings, assertNetworkDefinition, networkName, verifyLoopbackBindings,} from "./runtime-network.mjs";
 import {readPrivateFixture} from "./testing/read-private-fixture.mjs";
 
 test("local Docker networking rejects public host bindings, extra networks and unowned resources", () => {
@@ -173,6 +174,98 @@ test("local readiness checks require their own direct HTTP response", async (t) 
     assert.deepEqual(requests, ["/redirect"]);
     await waitForHttp(origin + "/healthy");
     assert.deepEqual(requests, ["/redirect", "/healthy"]);
+});
+
+test("local readiness cancels a slow request within its deadline", async (t) => {
+    const server = createServer(() => {});
+    const listening = once(server, "listening");
+    server.listen(0, "127.0.0.1");
+    await listening;
+    t.after(() => new Promise((resolve) => {
+        server.close(resolve);
+        server.closeAllConnections();
+    }));
+    const start = performance.now();
+    await assert.rejects(
+        waitForHttp(`http://127.0.0.1:${server.address().port}/slow`, {timeoutMs: 100}),
+        /Local service did not become ready/,
+    );
+    // The previous fixed request deadline and retry sleep took 2.5 seconds.
+    assert.ok(performance.now() - start < 1000);
+});
+
+test("readiness confirms every projected Docker container in one project inspection", async (t) => {
+    const folder = mkdtempSync(join(tmpdir(), "portal-network-test-"));
+    const path = process.env.PATH;
+    const project = "luminovia-portal-test-1234abcd";
+    const network = networkName(project);
+    const containers = ["db", "kong", "edge_runtime", "storage"];
+    const refs = containers.map((service) => `supabase_${service}_${project}`);
+    const scanner = `portal_scanner_${project}`;
+    const container = (name) => ({
+        Name: `/${name}`,
+        Labels: {[name === scanner ? "org.luminovia.portal" : "com.supabase.cli.project"]: project},
+        Networks: {[network]: {}},
+        Ports: {},
+        Running: true,
+    });
+    const trace = join(folder, "trace");
+    const incomplete = join(folder, "incomplete");
+    t.after(() => {
+        process.env.PATH = path;
+        rmSync(folder, {recursive: true, force: true});
+    });
+    const daemon = pathToFileURL(join(folder, "fixture.mjs"));
+    writeFileSync(join(folder, "fixture.mjs"), String.raw`
+import {appendFileSync, existsSync} from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(${JSON.stringify(trace)}, JSON.stringify(args) + "\n");
+if (args[0] === "network" && args[1] === "ls") console.log(${JSON.stringify(network)});
+else if (args[0] === "network" && args[1] === "inspect") console.log(JSON.stringify(${JSON.stringify([{
+        Name: network,
+        Labels: {"org.luminovia.portal": project, "org.luminovia.portal.network": "loopback-v1"},
+        Driver: "bridge",
+        Options: {"com.docker.network.bridge.host_binding_ipv4": "127.0.0.1"},
+    }])}));
+else if (args[0] === "ps") console.log(${JSON.stringify(refs.join("\n"))});
+else if (args[0] === "inspect") {
+    const fixtures = ${JSON.stringify(Object.fromEntries([...refs, scanner].map((name) => [name, container(name)])))};
+    const refs = args.slice(args.indexOf("--") + 1);
+    if (existsSync(${JSON.stringify(incomplete)})) refs.pop();
+    for (const ref of refs) {
+        if (!fixtures[ref]) process.exit(1);
+        console.log(JSON.stringify(fixtures[ref]));
+    }
+}
+else process.exit(1);
+`);
+    writeFileSync(
+        join(folder, "docker"),
+        `#!${process.execPath}
+import(${JSON.stringify(daemon.href)});
+`,
+        {mode: 0o755},
+    );
+    process.env.PATH = `${folder}:${path}`;
+    await verifyLoopbackBindings(project, {scanner: true, edge: true});
+
+    const inspections = readFileSync(trace, "utf8").trim().split("\n")
+        .map((line) => JSON.parse(line))
+        .filter(([action]) => action === "inspect");
+    assert.deepEqual(inspections.map((args) => args.slice(args.indexOf("--") + 1)), [
+        refs,
+        [scanner],
+    ]);
+    for (const args of inspections) {
+        const projection = args[args.indexOf("--format") + 1];
+        assert.match(projection, /NetworkSettings/);
+        assert.doesNotMatch(projection, /Config.Env/);
+    }
+    writeFileSync(incomplete, "");
+    await assert.rejects(
+        verifyLoopbackBindings(project, {scanner: true, edge: true}),
+        /Incomplete Docker container inspection/,
+    );
 });
 
 test("private environment writes preserve values and restrict filesystem permissions", () => {

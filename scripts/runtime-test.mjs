@@ -336,12 +336,14 @@ try {
                 ...handlerTests,
             ]);
         }
-        for (const entry of entries)
-            await step(
-                `Edge type check ${basename(join(entry, ".."))}`,
-                process.execPath,
-                [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
-            );
+        // One Deno invocation checks the entire set and reuses the shared
+        // dependency graph across entry points.
+        if (entries.length)
+            await step("Edge type checks", process.execPath, [
+                join(scratch, "node_modules/deno/bin.cjs"),
+                "check",
+                ...entries.sort(),
+            ]);
         // Keep release/update safety in the same local command as application QA.
         await step("SMTP-Benachrichtigungsschutz", "python3", [
             "-W",
