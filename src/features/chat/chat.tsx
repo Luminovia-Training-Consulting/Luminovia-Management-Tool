@@ -2,7 +2,7 @@
  * Room directory, direct-message creation and active conversation selection. Selection owns
  * thread lifetime; contacts and membership come from authorized server projections.
  */
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -37,7 +37,9 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import {
   chatDirectoryFiltersQuery,
   chatKeys,
+  chatRoomPreferencesQuery,
   chatRoomsQuery,
+  decorateChatRooms,
   type ChatDirectoryFacet,
 } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
@@ -106,6 +108,11 @@ function ChatDirectory({ actor }: { actor: string }) {
   const selectedId = params.get("room");
   const messageId = params.get("message");
   const rooms = useQuery(chatRoomsQuery(actor));
+  const preferences = useQuery(chatRoomPreferencesQuery(actor));
+  const decoratedRooms = useMemo(
+    () => decorateChatRooms(rooms.data ?? [], preferences.data),
+    [rooms.data, preferences.data],
+  );
   const directoryFilters = useQuery(chatDirectoryFiltersQuery(actor));
   // The shell owns the profile request; observe its cached zone without initiating another request.
   const profile = useQuery({ ...profileQuery(actor), enabled: false });
@@ -141,7 +148,7 @@ function ChatDirectory({ actor }: { actor: string }) {
   const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
   const previousRooms = useRef(new Set<string>());
   const previousDeleted = useRef(new Set<string>());
-  const selected = rooms.data?.find((room) => room.id === selectedId);
+  const selected = decoratedRooms.find((room) => room.id === selectedId);
   const canManageCourses =
     permissions.data?.includes("courses.manage") ?? false;
   const staff =
@@ -234,6 +241,8 @@ function ChatDirectory({ actor }: { actor: string }) {
       selectRoom(room);
     },
   });
+  const refreshPreferences = () =>
+    client.invalidateQueries({ queryKey: chatKeys.roomPreferences(actor) });
   const pin = useMutation({
     mutationFn: async ({ room, pinned }: { room: string; pinned: boolean }) => {
       requireOnline();
@@ -243,8 +252,7 @@ function ChatDirectory({ actor }: { actor: string }) {
       });
       if (error) throw error;
     },
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+    onSuccess: refreshPreferences,
   });
   const archive = useMutation({
     mutationFn: async ({
@@ -261,8 +269,7 @@ function ChatDirectory({ actor }: { actor: string }) {
       });
       if (error) throw error;
     },
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+    onSuccess: refreshPreferences,
   });
   const clearRoom = useMutation({
     mutationFn: async (room: string) => {
@@ -279,6 +286,7 @@ function ChatDirectory({ actor }: { actor: string }) {
       client.removeQueries({ queryKey: history, type: "inactive" });
       await Promise.all([
         client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+        refreshPreferences(),
         client.invalidateQueries({ queryKey: history }),
         client.invalidateQueries({ queryKey: ["course-chat-messages", actor] }),
         client.invalidateQueries({ queryKey: ["course-chat-rooms", actor] }),
@@ -287,7 +295,7 @@ function ChatDirectory({ actor }: { actor: string }) {
       setRoomToClear(null);
     },
   });
-  const pinnedOrder = (rooms.data ?? [])
+  const pinnedOrder = decoratedRooms
     .filter((room) => room.pinned)
     .sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0))
     .map((room) => room.id);
@@ -307,10 +315,9 @@ function ChatDirectory({ actor }: { actor: string }) {
       });
       if (error) throw error;
     },
-    onSettled: () =>
-      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+    onSettled: refreshPreferences,
   });
-  const directoryRooms = (rooms.data ?? []).filter(
+  const directoryRooms = decoratedRooms.filter(
     (room) =>
       !room.personal_deleted &&
       Boolean(room.personal_archived) === showArchived,
@@ -551,10 +558,15 @@ function ChatDirectory({ actor }: { actor: string }) {
             {(pin.isError || movePin.isError) && (
               <Notice kind="error">{t("pinError")}</Notice>
             )}
-            {rooms.isPending ? (
+            {rooms.isPending || preferences.isPending ? (
               <Loading />
-            ) : rooms.isError ? (
-              <ErrorState retry={() => void rooms.refetch()} />
+            ) : rooms.isError || (preferences.isError && !preferences.data) ? (
+              <ErrorState
+                retry={() => {
+                  if (rooms.isError) void rooms.refetch();
+                  if (preferences.isError) void preferences.refetch();
+                }}
+              />
             ) : visibleRooms.length ? (
               <ul className="chat-room-list">
                 {visibleRooms.map((room) => (

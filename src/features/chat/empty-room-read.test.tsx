@@ -7,7 +7,14 @@ import { ChatThread } from "./thread";
 import type { ChatRoom } from "./types";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: (name: string, args?: unknown) => {
+      const request = rpc(name, ...(args === undefined ? [] : [args]));
+      return Object.assign(request, { abortSignal: () => request });
+    },
+  }),
+}));
 vi.mock("./realtime", () => ({
   useChatRealtime: () => ({ status: "connected", revoked: false }),
 }));

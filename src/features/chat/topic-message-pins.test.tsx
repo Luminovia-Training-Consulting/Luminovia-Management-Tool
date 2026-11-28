@@ -20,7 +20,14 @@ const state = vi.hoisted(() => ({
   pins: [] as unknown[],
   denied: false,
 }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: (name: string, args?: unknown) => {
+      const request = state.rpc(name, ...(args === undefined ? [] : [args]));
+      return Object.assign(request, { abortSignal: () => request });
+    },
+  }),
+}));
 vi.mock("./realtime", () => ({
   useChatRealtime: () => ({ status: "connected", revoked: false }),
 }));

@@ -10,7 +10,14 @@ import { MessageComposer } from "./composer";
 import type { ChatMessage } from "./types";
 
 const fake = vi.hoisted(() => ({ rpc: vi.fn() }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: fake.rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: (name: string, args?: unknown) => {
+      const request = fake.rpc(name, ...(args === undefined ? [] : [args]));
+      return Object.assign(request, { abortSignal: () => request });
+    },
+  }),
+}));
 const parent: ChatMessage = {
   id: "parent",
   room_id: "room",

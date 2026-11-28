@@ -2790,6 +2790,15 @@ browser metadata. Existing send limits, clean-attachment checks and membership
 locks also apply to structured sends. Structured operations allow at most 20 unique,
 non-null recipients and reject self, foreign, removed or role-ineligible targets.
 
+The directory refreshes authorized rooms independently of personal pins and
+archives. Preferences refresh every 30 seconds while the directory is visible,
+and changes made in this session refresh preferences immediately. A delayed or
+failed preference read cannot prevent the directory from discarding rooms that
+are no longer authorized. History refreshes after joining or rejoining Realtime.
+Leaving a room or replacing a message search cancels its in-flight history and
+reply-preview requests. Polling still revalidates the authorized history and
+catches changes that do not emit a subscribed event.
+
 `messages.content_version` increases on text/edit/deletion changes, including old
 API edits. Private content-version records own immutable mention-version rows.
 An old API edit creates a new current version with no structured mentions rather

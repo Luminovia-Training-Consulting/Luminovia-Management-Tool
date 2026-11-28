@@ -90,7 +90,8 @@ export function ChatThread({
   const { t, i18n } = useTranslation("chat");
   const online = useOnline();
   const client = useQueryClient();
-  const profile = useQuery(profileQuery(actor));
+  // The authenticated shell owns the profile request; use its cached time zone.
+  const profile = useQuery({ ...profileQuery(actor), enabled: false });
   const [search, setSearch] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [searchInput, setSearchInput] = useState("");

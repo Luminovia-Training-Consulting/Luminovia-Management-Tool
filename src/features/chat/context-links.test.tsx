@@ -52,7 +52,8 @@ vi.mock("../knowledge/api", () => ({
     queryFn: async () => ({ can_author: state.canAuthor }),
   }),
 }));
-vi.mock("./api", () => ({
+vi.mock("./api", async (original) => ({
+  ...(await original<typeof import("./api")>()),
   chatDirectoryFiltersQuery: (actor: string) => ({
     queryKey: ["directory-filters", actor],
     queryFn: async () => state.facets,
@@ -61,10 +62,10 @@ vi.mock("./api", () => ({
     queryKey: ["chat-contacts", actor],
     queryFn: async () => [],
   }),
-  chatKeys: {
-    rooms: (actor: string) => ["chat-rooms", actor],
-    draft: (actor: string, room: string) => ["chat-draft", actor, room],
-  },
+  chatRoomPreferencesQuery: (actor: string) => ({
+    queryKey: ["chat-room-preferences", actor],
+    queryFn: async () => null,
+  }),
   chatRoomsQuery: (actor: string) => ({
     queryKey: ["chat-rooms", actor],
     queryFn: async () => state.rooms,

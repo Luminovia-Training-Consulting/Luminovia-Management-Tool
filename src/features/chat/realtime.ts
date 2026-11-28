@@ -23,7 +23,7 @@ export function useChatRealtime(actor: string, room: string | undefined) {
     let active = true;
     let accessRevoked = false;
     let visibilityKey: string | undefined;
-    let wasSubscribed = false;
+    let connected = false;
     // Keep history and the room directory independent. Otherwise a long history
     // refresh would delay unread counts, and new events would keep cancelling it.
     function refreshQueue(queryKey: QueryKey) {
@@ -155,11 +155,11 @@ export function useChatRealtime(actor: string, room: string | undefined) {
       .subscribe((next) => {
         if (!active) return;
         const value = next === "SUBSCRIBED" ? "connected" : "retrying";
-        if (value === "connected") {
-          if (wasSubscribed && statusRef.current !== "connected")
-            refresh(true, true);
-          wasSubscribed = true;
-        } else visibilityKey = undefined;
+        // A message or a membership change can commit after the initial RPC
+        // starts and before Realtime acknowledges this subscription.
+        if (value === "connected" && !connected) refresh(true, true);
+        connected = value === "connected";
+        if (!connected) visibilityKey = undefined;
         if (value !== statusRef.current) {
           statusRef.current = value;
           setStatus(value);

@@ -179,6 +179,20 @@ it("refreshes the current history after a personal visibility change from anothe
     [{ queryKey: chatKeys.rooms("actor-a") }, keepInFlight],
   ]);
 });
+it("catches commits during initial subscription and ignores duplicate acknowledgements", async () => {
+  const { invalidate } = setup();
+  const channel = state.channels[0];
+  act(() => channel.status("SUBSCRIBED"));
+  await advance();
+  expect(invalidate.mock.calls).toEqual([
+    [{ queryKey: chatKeys.messages("actor-a", "room-a") }, keepInFlight],
+    [{ queryKey: chatKeys.rooms("actor-a") }, keepInFlight],
+  ]);
+  invalidate.mockClear();
+  act(() => channel.status("SUBSCRIBED"));
+  await advance();
+  expect(invalidate).not.toHaveBeenCalled();
+});
 it("revalidates saved history only when membership visibility changes or the connection was interrupted", async () => {
   const { invalidate } = setup();
   const channel = state.channels[0];
@@ -261,11 +275,11 @@ it("cancels old actor/room timers and ignores old channel callbacks after cleanu
   const current = state.channels[1];
   expect(state.remove).toHaveBeenCalledWith(old);
   emit(old);
+  await advance();
+  expect(invalidate).not.toHaveBeenCalled();
   act(() => current.status("SUBSCRIBED"));
   act(() => old.status("CLOSED"));
   expect(screen.getByText("connected:false")).toBeInTheDocument();
-  await advance();
-  expect(invalidate).not.toHaveBeenCalled();
   emit(current);
   await advance();
   expect(invalidate.mock.calls).toEqual([

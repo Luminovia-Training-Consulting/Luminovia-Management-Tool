@@ -21,7 +21,14 @@ import type { ChatMessage, ChatRoom } from "./types";
 const { rpc } = vi.hoisted(() => ({
   rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
 }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: (name: string, args?: unknown) => {
+      const request = rpc(name, ...(args === undefined ? [] : [args]));
+      return Object.assign(request, { abortSignal: () => request });
+    },
+  }),
+}));
 vi.mock("./realtime", () => ({
   useChatRealtime: () => ({ status: "connected", revoked: false }),
 }));

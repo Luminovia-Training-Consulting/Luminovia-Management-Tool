@@ -17,6 +17,7 @@ import type {
 /** Shared cache prefixes for targeted revalidation and immediate removal of a revoked room. */
 export const chatKeys = {
   rooms: (actor: string) => ["chat-rooms", actor] as const,
+  roomPreferences: (actor: string) => ["chat-room-preferences", actor] as const,
   draft: (actor: string, room: string) => ["chat-draft", actor, room] as const,
   contacts: (actor: string) => ["chat-contacts", actor] as const,
   members: (actor: string, room: string) =>
@@ -30,10 +31,11 @@ async function readChatRooms() {
   return (data ?? []) as ChatRoom[];
 }
 
-/** Personal room preferences change less often than unread counts and messages. */
-const chatRoomPreferencesQuery = (actor: string) =>
+/** Refresh personal preferences independently of room access checks and message traffic. */
+export const chatRoomPreferencesQuery = (actor: string) =>
   queryOptions({
-    queryKey: [...chatKeys.rooms(actor), "preferences"],
+    queryKey: chatKeys.roomPreferences(actor),
+    refetchInterval: 30000,
     staleTime: 30000,
     queryFn: async () => {
       const [pins, archives] = await Promise.all([
@@ -51,25 +53,30 @@ const chatRoomPreferencesQuery = (actor: string) =>
     },
   });
 
-/** Poll the room list while reusing fresh, actor-scoped personal preferences. */
+/** Poll the authoritative room list even when personal preferences are delayed or fail. */
 export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
-    queryFn: async ({ client }) => {
-      const [rooms, { pinOrder, archived }] = await Promise.all([
-        readChatRooms(),
-        client.fetchQuery(chatRoomPreferencesQuery(actor)),
-      ]);
-      return rooms.map((room) => ({
-        ...room,
-        personal_archived: archived.has(room.id),
-        pinned: pinOrder.has(room.id),
-        pinOrder: pinOrder.get(room.id) ?? -1,
-      }));
-    },
+    queryFn: readChatRooms,
     refetchInterval: 3000,
     staleTime: 1000,
   });
+
+/** Apply preferences only to rooms the current directory response still authorizes. */
+export function decorateChatRooms(
+  rooms: ChatRoom[],
+  preferences:
+    | { pinOrder: ReadonlyMap<string, number>; archived: ReadonlySet<string> }
+    | undefined,
+) {
+  if (!preferences) return rooms;
+  return rooms.map((room) => ({
+    ...room,
+    personal_archived: preferences.archived.has(room.id),
+    pinned: preferences.pinOrder.has(room.id),
+    pinOrder: preferences.pinOrder.get(room.id) ?? -1,
+  }));
+}
 
 /** Observe the same invalidation prefix without fetching personal room metadata. */
 export const chatUnreadCountQuery = (actor: string) =>
@@ -135,25 +142,29 @@ export const chatMessagesQuery = (
   infiniteQueryOptions({
     queryKey: [...chatKeys.messages(actor, room), search],
     initialPageParam: null as MessageCursor | null,
-    queryFn: async ({ pageParam }) => {
-      const { data, error, status } = await db().rpc(
-        "chat_messages_with_mentions",
-        {
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, error, status } = await db()
+        .rpc("chat_messages_with_mentions", {
           p_room_id: room,
           p_before_at: pageParam?.at ?? null,
           p_before_id: pageParam?.id ?? null,
           p_search: search,
           p_limit: 40,
-        },
-      );
+        })
+        .abortSignal(signal);
+      // A room switch, discarded search or revocation can cancel this page between RPCs.
+      signal.throwIfAborted();
       if (error) throwPagedReadError(error, status);
       const page = (data ?? []) as ChatMessage[];
       if (!page.length) return page;
-      const previews = await db().rpc("chat_reply_previews", {
-        p_room_id: room,
-        p_message_ids: page.map((item) => item.id),
-        p_versions: page.map((item) => item.content_version ?? 1),
-      });
+      const previews = await db()
+        .rpc("chat_reply_previews", {
+          p_room_id: room,
+          p_message_ids: page.map((item) => item.id),
+          p_versions: page.map((item) => item.content_version ?? 1),
+        })
+        .abortSignal(signal);
+      signal.throwIfAborted();
       if (previews.error) throwPagedReadError(previews.error, previews.status);
       const lookup = (previews.data ?? {}) as Record<
         string,
