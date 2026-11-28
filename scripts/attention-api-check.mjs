@@ -25,15 +25,17 @@ await withApiFixture(
                 who.client.rpc("attention_preferences"),
                 "Read own actual quiet settings",
             );
-        const legacy = await checked(
+        const categories = await checked(
             owner.client.rpc("notification_preferences"),
-            "Snapshot unchanged four-category contract",
+            "Read actual notification categories and delivery defaults",
         );
-        assert.deepEqual(legacy, {
+        assert.deepEqual(categories, {
             chat: true,
             forum: true,
             job_updates: true,
             reminders: true,
+            events: true,
+            invoices: true,
             version: 1,
         });
         assert.equal((await preferences(owner)).version, 0);
