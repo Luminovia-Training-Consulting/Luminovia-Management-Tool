@@ -313,6 +313,10 @@ export default defineConfig(({ mode }) => {
             "**/academy-explorer-*.{js,css}",
             "**/standalone-swagger-*.{js,css}",
             "**/swagger-view-*.{js,css}",
+            // Editing and syntax decoration are optional online enhancements.
+            // The article and thread readers still render ordinary and code text.
+            "**/knowledge-editor-*.js",
+            "**/knowledge-syntax-*.js",
             // Spreadsheet processing is loaded on demand during online imports.
             "**/attendance-xlsx-*.js",
             // Private company contracts cannot be viewed or filed offline.

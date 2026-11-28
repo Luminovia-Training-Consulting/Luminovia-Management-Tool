@@ -9,7 +9,8 @@ import { Dialog } from "../../components/ui/dialog";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { DownloadButton } from "./resources";
-import { KnowledgeEditor } from "../knowledge/editor";
+import { KnowledgeEditor } from "../knowledge/editor-loader";
+import { KnowledgeDocument } from "../knowledge/reader";
 import {
   CourseLessonBlockEditor,
   CourseLessonBlockContent,
@@ -83,11 +84,7 @@ function CourseContents({
                     {t("lessonDuration", { count: lesson.duration_minutes })}
                   </p>
                 )}
-                <KnowledgeEditor
-                  value={lesson.body}
-                  label={lesson.title}
-                  readOnly
-                />
+                <KnowledgeDocument value={lesson.body} label={lesson.title} />
                 {lesson.blocks?.map((block) => (
                   <CourseLessonBlockContent key={block.id} block={block} />
                 ))}

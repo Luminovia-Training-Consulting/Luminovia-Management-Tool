@@ -32,7 +32,6 @@ import {
   AdministrationSection,
 } from "../features/admin/navigation";
 import { isAssignmentRequest } from "../features/admin/navigation-links";
-import { Shell } from "./shell";
 import { Preferences } from "../components/preferences";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { useOnline } from "../lib/online";
@@ -44,6 +43,10 @@ import { isDatabasePermissionDenied } from "../lib/database-errors";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
 
+// Public login and help do not need the private workspace runtime.
+const Shell = lazy(() =>
+  import("./shell").then((module) => ({ default: module.Shell })),
+);
 const Dashboard = lazy(() =>
   import("../features/dashboard/dashboard").then((module) => ({
     default: module.Dashboard,

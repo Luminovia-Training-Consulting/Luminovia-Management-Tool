@@ -50,7 +50,8 @@ import {
 } from "./api";
 import { contentIsValid, documentText, emptyDocument } from "./content";
 import type { ForumPost, ForumThread, KnowledgeCategory } from "./types";
-import { KnowledgeEditor } from "./editor";
+import { KnowledgeEditor } from "./editor-loader";
+import { KnowledgeDocument } from "./reader";
 import { ForumMetadataEditor } from "./forum-metadata";
 import { CategoryManager } from "./categories";
 import { KnowledgeCategoryFilter, KnowledgeListSearch } from "./list-filters";
@@ -423,11 +424,10 @@ function ForumPostView({
       {post.deleted_at ? (
         <p className="muted">{t("postDeleted")}</p>
       ) : (
-        <KnowledgeEditor
+        <KnowledgeDocument
           key={`${post.id}:${post.version}`}
           value={post.content}
           label={t("content")}
-          readOnly
         />
       )}
       <div className="forum-post-actions">

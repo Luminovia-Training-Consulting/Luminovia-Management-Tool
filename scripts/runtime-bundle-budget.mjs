@@ -19,6 +19,17 @@ const explorerEntries = [
   "src/features/developer-api/standalone-swagger.tsx",
 ];
 
+const privateShell = "src/app/shell.tsx";
+const knowledgeReaders = [
+  "src/features/knowledge/articles.tsx",
+  "src/features/knowledge/forum.tsx",
+  "src/features/learning/learning.tsx",
+];
+const optionalKnowledge = [
+  "src/features/knowledge/knowledge-editor.tsx",
+  "src/features/knowledge/knowledge-syntax.tsx",
+];
+
 function staticAssets(manifest, entry) {
   const files = new Set();
   const pending = [entry];
@@ -108,6 +119,29 @@ export function checkBundleBudget(directory, limits = budgets) {
     throw new Error(
       "The build is missing the API explorer or offline navigation shell.",
     );
+  }
+
+  if (manifest[privateShell]) {
+    for (const asset of staticAssets(manifest, privateShell)) {
+      if (!precache.has(asset))
+        throw new Error(`Offline shell dependency is not precached: ${asset}`);
+    }
+    if (startup.has(manifest[privateShell].file))
+      throw new Error("The private workspace must load after startup.");
+  }
+
+  const readerAssets = new Set([
+    ...startup,
+    ...knowledgeReaders
+      .filter((entry) => manifest[entry])
+      .flatMap((entry) => [...staticAssets(manifest, entry)]),
+  ]);
+  for (const entry of optionalKnowledge) {
+    const file = manifest[entry]?.file;
+    if (file && (readerAssets.has(file) || precache.has(file)))
+      throw new Error(
+        `Knowledge editing or highlighting asset must load on demand: ${file}`,
+      );
   }
 
   let explorerBytes = 0;

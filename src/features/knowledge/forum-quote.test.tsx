@@ -25,39 +25,32 @@ vi.mock("../../lib/queries", () => ({
     queryFn: async () => ({ time_zone: "UTC" }),
   }),
 }));
-vi.mock("./editor", () => ({
+vi.mock("./editor-loader", () => ({
   KnowledgeEditor: ({
     value,
     onChange,
     label,
-    readOnly,
   }: {
     value: JSONContent;
     onChange?: (value: JSONContent) => void;
     label: string;
-    readOnly?: boolean;
-  }) =>
-    readOnly ? (
-      <div role="article" aria-label={label}>
-        {documentText(value)}
-      </div>
-    ) : (
-      <textarea
-        aria-label={label}
-        value={documentText(value).trim()}
-        onChange={(e) =>
-          onChange?.({
-            type: "doc",
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: e.target.value }],
-              },
-            ],
-          })
-        }
-      />
-    ),
+  }) => (
+    <textarea
+      aria-label={label}
+      value={documentText(value).trim()}
+      onChange={(e) =>
+        onChange?.({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: e.target.value }],
+            },
+          ],
+        })
+      }
+    />
+  ),
 }));
 const textDoc = (value: string): JSONContent => ({
   type: "doc",

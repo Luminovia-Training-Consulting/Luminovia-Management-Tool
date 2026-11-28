@@ -33,26 +33,20 @@ vi.mock("../../lib/online", () => ({
 }));
 // These tests exercise the parent editor workflow, real form validation and
 // query invalidation. Tiptap formatting/sanitisation has separate coverage.
-vi.mock("./editor", () => ({
+vi.mock("./editor-loader", () => ({
   KnowledgeEditor: ({
     value,
     onChange,
     label,
     disabled,
-    readOnly,
   }: {
     value: JSONContent;
     onChange?: (value: JSONContent) => void;
     label: string;
     disabled?: boolean;
-    readOnly?: boolean;
   }) => {
     const text = value.content?.[0]?.content?.[0]?.text ?? "";
-    return readOnly ? (
-      <div role="region" aria-label={label}>
-        {text}
-      </div>
-    ) : (
+    return (
       <textarea
         aria-label={label}
         value={text}
@@ -341,7 +335,7 @@ describe("Wiki editor confirmation and draft preservation", () => {
       await screen.findByRole("heading", { name: "Confirmed publication" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("region", { name: "Confirmed publication" }),
+      screen.getByRole("article", { name: "Confirmed publication" }),
     ).toHaveTextContent("Server-confirmed content.");
     expect(screen.getAllByText("Published")).toHaveLength(2);
     expect(screen.getByText(/Version 4/)).toBeVisible();
@@ -501,7 +495,7 @@ describe("Wiki permissions and creation prerequisites", () => {
       p_expected_version: null,
     });
     expect(
-      screen.getByRole("region", { name: "New fictional guide" }),
+      screen.getByRole("article", { name: "New fictional guide" }),
     ).toHaveTextContent("Authored new draft.");
     expect(screen.queryByText("Published")).not.toBeInTheDocument();
   });

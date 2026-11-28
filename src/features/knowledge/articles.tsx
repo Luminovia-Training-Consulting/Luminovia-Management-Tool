@@ -42,7 +42,8 @@ import {
 } from "./api";
 import type { KnowledgeCategory, WikiPageRecord } from "./types";
 import { contentIsValid, emptyDocument } from "./content";
-import { KnowledgeEditor } from "./editor";
+import { KnowledgeEditor } from "./editor-loader";
+import { KnowledgeDocument } from "./reader";
 import { CategoryManager } from "./categories";
 import { KnowledgeCategoryFilter, KnowledgeListSearch } from "./list-filters";
 import "./i18n";
@@ -309,11 +310,10 @@ function WikiArticle({
         {t("version", { version: record.version })}
       </p>
       {record.has_draft && <Notice>{t("draftNotice")}</Notice>}
-      <KnowledgeEditor
+      <KnowledgeDocument
         key={`${record.id}:${record.version}`}
         value={record.content}
         label={record.title}
-        readOnly
       />
       <WikiAttachments
         actor={actor}
@@ -368,11 +368,10 @@ function WikiArticle({
                     }).format(new Date(selectedRevision.created_at)),
                   })}
                 </p>
-                <KnowledgeEditor
+                <KnowledgeDocument
                   key={selectedRevision.version}
                   value={selectedRevision.content}
                   label={selectedRevision.title}
-                  readOnly
                 />
               </>
             )}
