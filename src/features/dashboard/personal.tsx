@@ -249,10 +249,17 @@ export function PersonalizedWidgets({
   actor: string;
   widgets: Partial<Record<WidgetId, ReactNode>>;
 }) {
+  const { t } = useTranslation("dashboard");
   const preferences = useQuery(dashboardPreferencesQuery(actor));
-  const saved = preferences.isError
-    ? defaultDashboardPreferences
-    : (preferences.data ?? defaultDashboardPreferences);
+  // The default layout would mount even the widgets hidden by the saved
+  // preferences, starting their data requests before the layout is known.
+  if (preferences.isLoading)
+    return (
+      <p className="muted" role="status">
+        {t("loading")}
+      </p>
+    );
+  const saved = preferences.data ?? defaultDashboardPreferences;
   return (
     <div className="dashboard-widgets">
       {saved.widget_order

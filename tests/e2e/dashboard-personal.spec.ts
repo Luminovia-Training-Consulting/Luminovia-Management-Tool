@@ -261,6 +261,16 @@ test("personal cards and teaching preparation persist in the real account across
     await expect(
         page.getByRole("button", {name: "Dashboard speichern", exact: true}),
     ).toHaveCount(0);
+    const hiddenFileReads: string[] = [];
+    page.on("request", (request) => {
+        const url = new URL(request.url());
+        if (
+            url.pathname.endsWith("/rest/v1/documents") &&
+            url.searchParams.get("select") === "id,original_name,created_at"
+        ) {
+            hiddenFileReads.push(url.pathname);
+        }
+    });
     await page.reload();
     await teachingDisclosure.locator("summary").click();
     teaching = page.getByRole("region", {
@@ -285,6 +295,7 @@ test("personal cards and teaching preparation persist in the real account across
             .first()
             .getByRole("region", {name: "Nachrichten & Meldungen", exact: true}),
     ).toBeVisible();
+    expect(hiddenFileReads).toHaveLength(0);
     await context.setOffline(true);
     await expect(
         teaching.getByRole("checkbox", {

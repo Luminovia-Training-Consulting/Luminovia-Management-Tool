@@ -65,9 +65,20 @@ export function resolveScheduleWindow(
     original?.ends_at,
     original?.time_zone,
   );
-  return starts_at && ends_at && Date.parse(starts_at) < Date.parse(ends_at)
+  return starts_at &&
+    ends_at &&
+    (compareScheduleInstants(starts_at, ends_at) ?? 0) < 0
     ? { starts_at, ends_at }
     : null;
+}
+
+// Date.parse retains milliseconds. Keep the next three digits separately so
+// the full PostgreSQL precision never has to fit in one JavaScript number.
+function subMillisecondMicroseconds(instant: string): number {
+  const digits = /\.\d{3}(\d{1,3})\d*(?:Z|[+-]\d{2}:?\d{2})$/i.exec(
+    instant,
+  )?.[1];
+  return digits ? Number(digits.padEnd(3, "0")) : 0;
 }
 
 /** Compare absolute instants, retaining PostgreSQL microseconds when JavaScript milliseconds tie. Invalid endpoints return null. */
@@ -79,39 +90,42 @@ export function compareScheduleInstants(
   const secondMillis = Date.parse(second);
   if (!Number.isFinite(firstMillis) || !Number.isFinite(secondMillis))
     return null;
-  const difference = firstMillis - secondMillis;
-  if (difference) return difference;
-  // PostgreSQL timestamps retain up to six fractional digits. Equal JavaScript
-  // milliseconds still need that precision; whole-minute ISO offsets do not
-  // affect the fractional component within the same absolute second.
-  const microseconds = (instant: string) =>
-    Number(
-      (/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/i.exec(instant)?.[1] ?? "")
-        .padEnd(6, "0")
-        .slice(0, 6),
-    );
-  return microseconds(first) - microseconds(second);
+  return (
+    firstMillis - secondMillis ||
+    subMillisecondMicroseconds(first) - subMillisecondMicroseconds(second)
+  );
 }
 
-/** Check all half-open intervals without rounding stored microseconds or changing form order. */
+function parseSchedulePoint(value: string | null) {
+  if (!value) return null;
+  const millis = Date.parse(value);
+  return Number.isFinite(millis)
+    ? { millis, fraction: subMillisecondMicroseconds(value) }
+    : null;
+}
+
+type SchedulePoint = NonNullable<ReturnType<typeof parseSchedulePoint>>;
+
+function compareSchedulePoints(first: SchedulePoint, second: SchedulePoint) {
+  return first.millis - second.millis || first.fraction - second.fraction;
+}
+
+/** Check every half-open interval, sorting parsed endpoints without changing form order. */
 export function validScheduleIntervals(
   rows: readonly { starts_at: string | null; ends_at: string | null }[],
 ) {
-  const intervals = rows.flatMap(({ starts_at, ends_at }) =>
-    starts_at &&
-    ends_at &&
-    (compareScheduleInstants(starts_at, ends_at) ?? 0) < 0
-      ? [{ starts_at, ends_at }]
-      : [],
-  );
-  if (intervals.length !== rows.length) return false;
-  // Every endpoint has already passed the finite-instant check above.
-  intervals.sort((a, b) => compareScheduleInstants(a.starts_at, b.starts_at)!);
+  const intervals: { start: SchedulePoint; end: SchedulePoint }[] = [];
+  for (const { starts_at, ends_at } of rows) {
+    const start = parseSchedulePoint(starts_at);
+    const end = parseSchedulePoint(ends_at);
+    if (!start || !end || compareSchedulePoints(start, end) >= 0) return false;
+    intervals.push({ start, end });
+  }
+  intervals.sort((a, b) => compareSchedulePoints(a.start, b.start));
   return intervals.every(
     (item, index) =>
       index === 0 ||
-      compareScheduleInstants(item.starts_at, intervals[index - 1].ends_at)! >=
-        0,
+      compareSchedulePoints(item.start, intervals[index - 1].end) >= 0,
   );
 }
 

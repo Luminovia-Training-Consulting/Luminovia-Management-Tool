@@ -23,3 +23,20 @@ export function calendarFoldLabel(
     )
     .join(" – ");
 }
+
+/** Reuse labels, including ordinary events, only within this calendar snapshot and zone. */
+export function calendarEventTimeLabels(
+  sources: ReadonlyMap<string, { start: string; end: string }>,
+  zone: string,
+  locale: string,
+) {
+  const labels = new Map<string, string | undefined>();
+  return (id: string) => {
+    if (labels.has(id)) return labels.get(id);
+    const source = sources.get(id);
+    if (!source) return undefined;
+    const label = calendarFoldLabel(source.start, source.end, zone, locale);
+    labels.set(id, label);
+    return label;
+  };
+}

@@ -67,12 +67,14 @@ export function Dashboard() {
     // The header owns polling for this actor's shared preview.
     refetchInterval: false,
   });
-  const removals = notifications.data?.items.filter(
-    (item) =>
-      item.kind === "claim_cancelled" &&
-      item.assignment_removed &&
-      !item.read_at,
-  );
+  const removals = notifications.isSuccess
+    ? notifications.data.items.filter(
+        (item) =>
+          item.kind === "claim_cancelled" &&
+          item.assignment_removed &&
+          !item.read_at,
+      )
+    : [];
   if (roles.isPending) return <Loading />;
   if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   // Keep independent widgets usable while the authorized job summary loads.
@@ -102,7 +104,7 @@ export function Dashboard() {
         />
       </header>
       {teaching &&
-        removals?.map((item) => (
+        removals.map((item) => (
           <Notice key={item.id} kind="error">
             <strong>{inbox("lecturerRemoved")}</strong>
             <p>{item.title}</p>

@@ -22,6 +22,10 @@ import i18n from "../../lib/i18n";
 import { userRolesQuery } from "../../lib/queries";
 import { Dashboard } from "./dashboard";
 import { DashboardWidgets } from "./widgets";
+import {
+  dashboardPreferencesKey,
+  defaultDashboardPreferences,
+} from "./personal-api";
 import { notificationPreviewQuery } from "../notifications/api";
 import { chatKeys } from "../chat/api";
 
@@ -125,6 +129,7 @@ beforeEach(async () => {
     ],
   };
   fake.rpcData = {
+    dashboard_preferences: defaultDashboardPreferences,
     job_dashboard: {
       open_count: 0,
       assignment_count: 0,
@@ -280,6 +285,74 @@ describe("role-aware dashboard previews", () => {
     ).closest("[role=alert]");
     expect(notice).toHaveTextContent("Fictional removed assignment");
     expect(notice).toHaveTextContent("Fictional scheduling conflict");
+  });
+
+  it("waits for the saved layout before loading widgets and keeps hidden reads out after a failed refresh", async () => {
+    let release!: () => void;
+    fake.rpcDelays.dashboard_preferences = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    fake.rpcData.dashboard_preferences = {
+      ...defaultDashboardPreferences,
+      hidden_widgets: ["contracts", "files"],
+    };
+    const { client } = setup();
+    expect(await screen.findByText("My private preparation")).toBeVisible();
+    expect(rpcCalls("dashboard_preferences")).toHaveLength(1);
+    const hiddenReads = () =>
+      fake.calls.filter(
+        ({ method, table }) =>
+          method === "from" && ["contracts", "documents"].includes(table),
+      );
+    expect(hiddenReads()).toEqual([]);
+    await act(async () => release());
+    expect(await screen.findByText("3 ungelesene Nachrichten")).toBeVisible();
+    expect(hiddenReads()).toEqual([]);
+    fake.errors.dashboard_preferences = {
+      code: "",
+      message: "temporary read failure",
+    };
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: dashboardPreferencesKey(fake.actor),
+      });
+    });
+    expect(await screen.findByText("3 ungelesene Nachrichten")).toBeVisible();
+    expect(hiddenReads()).toEqual([]);
+  });
+
+  it("removes a cached assignment notice when its inbox refresh is denied", async () => {
+    fake.rpcData.notification_inbox = {
+      items: [
+        {
+          id: "6f1be4c1-9910-4f22-a3e0-d92b60bc8ee4",
+          kind: "claim_cancelled",
+          title: "Fictional revoked notification",
+          assignment_removed: true,
+          removal_reason: "Fictional private removal reason",
+          href: null,
+          read_at: null,
+          created_at: ahead(0),
+        },
+      ],
+      unread_count: 1,
+      as_of: ahead(0),
+    };
+    const { client } = setup();
+    expect(
+      await screen.findByText("Fictional private removal reason"),
+    ).toBeVisible();
+    fake.errors.notification_inbox = { code: "42501", message: "denied" };
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: notificationPreviewQuery(fake.actor).queryKey,
+      });
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Fictional private removal reason"),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it("provides a named page-level heading", async () => {

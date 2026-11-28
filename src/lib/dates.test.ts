@@ -117,6 +117,43 @@ it("requires a positive published window with valid endpoints", () => {
   ).toBeNull();
 });
 
+it("preserves an unchanged positive window entirely within one millisecond", () => {
+  const original = {
+    starts_at: "2030-07-10T08:00:00.000001Z",
+    ends_at: "2030-07-10T08:00:00.000002Z",
+    time_zone: "Europe/Berlin",
+  };
+  const draft = {
+    starts_at: "2030-07-10T10:00",
+    ends_at: "2030-07-10T10:00",
+    time_zone: original.time_zone,
+  };
+  expect(resolveScheduleWindow(draft, original)).toEqual({
+    starts_at: original.starts_at,
+    ends_at: original.ends_at,
+  });
+  expect(
+    resolveScheduleWindow(draft, { ...original, ends_at: original.starts_at }),
+  ).toBeNull();
+});
+
+it("parses each schedule endpoint once even when sorting an unordered series", () => {
+  const rows = Array.from({ length: 60 }, (_, index) => {
+    const starts = Date.UTC(2030, 0, ((index * 37) % 60) + 1);
+    return {
+      starts_at: new Date(starts).toISOString(),
+      ends_at: new Date(starts + 60_000).toISOString(),
+    };
+  });
+  const parse = vi.spyOn(Date, "parse");
+  try {
+    expect(validScheduleIntervals(rows)).toBe(true);
+    expect(parse).toHaveBeenCalledTimes(rows.length * 2);
+  } finally {
+    parse.mockRestore();
+  }
+});
+
 it("renders a placeholder for an unreadable date or unsupported display zone", () => {
   expect(dateTime("infinity", "en", "UTC")).toBe("–");
   expect(dateTime("2027-01-18T20:00:00Z", "en", "Legacy/Zone")).toBe("–");

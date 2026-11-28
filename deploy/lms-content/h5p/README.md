@@ -24,6 +24,7 @@ Apply the portal migrations and start the existing file scanner before publishin
 
 ## Local verification
 
+- `node --test scripts/runtime-h5p-serve.test.mjs` starts the isolated loopback origin and checks its static headers, bytes and bounded buffering with a slow client.
 - `npx --no-install vitest run src/features/learning/h5p-runtime-package.test.ts` checks exact ZIP selection, digest calculation, available libraries and input limits.
 - `node scripts/course-h5p-playback-db-tests.mjs` uses an isolated PostgreSQL fixture and covers the internal edition and both Academy editions.
 - With the built runtime and the directory of checksum-pinned archives, run `node scripts/h5p-runtime-browser-check.mjs` from the repository root. It opens the official samples on a loopback TLS proxy in actual Chromium on desktop and mobile viewports.

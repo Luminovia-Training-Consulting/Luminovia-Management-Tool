@@ -1,7 +1,8 @@
 /** Serve the isolated, cookie-free H5P runtime behind wildcard HTTPS. */
 import { createServer } from "node:http";
-import { opendir, readFile } from "node:fs/promises";
+import { open, opendir } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
+import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -113,18 +114,33 @@ const server = createServer(async (request, response) => {
       response.writeHead(404, staticHeaders).end();
       return;
     }
-    const bytes = await readFile(join(root, route));
-    response
-      .writeHead(200, {
+    const file = await open(join(root, route), "r");
+    try {
+      const { size } = await file.stat();
+      if (response.destroyed) return;
+      response.writeHead(200, {
         ...staticHeaders,
         "Content-Type": types[extname(route)],
-        "Content-Length": bytes.length,
-      })
-      .end(bytes);
+        "Content-Length": size,
+      });
+      if (size === 0) {
+        response.end();
+        return;
+      }
+      // Pause disk reads when the client stops consuming the response.
+      await pipeline(file.createReadStream({ end: size - 1 }), response);
+    } finally {
+      await file.close();
+    }
   } catch {
-    response.writeHead(400, staticHeaders).end();
+    if (!response.destroyed) {
+      if (response.headersSent) response.destroy();
+      else response.writeHead(400, staticHeaders).end();
+    }
   }
 });
 server.listen(port, "127.0.0.1", () =>
-  console.log(`Isolated H5P runtime listening on loopback port ${server.address().port}`),
+  console.log(
+    `Isolated H5P runtime listening on loopback port ${server.address().port}`,
+  ),
 );

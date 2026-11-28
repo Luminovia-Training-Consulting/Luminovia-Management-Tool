@@ -88,7 +88,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { CalendarDisplayZone } from "./display-zone";
 import { TimeZoneOptions } from "../../components/time-zone-options";
-import { calendarFoldLabel } from "./display-time";
+import { calendarEventTimeLabels } from "./display-time";
 import {
   ErrorState,
   Field,
@@ -1041,11 +1041,13 @@ export function CalendarPage() {
     },
     [openPersonalEditor, personalRows],
   );
+  const eventTimeLabel = useMemo(
+    () => calendarEventTimeLabels(sourceEvents, zone, language),
+    [sourceEvents, zone, language],
+  );
   const showEventContent = useCallback(
     ({ event }: EventContentArg) => {
-      const source = sourceEvents.get(event.id);
-      const label =
-        source && calendarFoldLabel(source.start, source.end, zone, language);
+      const label = eventTimeLabel(event.id);
       if (!label) return true;
       return (
         <>
@@ -1054,7 +1056,7 @@ export function CalendarPage() {
         </>
       );
     },
-    [sourceEvents, zone, language],
+    [eventTimeLabel],
   );
   return (
     <>
