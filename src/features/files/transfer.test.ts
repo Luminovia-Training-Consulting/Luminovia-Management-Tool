@@ -126,6 +126,20 @@ describe("online, authenticated document transfers", () => {
     expect(Request.requests).toHaveLength(0);
   });
 
+  it("ignores a clean upload response after the active account changes", async () => {
+    const progress = vi.fn();
+    const { promise, request } = await transfer(progress);
+    auth.getSession.mockResolvedValue({
+      data: {
+        session: { access_token: "next-token", user: { id: "next-account" } },
+      },
+      error: null,
+    });
+    request.respond(200, { document: { id: "old-document", status: "clean" } });
+    await expect(promise).rejects.toThrow("account_changed");
+    expect(progress).not.toHaveBeenCalledWith(100);
+  });
+
   it("uses the SCORM scan scope and returns the exact clean version", async () => {
     await expect(
       uploadCourseScormPackage(new File([], "short.zip"), "course", "retry"),

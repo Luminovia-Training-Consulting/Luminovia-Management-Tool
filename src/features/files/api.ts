@@ -320,7 +320,7 @@ async function transferUpload(
     };
     xhr.onerror = () => reject(new Error("upload_failed"));
     xhr.ontimeout = () => reject(new Error("upload_failed"));
-    xhr.onload = () => {
+    xhr.onload = async () => {
       try {
         const result = JSON.parse(xhr.responseText);
         // Neither HTTP 2xx nor an existing document row alone grants scan clearance.
@@ -330,6 +330,12 @@ async function transferUpload(
           xhr.status < 300 &&
           result.document?.status === "clean"
         ) {
+          // A completed upload belongs to the account whose token sent it.
+          const { data, error } = await db().auth.getSession();
+          if (error || data.session?.user.id !== session.user.id) {
+            reject(new Error("account_changed"));
+            return;
+          }
           onProgress?.(100);
           resolve(result.document);
         } else reject(new Error(result.error ?? "upload_failed"));
