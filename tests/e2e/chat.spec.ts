@@ -179,6 +179,63 @@ test("long chat history loads on upward scroll without moving the visible messag
     await expect(rows.first()).toContainText("Fictional history message 1");
 });
 
+test("room navigation and composer stay usable on a short viewport", async ({
+    page,
+    isMobile,
+}) => {
+    const owner = await account("NavigationOwner");
+    const member = await account("NavigationMember");
+    const ownerApi = localClient(process.env.SUPABASE_ANON_KEY!);
+    expect((await ownerApi.auth.signInWithPassword({
+        email: owner.email,
+        password: process.env.E2E_PASSWORD!,
+    })).error).toBeNull();
+
+    const title = `Fictional navigation chat ${randomUUID().slice(0, 8)}`;
+    const room = await ownerApi.rpc("create_chat_group", {
+        p_title: title,
+        p_member_ids: [member.id],
+    });
+    expect(room.error).toBeNull();
+    const original = "A longer reference message for the reply preview. ".repeat(6).trim();
+    expect((await service().from("messages").insert({
+        room_id: room.data,
+        sender_id: member.id,
+        client_id: randomUUID(),
+        request_hash: randomUUID(),
+        body: original,
+    })).error).toBeNull();
+
+    await page.setViewportSize({width: isMobile ? 360 : 1024, height: 520});
+    await login(page, owner);
+    const roomButton = page.locator(".chat-room-button").filter({hasText: title});
+    await roomButton.press("Enter");
+
+    const thread = page.getByRole("region", {name: title, exact: true});
+    await expect(thread).toBeVisible();
+    if (isMobile) {
+        await expect(thread.getByRole("heading", {name: title})).toBeFocused();
+    } else {
+        await expect(roomButton).toBeFocused();
+    }
+
+    await thread.getByText("Suche, angeheftete Nachrichten & Hinweise", {exact: true}).click();
+    await thread.getByRole("button", {name: "Auf Nachricht antworten", exact: true}).click();
+    const reply = "Sending a reply from a short viewport.";
+    await thread.getByRole("textbox", {name: "Deine Nachricht", exact: true}).fill(reply);
+    const sendButton = thread.getByRole("button", {name: "Nachricht senden", exact: true});
+    // The thread must offer its own scrolling when the tools and reply draft
+    // use the available height. Script-driven scrolling alone can bypass clipping.
+    await expect(thread).toHaveCSS("overflow-y", "auto");
+    await sendButton.click();
+    await expect(thread.getByText(reply, {exact: true})).toBeVisible();
+
+    if (isMobile) {
+        await thread.getByRole("button", {name: "Unterhaltungen", exact: true}).press("Enter");
+        await expect(roomButton).toBeFocused();
+    }
+});
+
 test("real private DM persists, delivers realtime, edits/deletes safely and denies a third lecturer", async ({
                                                                                                                  browser,
                                                                                                                  page,

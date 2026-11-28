@@ -134,6 +134,10 @@ function ChatDirectory({ actor }: { actor: string }) {
   const [clearTrigger, setClearTrigger] = useState<HTMLButtonElement | null>(
     null,
   );
+  const directoryHeading = useRef<HTMLHeadingElement>(null);
+  const threadHeading = useRef<HTMLHeadingElement>(null);
+  const roomTrigger = useRef<HTMLButtonElement | null>(null);
+  const restoreDirectoryFocus = useRef(false);
   const [roomSearch, setRoomSearch] = useState<HTMLInputElement | null>(null);
   const previousRooms = useRef(new Set<string>());
   const previousDeleted = useRef(new Set<string>());
@@ -150,13 +154,37 @@ function ChatDirectory({ actor }: { actor: string }) {
     roles.data?.some((role) =>
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
     ) ?? false;
-  const selectRoom = (room: string | null) => {
+  const selectRoom = (room: string | null, trigger?: HTMLButtonElement) => {
     const next = new URLSearchParams(params);
     next.delete("message");
-    if (room) next.set("room", room);
-    else next.delete("room");
+    if (room) {
+      next.set("room", room);
+      roomTrigger.current = trigger ?? null;
+    } else next.delete("room");
     setParams(next);
   };
+  function backToRooms() {
+    restoreDirectoryFocus.current = true;
+    selectRoom(null);
+  }
+  useEffect(() => {
+    if (selectedId) {
+      // On mobile the selected button disappears with the directory pane.
+      const trigger = roomTrigger.current;
+      if (trigger && trigger.getClientRects().length === 0) {
+        threadHeading.current?.focus();
+      }
+    } else if (restoreDirectoryFocus.current) {
+      restoreDirectoryFocus.current = false;
+      const trigger = roomTrigger.current;
+      const target =
+        trigger && trigger.getClientRects().length
+          ? trigger
+          : directoryHeading.current;
+      target?.focus();
+      roomTrigger.current = null;
+    }
+  }, [selectedId]);
   const contact = params.get("contact");
   const { mutate: openContactDm, isError: contactFailed } = useMutation({
     mutationFn: async (userId: string) => {
@@ -380,7 +408,9 @@ function ChatDirectory({ actor }: { actor: string }) {
         <aside className="chat-directory" aria-label={t("rooms")}>
           <div className="chat-directory-tools">
             <div className="chat-directory-heading">
-              <h2>{t("rooms")}</h2>
+              <h2 ref={directoryHeading} tabIndex={-1}>
+                {t("rooms")}
+              </h2>
               <span className="badge" aria-live="polite">
                 {visibleRooms.length}
               </span>
@@ -533,7 +563,9 @@ function ChatDirectory({ actor }: { actor: string }) {
                       type="button"
                       className={`chat-room-button ${room.id === selectedId ? "is-selected" : ""}`}
                       aria-pressed={room.id === selectedId}
-                      onClick={() => selectRoom(room.id)}
+                      onClick={(event) =>
+                        selectRoom(room.id, event.currentTarget)
+                      }
                     >
                       <span
                         className={`chat-room-symbol chat-kind-${room.kind}`}
@@ -758,12 +790,13 @@ function ChatDirectory({ actor }: { actor: string }) {
                       : text,
                 )
               }
-              onBack={() => selectRoom(null)}
+              headingRef={threadHeading}
+              onBack={backToRooms}
             />
           ) : selectedId ? (
             <div className="chat-room-denied">
               <Notice kind="error">{t("roomUnavailable")}</Notice>
-              <Button variant="secondary" onClick={() => selectRoom(null)}>
+              <Button variant="secondary" onClick={backToRooms}>
                 {t("rooms")}
               </Button>
             </div>

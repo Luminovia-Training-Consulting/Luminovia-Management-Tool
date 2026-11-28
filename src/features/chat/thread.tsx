@@ -9,6 +9,7 @@ import {
   Fragment,
   lazy,
   Suspense,
+  type Ref,
   useCallback,
   useEffect,
   useEffectEvent,
@@ -72,6 +73,7 @@ export function ChatThread({
   room,
   canManageCourses,
   onBack,
+  headingRef,
   messageId,
   draft,
   onDraftChange,
@@ -80,6 +82,7 @@ export function ChatThread({
   room: ChatRoom;
   canManageCourses: boolean;
   onBack: () => void;
+  headingRef?: Ref<HTMLHeadingElement>;
   messageId?: string | null;
   draft?: string;
   onDraftChange?: (text: string, sentText?: string) => void;
@@ -447,7 +450,7 @@ export function ChatThread({
           <RoomIcon kind={room.kind} />
         </span>
         <div className="chat-thread-title">
-          <h2>
+          <h2 ref={headingRef} tabIndex={-1}>
             {room.kind === "general"
               ? t("kind_general")
               : room.title || t(`kind_${room.kind}`)}

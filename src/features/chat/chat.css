@@ -358,13 +358,15 @@
   color: var(--brand);
 }
 
-/* The active conversation owns its scrollable history. */
+/* History normally takes the remaining space. If tools or composer feedback
+   need more room, the thread itself can scroll instead of clipping controls. */
 .chat-thread {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .chat-thread-header {
@@ -1312,7 +1314,7 @@
 
 .chat-message-scroll {
   flex: 1 1 auto;
-  min-height: 240px;
+  min-height: clamp(120px, 28dvh, 240px);
   padding: 18px;
 }
 
@@ -1431,7 +1433,6 @@
 
   .chat-message-scroll {
     padding: 14px 12px;
-    min-height: 260px;
   }
 
   .chat-composer {
