@@ -1,5 +1,5 @@
 /** Open a customer app only after its own backend confirms edition and readiness. */
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ErrorState, Loading, Notice } from "../../components/common";
@@ -19,9 +19,11 @@ type CourseAccess = "active" | "grace";
 export function AcademyCourseAccess({
   actor,
   children,
+  onWriteAccessLost,
 }: {
   actor: string;
   children: (access: CourseAccess) => ReactNode;
+  onWriteAccessLost?: () => void;
 }) {
   const online = useOnline();
   const { i18n } = useTranslation();
@@ -34,7 +36,11 @@ export function AcademyCourseAccess({
       </Notice>
     );
   return (
-    <OnlineAcademyCourseAccess key={actor} actor={actor}>
+    <OnlineAcademyCourseAccess
+      key={actor}
+      actor={actor}
+      onWriteAccessLost={onWriteAccessLost}
+    >
       {children}
     </OnlineAcademyCourseAccess>
   );
@@ -43,9 +49,11 @@ export function AcademyCourseAccess({
 function OnlineAcademyCourseAccess({
   actor,
   children,
+  onWriteAccessLost,
 }: {
   actor: string;
   children: (access: CourseAccess) => ReactNode;
+  onWriteAccessLost?: () => void;
 }) {
   const { i18n } = useTranslation();
   const { session } = useAuth();
@@ -104,6 +112,14 @@ function OnlineAcademyCourseAccess({
         : null;
     },
   });
+  const writeAccessLost =
+    (query.isSuccess &&
+      (typeof query.data !== "object" || query.data?.access !== "active")) ||
+    (query.error && "code" in query.error && query.error.code === "42501");
+  useEffect(() => {
+    if (query.isFetchedAfterMount && writeAccessLost) onWriteAccessLost?.();
+  }, [onWriteAccessLost, query.isFetchedAfterMount, writeAccessLost]);
+
   if (query.isPending || (query.isFetching && !query.isFetchedAfterMount))
     return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;

@@ -367,6 +367,18 @@ beforeEach(async () => {
                   exams: { ...workspace.exams, required: fake.examRequired },
                 };
           break;
+        case "course_content_studio":
+          data = {
+            can_edit: fake.licence === "active",
+            published_version: 0,
+            published_content: { modules: [] },
+            published_at: null,
+            draft_version: 0,
+            draft_base_version: 0,
+            draft_content: null,
+            versions: [],
+          };
+          break;
         case "course_submissions":
           data = {
             enabled: false,
@@ -1469,6 +1481,39 @@ it("discards the visible workspace offline and requires fresh operator proof on 
   expect(screen.queryByText("Protected course briefing")).toBeNull();
   expect(await screen.findByText(/course area is unavailable/)).toBeVisible();
 });
+
+it.each([true, false])(
+  "keeps the local curriculum hidden until the Academy profile revalidates (access: %s)",
+  async (access) => {
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    const { client } = open(`/courses/${id}/workspace#course-curriculum`);
+    fireEvent.click(await screen.findByRole("button", { name: "Add module" }));
+    const title = "Fictional curriculum draft before Academy outage";
+    fireEvent.change(screen.getByLabelText("Module title"), {
+      target: { value: title },
+    });
+    expect(screen.getByRole("button", { name: title })).toBeVisible();
+    online.mockReturnValue(false);
+    fireEvent(window, new Event("offline"));
+    expect(screen.queryByText(title)).not.toBeInTheDocument();
+
+    fake.profile = access;
+    online.mockReturnValue(true);
+    fireEvent(window, new Event("online"));
+    expect(screen.queryByText(title)).not.toBeInTheDocument();
+    if (access) {
+      expect(await screen.findByRole("button", { name: title })).toBeVisible();
+    } else {
+      expect(
+        await screen.findByText(/course area is unavailable/),
+      ).toBeVisible();
+      fake.profile = true;
+      await client.invalidateQueries({ queryKey: ["academy-course-access"] });
+      await screen.findByRole("button", { name: "Add module" });
+      expect(screen.queryByText(title)).not.toBeInTheDocument();
+    }
+  },
+);
 
 it.each([
   [

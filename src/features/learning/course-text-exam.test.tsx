@@ -230,6 +230,42 @@ it("preserves unsaved answers and blocks writes after another browser updates a 
   expect(answer).toHaveValue("Reconciled at revision three");
 });
 
+it.each([false, true])(
+  "hides answers through read errors and recovers edits only after a transient failure (access denied: %s)",
+  async (denied) => {
+    const open: TextExamState = {
+      ...beforeOpening,
+      now: "2026-11-26T05:15:00+00:00",
+      exam: {
+        ...beforeOpening.exam!,
+        questions: [{ prompt: "Describe the default route.", max_points: 10 }],
+      },
+    };
+    backend(open);
+    const client = openExam();
+    const queryKey = ["course-text-exam", "learner", run];
+    const answer = await screen.findByRole("textbox", {
+      name: "Answer to question 1",
+    });
+    fireEvent.change(answer, {
+      target: { value: "Unsaved fictional exam answer" },
+    });
+    fake.rpc.mockImplementation(() => ({
+      abortSignal: async () => ({
+        data: null,
+        error: denied ? { code: "42501" } : new TypeError("Network error"),
+      }),
+    }));
+    await act(async () => client.invalidateQueries({ queryKey }));
+    await waitFor(() => expect(answer).not.toBeInTheDocument());
+    backend(open);
+    await act(async () => client.invalidateQueries({ queryKey }));
+    expect(
+      await screen.findByRole("textbox", { name: "Answer to question 1" }),
+    ).toHaveValue(denied ? "" : "Unsaved fictional exam answer");
+  },
+);
+
 it("accepts only the action-specific schema and exact revision input", () => {
   const command = {
     p_run_id: run,

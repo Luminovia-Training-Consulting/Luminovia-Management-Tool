@@ -11,7 +11,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { PageNotFound } from "../components/page-not-found";
 import { ErrorState, Loading, Notice } from "../components/common";
@@ -31,6 +31,8 @@ import { Login } from "../features/auth/login";
 import { PasswordRecovery } from "../features/auth/password";
 import { SignOutButton } from "../features/auth/sign-out-button";
 import { LearningHubPage } from "../features/learning/course-hub";
+import { ClearCourseDraftContext } from "../features/learning/course-draft-context";
+import { CourseDraftSession } from "../features/learning/course-draft-session";
 import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import { NotificationsPage } from "../features/notifications/notifications";
 import { AcademyBrandLinksFooter } from "../features/branding/academy-brand-links-panel";
@@ -151,20 +153,30 @@ function AcademySession() {
 }
 
 function AcademyCourseProfile() {
-  const swagger = useMatch("/api/swagger");
+  const workspace = useMatch("/courses/:id/workspace");
   const { session } = useAuth();
   if (!session) return null;
+  const actor = session.user.id;
   return (
-    <AcademyCourseAccess actor={session.user.id}>
+    <CourseDraftSession scope={actor + ":" + (workspace?.params.id ?? "")}>
+      <AcademyCourseProfileGate actor={actor} />
+    </CourseDraftSession>
+  );
+}
+
+function AcademyCourseProfileGate({ actor }: { actor: string }) {
+  const swagger = useMatch("/api/swagger");
+  const clearDraft = useContext(ClearCourseDraftContext);
+  return (
+    <AcademyCourseAccess
+      actor={actor}
+      onWriteAccessLost={clearDraft ?? undefined}
+    >
       {(access) =>
         swagger ? (
           <Outlet context={access} />
         ) : (
-          <AcademyWorkspaceFrame
-            key={session.user.id}
-            actor={session.user.id}
-            access={access}
-          />
+          <AcademyWorkspaceFrame key={actor} actor={actor} access={access} />
         )
       }
     </AcademyCourseAccess>

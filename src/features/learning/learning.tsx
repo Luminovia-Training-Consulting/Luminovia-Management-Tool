@@ -2,15 +2,7 @@ import { CourseCloseout } from "./course-closeout";
 import { CourseTimeline } from "../../components/course-timeline";
 /** Operational course workspace: scoped preparation, contacts, dates and exact shared file versions. */
 import { useRequestKey } from "../../lib/request-key";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { lazy, Suspense, useContext, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -83,11 +75,8 @@ import { DownloadButton, Resources } from "./resources";
 import { CourseSubmissions } from "./course-submissions";
 import { CourseEvaluations } from "./course-evaluations";
 import { CourseAuthoring } from "./course-authoring";
-import {
-  ClearCourseDraftContext,
-  CourseDraftContext,
-  type LocalCourseDraft,
-} from "./course-draft-context";
+import { ClearCourseDraftContext } from "./course-draft-context";
+import { CourseDraftSession } from "./course-draft-session";
 import { CourseGradebook } from "./course-gradebook";
 import {
   CompletionRequirements,
@@ -2206,19 +2195,6 @@ function StandardCourseWorkspace({
   );
 }
 
-function CourseDraftSession({ children }: { children: ReactNode }) {
-  const draft = useState<LocalCourseDraft | null>(null);
-  const [, setDraft] = draft;
-  const clearDraft = useCallback(() => setDraft(null), [setDraft]);
-  return (
-    <ClearCourseDraftContext.Provider value={clearDraft}>
-      <CourseDraftContext.Provider value={draft}>
-        {children}
-      </CourseDraftContext.Provider>
-    </ClearCourseDraftContext.Provider>
-  );
-}
-
 /** Remount protected content on reconnect. Keep unsaved curriculum edits only in the same actor/course route. */
 export function CourseWorkspacePage({
   academy,
@@ -2227,9 +2203,13 @@ export function CourseWorkspacePage({
 }) {
   const { id } = useParams();
   const actor = useAuth().session!.user.id;
-  return (
-    <CourseDraftSession key={actor + ":" + id}>
-      <CourseWorkspaceConnection academy={academy} />
+  const retainedDraft = useContext(ClearCourseDraftContext);
+  const workspace = <CourseWorkspaceConnection academy={academy} />;
+  return retainedDraft ? (
+    workspace
+  ) : (
+    <CourseDraftSession scope={actor + ":" + id}>
+      {workspace}
     </CourseDraftSession>
   );
 }

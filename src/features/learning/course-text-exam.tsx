@@ -1,5 +1,13 @@
 /** A course-scoped native exam with versioned papers, private answers and explicit grade release. */
-import { lazy, Suspense, useEffect, useId, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { useTranslation } from "react-i18next";
@@ -29,6 +37,11 @@ type Review = NonNullable<TextExamState["review"]>;
 type WithoutRun<T> = T extends unknown ? Omit<T, "p_run_id"> : never;
 type Action = WithoutRun<TextExamCommand>;
 type Run = (command: Action) => Promise<unknown>;
+type LearnerAnswerDraft = {
+  paper: number;
+  revision: number;
+  answers: string[];
+};
 
 const TextExamGradeImport = lazy(() =>
   import("./text-exam-grade-import-panel").then((module) => ({
@@ -62,6 +75,7 @@ function ExamWorkspace({ actor, course, zone }: Props) {
   const [revision, setRevision] = useState<number>();
   const [learner, setLearner] = useState("");
   const [offset, setOffset] = useState(0);
+  const [answerDraft, setAnswerDraft] = useState<LearnerAnswerDraft>();
   const key = ["course-text-exam", actor, course];
   const read = useQuery({
     queryKey: [...key, revision, learner, offset],
@@ -166,6 +180,24 @@ function ExamWorkspace({ actor, course, zone }: Props) {
     write.reset();
     void read.refetch();
   };
+  // Keep the local edit above the request fallback. A failed read can hide the
+  // paper safely without dropping answers before the learner retries the read.
+  const answerReadDenied =
+    read.error && "code" in read.error && read.error.code === "42501";
+  if (
+    answerDraft &&
+    (answerReadDenied ||
+      (read.isSuccess &&
+        (read.data.staff ||
+          !read.data.exam?.questions ||
+          read.data.exam.revision !== answerDraft.paper ||
+          read.data.attempt?.submitted_at ||
+          answerDraft.answers.every(
+            (answer, index) =>
+              answer === (read.data.attempt?.answers[index] ?? ""),
+          ))))
+  )
+    setAnswerDraft(undefined);
   if (read.isPending)
     return online ? <Loading /> : <p role="status">{t("offline")}</p>;
   if (read.isError) {
@@ -325,6 +357,8 @@ function ExamWorkspace({ actor, course, zone }: Props) {
             key={paper.revision}
             state={state}
             paper={paper}
+            draft={answerDraft}
+            setDraft={setAnswerDraft}
             disabled={disabled}
             run={write.mutateAsync}
             loadedAt={read.dataUpdatedAt}
@@ -719,6 +753,8 @@ function useExamClock(serverTime: string, loadedAt: number) {
 function LearnerPaper({
   paper,
   state,
+  draft,
+  setDraft,
   disabled,
   run,
   loadedAt,
@@ -726,6 +762,8 @@ function LearnerPaper({
 }: {
   paper: Paper;
   state: TextExamState;
+  draft: LearnerAnswerDraft | undefined;
+  setDraft: Dispatch<SetStateAction<LearnerAnswerDraft | undefined>>;
   disabled: boolean;
   run: Run;
   loadedAt: number;
@@ -734,20 +772,13 @@ function LearnerPaper({
   const { t } = useTranslation("textExam");
   const id = useId();
   const now = useExamClock(state.now, loadedAt);
-  const [draft, setDraft] = useState<{ answers: string[]; revision: number }>();
   const attempt = state.attempt;
   const revision = attempt?.revision ?? 0;
   const submitted = attempt?.submitted_at;
   const closed = now >= Date.parse(paper.deadline);
   const saved = attempt?.answers ?? paper.questions?.map(() => "") ?? [];
-  const changed =
-    !submitted &&
-    draft?.answers.some((answer, index) => answer !== saved[index])
-      ? draft
-      : undefined;
-  if (draft && !changed) setDraft(undefined);
-  const dirty = !closed && !!changed;
-  const conflict = dirty && changed.revision !== revision;
+  const dirty = !submitted && !closed && !!draft;
+  const conflict = dirty && draft.revision !== revision;
   // Keep private answers in memory. The browser's normal reload warning
   // protects edits until PostgreSQL confirms a saved draft or submission.
   useEffect(() => {
@@ -759,15 +790,15 @@ function LearnerPaper({
 
   if (!paper.questions) return <p>{t("notOpen")}</p>;
 
-  const answers = changed?.answers ?? saved;
+  const answers = draft?.answers ?? saved;
   const save = (command: "save_answers" | "submit") =>
     run({
       p_action: command,
       p_revision: paper.revision,
-      p_expected: changed?.revision ?? revision,
+      p_expected: draft?.revision ?? revision,
       p_payload: { answers },
     }).then(() =>
-      setDraft((current) => (current === changed ? undefined : current)),
+      setDraft((current) => (current === draft ? undefined : current)),
     );
   return (
     <div className="space-y-3">
@@ -815,8 +846,9 @@ function LearnerPaper({
                   const updated = [...answers];
                   updated[index] = event.target.value;
                   setDraft({
+                    paper: paper.revision,
                     answers: updated,
-                    revision: changed?.revision ?? revision,
+                    revision: draft?.revision ?? revision,
                   });
                 }}
               />
