@@ -1,3 +1,5 @@
+import { compareInstantPoints, parseInstantPoint } from "./dates";
+
 /** Keep the first version of an overlapping row and preserve cursor tie order. */
 export function orderedCursorRows<T extends { id: string; created_at: string }>(
   pages: T[][] | undefined,
@@ -10,11 +12,28 @@ export function orderedCursorRows<T extends { id: string; created_at: string }>(
     }
   }
   const direction = order === "ascending" ? 1 : -1;
-  return [...unique.values()].sort(
-    (a, b) =>
-      direction *
-      (a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)),
-  );
+  return Array.from(unique.values(), (row) => ({
+    row,
+    instant: parseInstantPoint(row.created_at),
+  }))
+    .sort((a, b) => {
+      if (a.instant && b.instant)
+        return (
+          direction *
+          (compareInstantPoints(a.instant, b.instant) ||
+            a.row.id.localeCompare(b.row.id))
+        );
+
+      // Place unparseable timestamps after dated rows in either view.
+      if (a.instant) return -1;
+      if (b.instant) return 1;
+      return (
+        direction *
+        (a.row.created_at.localeCompare(b.row.created_at) ||
+          a.row.id.localeCompare(b.row.id))
+      );
+    })
+    .map(({ row }) => row);
 }
 
 /** Merge overlapping cursor pages in server order, preserving the first position of each key. */

@@ -1549,7 +1549,10 @@ test("company filters live Premium LMS analytics without exposing learners", asy
         : "Für diese Auswahl wurden keine Kurse gefunden.")).toBeVisible();
     await page.getByLabel(english ? "Course status" : "Kursstatus").selectOption("finished");
     await expect(row).toBeVisible();
-    await page.getByRole("searchbox").fill("does not match any course");
+    await page.getByRole("searchbox", {
+        name: english ? "Search course or class" : "Kurs oder Klasse suchen",
+        exact: true,
+    }).fill("does not match any course");
     await page.getByRole("button", { name: english ? "Search" : "Suchen", exact: true }).click();
     await expect(row).toHaveCount(0);
 });
@@ -1570,7 +1573,10 @@ test("scoped LMS assessment exports protect small cohorts and company views", as
     await chooseLanguage(page);
     // The staff report spans all companies. Select this fixture explicitly
     // before exporting, even when earlier journeys have filled its first page.
-    await page.getByRole("searchbox").fill(f.title);
+    await page.getByRole("searchbox", {
+        name: english ? "Search course or class" : "Kurs oder Klasse suchen",
+        exact: true,
+    }).fill(f.title);
     await page.getByRole("button", { name: english ? "Search" : "Suchen", exact: true }).click();
     const assessmentName = english ? "Assessments and submissions by course" : "Bewertungen und Abgaben je Kurs";
     const assessment = page.getByRole("region", { name: assessmentName });

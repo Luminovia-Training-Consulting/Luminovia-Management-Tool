@@ -1333,7 +1333,11 @@ test("packaged finite workers run outside node_modules and retain actual AES/VAP
     delete childEnvironment.NODE_TEST_CONTEXT;
     const checked = execFileSync(
         process.execPath,
-        ["--test", join(repositoryRoot, "scripts/runtime-web-push.test.mjs")],
+        [
+            "--test",
+            "--test-reporter=tap",
+            join(repositoryRoot, "scripts/runtime-web-push.test.mjs"),
+        ],
         {
             cwd: repositoryRoot,
             encoding: "utf8",
@@ -1342,8 +1346,10 @@ test("packaged finite workers run outside node_modules and retain actual AES/VAP
             maxBuffer: 1024 * 1024,
         },
     );
-    assert.match(checked, /tests 8/);
-    assert.match(checked, /fail 0/);
+    const total = Number(/^# tests (\d+)$/m.exec(checked)?.[1]);
+    const passed = Number(/^# pass (\d+)$/m.exec(checked)?.[1]);
+    assert(total >= 8, "The packaged worker contract suite must run.");
+    assert.equal(passed, total, "Every packaged worker contract test must pass.");
 });
 
 test("worker lock mismatch, missing license and unexpected local import fail closed", (t) => {

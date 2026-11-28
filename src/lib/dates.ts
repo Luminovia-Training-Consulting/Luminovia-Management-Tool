@@ -96,7 +96,7 @@ export function compareScheduleInstants(
   );
 }
 
-function parseSchedulePoint(value: string | null) {
+export function parseInstantPoint(value: string | null) {
   if (!value) return null;
   const millis = Date.parse(value);
   return Number.isFinite(millis)
@@ -104,9 +104,12 @@ function parseSchedulePoint(value: string | null) {
     : null;
 }
 
-type SchedulePoint = NonNullable<ReturnType<typeof parseSchedulePoint>>;
+type InstantPoint = NonNullable<ReturnType<typeof parseInstantPoint>>;
 
-function compareSchedulePoints(first: SchedulePoint, second: SchedulePoint) {
+export function compareInstantPoints(
+  first: InstantPoint,
+  second: InstantPoint,
+) {
   return first.millis - second.millis || first.fraction - second.fraction;
 }
 
@@ -114,18 +117,18 @@ function compareSchedulePoints(first: SchedulePoint, second: SchedulePoint) {
 export function validScheduleIntervals(
   rows: readonly { starts_at: string | null; ends_at: string | null }[],
 ) {
-  const intervals: { start: SchedulePoint; end: SchedulePoint }[] = [];
+  const intervals: { start: InstantPoint; end: InstantPoint }[] = [];
   for (const { starts_at, ends_at } of rows) {
-    const start = parseSchedulePoint(starts_at);
-    const end = parseSchedulePoint(ends_at);
-    if (!start || !end || compareSchedulePoints(start, end) >= 0) return false;
+    const start = parseInstantPoint(starts_at);
+    const end = parseInstantPoint(ends_at);
+    if (!start || !end || compareInstantPoints(start, end) >= 0) return false;
     intervals.push({ start, end });
   }
-  intervals.sort((a, b) => compareSchedulePoints(a.start, b.start));
+  intervals.sort((a, b) => compareInstantPoints(a.start, b.start));
   return intervals.every(
     (item, index) =>
       index === 0 ||
-      compareSchedulePoints(item.start, intervals[index - 1].end) >= 0,
+      compareInstantPoints(item.start, intervals[index - 1].end) >= 0,
   );
 }
 

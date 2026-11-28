@@ -4,6 +4,7 @@
 import * as jose from "jsr:@panva/jose@6.2.17";
 import {startMemoryPressureLoop} from "./memory-pressure.ts";
 import {logRuntimeFailure} from "./safe-log.ts";
+import {dispatchToWorker} from "./worker-dispatch.mjs";
 
 console.log("main function started");
 startMemoryPressureLoop();
@@ -477,18 +478,9 @@ Deno.serve({onError}, async (req: Request) => {
     }
     const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]]);
 
-    const callWorker = async (
-        req: Request,
-        retriesLeft = MAX_WORKER_RETRIES,
-    ): Promise<Response> => {
-        // Preserve the body before fetch() can consume it, even on a failed attempt.
-        // Must run before `new Request(req)` below, which takes over the body.
-        // The unread retry branch can buffer the entire body in main-worker memory,
-        // even when the first attempt succeeds.
-        const retryReq = retriesLeft > 0 ? req.clone() : null;
-
-        try {
-            const worker = await EdgeRuntime.userWorkers.create({
+    try {
+        const response = await dispatchToWorker(req, {
+            createWorker: () => EdgeRuntime.userWorkers.create({
                 servicePath,
                 memoryLimitMb,
                 workerTimeoutMs,
@@ -500,27 +492,26 @@ Deno.serve({onError}, async (req: Request) => {
                         : [],
                 importMapPath,
                 envVars,
-            });
-            // Gateway-minted internal JWT is for this router only; never expose it to user functions.
-            const userReq = new Request(req);
-            userReq.headers.delete("sb-api-key");
-            EdgeRuntime.applySupabaseTag(req, userReq);
-            return handleWorkerResponse(await worker.fetch(userReq));
-        } catch (e) {
-            // Retirement rejects before dispatch, so user code has not run yet.
-            if (e instanceof Deno.errors.WorkerAlreadyRetired && retryReq) {
+            }),
+            prepareRequest(request) {
+                // The gateway-minted JWT belongs only to the router; retain the
+                // client connection tag for input and output streaming.
+                const userRequest = new Request(request);
+                userRequest.headers.delete("sb-api-key");
+                EdgeRuntime.applySupabaseTag(request, userRequest);
+                return userRequest;
+            },
+            isRetired: (error) => error instanceof Deno.errors.WorkerAlreadyRetired,
+            onRetry(retriesLeft) {
                 console.warn(
                     `${service_name}: worker retired before dispatch; retrying (${retriesLeft} left)`,
                 );
-                // Request.clone() does not copy the tag that connects streaming to the client.
-                EdgeRuntime.applySupabaseTag(req, retryReq);
-                return await callWorker(retryReq, retriesLeft - 1);
-            }
-
-            logRuntimeFailure("worker_fetch_failed", e);
-            return getFunctionErrorResponse(resolveRuntimeError(e));
-        }
-    };
-
-    return await callWorker(req);
+            },
+            maxRetries: MAX_WORKER_RETRIES,
+        });
+        return handleWorkerResponse(response);
+    } catch (error) {
+        logRuntimeFailure("worker_fetch_failed", error);
+        return getFunctionErrorResponse(resolveRuntimeError(error));
+    }
 });

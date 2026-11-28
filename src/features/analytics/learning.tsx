@@ -1,7 +1,7 @@
 /** Course participation, attendance and assessment reporting for authorized portal actors. */
 import { financeRoots, type FinanceScope } from "../../app/finance-access";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -342,6 +342,7 @@ function LearningAnalyticsView({
   fixedScope?: FinanceScope;
 }) {
   const { t } = useTranslation("learningAnalytics");
+  const cache = useQueryClient();
   const [selectedScope, setScope] = useState<AnalyticsScope>();
   const [organisationId, setOrganisation] = useState("");
   const [preset, setPreset] = useState<AnalyticsPreset>("around");
@@ -371,17 +372,15 @@ function LearningAnalyticsView({
   const zone = access.time_zone ?? "UTC";
   const period =
     periodOverride ?? analyticsPreset(preset, DateTime.now().setZone(zone));
-  const query = useQuery({
-    ...learningAnalyticsReportQuery(actor, {
-      scope: scope ?? "personal",
-      organisation: scope === "personal" ? null : (organisation?.id ?? null),
-      period,
-      status,
-      search,
-      page,
-    }),
-    enabled: Boolean(scope),
+  const reportQuery = learningAnalyticsReportQuery(actor, {
+    scope: scope ?? "personal",
+    organisation: scope === "personal" ? null : (organisation?.id ?? null),
+    period,
+    status,
+    search,
+    page,
   });
+  const query = useQuery({ ...reportQuery, enabled: Boolean(scope) });
   const lastPage = query.isSuccess
     ? learningReportPages(query.data.totals.courses)
     : page;
@@ -531,11 +530,7 @@ function LearningAnalyticsView({
               actor={actor}
               page={page}
               period={period}
-              refresh={async () => {
-                const latest = await query.refetch({ throwOnError: true });
-                if (!latest.data) throw new Error("learning_analytics_missing");
-                return latest.data;
-              }}
+              refresh={() => cache.fetchQuery({ ...reportQuery, staleTime: 0 })}
             />
           }
         />

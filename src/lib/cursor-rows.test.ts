@@ -22,6 +22,30 @@ it("retains the first version of overlapping rows and sorts ties consistently in
   expect(orderedCursorRows(undefined, "ascending")).toEqual([]);
 });
 
+it("orders mixed offsets and preserves microsecond precision across pages", () => {
+  const left = { id: "a", created_at: "2026-11-23T09:00:00+01:00" };
+  const right = { id: "b", created_at: "2026-11-23T08:00:00.000000Z" };
+  const next = { id: "c", created_at: "2026-11-23T08:00:00.000001Z" };
+  const last = { id: "d", created_at: "2026-11-23T08:00:00.00001Z" };
+  const pages = [
+    [last, next],
+    [right, left],
+  ];
+
+  expect(orderedCursorRows(pages, "ascending")).toEqual([
+    left,
+    right,
+    next,
+    last,
+  ]);
+  expect(orderedCursorRows(pages, "descending")).toEqual([
+    last,
+    next,
+    right,
+    left,
+  ]);
+});
+
 it("merges overlapping pages without moving keys and can separate equal IDs from different kinds", () => {
   const newest = { id: "a", kind: "files", title: "New" };
   const replaced = { ...newest, title: "Old" };

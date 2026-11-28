@@ -80,14 +80,18 @@ const report: LearningAnalyticsReport = {
 
 function open(
   capabilities: LearningAnalyticsAccess,
-  pageReport: (page: number) => LearningAnalyticsReport = () => report,
+  pageReport: (
+    page: number,
+    signal: AbortSignal,
+  ) => LearningAnalyticsReport | Promise<LearningAnalyticsReport> = () =>
+    report,
 ) {
   rpc.mockImplementation((name: string, args?: { p_page: number }) => ({
-    abortSignal: async () => ({
+    abortSignal: async (signal: AbortSignal) => ({
       data:
         name === "learning_analytics_access"
           ? capabilities
-          : pageReport(args?.p_page ?? 1),
+          : await pageReport(args?.p_page ?? 1, signal),
       error: null,
     }),
   }));
@@ -101,6 +105,7 @@ function open(
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return cache;
 }
 
 beforeEach(async () => {
@@ -306,6 +311,50 @@ it("exports a refetched report with safe CSV text, true XLSX numbers and no supp
   } finally {
     await zip.close();
   }
+});
+
+it("reuses an in-flight report refresh for export without restarting the RPC", async () => {
+  const user = userEvent.setup();
+  let resolveRefresh!: (value: LearningAnalyticsReport) => void;
+  const refreshed = new Promise<LearningAnalyticsReport>((resolve) => {
+    resolveRefresh = resolve;
+  });
+  const load = vi
+    .fn<
+      (page: number, signal: AbortSignal) => Promise<LearningAnalyticsReport>
+    >()
+    .mockResolvedValueOnce(report)
+    .mockReturnValue(refreshed);
+  const cache = open(access, load);
+  const exportButton = await screen.findByRole("button", {
+    name: "CSV for this page",
+  });
+
+  const refresh = cache.refetchQueries({
+    queryKey: ["learning-analytics", "fictional-course-admin"],
+    predicate: ({ queryKey }) => typeof queryKey[2] === "object",
+  });
+  await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  const refreshSignal = load.mock.calls[1][1];
+
+  await user.click(exportButton);
+  expect(load).toHaveBeenCalledTimes(2);
+  expect(refreshSignal.aborted).toBe(false);
+  resolveRefresh({
+    ...report,
+    courses: report.courses.map((entry) => ({
+      ...entry,
+      title: "Refreshed fictional course",
+    })),
+  });
+
+  await refresh;
+  await waitFor(() => expect(saveBlob).toHaveBeenCalledTimes(1));
+  const text = await readReportBlob<string>(
+    saveBlob.mock.calls[0][0],
+    (reader, blob) => reader.readAsText(blob),
+  );
+  expect(text).toContain("Refreshed fictional course");
 });
 
 it("keeps refreshed bytes local when the authenticated identity changes", async () => {

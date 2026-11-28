@@ -8,6 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ResourceComments } from "./comments";
 import i18n from "../../lib/i18n";
+import * as cursorRows from "../../lib/cursor-rows";
+import * as dates from "../../lib/dates";
 
 const mock = vi.hoisted(() => ({ actor: "teacher-a", rpc: vi.fn() }));
 vi.mock("../auth/auth-context", () => ({
@@ -42,6 +44,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   for (const client of clients.splice(0)) client.clear();
 });
 
@@ -74,6 +77,45 @@ describe("resource comment boundaries", () => {
     mock.actor = "teacher-b";
     view.rerender(view.app("job-b"));
     expect(await screen.findByLabelText("Dein Kommentar")).toHaveValue("");
+  });
+
+  it("reuses the loaded comment list while editing the draft", async () => {
+    const order = vi.spyOn(cursorRows, "orderedCursorRows");
+    const formatDate = vi.spyOn(dates, "dateTime");
+    const rows = Array.from({ length: 30 }, (_, index) => ({
+      id: String(index),
+      author_id: "teacher-b",
+      author_name: "Lecturer",
+      body: "Saved comment " + index,
+      version: 1,
+      hidden: false,
+      withdrawn: false,
+      moderation_reason: "",
+      created_at: "2026-10-04T09:00:00Z",
+      updated_at: "2026-10-04T09:00:00Z",
+      mine: false,
+    }));
+    mock.rpc.mockImplementation(async (name: string) => ({
+      data:
+        name === "comment_context"
+          ? { can_post: true, can_moderate: false }
+          : rows,
+      error: null,
+    }));
+    const user = userEvent.setup();
+    setup();
+    await screen.findByText("Saved comment 0");
+    const input = screen.getByLabelText("Dein Kommentar");
+    expect(screen.getAllByRole("listitem")).toHaveLength(rows.length);
+    expect(formatDate).toHaveBeenCalled();
+    order.mockClear();
+    formatDate.mockClear();
+
+    await user.type(input, "A new draft");
+
+    expect(input).toHaveValue("A new draft");
+    expect(order).not.toHaveBeenCalled();
+    expect(formatDate).not.toHaveBeenCalled();
   });
 
   it("preserves a rejected draft and retries the exact request identity; success waits for acknowledgement", async () => {

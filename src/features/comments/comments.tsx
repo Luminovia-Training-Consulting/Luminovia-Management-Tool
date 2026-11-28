@@ -5,7 +5,7 @@
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { callRpc } from "../../lib/rpc";
 import { orderedCursorRows } from "../../lib/cursor-rows";
-import { useId, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -250,14 +250,14 @@ function CommentThread({
   });
   const [text, setText] = useState("");
   const retry = useRef<{ text: string; key: string } | null>(null);
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await cache.invalidateQueries({
       queryKey: commentKeys.list(actor, kind, resourceId),
     });
     await cache.invalidateQueries({
       queryKey: commentKeys.context(actor, kind, resourceId),
     });
-  };
+  }, [actor, cache, kind, resourceId]);
   const send = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -277,6 +277,25 @@ function CommentThread({
       await refresh();
     },
   });
+  const pages = comments.data?.pages;
+  const canEdit = access.data?.can_post ?? false;
+  const canModerate = access.data?.can_moderate ?? false;
+  const entries = useMemo(() => {
+    const rows = orderedCursorRows(pages, "descending");
+    return rows.length ? (
+      <ol className="comment-list">
+        {rows.map((row) => (
+          <CommentEntry
+            key={row.id}
+            row={row}
+            canEdit={canEdit}
+            canModerate={canModerate}
+            refresh={refresh}
+          />
+        ))}
+      </ol>
+    ) : null;
+  }, [pages, canEdit, canModerate, refresh]);
   if (access.isPending) return <Loading />;
   if (access.isError)
     return isDatabasePermissionDenied(access.error) ? (
@@ -290,7 +309,6 @@ function CommentThread({
     ) : (
       <ErrorState retry={() => void comments.refetch()} />
     );
-  const rows = orderedCursorRows(comments.data?.pages, "descending");
   return (
     <section className="panel resource-comments" aria-labelledby={heading}>
       <h2 id={heading}>
@@ -339,18 +357,8 @@ function CommentThread({
       </Button>
       {comments.isPending ? (
         <Loading />
-      ) : rows.length ? (
-        <ol className="comment-list">
-          {rows.map((row) => (
-            <CommentEntry
-              key={row.id}
-              row={row}
-              canEdit={access.data.can_post}
-              canModerate={access.data.can_moderate}
-              refresh={refresh}
-            />
-          ))}
-        </ol>
+      ) : entries ? (
+        entries
       ) : (
         <p className="comment-empty">{t("empty")}</p>
       )}

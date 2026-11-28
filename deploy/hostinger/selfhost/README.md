@@ -17,7 +17,7 @@ The local Envoy files preserve upstream API-key translation, JWT enforcement and
 mail-administration permission on every request. No gateway access logger is configured, so authentication query strings do not enter an access log. The official Envoy bootstrap and internal cluster definitions are retained, with only the required API clusters.
 
 runtime/index.ts and memory-pressure.ts derive from the pinned official main function router. Local adaptations are the explicit seven-worker allowlist and worker memory ceiling: files 1024 MiB, other functions 128 MiB. The container default ceiling is 1280 MiB, shared by the main worker and all workers. These are limits, not preallocated RAM. The small machine can still run out of memory; future large-file processing has no acceptance claim. Root deployment owns host swap and actual resource
-observations.
+observations. The router forwards upload bodies as a single stream. Worker retirement can be retried before a worker is acquired, or when the request has no body. A retirement reported after handing off a body returns the worker error to the client.
 
 ## Host/network agreement
 
