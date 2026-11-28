@@ -26,8 +26,6 @@ export function financeWorkspaceAccess(
 
   return {
     personal: {
-      // Keep the sidebar shortcut for lecturers outside platform administration.
-      sidebar: teaching && !management,
       overview: teaching,
       accounting: teaching,
       analytics: teaching,

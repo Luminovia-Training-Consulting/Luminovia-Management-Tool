@@ -849,30 +849,49 @@ it("uses one finance link for company invoices and analytics", () => {
   ).toBeNull();
 });
 
-it.each(["owner", "admin", "management"])(
-  "keeps finance under administration in both menus for a teaching %s",
-  async (role) => {
-    access.roles = ["lecturer", role];
+it.each([
+  { roles: ["lecturer"], personal: true, platform: false },
+  { roles: ["senior_lecturer"], personal: true, platform: false },
+  { roles: ["owner"], personal: false, platform: true },
+  { roles: ["admin"], personal: false, platform: true },
+  { roles: ["management"], personal: false, platform: true },
+  { roles: ["owner", "lecturer"], personal: true, platform: true },
+  { roles: ["admin", "lecturer"], personal: true, platform: true },
+  { roles: ["management", "lecturer"], personal: true, platform: true },
+  { roles: ["client"], personal: false, platform: false },
+  { roles: ["participant"], personal: false, platform: false },
+])(
+  "shows the authorised finance entry points in both menus for $roles",
+  async ({ roles, personal, platform }) => {
+    access.roles = roles;
     access.permissions = ["finance.manage"];
     const { user } = setup("/", false);
     const sidebar = within(screen.getByRole("complementary", { name: "Menü" }));
-    expect(
-      sidebar.queryByRole("link", { name: "Meine Finanzen" }),
-    ).not.toBeInTheDocument();
-
     const summary = screen.getByLabelText("Mehr");
     await user.click(summary);
     const mobile = within(summary.closest("details")!);
-    expect(
-      mobile.queryByRole("link", { name: "Meine Finanzen" }),
-    ).not.toBeInTheDocument();
-    await user.click(mobile.getByRole("link", { name: "Verwaltung" }));
-    expect(
-      within(screen.getByRole("navigation", { name: "Verwaltung" })).getByRole(
-        "link",
-        { name: /^Plattformfinanzen(?: |$)/ },
-      ),
-    ).toHaveAttribute("href", "/admin/finance");
+    for (const menu of [sidebar, mobile]) {
+      const personalLink = menu.queryByRole("link", { name: "Meine Finanzen" });
+      const companyLink = menu.queryByRole("link", {
+        name: "Unternehmensfinanzen",
+      });
+      const platformLink = menu.queryByRole("link", { name: "Verwaltung" });
+      if (personal) expect(personalLink).toHaveAttribute("href", "/finance");
+      else expect(personalLink).not.toBeInTheDocument();
+      if (roles.includes("client"))
+        expect(companyLink).toHaveAttribute("href", "/client/finance");
+      else expect(companyLink).not.toBeInTheDocument();
+      if (platform) expect(platformLink).toHaveAttribute("href", "/admin");
+      else expect(platformLink).not.toBeInTheDocument();
+    }
+    if (platform) {
+      await user.click(mobile.getByRole("link", { name: "Verwaltung" }));
+      expect(
+        within(
+          screen.getByRole("navigation", { name: "Verwaltung" }),
+        ).getByRole("link", { name: /^Plattformfinanzen(?: |$)/ }),
+      ).toHaveAttribute("href", "/admin/finance");
+    }
   },
 );
 
