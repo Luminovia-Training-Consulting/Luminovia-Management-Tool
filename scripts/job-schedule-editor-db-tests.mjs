@@ -102,7 +102,10 @@ await withTestDatabase("job_schedule_editor", async ({ sql, actor }) => {
   await assert.rejects(edit(manager, previous.version, payload), /40001/);
   const after = await detail(lecturer);
   assert.equal(after.description, payload.description);
-  assert.equal(after.location, payload.location);
+  // The edit must persist for management, while the exact venue stays
+  // protected for lecturers until the assignment disclosure policy permits it.
+  assert.equal((await detail()).location, payload.location);
+  assert.equal(after.location, "");
   assert.deepEqual(after.job_requirements, [{ topic_id: nextTopic }]);
   assert.equal(after.job_sessions.length, 3);
   assert.equal(after.job_sessions[0].id, initial.job_sessions[0].id);
@@ -146,6 +149,15 @@ await withTestDatabase("job_schedule_editor", async ({ sql, actor }) => {
     ).then(JSON.parse);
   assert.equal((await claim(initial.terms_version)).status, "terms_changed");
   assert.equal((await claim(after.terms_version)).status, "confirmed");
+  assert.equal((await detail(lecturer)).location, "");
+  const settings = JSON.parse(
+    await actor(manager, "select public.assignment_customer_settings()"),
+  );
+  await actor(
+    manager,
+    `select public.save_assignment_customer_settings('on_confirmation',168,${settings.revision})`,
+  );
+  assert.equal((await detail(lecturer)).location, payload.location);
   const accepted = await lifecycle();
   assert.equal(accepted.can_edit_schedule, false);
   await assert.rejects(
