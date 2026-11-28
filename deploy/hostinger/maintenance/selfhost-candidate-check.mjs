@@ -532,19 +532,20 @@ export function financialProbeReceipt(output, phase) {
 
 const originalCourseOriginMigration = "20261124062130_course_run_creation_origin.sql";
 const repairedCourseOriginMigration = "20261124072614_protect_course_run_origin_for_service_writes.sql";
-const unacceptedDiscoveryMigrations = new Set([
+const unacceptedMainMigrations = new Set([
     "20261128123500_bound_job_discovery_authorization.sql",
     "20261128123600_include_discovery_status_projection.sql",
     "20261128123700_repair_discovery_scope_status.sql",
+  "20261128123800_lecturer_expense_local_dates.sql",
 ]);
 
 /** Build the last accepted baseline, excluding only migrations that never passed candidate acceptance. */
 export function acceptedBaselineMigrations(migrations) {
-    // These discovery migrations were pushed to main but have not passed a
-    // complete acceptance run. Model the prior deployed schema without them,
-    // then require candidate replay to apply the corrected forward migration.
-    return migrations.some((name) => unacceptedDiscoveryMigrations.has(name))
-        ? migrations.filter((name) => !unacceptedDiscoveryMigrations.has(name))
+    // These main migrations have not passed a complete acceptance run. Model
+    // the prior deployed schema without them, then require candidate replay to
+    // apply the complete forward migration sequence in order.
+    return migrations.some((name) => unacceptedMainMigrations.has(name))
+        ? migrations.filter((name) => !unacceptedMainMigrations.has(name))
         : migrations;
 }
 
