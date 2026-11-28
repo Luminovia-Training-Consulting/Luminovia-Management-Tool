@@ -1284,8 +1284,13 @@ describe("course form failure and confirmation boundaries", () => {
           name: /^(Speichern|Entwurf speichern)$/,
         }),
       );
-      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      const schedule = within(dialog).getByRole("group", { name: "Termine" });
+      expect(await within(schedule).findByRole("alert")).toHaveTextContent(
         "Beginn und Ende müssen eindeutig sein.",
+      );
+      expect(schedule).toHaveFocus();
+      expect(schedule).toHaveAccessibleDescription(
+        expect.stringContaining("Beginn und Ende müssen eindeutig sein."),
       );
       expect(
         within(dialog).getByLabelText("Beginn 1", { exact: true }),
@@ -2092,8 +2097,13 @@ describe("course form failure and confirmation boundaries", () => {
           name: /^(Speichern|Entwurf speichern)$/,
         }),
       );
-      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      const schedule = within(dialog).getByRole("group", { name: "Termine" });
+      expect(await within(schedule).findByRole("alert")).toHaveTextContent(
         "Beginn und Ende müssen eindeutig sein.",
+      );
+      expect(schedule).toHaveFocus();
+      expect(schedule).toHaveAccessibleDescription(
+        expect.stringContaining("Beginn und Ende müssen eindeutig sein."),
       );
       expect(state.rpc).not.toHaveBeenCalledWith(
         "save_course_run",
@@ -2277,6 +2287,90 @@ it("opens a company template without fetching course pages, taxonomy or the orga
   expect(state.from).toHaveBeenCalledWith("organisations");
   expect(state.from).toHaveBeenCalledWith("course_runs");
 });
+
+it("offers the draft import beside course creation even when the tools menu is closed", async () => {
+  renderCourses();
+  const user = userEvent.setup();
+  const name = "Kursentwürfe mit einem Termin importieren";
+  const importButton = screen.getByRole("button", { name });
+  expect(importButton).toBeVisible();
+  expect(importButton.closest("details")).toBeNull();
+  expect(screen.getByRole("button", { name: "Kurs anlegen" })).toBeVisible();
+  expect(screen.queryByRole("dialog", { name })).not.toBeInTheDocument();
+  importButton.focus();
+  await user.keyboard("{Enter}");
+  expect(await screen.findByRole("dialog", { name })).toBeVisible();
+});
+
+it("clears a zero-result course search and the active company and status filters together", async () => {
+  renderCourses({
+    runs: [run, { ...run, id: "company-run", organisation_id: companyId }],
+    organisations: [organisation],
+    path: `/courses?company=${companyId}`,
+  });
+  const user = userEvent.setup();
+  await user.click(screen.getByText("Filter (1)", { selector: "summary" }));
+  await user.selectOptions(screen.getByLabelText("Planungsstatus"), "planning");
+  const search = screen.getByRole("searchbox", { name: "Suchen" });
+  await user.type(search, "a nonexistent course");
+  expect(
+    screen.getByText(
+      "Keine Kurse oder Vorlagen entsprechen der aktuellen Auswahl.",
+    ),
+  ).toBeVisible();
+  const clear = screen.getByRole("button", {
+    name: "Suche und Filter zurücksetzen",
+  });
+  clear.focus();
+  await user.keyboard("{Enter}");
+  expect(search).toHaveValue("");
+  expect(search).toHaveFocus();
+  expect(screen.getByLabelText("Planungsstatus")).toHaveValue("all");
+  expect(screen.getByTestId("course-route")).toHaveTextContent(/^\/courses$/);
+  expect(screen.getAllByRole("article")).toHaveLength(2);
+});
+
+it("keeps the company library scope when clearing an English template search", async () => {
+  await i18n.changeLanguage("en");
+  renderCourses({
+    permissions: [],
+    roles: ["client"],
+    templates: [{ ...template, owner_organisation_id: companyId }],
+    organisations: [organisation],
+    path: `/courses?tab=templates&company=${companyId}`,
+  });
+  const user = userEvent.setup();
+  const search = screen.getByRole("searchbox", { name: "Search" });
+  await user.type(search, "a nonexistent template");
+  expect(
+    screen.getByText("No courses or templates match the current selection."),
+  ).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Clear search and filters" }),
+  );
+  expect(search).toHaveFocus();
+  expect(screen.getByTestId("course-route")).toHaveTextContent(
+    `/courses?tab=templates&company=${companyId}`,
+  );
+  expect(screen.getByRole("heading", { name: template.title })).toBeVisible();
+});
+
+it.each([
+  ["de", "Europe/Berlin", "01.04.30", "09:00", "1 Termin"],
+  ["en", "Australia/Brisbane", "4/1/30", "5:00", "1 session"],
+])(
+  "shows the first session in %s and the course zone %s on the card",
+  async (language, zone, date, time, count) => {
+    await i18n.changeLanguage(language);
+    renderCourses({ runs: [{ ...run, time_zone: zone }] });
+    const card = screen.getByRole("article");
+    const start = card.querySelector("time");
+    expect(start).toHaveAttribute("datetime", "2030-04-01T07:00:00.000Z");
+    expect(start).toHaveTextContent(date);
+    expect(start).toHaveTextContent(time);
+    expect(card).toHaveTextContent(`${count} · ${zone}`);
+  },
+);
 
 it("appends batches and still searches the entire course catalogue", async () => {
   const templates = Array.from({ length: 1001 }, (_, index) => ({

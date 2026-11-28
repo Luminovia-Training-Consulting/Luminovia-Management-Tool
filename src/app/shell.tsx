@@ -359,17 +359,27 @@ export function Shell() {
                 });
               }}
             >
-              <Search size={20} aria-hidden="true" />
               <label htmlFor="portal-global-search" className="sr-only">
                 {t("portalSearch")}
               </label>
               <input
                 id="portal-global-search"
                 name="q"
+                type="search"
+                enterKeyHint="search"
                 autoComplete="off"
                 maxLength={100}
                 placeholder={t("portalSearch")}
               />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                aria-label={t("portalSearchSubmit")}
+                title={t("portalSearchSubmit")}
+              >
+                <Search size={20} aria-hidden="true" />
+              </Button>
             </form>
           )}
           <div className="topbar-actions">

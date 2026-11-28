@@ -35,8 +35,11 @@ test("legacy links redirect, teaching evidence opens directly, and collapsed hea
             response.request().method() === "POST" &&
             response.request().postDataJSON().p_query === "Fictional",
         );
-        await page.locator("#portal-global-search").fill("Fictional");
-        await page.locator("#portal-global-search").press("Enter");
+        const headerSearch = page.getByRole("banner").getByRole("search");
+        await headerSearch.getByRole("searchbox").fill("Fictional");
+        await headerSearch.getByRole("button", {
+            name: /^(Suche starten|Run search)$/,
+        }).click();
         await expect(page).toHaveURL(/\/search$/);
         await expect(page.getByRole("searchbox", {name: /^(Suchbegriff|Search term)$/})).toHaveValue("Fictional");
         expect((await searchResponse).status()).toBe(200);

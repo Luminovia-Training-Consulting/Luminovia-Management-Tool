@@ -70,7 +70,7 @@ test("course draft import corrects a rejected row and does not duplicate the fir
   const importName = "Kursentwürfe mit einem Termin importieren";
   const importDialog = page.getByRole("dialog", { name: importName });
   await expect(importDialog).toBeHidden();
-  await page.locator("summary").getByText("Kurswerkzeuge", { exact: true }).click();
+  await expect(page.locator(".course-tools")).not.toHaveAttribute("open", "");
   await page.getByRole("button", { name: importName }).click();
   await expect(importDialog).toBeVisible();
   await importDialog.getByLabel("CSV- oder XLSX-Datei").setInputFiles({
@@ -112,4 +112,26 @@ test("course draft import corrects a rejected row and does not duplicate the fir
       published: false,
     })),
   );
+
+  await importDialog.getByRole("button", { name: "Schließen" }).click();
+  const search = page.getByRole("searchbox", { name: "Suchen", exact: true });
+  await search.fill(`missing ${template.id}`);
+  await page
+    .getByRole("button", { name: "Suche und Filter zurücksetzen" })
+    .click();
+  await expect(search).toBeFocused();
+  await search.fill(template.title);
+  const cards = page
+    .getByRole("article")
+    .filter({ has: page.getByRole("heading", { name: template.title }) });
+  await expect(cards).toHaveCount(2);
+  for (const date of [first, second]) {
+    const expected = DateTime.fromISO(`${date}T09:00`, {
+      zone: "Europe/Berlin",
+    });
+    const session = cards.locator(
+      `time[datetime^="${expected.toUTC().toISO({ suppressMilliseconds: true })?.slice(0, 19)}"]`,
+    );
+    await expect(session).toHaveText(/09:00/);
+  }
 });

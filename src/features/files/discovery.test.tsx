@@ -291,7 +291,49 @@ it("keeps filter inputs focused while pending and preserves drafts across langua
       error: null,
     }),
   );
-  expect(await screen.findByText("No files yet.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("No files match this search or these filters."),
+  ).toBeInTheDocument();
+});
+it("clears the search and combined private filters in one keyboard action", async () => {
+  state.rpc.mockImplementation((_name, args) =>
+    response({
+      items:
+        args.p_search || args.p_tag || args.p_folder === "" ? [] : [item()],
+      has_more: false,
+      next_cursor: null,
+    }),
+  );
+  mount();
+  await screen.findByText(item().original_name);
+  const user = userEvent.setup();
+  const search = screen.getByRole("searchbox", { name: "Dateien suchen" });
+  const tag = screen.getByLabelText("Eigenes Tag filtern");
+  const folder = screen.getByLabelText("Eigenen Ordner filtern");
+  const unfiled = screen.getByRole("checkbox", {
+    name: "Nur ohne eigenen Ordner",
+  });
+  await user.type(search, "missing");
+  await user.type(tag, "Tag");
+  await user.type(folder, "Ordner");
+  await user.click(unfiled);
+  expect(
+    await screen.findByText(
+      "Keine Dateien für diese Suche oder Filter gefunden.",
+    ),
+  ).toBeInTheDocument();
+  const clear = screen.getByRole("button", {
+    name: "Suche und Filter zurücksetzen",
+  });
+  clear.focus();
+  await user.keyboard("{Enter}");
+  expect(search).toHaveFocus();
+  expect(search).toHaveValue("");
+  expect(tag).toHaveValue("");
+  expect(folder).toHaveValue("");
+  expect(unfiled).not.toBeChecked();
+  expect(clear).not.toBeInTheDocument();
+  expect(await screen.findByText(item().original_name)).toBeInTheDocument();
 });
 it("waits for server confirmation before showing personal tags and preserves organisation drafts in DE/EN", async () => {
   let current = item(),

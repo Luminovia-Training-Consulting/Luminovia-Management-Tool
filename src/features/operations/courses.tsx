@@ -18,6 +18,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -56,6 +57,7 @@ import {
   dateTime,
   zonedInstantForScheduleEdit,
   compareScheduleInstants,
+  validZone,
 } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { TableImport } from "../../components/table-import";
@@ -199,7 +201,8 @@ export function CoursesPage() {
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
-  const needle = useDeferredValue(search).toLowerCase();
+  const searchField = useRef<HTMLInputElement>(null);
+  const needle = useDeferredValue(search).trim().toLowerCase();
   const [phase, setPhase] = useState<CoursePhaseSelection>("all");
   const [runStatus, setRunStatus] = useState("all");
   const [lecturer, setLecturer] = useState("");
@@ -841,6 +844,20 @@ export function CoursesPage() {
         Number(canPrepareOffer && Boolean(lecturer)) +
         Number(selectedRunStatus !== "all")
       : 0);
+  const resetList = () => {
+    setSearch("");
+    if (tab === "runs") {
+      setPhase("all");
+      setLecturer("");
+      setRunStatus("all");
+      if (manage && company) {
+        const next = new URLSearchParams(params);
+        next.delete("company");
+        setParams(next, { replace: true });
+      }
+    }
+    searchField.current?.focus();
+  };
   return (
     <>
       <PageHeading
@@ -865,6 +882,87 @@ export function CoursesPage() {
                 <Link to="/learning">{t("translation:myCourses")}</Link>
               </Button>
             )}
+            {manage &&
+              tab === "runs" &&
+              visibleTemplates.some((template) => !template.archived_at) && (
+                <TableImport
+                  inDialog
+                  label={
+                    i18n.language.startsWith("de")
+                      ? "Kursentwürfe mit einem Termin importieren"
+                      : "Import course drafts with one session"
+                  }
+                  filename="course-drafts"
+                  columns={[
+                    "template_title",
+                    "company_name",
+                    "time_zone",
+                    "delivery_type",
+                    "venue",
+                    "starts_at",
+                    "ends_at",
+                  ]}
+                  example={[
+                    "Excel Grundlagen",
+                    "",
+                    "Europe/Berlin",
+                    "online",
+                    "",
+                    "2027-01-11T09:00",
+                    "2027-01-11T12:00",
+                  ]}
+                  parse={(row) => {
+                    const matchingTemplates = visibleTemplates.filter(
+                      (item) =>
+                        !item.archived_at &&
+                        item.title === row.template_title.trim(),
+                    );
+                    const companyName = row.company_name.trim();
+                    const companies = directoryOrganisations.filter(
+                      (item) => !item.archived_at && item.name === companyName,
+                    );
+                    if (
+                      matchingTemplates.length !== 1 ||
+                      (companyName && companies.length !== 1)
+                    )
+                      throw new Error("ambiguous course references");
+                    const values = runSchema.parse({
+                      template_id: matchingTemplates[0].id,
+                      organisation_id: companyName ? companies[0].id : "",
+                      time_zone: row.time_zone,
+                      delivery_type: row.delivery_type,
+                      venue: row.venue,
+                      published: false,
+                      archived: false,
+                      sessions: [
+                        { starts_at: row.starts_at, ends_at: row.ends_at },
+                      ],
+                    });
+                    const starts_at = zonedInstantForScheduleEdit(
+                      row.starts_at,
+                      values.time_zone,
+                    );
+                    const ends_at = zonedInstantForScheduleEdit(
+                      row.ends_at,
+                      values.time_zone,
+                    );
+                    if (
+                      !starts_at ||
+                      !ends_at ||
+                      (compareScheduleInstants(ends_at, starts_at) ?? 0) <= 0
+                    )
+                      throw new Error("invalid course session");
+                    return {
+                      ...values,
+                      sessions: [{ starts_at, ends_at }],
+                    };
+                  }}
+                  save={(row, key) => importTableRow(key, "course-draft", row)}
+                  refresh={() =>
+                    client.invalidateQueries({ queryKey: ["operations"] })
+                  }
+                />
+              )}
             <details className="course-tools">
               <summary className="button button-secondary">
                 {t("courseTools")} <ChevronDown size={16} aria-hidden="true" />
@@ -920,93 +1018,6 @@ export function CoursesPage() {
                     }
                   />
                 )}
-                {manage &&
-                  tab === "runs" &&
-                  visibleTemplates.some(
-                    (template) => !template.archived_at,
-                  ) && (
-                    <TableImport
-                      inDialog
-                      label={
-                        i18n.language.startsWith("de")
-                          ? "Kursentwürfe mit einem Termin importieren"
-                          : "Import course drafts with one session"
-                      }
-                      filename="course-drafts"
-                      columns={[
-                        "template_title",
-                        "company_name",
-                        "time_zone",
-                        "delivery_type",
-                        "venue",
-                        "starts_at",
-                        "ends_at",
-                      ]}
-                      example={[
-                        "Excel Grundlagen",
-                        "",
-                        "Europe/Berlin",
-                        "online",
-                        "",
-                        "2027-01-11T09:00",
-                        "2027-01-11T12:00",
-                      ]}
-                      parse={(row) => {
-                        const matchingTemplates = visibleTemplates.filter(
-                          (item) =>
-                            !item.archived_at &&
-                            item.title === row.template_title.trim(),
-                        );
-                        const companyName = row.company_name.trim();
-                        const companies = directoryOrganisations.filter(
-                          (item) =>
-                            !item.archived_at && item.name === companyName,
-                        );
-                        if (
-                          matchingTemplates.length !== 1 ||
-                          (companyName && companies.length !== 1)
-                        )
-                          throw new Error("ambiguous course references");
-                        const values = runSchema.parse({
-                          template_id: matchingTemplates[0].id,
-                          organisation_id: companyName ? companies[0].id : "",
-                          time_zone: row.time_zone,
-                          delivery_type: row.delivery_type,
-                          venue: row.venue,
-                          published: false,
-                          archived: false,
-                          sessions: [
-                            { starts_at: row.starts_at, ends_at: row.ends_at },
-                          ],
-                        });
-                        const starts_at = zonedInstantForScheduleEdit(
-                          row.starts_at,
-                          values.time_zone,
-                        );
-                        const ends_at = zonedInstantForScheduleEdit(
-                          row.ends_at,
-                          values.time_zone,
-                        );
-                        if (
-                          !starts_at ||
-                          !ends_at ||
-                          (compareScheduleInstants(ends_at, starts_at) ?? 0) <=
-                            0
-                        )
-                          throw new Error("invalid course session");
-                        return {
-                          ...values,
-                          sessions: [{ starts_at, ends_at }],
-                        };
-                      }}
-                      save={(row, key) =>
-                        importTableRow(key, "course-draft", row)
-                      }
-                      refresh={() =>
-                        client.invalidateQueries({ queryKey: ["operations"] })
-                      }
-                    />
-                  )}
               </div>
             </details>
           </div>
@@ -1080,6 +1091,7 @@ export function CoursesPage() {
           <Field id="course-search" label={t("search")}>
             <input
               id="course-search"
+              ref={searchField}
               type="search"
               placeholder={
                 canPrepareOffer && tab === "runs"
@@ -1207,16 +1219,27 @@ export function CoursesPage() {
       {manage && tab === "runs" && (
         <CourseBulkArchiveActions controls={bulkArchive} />
       )}
-      {tab === "runs" && filteredRuns.length === 0 ? (
+      {total === 0 ? (
         <div className="empty-state">
-          {t(
-            onlyAssignedRuns
-              ? "noAssignedRuns"
-              : selectedRunStatus !== "all"
-                ? "noCoursesWithStatus"
-                : phase === "all"
-                  ? "learning:noCourses"
-                  : "learning:noCoursesInPhase",
+          <p role="status">
+            {t(
+              needle || (tab === "runs" && manage && company)
+                ? "courseNoMatches"
+                : tab === "templates"
+                  ? "noCourseTemplates"
+                  : onlyAssignedRuns
+                    ? "noAssignedRuns"
+                    : selectedRunStatus !== "all"
+                      ? "noCoursesWithStatus"
+                      : phase === "all"
+                        ? "learning:noCourses"
+                        : "learning:noCoursesInPhase",
+            )}
+          </p>
+          {(needle || (tab === "runs" && activeFilters > 0)) && (
+            <Button type="button" variant="secondary" onClick={resetList}>
+              {t("courseResetList")}
+            </Button>
           )}
         </div>
       ) : tab === "runs" ? (
@@ -1226,6 +1249,7 @@ export function CoursesPage() {
             const jobs = run.jobs ?? [];
             const offers = courseOfferState(run, runs.dataUpdatedAt);
             const { liveOffers, closedReason } = offers;
+            const first = run.course_sessions[0]?.starts_at;
             const customer =
               organisationName(run.organisation_id) ?? t("noCustomer");
             return (
@@ -1317,8 +1341,26 @@ export function CoursesPage() {
                   })}
                 </div>
                 <p className="operations-session-summary">
-                  <CalendarDays size={17} />
-                  {run.course_sessions.length} · {run.time_zone}
+                  <CalendarDays size={17} aria-hidden="true" />
+                  <span>
+                    {first && validZone(run.time_zone) && (
+                      <>
+                        <time dateTime={first}>
+                          {dateTime(
+                            first,
+                            i18n.language,
+                            run.time_zone,
+                            "short",
+                          )}
+                        </time>
+                        {" · "}
+                      </>
+                    )}
+                    {t("courseSessionCount", {
+                      count: run.course_sessions.length,
+                    })}
+                    {first && ` · ${run.time_zone}`}
+                  </span>
                 </p>
                 <div className="course-card-actions">
                   <div className="operations-actions">
@@ -1399,8 +1441,6 @@ export function CoursesPage() {
             );
           })}
         </div>
-      ) : filteredTemplates.length === 0 ? (
-        <div className="empty-state">{t("noCourseTemplates")}</div>
       ) : (
         <div className="operations-courses-grid">
           {filteredTemplates.slice(0, shownCount).map((template) => (
