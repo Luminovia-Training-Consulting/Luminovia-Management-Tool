@@ -40,6 +40,12 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
         const inboxLink = popover.getByRole("link", {
             name: "Alle Benachrichtigungen",
         });
+        // The unread count is a badge inside the bell, and the inbox link
+        // stays in view even when the preview contains several notifications.
+        const bellBounds = (await bell.boundingBox())!;
+        const badgeBounds = (await bell.locator(".notification-count").boundingBox())!;
+        expect(badgeBounds.y + badgeBounds.height).toBeLessThanOrEqual(bellBounds.y + bellBounds.height);
+        await expect(inboxLink).toBeInViewport();
         await inboxLink.focus();
         await inboxLink.press("Escape");
         await expect(popover).toHaveCount(0);

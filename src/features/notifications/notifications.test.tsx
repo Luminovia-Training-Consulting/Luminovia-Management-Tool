@@ -336,6 +336,39 @@ describe("connected notification inbox", () => {
       notificationInboxQuery("actor-a", false).refetchInterval,
     ).toBeUndefined();
   });
+  it("shows a direct inbox link and removes inapplicable controls in an empty preview", async () => {
+    const client = new QueryClient();
+    clients.push(client);
+    client.setQueryData(notificationPreviewQuery("actor-a").queryKey, {
+      items: [],
+      unread_count: 0,
+      as_of: "2026-11-15T11:00:00Z",
+    });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <NotificationsMenu id="actor-a" zone="UTC" />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    await userEvent.click(
+      screen.getByLabelText("Benachrichtigungen: 0 ungelesen"),
+    );
+    expect(
+      await screen.findByRole("link", { name: "Alle Benachrichtigungen" }),
+    ).toHaveAttribute("href", "/notifications");
+    expect(
+      screen.getByText("Hier gibt es gerade keine Meldungen."),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Lesestatus" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Gesamten Posteingang als gelesen markieren",
+      }),
+    ).not.toBeInTheDocument();
+  });
   it("filters unread items without unmounting the filter and disables offline writes", async () => {
     state.online = false;
     view(<NotificationsPage />);

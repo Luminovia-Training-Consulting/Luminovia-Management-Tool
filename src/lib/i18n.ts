@@ -83,6 +83,7 @@ const pairs: Record<string, [string, string]> = {
   accountingExports: ["Buchhaltung und Exporte", "Accounting and exports"],
   submitInvoice: ["Rechnung einreichen", "Submit invoice"],
   portalSearch: ["Im Portal suchen", "Search the portal"],
+  portalSearchSubmit: ["Suche starten", "Run search"],
   searchAction: ["Suchen", "Search"],
   searchHint: [
     "Durchsuche die für dich freigegebenen Aufträge, Dateien, Nachrichten und Wissensbeiträge. Mindestens zwei Zeichen.",

@@ -89,31 +89,36 @@ export function NotificationsMenu({
       </summary>
       {open && (
         <div className="notification-popover">
-          <h2>{t("title")}</h2>
-          {!academy && (
+          <div className="notification-popover-heading">
+            <h2>{t("title")}</h2>
+            <Link to="/notifications">{t("inbox")}</Link>
+          </div>
+          {!academy && Boolean(page?.items.length) && (
             <>
               <CategorySelector value={category} onChange={setCategory} />
               <p className="notification-filter-scope">{t("recentScope")}</p>
             </>
           )}
-          <Field
-            id={`notification-preview-filter-${filterId}`}
-            label={t("readFilter")}
-          >
-            <select
-              value={unreadOnly ? "unread" : "all"}
-              onChange={(event) =>
-                setUnreadOnly(event.target.value === "unread")
-              }
+          {Boolean(page?.items.length) && (
+            <Field
+              id={`notification-preview-filter-${filterId}`}
+              label={t("readFilter")}
             >
-              <option value="all">{t("all")}</option>
-              <option value="unread">{t("unread")}</option>
-            </select>
-          </Field>
+              <select
+                value={unreadOnly ? "unread" : "all"}
+                onChange={(event) =>
+                  setUnreadOnly(event.target.value === "unread")
+                }
+              >
+                <option value="all">{t("all")}</option>
+                <option value="unread">{t("unread")}</option>
+              </select>
+            </Field>
+          )}
           {academy && unreadOnly && (
             <p className="notification-filter-scope">{t("recentScope")}</p>
           )}
-          {page && academy !== "grace" && (
+          {page && page.unread_count > 0 && academy !== "grace" && (
             <Button
               variant="secondary"
               disabled={
@@ -168,7 +173,6 @@ export function NotificationsMenu({
             </ul>
           )}
           {mark.isError && <Notice kind="error">{t("error")}</Notice>}
-          <Link to="/notifications">{t("inbox")}</Link>
         </div>
       )}
     </details>

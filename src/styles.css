@@ -3612,7 +3612,7 @@ tr + tr td {
   min-width: 0;
   max-width: 620px;
   margin: 0 auto;
-  padding: 0 14px;
+  padding: 0 0 0 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -3625,8 +3625,12 @@ tr + tr td {
   outline-offset: 2px;
 }
 
-.header-global-search > svg {
-  flex: 0 0 20px;
+.header-global-search > button {
+  flex: 0 0 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: var(--blue-soft);
+  color: var(--ink);
 }
 
 .header-global-search input {

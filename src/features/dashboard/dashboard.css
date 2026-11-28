@@ -341,7 +341,7 @@
 /* Existing scoped shortcuts become action tiles rather than another text-heavy toolbar. */
 .dashboard-page .dashboard-shortcuts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: 10px;
   align-items: stretch;
 }
@@ -364,7 +364,7 @@
 
 .dashboard-page .dashboard-shortcuts a::after {
   content: "→";
-  margin-left: 12px;
+  margin-inline-start: 8px;
 }
 
 .dashboard-page .dashboard-shortcuts a:first-of-type {

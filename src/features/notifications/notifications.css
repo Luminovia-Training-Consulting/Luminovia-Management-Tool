@@ -3,6 +3,8 @@
  * surface variables.
  */
 .notification-count {
+  position: absolute;
+  inset: 0.1rem 0.1rem auto auto;
   display: inline-grid;
   min-width: 1.25rem;
   min-height: 1.25rem;
@@ -13,6 +15,24 @@
   color: white;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.notification-popover-heading {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.notification-popover-heading h2 {
+  margin: 0;
+}
+
+.notification-popover-heading a {
+  width: fit-content;
+  padding-block: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .inbox-tools {
