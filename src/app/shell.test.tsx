@@ -721,7 +721,7 @@ describe("Royal workspace sidebar preference", () => {
     const sidebar = screen.getByRole("complementary");
     expect(within(sidebar).queryByRole("search")).not.toBeInTheDocument();
     const banner = screen.getByRole("banner");
-    const input = within(banner).getByRole("textbox", {
+    const input = within(banner).getByRole("searchbox", {
       name: "Im Portal suchen",
     });
     await user.type(input, "Fictional files");

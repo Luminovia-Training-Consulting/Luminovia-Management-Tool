@@ -193,7 +193,7 @@ for (const role of actors) {
           }
         }
         if ("additional" in role && width === 1440) {
-          const search = page.getByRole("textbox", {
+          const search = page.getByRole("searchbox", {
             name: /^(Search the portal|Im Portal suchen)$/,
           });
           await expect
