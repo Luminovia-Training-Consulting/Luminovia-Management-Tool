@@ -10,7 +10,7 @@ import test from "node:test";
 import {setTimeout as delay} from "node:timers/promises";
 import {cleanEnvironment, root} from "./runtime-lib.mjs";
 
-test("stopping a live startup closes its mutating subprocess before cleaning Docker", {timeout: 10000}, async () => {
+test("stopping a live startup closes its mutating subprocess before cleaning Docker", {timeout: 10000}, async (t) => {
     const fixture = mkdtempSync(join(tmpdir(), "portal-supervisor-cancel-"));
     for (const folder of ["supabase/migrations", "node_modules/.bin", "bin", "scripts"])
         mkdirSync(join(fixture, folder), {recursive: true});
@@ -58,18 +58,7 @@ if (action === "start") {
         stdio: "ignore",
     });
     const exited = once(supervisor, "exit");
-    try {
-        const deadline = performance.now() + 3000;
-        while (!existsSync(startupPid) && performance.now() < deadline) await delay(10);
-        assert.ok(existsSync(startupPid), "the isolated Supabase startup must enter");
-        supervisor.kill("SIGTERM");
-        assert.deepEqual(await exited, [0, null]);
-        assert.deepEqual(readFileSync(trace, "utf8").trim().split("\n"), [
-            "start entered", "start signalled", "start exited", "stop", "network removed",
-        ]);
-        const state = JSON.parse(readFileSync(join(fixture, ".local/runtime.json"), "utf8"));
-        assert.equal(state.phase, "stopped");
-    } finally {
+    t.after(async () => {
         supervisor.kill("SIGKILL");
         await exited;
         if (existsSync(startupPid) && !readFileSync(trace, "utf8").includes("start exited")) {
@@ -80,5 +69,16 @@ if (action === "start") {
             }
         }
         rmSync(fixture, {recursive: true, force: true});
-    }
+    });
+
+    const deadline = performance.now() + 3000;
+    while (!existsSync(startupPid) && performance.now() < deadline) await delay(10);
+    assert.ok(existsSync(startupPid), "the isolated Supabase startup must enter");
+    supervisor.kill("SIGTERM");
+    assert.deepEqual(await exited, [0, null]);
+    assert.deepEqual(readFileSync(trace, "utf8").trim().split("\n"), [
+        "start entered", "start signalled", "start exited", "stop", "network removed",
+    ]);
+    const state = JSON.parse(readFileSync(join(fixture, ".local/runtime.json"), "utf8"));
+    assert.equal(state.phase, "stopped");
 });
