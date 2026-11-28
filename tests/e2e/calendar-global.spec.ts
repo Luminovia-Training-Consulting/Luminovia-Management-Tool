@@ -216,8 +216,9 @@ test("password-only authentication global publication, descriptions/HTTPS links,
 test("global calendar only transfers published course sessions in the visible range", async ({page}) => {
     const admin = await actor("Fictional calendar range administrator", "admin");
     const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    const [template, published, draft, archived] = Array.from({length: 4}, randomUUID);
+    const [template, published, draft, archived, organisation, topic] = Array.from({length: 6}, randomUUID);
     const title = `Fictional range course ${template.slice(0, 8)}`;
+    const topicLabel = `Fiktives Kalenderthema ${topic.slice(0, 8)}`;
     const session = (course_run_id: string, offsetDays: number) => {
         const start = new Date();
         start.setUTCHours(11, 0, 0, 0);
@@ -232,8 +233,16 @@ test("global calendar only transfers published course sessions in the visible ra
     const current = session(published, 0);
     await checked(service.from("course_templates").insert({id: template, title}));
     try {
+        await checked(service.from("organisations").insert({id: organisation, name: "Fictional calendar range company"}));
+        await checked(service.from("topics").insert({
+            id: topic,
+            label_de: topicLabel,
+            kind: "topic",
+            label_en: "Fictional calendar topic",
+        }));
+        await checked(service.from("course_template_topics").insert({template_id: template, topic_id: topic}));
         await checked(service.from("course_runs").insert([
-            {id: published, template_id: template, published: true, archived_at: null},
+            {id: published, template_id: template, organisation_id: organisation, published: true, archived_at: null},
             {id: draft, template_id: template, published: false, archived_at: null},
             {id: archived, template_id: template, published: true, archived_at: new Date().toISOString()},
         ]));
@@ -246,6 +255,12 @@ test("global calendar only transfers published course sessions in the visible ra
         ]));
         await adminLogin(page, admin);
         await page.goto("/calendar");
+        const broadReads: string[] = [];
+        page.on("request", (request) => {
+            const path = new URL(request.url()).pathname;
+            if (/\/rest\/v1\/(?:course_templates|organisations|topics)$/.test(path))
+                broadReads.push(path);
+        });
         const courses = page.waitForResponse((response) => {
             const url = new URL(response.url());
             return url.pathname.endsWith("/rest/v1/course_runs") &&
@@ -262,13 +277,23 @@ test("global calendar only transfers published course sessions in the visible ra
         );
         expect(scopedRows).toEqual([expect.objectContaining({
             id: published,
+            organisations: {name: "Fictional calendar range company"},
+            course_templates: {
+                title,
+                course_template_topics: [{
+                    topics: {id: topic, label_de: topicLabel, label_en: "Fictional calendar topic"},
+                }],
+            },
             course_sessions: [expect.objectContaining({id: current.id})],
         })]);
         await expect(page.locator(".calendar-panel").getByText(title, {exact: true})).toBeVisible();
+        expect(broadReads).toEqual([]);
     } finally {
         await checked(service.from("course_sessions").delete().in("course_run_id", [published, draft, archived]));
         await checked(service.from("course_runs").delete().in("id", [published, draft, archived]));
         await checked(service.from("course_templates").delete().eq("id", template));
+        await checked(service.from("topics").delete().eq("id", topic));
+        await checked(service.from("organisations").delete().eq("id", organisation));
         await checked(service.auth.admin.deleteUser(admin.id));
     }
 });

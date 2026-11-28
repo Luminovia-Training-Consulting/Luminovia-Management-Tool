@@ -63,6 +63,7 @@ const state = vi.hoisted(() => ({
   saveEvent: vi.fn(),
   rpc: vi.fn(),
   datesSetOnLocale: false,
+  reportInitialWindow: true,
   callbacks: [] as unknown[],
   initialDate: undefined as string | undefined,
   displayedZone: undefined as string | undefined,
@@ -122,7 +123,6 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["profile"],
     queryFn: async () => ({ time_zone: "Europe/Berlin" }),
   }),
-  topicsQuery: { queryKey: ["topics"], queryFn: async () => [] },
 }));
 vi.mock("./calendar-window-api", () => ({
   calendarAssignmentsQuery: (
@@ -157,13 +157,17 @@ vi.mock("./calendar-window-api", () => ({
   }),
 }));
 vi.mock("../operations/data", () => ({
-  orgQuery: () => ({ queryKey: ["organisations"], queryFn: async () => [] }),
   calendarCourseRunsQuery: (_actor: string, from: string, to: string) => ({
     queryKey: ["runs", from, to],
     queryFn: async () => [
       {
         id: "specific-course",
         template_id: "template",
+        course_templates: {
+          title: "Published course",
+          course_template_topics: [],
+        },
+        organisations: null,
         published: true,
         archived_at: null,
         course_sessions: [
@@ -175,10 +179,6 @@ vi.mock("../operations/data", () => ({
         ],
       },
     ],
-  }),
-  templatesQuery: () => ({
-    queryKey: ["templates"],
-    queryFn: async () => [{ id: "template", title: "Published course" }],
   }),
 }));
 vi.mock("@fullcalendar/react", () => ({
@@ -237,6 +237,14 @@ vi.mock("@fullcalendar/react", () => ({
     state.callbacks.push(datesSet);
     state.initialDate = initialDate;
     state.displayedZone = timeZone;
+    const [initialDatesSet] = useState(() => datesSet);
+    useEffect(() => {
+      if (!state.reportInitialWindow) return;
+      initialDatesSet?.({
+        start: new Date("2060-02-01T00:00Z"),
+        end: new Date("2060-03-01T00:00Z"),
+      });
+    }, [initialDatesSet]);
     // FullCalendar rebuilds its DateProfile when locale options change and may
     // deliver datesSet again even though the visible instants remain identical.
     useEffect(() => {
@@ -305,6 +313,7 @@ vi.mock("@fullcalendar/react", () => ({
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.datesSetOnLocale = false;
+  state.reportInitialWindow = true;
   state.loadEvents.mockImplementation(async () => state.events);
   state.callbacks = [];
   state.initialDate = undefined;
@@ -602,6 +611,32 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
   });
 });
 
+it("waits for the grid before reading any personal appointments", async () => {
+  state.reportInitialWindow = false;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const dateChange = await screen.findByRole("button", {
+    name: "Change visible range",
+  });
+  expect(state.loadEvents).not.toHaveBeenCalled();
+  await userEvent.setup().click(dateChange);
+  await waitFor(() => expect(state.loadEvents).toHaveBeenCalledTimes(1));
+  expect(state.loadEvents).toHaveBeenCalledWith(
+    expect.objectContaining({
+      from: "2060-03-01T00:00:00.000Z",
+      to: "2060-04-10T00:00:00.000Z",
+    }),
+  );
+});
+
 it("keeps the calendar mounted while the private range changes", async () => {
   let finishRange!: (rows: unknown[]) => void;
   const nextRange = new Promise<unknown[]>((resolve) => {
@@ -618,7 +653,7 @@ it("keeps the calendar mounted while the private range changes", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  const grid = screen.getByTestId("calendar-engine");
+  const grid = await screen.findByTestId("calendar-engine");
   await userEvent.click(
     within(grid).getByRole("button", { name: "Change visible range" }),
   );
@@ -974,9 +1009,10 @@ it("switches calendar zones without writing and preserves the original DST-fold 
   );
   const user = userEvent.setup();
   const select = await screen.findByLabelText("Kalenderanzeige in");
+  await screen.findByTestId("calendar-engine");
   expect(state.displayedZone).toBe("Europe/Berlin");
-  const originalInstance =
-    screen.getByTestId("calendar-engine").dataset.instance;
+  const originalInstance = (await screen.findByTestId("calendar-engine"))
+    .dataset.instance;
   await user.selectOptions(select, "Australia/Brisbane");
   expect(state.displayedZone).toBe("Australia/Brisbane");
   expect(screen.getByTestId("calendar-engine").dataset.instance).not.toBe(

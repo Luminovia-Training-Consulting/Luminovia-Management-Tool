@@ -9,7 +9,34 @@ test("calendar jumps to a civil date, keeps the view and restores keyboard focus
   await withApiFixture(async ({ actor }) => {
     const lecturer = await actor("fictional-calendar-navigation", "lecturer");
     await login(page, lecturer.email);
+    const requestedWindows = {
+      personal_events: [],
+      assignment_sessions: [],
+    } as Record<string, string[]>;
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      const source = url.pathname.split("/").at(-1);
+      const windowStart = url.searchParams.get("ends_at");
+      if (source && windowStart && Object.hasOwn(requestedWindows, source)) {
+        requestedWindows[source].push(windowStart);
+      }
+    });
+    const firstWindow = Promise.all(
+      Object.keys(requestedWindows).map((source) =>
+        page.waitForResponse((response) => {
+          const url = new URL(response.url());
+          return (
+            url.pathname.endsWith(`/rest/v1/${source}`) &&
+            url.searchParams.has("ends_at") &&
+            response.ok()
+          );
+        }),
+      ),
+    );
     await page.goto("/calendar");
+    await firstWindow;
+    expect(requestedWindows.personal_events).toHaveLength(1);
+    expect(requestedWindows.assignment_sessions).toHaveLength(1);
 
     const dayView = page
       .getByRole("group", { name: "Kalenderansicht" })

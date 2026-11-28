@@ -11,11 +11,7 @@ import {
   calendarColorsQuery,
   defaultCalendarColors,
 } from "./calendar-color-api";
-import {
-  calendarCourseRunsQuery,
-  orgQuery,
-  templatesQuery,
-} from "../operations/data";
+import { calendarCourseRunsQuery } from "../operations/data";
 import {
   memo,
   useCallback,
@@ -59,7 +55,7 @@ import deLocale from "@fullcalendar/core/locales/de";
 import enLocale from "@fullcalendar/core/locales/en-gb";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import { permissionsQuery, profileQuery, topicsQuery } from "../../lib/queries";
+import { permissionsQuery, profileQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import {
   calendarAssignmentsQuery,
@@ -599,6 +595,8 @@ type PersonalEditorDraft = {
   range?: CalendarDraftRange;
 };
 
+const noCalendarWindow = { from: "", to: "" };
+
 /** Combine separately authorized calendar sources and display them in the selected IANA zone. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
@@ -624,35 +622,39 @@ export function CalendarPage() {
   const actor = session!.user.id;
   const assignment = calendarParams.get("assignment");
   const [global, setGlobal] = useState(false);
-  const templates = useQuery({
-    ...templatesQuery(session!.user.id),
-    enabled: global,
-  });
-  const organisations = useQuery({
-    ...orgQuery(session!.user.id),
-    enabled: global,
-  });
-  const topics = useQuery({ ...topicsQuery, enabled: global });
   const publicationText = useTranslation("calendarPublications").t;
   const permissions = useQuery(permissionsQuery(session!.user.id));
-  const [range, setRange] = useState(() => {
-    const start = DateTime.utc().startOf("month").minus({ days: 7 });
-    return { from: start.toISO()!, to: start.plus({ days: 49 }).toISO()! };
-  });
+  const online = useOnline();
+  const [displayZone, setDisplayZone] = useState("");
+  const accountZone = profile.data?.time_zone ?? "";
+  const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
+  const zone = displayZone || profileZone;
+  const gridKey = `${zone}/${assignment ?? ""}`;
+  const [visibleWindow, setVisibleWindow] = useState<{
+    gridKey: string;
+    range: typeof noCalendarWindow;
+  }>();
+  const rangeReady = visibleWindow?.gridKey === gridKey;
+  const range = rangeReady ? visibleWindow.range : noCalendarWindow;
   const assignmentStartOptions = calendarAssignmentStartQuery(
     actor,
     assignment,
   );
   const assignmentStart = useQuery(assignmentStartOptions);
   const waitingForAnchor =
-    assignmentStartOptions.enabled && assignmentStart.isPending;
+    (assignmentStartOptions.enabled && assignmentStart.isPending) ||
+    (online && profile.isPending);
+  // The grid is authoritative for the actual interval, including the extra
+  // days in the month view. An old window still in state after a zone or
+  // assignment jump must not trigger another read for the new grid.
+  const readWindow = rangeReady && !waitingForAnchor;
   const personal = useQuery({
     ...privateCalendarEventsQuery(actor, range),
-    enabled: !global && !waitingForAnchor,
+    enabled: !global && readWindow,
   });
   const assignments = useQuery({
     ...calendarAssignmentsQuery(actor, range),
-    enabled: !global && !waitingForAnchor,
+    enabled: !global && readWindow,
   });
   const assignmentRows = assignments.isError ? undefined : assignments.data;
   const jobOptions = useMemo(
@@ -665,17 +667,17 @@ export function CalendarPage() {
   );
   const jobs = useQuery({
     ...jobOptions,
-    enabled: !global && jobOptions.enabled,
+    enabled: !global && readWindow && jobOptions.enabled,
   });
   const publicRuns = useQuery({
     ...calendarCourseRunsQuery(actor, range.from, range.to),
-    enabled: global,
+    enabled: global && readWindow,
     refetchOnWindowFocus: "always",
     refetchInterval: 15000,
   });
   const globals = useInfiniteQuery({
-    ...globalEventsQuery(session!.user.id, range.from, range.to),
-    enabled: global,
+    ...globalEventsQuery(actor, range.from, range.to),
+    enabled: global && readWindow,
   });
   const [globalID, setGlobalID] = useState<string | null>(null);
   const retryGlobalPage = canRetryNextPage(globals);
@@ -688,29 +690,33 @@ export function CalendarPage() {
         : mergeCursorItems(calendarPages, { preferLast: true }),
     [calendarPages, globalsFailed],
   );
-  const visibleRange = useRef(range);
+  const visibleRange = useRef<typeof visibleWindow>(undefined);
   const handleDatesSet = useCallback(
     (info: DatesSetArg) => {
       if (info.view?.title) setCalendarTitle(info.view.title);
       if (calendarViews.includes(info.view?.type as CalendarView))
         setCalendarView(info.view.type as CalendarView);
       const next = {
-        from: info.start.toISOString(),
-        to: info.end.toISOString(),
+        gridKey,
+        range: {
+          from: info.start.toISOString(),
+          to: info.end.toISOString(),
+        },
       };
       // Locale/view options can rebuild FullCalendar's DateProfile without moving
       // its instants. Preserve the captured detail and query key for those signals.
       if (
-        visibleRange.current.from === next.from &&
-        visibleRange.current.to === next.to
+        visibleRange.current?.gridKey === gridKey &&
+        visibleRange.current.range.from === next.range.from &&
+        visibleRange.current.range.to === next.range.to
       )
         return;
       // Update synchronously: multiple navigation callbacks can precede a render.
       visibleRange.current = next;
-      setRange(next);
+      setVisibleWindow(next);
       setGlobalID(null);
     },
-    [setRange],
+    [gridKey, setVisibleWindow],
   );
   const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
@@ -795,15 +801,10 @@ export function CalendarPage() {
     };
   }, [open, eventDirty, eventBusy]);
   const [message, setMessage] = useState("");
-  const online = useOnline();
-  const [displayZone, setDisplayZone] = useState("");
   const [viewAnchor, setViewAnchor] = useState<{
     assignment: string | null;
     date: string;
   }>();
-  const accountZone = profile.data?.time_zone ?? "";
-  const profileZone = validZone(accountZone) ? accountZone : "Europe/Berlin";
-  const zone = displayZone || profileZone;
   function currentCalendarDate() {
     const api = calendarRef.current?.getApi();
     // FullCalendar only omits time at midnight. Keep its display-zone date
@@ -816,18 +817,6 @@ export function CalendarPage() {
   const jobsById = useMemo(
     () => new Map(jobs.isError ? [] : jobs.data?.map((job) => [job.id, job])),
     [jobs.data, jobs.isError],
-  );
-  const templatesById = useMemo(
-    () => new Map(templates.data?.map((template) => [template.id, template])),
-    [templates.data],
-  );
-  const organisationsById = useMemo(
-    () => new Map(organisations.data?.map((org) => [org.id, org.name])),
-    [organisations.data],
-  );
-  const topicsById = useMemo(
-    () => new Map(topics.data?.map((topic) => [topic.id, topic])),
-    [topics.data],
   );
   const colors = calendarColors.data ?? defaultCalendarColors;
   const events = useMemo(
@@ -844,52 +833,36 @@ export function CalendarPage() {
               textColor: "#ffffff",
               extendedProps: { kind: "global", ...emptyMetadata },
             })),
-            ...(publicRuns.isError || templates.isError
-              ? []
-              : (publicRuns.data ?? [])
-            ).flatMap((run) => {
-              const template = templatesById.get(run.template_id);
-              const customerCreated = Boolean(run.organisation_id);
-              const customerName =
-                !organisations.isError && run.organisation_id
-                  ? (organisationsById.get(run.organisation_id) ?? "")
-                  : "";
-              const courseTopics = topics.isError
-                ? []
-                : (template?.course_template_topics ?? []).flatMap(
-                    ({ topic_id }) => {
-                      const topic = topicsById.get(topic_id);
-                      return topic
-                        ? [
-                            {
-                              id: topic.id,
-                              label_de: topic.label_de,
-                              label_en: topic.label_en,
-                            },
-                          ]
-                        : [];
-                    },
-                  );
-              return run.course_sessions.map((s) => ({
-                id: `course-${s.id}`,
-                title: template?.title ?? t("courses"),
-                start: s.starts_at,
-                end: s.ends_at,
-                display: "block",
-                color: customerCreated
-                  ? colors.customer_event_color
-                  : "#326c58",
-                textColor: customerCreated ? "#17283a" : "#ffffff",
-                url: `/courses?run=${run.id}`,
-                extendedProps: {
-                  kind: "course",
-                  customerCreated,
-                  customerKey: run.organisation_id ?? "",
-                  customerName,
-                  topics: courseTopics,
-                },
-              }));
-            }),
+            ...(publicRuns.isError ? [] : (publicRuns.data ?? [])).flatMap(
+              (run) => {
+                const template = run.course_templates;
+                const customerCreated = Boolean(run.organisation_id);
+                const customerName = run.organisations?.name ?? "";
+                const courseTopics =
+                  template?.course_template_topics.flatMap(({ topics }) =>
+                    topics ? [topics] : [],
+                  ) ?? [];
+                return run.course_sessions.map((s) => ({
+                  id: `course-${s.id}`,
+                  title: template?.title ?? t("courses"),
+                  start: s.starts_at,
+                  end: s.ends_at,
+                  display: "block",
+                  color: customerCreated
+                    ? colors.customer_event_color
+                    : "#326c58",
+                  textColor: customerCreated ? "#17283a" : "#ffffff",
+                  url: `/courses?run=${run.id}`,
+                  extendedProps: {
+                    kind: "course",
+                    customerCreated,
+                    customerKey: run.organisation_id ?? "",
+                    customerName,
+                    topics: courseTopics,
+                  },
+                }));
+              },
+            ),
           ]
         : [
             ...(personalRows ?? []).map((e) => ({
@@ -935,12 +908,6 @@ export function CalendarPage() {
       globalRows,
       publicRuns.data,
       publicRuns.isError,
-      templates.isError,
-      templatesById,
-      organisations.isError,
-      organisationsById,
-      topics.isError,
-      topicsById,
       personalRows,
       assignmentRows,
       jobsById,
@@ -988,11 +955,7 @@ export function CalendarPage() {
     customer || topicIds.length || search || eventType !== "all",
   );
   const filtersReady = global
-    ? publicRuns.isSuccess &&
-      templates.isSuccess &&
-      (!topicIds.length || !topics.isPending) &&
-      !globals.isPending &&
-      !globalsFailed
+    ? publicRuns.isSuccess && !globals.isPending && !globalsFailed
     : !waitingForAnchor &&
       personal.isSuccess &&
       assignments.isSuccess &&
@@ -1392,7 +1355,7 @@ export function CalendarPage() {
             fold. Build a new date environment from the source events instead. */}
           {!waitingForAnchor && (
             <CalendarGrid
-              key={`${zone}/${assignment ?? ""}`}
+              key={gridKey}
               plugins={calendarPlugins}
               locale={german ? deLocale : enLocale}
               timeZone={zone}
@@ -1427,14 +1390,9 @@ export function CalendarPage() {
       </div>
       {global && (
         <div className="global-event-public-status">
-          {(publicRuns.isPending || templates.isPending) && <Loading />}
-          {(publicRuns.isError || templates.isError) && (
-            <ErrorState
-              retry={() => {
-                void publicRuns.refetch();
-                void templates.refetch();
-              }}
-            />
+          {publicRuns.isPending && <Loading />}
+          {publicRuns.isError && (
+            <ErrorState retry={() => void publicRuns.refetch()} />
           )}
           {globals.isPending ? (
             <Loading />
@@ -1468,7 +1426,7 @@ export function CalendarPage() {
           )}
         </div>
       )}
-      {global && canManageGlobal && (
+      {global && canManageGlobal && readWindow && (
         <GlobalEventManagement
           actor={session!.user.id}
           from={range.from}

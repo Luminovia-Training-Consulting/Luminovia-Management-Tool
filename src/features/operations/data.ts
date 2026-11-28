@@ -263,6 +263,19 @@ export const runsQuery = (actor: string, withAssignments = false) =>
   });
 
 /** Only published course sessions that overlap the current calendar range. */
+type CalendarCourseRun = Pick<
+  CourseRun,
+  "id" | "template_id" | "organisation_id" | "course_sessions"
+> & {
+  course_templates: {
+    title: string;
+    course_template_topics: {
+      topics: { id: string; label_de: string; label_en: string } | null;
+    }[];
+  } | null;
+  organisations: { name: string } | null;
+};
+
 export const calendarCourseRunsQuery = (
   actor: string,
   from: string,
@@ -271,16 +284,12 @@ export const calendarCourseRunsQuery = (
   queryOptions({
     queryKey: ["operations", "calendar-runs", actor, from, to],
     queryFn: ({ signal }) =>
-      readDirectoryPages<
-        Pick<
-          CourseRun,
-          "id" | "template_id" | "organisation_id" | "course_sessions"
-        >
-      >((start, end) =>
+      readDirectoryPages<CalendarCourseRun>((start, end) =>
         db()
           .from("course_runs")
           .select(
-            "id,template_id,organisation_id,course_sessions!inner(id,starts_at,ends_at)",
+            "id,template_id,organisation_id,course_sessions!inner(id,starts_at,ends_at)," +
+              "course_templates(title,course_template_topics(topics(id,label_de,label_en))),organisations(name)",
           )
           .eq("published", true)
           .is("archived_at", null)
