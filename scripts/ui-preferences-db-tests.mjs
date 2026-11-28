@@ -11,10 +11,11 @@ await withTestDatabase("ui_preferences", async ({sql}) => {
     const guest = randomUUID();
     const inactive = randomUUID();
     const q = quoteSql;
-    await sql(`insert into auth.users(id, email)
+    // Email delivery deliberately rejects unconfirmed Auth addresses.
+    await sql(`insert into auth.users(id, email, email_confirmed_at)
                values
-    (${q(lecturer)},'lecturer@example.invalid'),(${q(peer)},'peer@example.invalid'),
-    (${q(guest)},'guest@example.invalid'),(${q(inactive)},'inactive@example.invalid');
+    (${q(lecturer)},'lecturer@example.invalid',now()),(${q(peer)},'peer@example.invalid',now()),
+    (${q(guest)},'guest@example.invalid',now()),(${q(inactive)},'inactive@example.invalid',now());
     insert into public.user_roles(user_id,role) values
     (${q(lecturer)},'lecturer'),(${q(peer)},'lecturer'),(${q(guest)},'guest'),(${q(inactive)},'lecturer');
     update public.profiles set active=false where id=${q(inactive)};`);
@@ -72,9 +73,11 @@ await withTestDatabase("ui_preferences", async ({sql}) => {
     await sql(`update private.delivery_preferences set email_enabled=true where user_id=${q(lecturer)};
         insert into public.notifications(user_id,kind,resource_id)
         values (${q(lecturer)}, 'claim_cancelled', ${q(randomUUID())});`);
-    const lease = JSON.parse(await sql(
+    const leased = await sql(
         "begin;set local role service_role;select public.lease_notification_emails(1)->0;commit;",
-    ));
+    );
+    assert.ok(leased, "A confirmed, opted-in recipient should have a deliverable notice.");
+    const lease = JSON.parse(leased);
     const delivery = JSON.parse(await sql(
         `begin;set local role service_role;
         select public.prepare_notification_email(${q(lease.id)},${q(lease.lease_token)});commit;`,

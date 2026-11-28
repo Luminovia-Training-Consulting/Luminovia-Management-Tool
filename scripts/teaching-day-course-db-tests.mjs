@@ -87,13 +87,14 @@ await withTestDatabase("teaching_day_course", async ({sql, actor}) => {
             `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)values(${q(d)},${q(peer)},${q(peer)},'personal','material','Fictional resource.pdf','application/pdf',10,'clean',${q(randomUUID())});insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)values(${q(v)},${q(d)},${q(peer)},${q(randomUUID())},1,${q("fictional/" + v)},'Fictional resource.pdf','application/pdf',10,'clean',${q("c".repeat(64))});insert into private.course_resources(id,run_id,version_id,audience,category,created_by)values(${q(id)},${q(run)},${q(v)},'staff','material',${q(peer)});`,
         );
     }
-    // Staff can still inspect assigned schedule facts while Premium is OFF.
-    // Course bytes and counts remain gated until this fictional company opts in.
-    await check("Teaching Day shows the assignment while Premium withholds shared files", async () => {
+    // Ordinary shared materials are available through Standard LMS on the
+    // internal installation. Premium-only resource categories remain gated.
+    await check("Teaching Day shows Standard materials while Premium features stay off", async () => {
         const d = (await day()).sessions[0];
         assert.equal(d.course_run_id, run);
-        assert.deepEqual(d.course_resources, []);
-        assert.equal(d.course_resource_count, 0);
+        assert.equal(d.course_resources.length, 10);
+        assert.equal(d.course_resource_count, 12);
+        assert.ok(d.course_resources.every((resource) => resource.category === "material"));
         await sql(`insert into private.company_premium_settings(organisation_id,enabled,version)
             values(${q(org)},true,1) on conflict(organisation_id) do update set enabled=true,version=1`);
     });

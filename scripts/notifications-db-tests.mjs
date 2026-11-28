@@ -28,7 +28,9 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
             for (const id of [teacher, peer, admin])
                 assert.deepEqual(await rpc(id, "notification_preferences"), {
                     chat: true,
+                    events: true,
                     forum: true,
+                    invoices: true,
                     job_updates: true,
                     reminders: true,
                     version: 1,
