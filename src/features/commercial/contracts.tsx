@@ -36,6 +36,7 @@ import {
   contractsQuery,
 } from "./api";
 import type { ContractRecord } from "./types";
+import { FinanceRows } from "./finance-rows";
 import { CommercialPdfUpload } from "./pdf-upload";
 import "./i18n";
 import "./commercial.css";
@@ -337,13 +338,13 @@ function ContractCard({
   contract,
   zone,
   manager,
-  checkDelegatedDownload = false,
+  delegatedDownload,
 }: {
   actor: string;
   contract: ContractRecord;
   zone: string;
   manager: boolean;
-  checkDelegatedDownload?: boolean;
+  delegatedDownload: boolean;
 }) {
   const { t, i18n } = useTranslation("commercial");
   const common = useTranslation().t;
@@ -355,34 +356,7 @@ function ContractCard({
   const [downloadFailed, setDownloadFailed] = useState(false);
   const own = contract.user_id === actor;
   const { document_id: documentId, document_version_id: versionId } = contract;
-  const delegatedVersion = useQuery({
-    queryKey: ["contract-download-version", actor, documentId, versionId],
-    enabled:
-      checkDelegatedDownload &&
-      manager &&
-      !own &&
-      Boolean(documentId && versionId),
-    // RLS admits only the authorized uploader on behalf. The gateway rechecks access on download.
-    queryFn: async ({ signal }) => {
-      const { data, error } = await db()
-        .from("document_versions")
-        .select("id")
-        .eq("id", versionId!)
-        .eq("document_id", documentId!)
-        .eq("status", "clean")
-        .eq("mime_type", "application/pdf")
-        .abortSignal(signal)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.id === versionId;
-    },
-  });
-  const canDownload =
-    own ||
-    (checkDelegatedDownload &&
-      manager &&
-      delegatedVersion.isSuccess &&
-      delegatedVersion.data);
+  const canDownload = own || delegatedDownload;
   const key = useRef(crypto.randomUUID());
   const acknowledge = useMutation({
     mutationFn: async () => {
@@ -567,19 +541,66 @@ function ContractCards({
   checkDelegatedDownload?: boolean;
 }) {
   const { t } = useTranslation("commercial");
+  const canCheck = manager && checkDelegatedDownload;
+  const versionIds = canCheck
+    ? [
+        ...new Set(
+          records.flatMap((record) =>
+            record.user_id !== actor &&
+            record.document_version_id &&
+            record.document_id
+              ? [record.document_version_id]
+              : [],
+          ),
+        ),
+      ].sort()
+    : [];
+  const delegatedVersions = useQuery({
+    queryKey: ["contract-download-versions", actor, versionIds],
+    enabled: versionIds.length > 0,
+    queryFn: async ({ signal }) => {
+      // Keep each RLS-scoped request within a bounded URL and REST response size.
+      // Match both returned IDs below; the file gateway still checks current access.
+      const allowed = new Map<string, string>();
+      const batchSize = 50;
+      for (let from = 0; from < versionIds.length; from += batchSize) {
+        const { data, error } = await db()
+          .from("document_versions")
+          .select("id,document_id")
+          .in("id", versionIds.slice(from, from + batchSize))
+          .eq("status", "clean")
+          .eq("mime_type", "application/pdf")
+          .abortSignal(signal);
+        if (error) throw error;
+        for (const row of data ?? []) allowed.set(row.id, row.document_id);
+      }
+      return allowed;
+    },
+  });
   return records.length ? (
-    <div className="commercial-contract-grid">
-      {records.map((contract) => (
-        <ContractCard
-          key={contract.id}
-          actor={actor}
-          contract={contract}
-          zone={zone}
-          manager={manager}
-          checkDelegatedDownload={checkDelegatedDownload}
-        />
-      ))}
-    </div>
+    <FinanceRows label={t("contracts")} total={records.length} scroll={false}>
+      {(shown) => (
+        <div className="commercial-contract-grid">
+          {records.slice(0, shown).map((contract) => (
+            <ContractCard
+              key={contract.id}
+              actor={actor}
+              contract={contract}
+              zone={zone}
+              manager={manager}
+              delegatedDownload={Boolean(
+                canCheck &&
+                delegatedVersions.isSuccess &&
+                contract.document_version_id &&
+                contract.document_id &&
+                delegatedVersions.data.get(contract.document_version_id) ===
+                  contract.document_id,
+              )}
+            />
+          ))}
+        </div>
+      )}
+    </FinanceRows>
   ) : (
     <div className="panel commercial-empty">
       <FileSignature size={35} />

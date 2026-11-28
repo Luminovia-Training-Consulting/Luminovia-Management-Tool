@@ -30,14 +30,17 @@ vi.mock("../../lib/supabase", () => ({
     rpc: fake.rpc,
     from: (table: string) => ({
       select: (columns: string) => {
-        const filters: Record<string, string> = {};
+        const filters: Record<string, string | string[]> = {};
         const query = {
           eq: (key: string, value: string) => {
             filters[key] = value;
             return query;
           },
-          abortSignal: () => query,
-          maybeSingle: () => fake.readVersion(table, columns, filters),
+          in: (key: string, values: string[]) => {
+            filters[key] = values;
+            return query;
+          },
+          abortSignal: () => fake.readVersion(table, columns, filters),
         };
         return query;
       },
@@ -103,6 +106,7 @@ async function show(
   contextual = false,
   location = `/admin/contracts?user=${target}`,
   roles: string[] = [],
+  additionalContracts = 0,
 ) {
   await i18n.changeLanguage("de");
   fake.roles.mockResolvedValue(roles);
@@ -137,6 +141,13 @@ async function show(
                 record("delegated", target, "Delegated contract"),
                 record("private", target, "Lecturer's own upload"),
                 record("other", second, "Other person's contract"),
+                ...Array.from({ length: additionalContracts }, (_, index) =>
+                  record(
+                    `history-${index + 1}`,
+                    target,
+                    `Historical contract ${index + 1}`,
+                  ),
+                ),
               ]
             : [record("personal", "actor", "Personal contract")];
           return Object.assign(
@@ -169,7 +180,12 @@ async function show(
     },
   );
   fake.readVersion.mockImplementation(async (_table, _columns, filters) => ({
-    data: filters.id === "delegated-version" ? { id: filters.id } : null,
+    data: filters.id.includes("delegated-version")
+      ? [
+          { id: "delegated-version", document_id: "delegated-document" },
+          { id: "private-version", document_id: "unrelated-document" },
+        ]
+      : [],
     error: null,
   }));
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -459,12 +475,15 @@ it("downloads only the exact registered PDF that the file policy allows and does
     name: "Dokument herunterladen",
   });
   await waitFor(() => expect(allowed).toBeEnabled());
-  expect(fake.readVersion).toHaveBeenCalledWith("document_versions", "id", {
-    id: "delegated-version",
-    document_id: "delegated-document",
-    status: "clean",
-    mime_type: "application/pdf",
-  });
+  expect(fake.readVersion).toHaveBeenCalledExactlyOnceWith(
+    "document_versions",
+    "id,document_id",
+    {
+      id: ["delegated-version", "private-version"],
+      status: "clean",
+      mime_type: "application/pdf",
+    },
+  );
   expect(denied).toBeDisabled();
   await user.click(denied);
   expect(fake.saveDownload).not.toHaveBeenCalled();
@@ -477,6 +496,27 @@ it("downloads only the exact registered PDF that the file policy allows and does
   expect(
     context.queryByRole("button", { name: "Empfang bestätigen" }),
   ).toBeNull();
+});
+
+it("bounds permission batches and rendered cards for a long contract history", async () => {
+  await show(true, true, undefined, [], 49);
+  const user = userEvent.setup();
+  const context = await openContext(user);
+  await context.findByRole("heading", { name: "Delegated contract" });
+  await waitFor(() => expect(fake.readVersion).toHaveBeenCalledTimes(2));
+  expect(
+    fake.readVersion.mock.calls.map(([, , filters]) => filters.id.length),
+  ).toEqual([50, 1]);
+  expect(
+    context.getAllByRole("button", { name: "Dokument herunterladen" }),
+  ).toHaveLength(12);
+  await user.click(
+    context.getByRole("button", { name: "Weitere Einträge laden" }),
+  );
+  expect(
+    context.getAllByRole("button", { name: "Dokument herunterladen" }),
+  ).toHaveLength(24);
+  expect(fake.readVersion).toHaveBeenCalledTimes(2);
 });
 
 it("discards the open registration draft when the selected person changes", async () => {
