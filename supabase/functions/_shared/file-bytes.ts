@@ -17,3 +17,16 @@ export async function sha256FileHex(
     (byte) => byte.toString(16).padStart(2, "0"),
   ).join("");
 }
+
+/** Accept a stored object only when it matches the validated upload exactly. */
+export async function readMatchingFileBytes(
+  object: Blob,
+  size: number,
+  digest: string,
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  if (object.size !== size) return null;
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  return bytes.byteLength === size && await sha256FileHex(bytes) === digest
+    ? bytes
+    : null;
+}

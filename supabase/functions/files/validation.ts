@@ -61,8 +61,14 @@ export async function validateFile(bytes: Uint8Array, name: string, declared: st
     } catch {/* Very short text buffers have no binary signature. */
     }
     if (!actual && extension === 'txt') {
-        const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
-        if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text)) throw new Error('unsupported_type');
+        // Bound temporary strings while preserving strict UTF-8 across chunks.
+        const decoder = new TextDecoder('utf-8', {fatal: true});
+        const chunkSize = 64 * 1024;
+        for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+            const end = offset + chunkSize;
+            const text = decoder.decode(bytes.subarray(offset, end), {stream: end < bytes.length});
+            if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text)) throw new Error('unsupported_type');
+        }
         actual = 'text/plain';
     }
     if (!actual || !supported[actual]?.includes(extension) || (declared && declared !== actual)) throw new Error('unsupported_type');

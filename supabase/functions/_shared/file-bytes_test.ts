@@ -1,4 +1,8 @@
-import { sha256FileHex, webFileBytes } from "./file-bytes.ts";
+import {
+  readMatchingFileBytes,
+  sha256FileHex,
+  webFileBytes,
+} from "./file-bytes.ts";
 
 Deno.test("file digest and response restrict output to the selected range without copying the buffer", async () => {
   const original = new TextEncoder().encode("prefixabcsuffix");
@@ -32,5 +36,33 @@ Deno.test("a shared buffer becomes an isolated snapshot of only the selected byt
   shared.fill(0);
   if (!(body.buffer instanceof ArrayBuffer) || body.toString() !== "2,3") {
     throw new Error("expected a stable snapshot of the selected shared bytes");
+  }
+});
+
+Deno.test("stored upload must match both the expected size and digest", async () => {
+  const expected = new Blob(["original"]);
+  const digest = await sha256FileHex(await expected.arrayBuffer());
+  if (!await readMatchingFileBytes(expected, expected.size, digest)) {
+    throw new Error("identical stored upload was rejected");
+  }
+  if (
+    await readMatchingFileBytes(new Blob(["modified"]), expected.size, digest)
+  ) {
+    throw new Error("different bytes at the expected size were accepted");
+  }
+
+  class UnexpectedSize extends Blob {
+    override arrayBuffer(): Promise<ArrayBuffer> {
+      throw new Error("oversized upload must be rejected before reading");
+    }
+  }
+  if (
+    await readMatchingFileBytes(
+      new UnexpectedSize(["too long!"]),
+      expected.size,
+      digest,
+    )
+  ) {
+    throw new Error("oversized stored upload was accepted");
   }
 });

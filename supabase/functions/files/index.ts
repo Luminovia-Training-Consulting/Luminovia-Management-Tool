@@ -4,7 +4,7 @@
  * resource access around Storage reads; qualification evidence has its own
  * exact-version authorization context.
  */
-import {sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
+import {readMatchingFileBytes, sha256FileHex, webFileBytes} from '../_shared/file-bytes.ts';
 import {boundedBytes, boundedFormData, boundedJson, RequestBodyTooLarge} from '../_shared/bounded-body.ts';
 import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {organisationContractBytes, readExpectedBytes} from './organisation-contract-download.ts';
@@ -190,13 +190,17 @@ Deno.serve(async (request: Request) => {
             const assignmentId = form.get('assignment_id');
             if (assignmentSubmission ? !uuid(assignmentId) : assignmentId !== null) return json(400, {error: 'invalid_request'});
             const protectedUpload = Boolean(materialRun || chatRoom || attendanceSession || submissionRun);
-            const file = form.get('file');
+            let file = form.get('file');
             if (!(file instanceof File)) return json(400, {error: 'invalid_request'});
             const name = safeName(file.name);
             if (!name) return json(400, {error: 'invalid_request'});
             if (file.size > (scopedIntake ? academyMaterialMaxBytes : MAX_FILE_SIZE)) return json(413, {error: 'file_size'});
-            const bytes = new Uint8Array(await file.arrayBuffer());
-            const mime = await validateFile(bytes, name, file.type, archiveFormat);
+            const declaredMime = file.type;
+            let bytes = new Uint8Array(await file.arrayBuffer());
+            form.delete('file');
+            file = null;
+            const size = bytes.byteLength;
+            const mime = await validateFile(bytes, name, declaredMime, archiveFormat);
             if ((examReservation || attendanceSession) && mime !== 'application/pdf') return json(415, {error: 'unsupported_type'});
             const incomingDigest = await sha256FileHex(bytes);
             const clientId = form.get('client_id');
@@ -217,32 +221,32 @@ Deno.serve(async (request: Request) => {
             if (courseChat !== null && (courseChat !== 'true' || messageOnly !== 'true')) return json(400, {error: 'invalid_request'});
             const reserved = archiveRun
                 ? await user.rpc(archiveFormat === 'h5p' ? 'reserve_course_h5p_package' : 'reserve_course_scorm_package', {
-                    p_run_id: archiveRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
+                    p_run_id: archiveRun, p_name: name, p_size: size, p_client_id: clientId, p_sha256: incomingDigest,
                 })
                 : portfolioUpload || expenseUpload
                 ? await user.rpc(expenseUpload ? 'reserve_expense_receipt' : 'reserve_learning_portfolio_evidence', {
-                    p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest,
+                    p_name: name, p_mime: mime, p_size: size, p_client_id: clientId, p_sha256: incomingDigest,
                 })
                 : companyUpload
-                ? await user.rpc('reserve_organisation_contract', {p_organisation_id: company, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc('reserve_organisation_contract', {p_organisation_id: company, p_name: name, p_size: size, p_client_id: clientId, p_sha256: incomingDigest})
                 : submissionRun
                 ? await user.rpc(assignmentSubmission ? 'reserve_course_assignment_submission'
                     : examSubmission ? 'reserve_course_exam_submission' : 'reserve_course_submission', {
-                    p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: bytes.length,
+                    p_run_id: submissionRun, p_name: name, p_mime: mime, p_size: size,
                     p_client_id: clientId, p_sha256: incomingDigest,
                     ...(assignmentSubmission ? {p_assignment_id: assignmentId} : {}),
                 })
                 : attendanceSession
-                ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc('reserve_academy_attendance_pdf', {p_session_id: attendanceSession, p_name: name, p_size: size, p_client_id: clientId, p_sha256: incomingDigest})
                 : chatRoom
-                ? await user.rpc('reserve_academy_course_chat_file', {p_room_id: chatRoom, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc('reserve_academy_course_chat_file', {p_room_id: chatRoom, p_name: name, p_mime: mime, p_size: size, p_client_id: clientId, p_sha256: incomingDigest})
                 : materialRun && examReservation
-                ? await user.rpc(examReservation, {p_run_id: materialRun, p_name: name, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc(examReservation, {p_run_id: materialRun, p_name: name, p_size: size, p_client_id: clientId, p_sha256: incomingDigest})
                 : materialRun
-                ? await user.rpc('reserve_academy_course_material', {p_run_id: materialRun, p_name: name, p_mime: mime, p_size: bytes.length, p_client_id: clientId, p_sha256: incomingDigest})
+                ? await user.rpc('reserve_academy_course_material', {p_run_id: materialRun, p_name: name, p_mime: mime, p_size: size, p_client_id: clientId, p_sha256: incomingDigest})
                 : messageOnly === 'true'
-                ? await user.rpc(courseChat === 'true' ? 'reserve_course_chat_document' : 'reserve_message_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_room_id: roomId, p_client_id: clientId})
-                : await user.rpc('reserve_document', {p_name: name, p_mime: mime, p_size: bytes.length, p_scope: scope, p_kind: kind, p_room_id: roomId, p_job_id: jobId, p_client_id: clientId, p_replace_id: replaceId, p_owner_id: ownerId});
+                ? await user.rpc(courseChat === 'true' ? 'reserve_course_chat_document' : 'reserve_message_document', {p_name: name, p_mime: mime, p_size: size, p_room_id: roomId, p_client_id: clientId})
+                : await user.rpc('reserve_document', {p_name: name, p_mime: mime, p_size: size, p_scope: scope, p_kind: kind, p_room_id: roomId, p_job_id: jobId, p_client_id: clientId, p_replace_id: replaceId, p_owner_id: ownerId});
             if (reserved.error) return reserved.error.code === 'PT409'
                 ? json(409, {error: 'idempotency_conflict'})
                 : json(403, {error: 'upload_not_allowed'});
@@ -345,14 +349,14 @@ Deno.serve(async (request: Request) => {
                     if (upload.error) return json(503, {error: 'upload_failed'});
                     acknowledgeQuarantine();
                 }
-                // Always verify the immutable stored object, including after an uncertain retry.
+                // Release the original buffer before materializing the immutable stored copy.
+                bytes = new Uint8Array();
+                // The stored bytes must match the format-validated input before malware verification.
                 const stored = await service.storage.from('portal-quarantine').download(reservation.object_path);
                 if (stored.error || !stored.data) return json(503, {error: 'upload_failed'});
-                const storedBytes = new Uint8Array(await stored.data.arrayBuffer());
-                const digest = await sha256FileHex(storedBytes);
-                if (digest !== incomingDigest) return json(409, {error: 'idempotency_conflict'});
-                await validateFile(storedBytes, name, mime, archiveFormat);
-                if (kind === 'avatar') await validateAvatar(storedBytes);
+                const storedBytes = await readMatchingFileBytes(stored.data, size, incomingDigest);
+                if (!storedBytes) return json(409, {error: 'idempotency_conflict'});
+                const digest = incomingDigest;
                 if (!protectedUpload) {
                     await service.from('document_versions').update({status: 'scanning'}).eq('id', reservation.version_id);
                     await service.from('documents').update({status: 'scanning'}).eq('id', doc.id).eq('current_version_id', reservation.version_id);
@@ -395,8 +399,7 @@ Deno.serve(async (request: Request) => {
                 } else {
                     const existingBytes = await service.storage.from('portal-clean').download(reservation.object_path);
                     if (existingBytes.error || !existingBytes.data) return json(503, {error: 'upload_failed'});
-                    const existingDigest = await sha256FileHex(await existingBytes.data.arrayBuffer());
-                    if (existingDigest !== digest) return json(409, {error: 'idempotency_conflict'});
+                    if (!await readMatchingFileBytes(existingBytes.data, size, digest)) return json(409, {error: 'idempotency_conflict'});
                 }
                 if (protectedUpload) {
                     try {

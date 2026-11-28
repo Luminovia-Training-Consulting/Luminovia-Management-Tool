@@ -146,6 +146,20 @@ Deno.test('empty/oversized/invalid binary text never passes content validation',
         assert(rejected)
     }
 });
+Deno.test('UTF-8 validation preserves split characters and fails on incomplete final input', async () => {
+    const prefix = 'a'.repeat(64 * 1024 - 1);
+    const bytes = new TextEncoder().encode(prefix + '📚');
+    assert(await validateFile(bytes, 'lesson.txt', 'text/plain') === 'text/plain');
+    for (const invalid of [bytes.subarray(0, bytes.length - 1), new TextEncoder().encode(prefix + '📚\u0000')]) {
+        let rejected = false;
+        try {
+            await validateFile(invalid, 'lesson.txt', 'text/plain');
+        } catch {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+});
 Deno.test('missing scanner fails closed before network or clean verdict', async () => {
     let rejected = false;
     try {
