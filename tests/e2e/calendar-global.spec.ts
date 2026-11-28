@@ -255,6 +255,7 @@ test("global calendar only transfers published course sessions in the visible ra
         ]));
         await adminLogin(page, admin);
         await page.goto("/calendar");
+        await page.getByRole("group", {name: "Kalenderansicht"}).getByRole("button", {name: "Tag", exact: true}).click();
         const broadReads: string[] = [];
         page.on("request", (request) => {
             const path = new URL(request.url()).pathname;
