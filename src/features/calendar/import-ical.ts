@@ -16,6 +16,15 @@ function isCancelled(component: ICAL.Component) {
   return component.getFirstPropertyValue("status") === "CANCELLED";
 }
 
+/** RFC 5545 DATE-TIME values name the first instant in a repeated local hour. */
+function firstLocalInstant(value: DateTime) {
+  return value.isOffsetFixed
+    ? value
+    : value
+        .getPossibleOffsets()
+        .reduce((first, candidate) => (candidate < first ? candidate : first));
+}
+
 /** Return the bounded, reviewed import preview using the file's explicit zones. */
 export function parseCalendarImport(
   source: string,
@@ -42,10 +51,7 @@ export function parseCalendarImport(
   )
     throw new Error("invalid_window");
   const startOfLocalDay = (day: DateTime) =>
-    day
-      .setZone(zone, { keepLocalTime: true })
-      .getPossibleOffsets()
-      .reduce((first, candidate) => (candidate < first ? candidate : first));
+    firstLocalInstant(day.setZone(zone, { keepLocalTime: true }));
   const windowStart = startOfLocalDay(firstDay);
   const windowEnd = startOfLocalDay(afterLastDay);
   const inWindow = (start: DateTime) =>
@@ -87,7 +93,7 @@ export function parseCalendarImport(
       { zone: timeZone },
     );
     if (!value.isValid) throw new Error("invalid_time");
-    return { value, zone: timeZone };
+    return { value: firstLocalInstant(value), zone: timeZone };
   }
 
   // ICAL's implicit exception discovery does not match series UIDs.

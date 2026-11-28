@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Settings } from "luxon";
 import { parseCalendarImport } from "./import-ical";
 
 const file = (...events: string[]) =>
@@ -72,6 +73,32 @@ describe("reviewed ICS import", () => {
       "2026-11-01T04:00:00.000Z",
       "2026-11-01T05:00:00.000Z",
     ]);
+  });
+  it("imports repeated local times at their first instant even when winter time is current", () => {
+    const previous = Settings.now;
+    try {
+      Settings.now = () => Date.parse("2026-01-01T12:00:00Z");
+      Settings.resetCaches();
+      const events = parse(
+        file(
+          "UID:local\r\nDTSTART;TZID=Europe/Berlin:20261025T023000\r\nDTEND;TZID=Europe/Berlin:20261025T033000",
+          "UID:recurring\r\nDTSTART:20261024T023000\r\nDTEND:20261024T033000\r\nRRULE:FREQ=DAILY;COUNT=2",
+          "UID:utc\r\nDTSTART:20261025T013000Z\r\nDTEND:20261025T023000Z",
+        ),
+        "2026-10-25",
+        "2026-10-25",
+      );
+      expect(
+        events.map(({ starts_at, ends_at }) => [starts_at, ends_at]),
+      ).toEqual([
+        ["2026-10-25T00:30:00.000Z", "2026-10-25T02:30:00.000Z"],
+        ["2026-10-25T00:30:00.000Z", "2026-10-25T02:30:00.000Z"],
+        ["2026-10-25T01:30:00.000Z", "2026-10-25T02:30:00.000Z"],
+      ]);
+    } finally {
+      Settings.now = previous;
+      Settings.resetCaches();
+    }
   });
   it("rejects time components in date-only import boundaries", () => {
     expect(() => parse(file("UID:invalid"), "2026-03-01T12:00")).toThrow(
