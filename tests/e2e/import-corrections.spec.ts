@@ -114,7 +114,7 @@ test("course draft import corrects a rejected row and does not duplicate the fir
   );
 
   await importDialog.getByRole("button", { name: "Schließen" }).click();
-  const search = page.getByRole("searchbox", { name: "Suchen" });
+  const search = page.getByRole("searchbox", { name: "Suchen", exact: true });
   await search.fill(`missing ${template.id}`);
   await page
     .getByRole("button", { name: "Suche und Filter zurücksetzen" })

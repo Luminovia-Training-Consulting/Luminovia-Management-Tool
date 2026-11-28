@@ -68,7 +68,7 @@ test("course managers can review, archive and recover multiple courses", async (
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/courses");
-  await page.getByRole("searchbox", { name: "Suchen" }).fill(marker);
+  await page.getByRole("searchbox", { name: "Suchen", exact: true }).fill(marker);
   const choose = async () => {
     for (const { title } of courses) {
       const checkbox = page.getByRole("checkbox", {
