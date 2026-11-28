@@ -952,9 +952,12 @@ export function CalendarPage() {
   const searchTerm = useDeferredValue(search.trim().toLocaleLowerCase());
   const selectedTopics = useMemo(() => new Set(topicIds), [topicIds]);
   const customerUnavailable = Boolean(customer && !customers.has(customer));
-  const filtersActive = Boolean(
-    customer || topicIds.length || search || eventType !== "all",
-  );
+  const activeFilterCount =
+    Number(Boolean(customer)) +
+    topicIds.length +
+    Number(Boolean(search.trim())) +
+    Number(eventType !== "all");
+  const filtersActive = activeFilterCount > 0;
   const filtersReady = global
     ? publicRuns.isSuccess && !globals.isPending && !globalsFailed
     : !waitingForAnchor &&
@@ -1120,127 +1123,137 @@ export function CalendarPage() {
           }}
         />
       </div>
-      <div className="calendar-filters">
-        <Field id="calendar-customer" label={filterText("customer")}>
-          <select
-            id="calendar-customer"
-            value={customerUnavailable ? "unavailable" : customer}
-            onChange={(event) => setCustomer(event.target.value)}
-          >
-            <option value="">{filterText("allCustomers")}</option>
-            {/* Report the active filter without putting a previously authorised
-                name in the DOM. Some legacy company keys include that name. */}
-            {customerUnavailable && (
-              <option value="unavailable" disabled>
-                {filterText("unavailableCustomer")}
-              </option>
-            )}
-            {customerOptions.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field id="calendar-topic" label={filterText("topics")}>
-          <select
-            id="calendar-topic"
-            value=""
-            onChange={(event) => {
-              if (event.target.value)
-                setTopicIds((current) => [
-                  ...new Set([...current, event.target.value]),
-                ]);
-            }}
-          >
-            <option value="">{filterText("addTopic")}</option>
-            {topicOptions
-              .filter((topic) => !selectedTopics.has(topic.id))
-              .map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {i18n.language.startsWith("de")
-                    ? topic.label_de
-                    : topic.label_en}
+      <details className="calendar-filter-menu">
+        <summary>
+          {filterText("filters")}
+          {filtersActive && (
+            <span className="calendar-filter-count">
+              {filterText("activeFilters", { count: activeFilterCount })}
+            </span>
+          )}
+        </summary>
+        <div className="calendar-filters">
+          <Field id="calendar-customer" label={filterText("customer")}>
+            <select
+              id="calendar-customer"
+              value={customerUnavailable ? "unavailable" : customer}
+              onChange={(event) => setCustomer(event.target.value)}
+            >
+              <option value="">{filterText("allCustomers")}</option>
+              {/* Report the active filter without putting a previously authorised
+                  name in the DOM. Some legacy company keys include that name. */}
+              {customerUnavailable && (
+                <option value="unavailable" disabled>
+                  {filterText("unavailableCustomer")}
+                </option>
+              )}
+              {customerOptions.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
                 </option>
               ))}
-          </select>
-        </Field>
-        <Field id="calendar-search" label={filterText("search")}>
-          <input
-            id="calendar-search"
-            ref={searchField}
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </Field>
-        <Field id="calendar-event-type" label={filterText("type")}>
-          <select
-            id="calendar-event-type"
-            value={eventType}
-            onChange={(event) => setEventType(event.target.value)}
-          >
-            <option value="all">{filterText("all")}</option>
-            {(global ? ["global", "course"] : ["private", "assignment"]).map(
-              (kind) => (
-                <option key={kind} value={kind}>
-                  {filterText(kind)}
-                </option>
-              ),
-            )}
-          </select>
-        </Field>
-      </div>
-      {topicIds.length > 0 && (
-        <div
-          className="calendar-topic-tags"
-          aria-label={filterText("selectedTopics")}
-        >
-          {topicIds.map((id) => {
-            const topic = eventTopics.get(id);
-            const label = topic
-              ? i18n.language.startsWith("de")
-                ? topic.label_de
-                : topic.label_en
-              : filterText("unavailableTopic");
-            return (
-              <Button
-                key={id}
-                type="button"
-                variant="secondary"
-                size="sm"
-                aria-label={filterText("removeTopic", { topic: label })}
-                onClick={() =>
-                  setTopicIds((current) =>
-                    current.filter((value) => value !== id),
-                  )
-                }
-              >
-                {label}
-                <X size={14} aria-hidden="true" />
-              </Button>
-            );
-          })}
+            </select>
+          </Field>
+          <Field id="calendar-topic" label={filterText("topics")}>
+            <select
+              id="calendar-topic"
+              value=""
+              onChange={(event) => {
+                if (event.target.value)
+                  setTopicIds((current) => [
+                    ...new Set([...current, event.target.value]),
+                  ]);
+              }}
+            >
+              <option value="">{filterText("addTopic")}</option>
+              {topicOptions
+                .filter((topic) => !selectedTopics.has(topic.id))
+                .map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {i18n.language.startsWith("de")
+                      ? topic.label_de
+                      : topic.label_en}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field id="calendar-search" label={filterText("search")}>
+            <input
+              id="calendar-search"
+              ref={searchField}
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </Field>
+          <Field id="calendar-event-type" label={filterText("type")}>
+            <select
+              id="calendar-event-type"
+              value={eventType}
+              onChange={(event) => setEventType(event.target.value)}
+            >
+              <option value="all">{filterText("all")}</option>
+              {(global ? ["global", "course"] : ["private", "assignment"]).map(
+                (kind) => (
+                  <option key={kind} value={kind}>
+                    {filterText(kind)}
+                  </option>
+                ),
+              )}
+            </select>
+          </Field>
         </div>
-      )}
-      <div className="calendar-filter-summary">
-        <p>{filterText("scope")}</p>
-        {filtersActive && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setCustomer("");
-              setTopicIds([]);
-              setSearch("");
-              setEventType("all");
-              searchField.current?.focus();
-            }}
+        {topicIds.length > 0 && (
+          <div
+            className="calendar-topic-tags"
+            aria-label={filterText("selectedTopics")}
           >
-            {filterText("clear")}
-          </Button>
+            {topicIds.map((id) => {
+              const topic = eventTopics.get(id);
+              const label = topic
+                ? i18n.language.startsWith("de")
+                  ? topic.label_de
+                  : topic.label_en
+                : filterText("unavailableTopic");
+              return (
+                <Button
+                  key={id}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  aria-label={filterText("removeTopic", { topic: label })}
+                  onClick={() =>
+                    setTopicIds((current) =>
+                      current.filter((value) => value !== id),
+                    )
+                  }
+                >
+                  {label}
+                  <X size={14} aria-hidden="true" />
+                </Button>
+              );
+            })}
+          </div>
         )}
-      </div>
+        <div className="calendar-filter-summary">
+          <p>{filterText("scope")}</p>
+          {filtersActive && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setCustomer("");
+                setTopicIds([]);
+                setSearch("");
+                setEventType("all");
+                searchField.current?.focus();
+              }}
+            >
+              {filterText("clear")}
+            </Button>
+          )}
+        </div>
+      </details>
       {message && <Notice>{message}</Notice>}
       <div className="panel calendar-panel">
         <CalendarToolbar

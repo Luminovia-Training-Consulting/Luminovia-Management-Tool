@@ -42,6 +42,8 @@ const values = {
     "Wähle einen Unterrichtstag oder einen Zeitraum im Kalender. Bei einer ganztägigen Auswahl startet der Entwurf am ersten Tag.",
     "Choose a teaching date or time range on the calendar. An all-day selection starts the draft on the first day.",
   ],
+  filters: ["Kalenderfilter", "Calendar filters"],
+  activeFilters: ["{{count}} aktiv", "{{count}} active"],
   customer: ["Unternehmen", "Company"],
   allCustomers: ["Alle Unternehmen", "All companies"],
   unavailableCustomer: [

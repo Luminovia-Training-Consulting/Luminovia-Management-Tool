@@ -111,12 +111,42 @@
   outline-offset: 3px;
 }
 
+.calendar-filter-menu {
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.calendar-filter-menu > summary {
+  min-height: 44px;
+  padding-block: 11px;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.calendar-filter-menu > summary:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.calendar-filter-count {
+  margin-inline-start: 0.65rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .calendar-filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px 18px;
   align-items: start;
-  margin-bottom: 18px;
+  margin-block: 4px 12px;
 }
 
 .calendar-filters > .field {
@@ -312,11 +342,12 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  padding-bottom: 12px;
 }
 
 .calendar-filter-summary p {
   flex: 1 1 20rem;
+  margin: 0;
   color: var(--muted);
   font-size: 0.85rem;
 }

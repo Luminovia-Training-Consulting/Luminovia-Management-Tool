@@ -389,6 +389,7 @@ it("keeps a populated grid stable when the search input changes without changing
   expect(await within(grid).findAllByText(/^Planning /)).toHaveLength(200);
   const renders = state.callbacks.length;
 
+  fireEvent.click(screen.getByText("Kalenderfilter", { exact: true }));
   const search = screen.getByRole("searchbox", {
     name: "Kalendertermine suchen",
   });
@@ -503,10 +504,21 @@ it("filters loaded private, assignment, global and course titles without extra q
   const user = userEvent.setup();
   await screen.findByText("Private planning");
   expect(await screen.findByText("Teaching assignment")).toBeInTheDocument();
+  const filterSummary = screen.getByText("Kalenderfilter", { exact: true });
+  const filterMenu = filterSummary.closest("details");
+  expect(filterMenu).not.toHaveAttribute("open");
+  await user.click(filterSummary);
+  expect(filterMenu).toHaveAttribute("open");
   const search = screen.getByLabelText("Kalendertermine suchen");
   await user.type(search, "PLANNING");
   expect(screen.getByText("Private planning")).toBeInTheDocument();
   expect(screen.queryByText("Teaching assignment")).not.toBeInTheDocument();
+  expect(filterSummary).toHaveTextContent("1 aktiv");
+  await user.click(filterSummary);
+  expect(filterMenu).not.toHaveAttribute("open");
+  expect(screen.queryByText("Teaching assignment")).not.toBeInTheDocument();
+  await user.click(filterSummary);
+  expect(search).toHaveValue("PLANNING");
   await user.clear(search);
   await user.selectOptions(screen.getByLabelText("Terminart"), "assignment");
   expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
@@ -519,6 +531,8 @@ it("filters loaded private, assignment, global and course titles without extra q
   expect(screen.queryByText("Global seminar")).not.toBeInTheDocument();
   expect(screen.getByText("Published course")).toBeInTheDocument();
   await act(() => i18n.changeLanguage("en"));
+  expect(filterSummary).toHaveTextContent("Calendar filters");
+  expect(filterSummary).toHaveTextContent("1 active");
   expect(screen.getByLabelText("Event type")).toHaveValue("course");
   await user.type(screen.getByLabelText("Search calendar events"), "missing");
   expect(screen.queryByText("Published course")).not.toBeInTheDocument();
@@ -1394,6 +1408,7 @@ it("filters confirmed course sessions by customer and any selected topic while r
   );
   const user = userEvent.setup();
   await screen.findByRole("link", { name: "Python course" });
+  await user.click(screen.getByText("Kalenderfilter", { exact: true }));
   await user.selectOptions(screen.getByLabelText("Unternehmen"), customerA);
   expect(screen.getByRole("link", { name: "Python course" })).toBeVisible();
   expect(
