@@ -17,6 +17,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import type { CourseOverview } from "./api";
 import { LearningHubPage } from "./course-hub";
+import * as phases from "./course-phase";
 import type { MaterialMetadata } from "./material-metadata-schema";
 
 const fixture = vi.hoisted(() => ({
@@ -26,6 +27,7 @@ const fixture = vi.hoisted(() => ({
     organisation_name: string;
     version: number;
   }[],
+  courseReads: 0,
   courseRead: undefined as Promise<void> | undefined,
   materials: [] as {
     id: string;
@@ -57,43 +59,53 @@ vi.mock("../../lib/supabase", () => ({
     rpc: (name: string, args: (typeof fixture.calls)[number] = {}) =>
       name === "set_course_material_metadata"
         ? fixture.revise(args)
-        : {
-            abortSignal: async () => {
-              await fixture.courseRead;
-              if (name === "search_course_materials") {
-                fixture.calls.push(args);
-                const offset = args.p_offset ?? 0;
-                if (offset && fixture.nextPageForbidden)
-                  return { data: null, error: { code: "42501" }, status: 403 };
-                const matches = fixture.materials.filter(
-                  (file) =>
-                    (!args.p_course_id ||
-                      args.p_course_id === file.course_id) &&
-                    (args.p_category === "archived"
-                      ? file.metadata?.library_archived === true
-                      : !file.metadata?.library_archived &&
-                        (args.p_category === "master"
-                          ? file.metadata?.library_master === true
-                          : !args.p_category ||
-                            args.p_category === file.category)) &&
-                    file.name
-                      .toLowerCase()
-                      .includes((args.p_search ?? "").toLowerCase()),
-                );
+        : name === "published_course_exam_results"
+          ? Promise.resolve({
+              data: { average: null, results: [] },
+              error: null,
+            })
+          : {
+              abortSignal: async () => {
+                if (name === "my_course_workspaces") fixture.courseReads++;
+                await fixture.courseRead;
+                if (name === "search_course_materials") {
+                  fixture.calls.push(args);
+                  const offset = args.p_offset ?? 0;
+                  if (offset && fixture.nextPageForbidden)
+                    return {
+                      data: null,
+                      error: { code: "42501" },
+                      status: 403,
+                    };
+                  const matches = fixture.materials.filter(
+                    (file) =>
+                      (!args.p_course_id ||
+                        args.p_course_id === file.course_id) &&
+                      (args.p_category === "archived"
+                        ? file.metadata?.library_archived === true
+                        : !file.metadata?.library_archived &&
+                          (args.p_category === "master"
+                            ? file.metadata?.library_master === true
+                            : !args.p_category ||
+                              args.p_category === file.category)) &&
+                      file.name
+                        .toLowerCase()
+                        .includes((args.p_search ?? "").toLowerCase()),
+                  );
+                  return {
+                    data: matches.slice(offset, offset + 25),
+                    error: null,
+                  };
+                }
                 return {
-                  data: matches.slice(offset, offset + 25),
+                  data:
+                    name === "my_course_workspaces"
+                      ? fixture.courses
+                      : fixture.invitations,
                   error: null,
                 };
-              }
-              return {
-                data:
-                  name === "my_course_workspaces"
-                    ? fixture.courses
-                    : fixture.invitations,
-                error: null,
-              };
+              },
             },
-          },
     from: () => ({
       select: () => ({
         eq: async () => ({
@@ -112,6 +124,7 @@ function date(offset: number) {
 
 beforeEach(async () => {
   await i18n.changeLanguage("de");
+  fixture.courseReads = 0;
   fixture.courseRead = undefined;
   fixture.invitations = [];
   fixture.materials = [];
@@ -222,6 +235,73 @@ it("groups current, next and past courses and preserves a direct scoped chat des
   fireEvent(window, new Event("offline"));
   expect(await screen.findByText(/Verbinde dich|Offline/)).toBeVisible();
   expect(screen.queryByText("Fictional company A")).toBeNull();
+});
+
+it("loads results without polling the course list, then fetches courses when opening their dashboard", async () => {
+  vi.useFakeTimers();
+  try {
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/learning?view=results"]}>
+          <LearningHubPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_050);
+    });
+    expect(
+      screen.getByRole("heading", { name: "Klausurergebnisse" }),
+    ).toBeVisible();
+    expect(fixture.courseReads).toBe(0);
+
+    fireEvent.click(screen.getByRole("link", { name: "Kursübersicht" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(screen.getByRole("link", { name: "Current course" })).toBeVisible();
+    expect(fixture.courseReads).toBe(1);
+
+    fireEvent.click(screen.getByRole("link", { name: "Klausurergebnisse" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_050);
+    });
+    expect(
+      screen.getByRole("heading", { name: "Klausurergebnisse" }),
+    ).toBeVisible();
+    expect(fixture.courseReads).toBe(1);
+  } finally {
+    cleanup();
+    vi.useRealTimers();
+  }
+});
+
+it("reuses one classification per course when changing the displayed phase", async () => {
+  const classify = vi.spyOn(phases, "coursePhase");
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <LearningHubPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: "Current course" });
+  expect(classify).toHaveBeenCalledTimes(fixture.courses.length);
+  classify.mockClear();
+
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Kurse nach Zeitraum filtern" }),
+    {
+      target: { value: "upcoming" },
+    },
+  );
+
+  expect(screen.getByRole("link", { name: "Upcoming course" })).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Current course" }),
+  ).not.toBeInTheDocument();
+  expect(classify).not.toHaveBeenCalled();
 });
 
 it("waits for current company courses and invitations after reconnecting with a warm cache", async () => {

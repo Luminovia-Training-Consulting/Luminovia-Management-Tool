@@ -98,3 +98,30 @@ Deno.test("dedicated PDF metadata uses the issued academy brand and leaves the i
     const repeat = await renderFactPdf("completion", issued, font);
     assert(repeat.length === bytes.length && repeat.every((byte, index) => byte === bytes[index]));
 });
+
+Deno.test("a course attendance report indexes sessions once and keeps roster order and missing dates", () => {
+    let idReads = 0;
+    const sessions = Array.from({length: 250}, (_, i) => ({
+        get id() {
+            idReads++;
+            return `session-${i}`;
+        },
+        starts_at: new Date(Date.UTC(2026, 0, 1 + i, 9)).toISOString(),
+    }));
+    const entries = [
+        {session_id: "session-249", state: "attended", minutes: 60},
+        {session_id: "session-1", state: "excused", minutes: 0},
+        {session_id: "missing", state: "unverified", minutes: 0},
+    ];
+    const roster = Array.from({length: 50}, (_, i) => ({
+        name: `Fictional attendee ${i}`,
+        sessions: entries,
+    }));
+    const lines = factLines("attendance", {id: facts.id, course: facts.course, sessions, roster});
+    const section = lines.indexOf("Teilnehmende Person / Participant: Fictional attendee 49");
+    assert(section >= 0);
+    assert(lines[section + 1] === `${sessions[249].starts_at} | attended | 60 min`);
+    assert(lines[section + 2] === `${sessions[1].starts_at} | excused | 0 min`);
+    assert(lines[section + 3] === "- | unverified | 0 min");
+    assert(idReads === sessions.length, `Expected one lookup per session, got ${idReads}`);
+});

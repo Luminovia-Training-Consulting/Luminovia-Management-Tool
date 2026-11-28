@@ -3,6 +3,7 @@
  * context separately; access errors must not present retained comments as still authorized.
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
+import { canRetryNextPage } from "../../lib/paged-read";
 import { callRpc } from "../../lib/rpc";
 import { orderedCursorRows } from "../../lib/cursor-rows";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
@@ -19,7 +20,13 @@ import { requireOnline, useOnline } from "../../lib/online";
 import { dateTime } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
-import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import {
+  ErrorState,
+  Field,
+  Loading,
+  NextPageError,
+  Notice,
+} from "../../components/common";
 import {
   commentContextQuery,
   commentError,
@@ -303,7 +310,8 @@ function CommentThread({
     ) : (
       <ErrorState retry={() => void access.refetch()} />
     );
-  if (comments.isError)
+  const retryNext = canRetryNextPage(comments);
+  if (comments.isError && !retryNext)
     return isDatabasePermissionDenied(comments.error) ? (
       <p className="muted">{t("denied")}</p>
     ) : (
@@ -362,14 +370,23 @@ function CommentThread({
       ) : (
         <p className="comment-empty">{t("empty")}</p>
       )}
-      {comments.hasNextPage && (
-        <Button
-          variant="secondary"
-          disabled={comments.isFetchingNextPage}
-          onClick={() => void comments.fetchNextPage()}
-        >
-          {t("older")}
-        </Button>
+      {retryNext ? (
+        <NextPageError
+          disabled={!online || comments.isFetching}
+          retry={() => void comments.fetchNextPage({ cancelRefetch: false })}
+        />
+      ) : (
+        comments.hasNextPage && (
+          <Button
+            variant="secondary"
+            disabled={!online || comments.isFetching}
+            onClick={() =>
+              void comments.fetchNextPage({ cancelRefetch: false })
+            }
+          >
+            {t("older")}
+          </Button>
+        )
       )}
     </section>
   );

@@ -125,3 +125,29 @@ Deno.test("calendar escaping and UTF8 folding prevent authored property injectio
     );
     assert(!unfolded.includes("\r\nATTENDEE:"));
 });
+Deno.test("large Unicode feeds fold without encoding each character separately", () => {
+    const encoder = new TextEncoder();
+    const original = TextEncoder.prototype.encode;
+    let encodeCalls = 0;
+    TextEncoder.prototype.encode = function (value) {
+        encodeCalls++;
+        return original.call(this, value);
+    };
+    const title = `${"a".repeat(65)}ä水👩\uD800\uFFFD`;
+    const items = Array.from({length: 2000}, (_, i) => ({
+        ...item,
+        id: item.id.slice(0, -4) + i.toString(16).padStart(4, "0"),
+        title,
+    }));
+    let content;
+    try {
+        content = renderCalendar({label: "Fictional calendar", items});
+    } finally {
+        TextEncoder.prototype.encode = original;
+    }
+    const lines = content.split("\r\n");
+    assert(lines.every((line) => encoder.encode(line).length <= 75));
+    assert(content.includes(`SUMMARY:${"a".repeat(65)}ä\r\n 水👩\uD800\uFFFD`));
+    assert(lines.filter((line) => line === "END:VEVENT").length === 2000);
+    assert(encodeCalls <= 1, `Expected one final size check, got ${encodeCalls} encodes`);
+});

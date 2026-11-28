@@ -119,6 +119,13 @@ export function factLines(kind: string, facts: Facts): string[] {
             `Kurs-ID / Course ID: ${printable(facts.id)}`,
         ];
         const exact = facts.report_scope === "session";
+        const startsBySession = new Map<unknown, unknown>();
+        if (!exact) {
+            for (const session of sessions) {
+                const id = session.id;
+                if (!startsBySession.has(id)) startsBySession.set(id, session.starts_at);
+            }
+        }
         const format = exact
             ? new Intl.DateTimeFormat("de-DE", {
                 timeZone: String(facts.time_zone),
@@ -160,8 +167,8 @@ export function factLines(kind: string, facts: Facts): string[] {
                         );
                     }
                 } else {
-                    const session = sessions.find((item) => item.id === attendance.session_id);
-                    lines.push(`${printable(session?.starts_at)} | ${printable(attendance.state)} | ${printable(attendance.minutes)} min`);
+                    const startsAt = startsBySession.get(attendance.session_id);
+                    lines.push(`${printable(startsAt)} | ${printable(attendance.state)} | ${printable(attendance.minutes)} min`);
                 }
             }
         }

@@ -4,7 +4,8 @@
  */
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { callRpc } from "../../lib/rpc";
+import { throwPagedReadError } from "../../lib/paged-read";
+import { db } from "../../lib/supabase";
 
 /** The two explicitly supported comment resource types. */
 export type CommentResource = "job" | "template";
@@ -52,8 +53,14 @@ export const commentContextQuery = (
 ) =>
   queryOptions({
     queryKey: commentKeys.context(actor, kind, id),
-    queryFn: () =>
-      callRpc<CommentContext>("comment_context", { p_kind: kind, p_id: id }),
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .rpc("comment_context", { p_kind: kind, p_id: id })
+        .abortSignal(signal);
+      signal.throwIfAborted();
+      if (error) throw error;
+      return data as CommentContext;
+    },
     retry: (count, error) => !isDatabasePermissionDenied(error) && count < 2,
     refetchInterval: 15000,
   });
@@ -66,14 +73,20 @@ export const resourceCommentsQuery = (
   infiniteQueryOptions({
     queryKey: commentKeys.list(actor, kind, id),
     initialPageParam: null as CommentCursor | null,
-    queryFn: ({ pageParam }) =>
-      callRpc<ResourceComment[]>("resource_comments", {
-        p_kind: kind,
-        p_id: id,
-        p_before_at: pageParam?.at ?? null,
-        p_before_id: pageParam?.id ?? null,
-        p_limit: 40,
-      }),
+    queryFn: async ({ pageParam, signal }) => {
+      const { data, error, status } = await db()
+        .rpc("resource_comments", {
+          p_kind: kind,
+          p_id: id,
+          p_before_at: pageParam?.at ?? null,
+          p_before_id: pageParam?.id ?? null,
+          p_limit: 40,
+        })
+        .abortSignal(signal);
+      signal.throwIfAborted();
+      if (error) throwPagedReadError(error, status);
+      return data as ResourceComment[];
+    },
     // Timestamp plus ID stays stable when creation times coincide. Only a full page
     // can have a continuation; the caller merges any overlap.
     getNextPageParam: (page): CommentCursor | undefined => {

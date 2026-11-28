@@ -1,3 +1,4 @@
+/** Render private iCalendar feeds and recheck access before returning their contents. */
 interface FeedEvent {
     id: string;
     kind: "assignment" | "private";
@@ -17,6 +18,8 @@ interface Dependencies {
     recheck: (hash: string, signal: AbortSignal) => Promise<boolean>;
 }
 
+const utf8 = new TextEncoder();
+
 const headers = {
     "Cache-Control": "private, no-store, max-age=0",
     "Pragma": "no-cache",
@@ -32,18 +35,25 @@ function escaped(value: string) {
         .replace(/,/g, "\\,");
 }
 
+/** Fold at 75 UTF-8 bytes, keeping Unicode code points together. */
 function fold(line: string) {
-    let result = "", bytes = 0;
+    let result = "", start = 0, offset = 0, bytes = 0;
     for (const char of line) {
-        const size = new TextEncoder().encode(char).length;
+        // Lone surrogates count as three bytes, like TextEncoder's replacement.
+        const codePoint = char.codePointAt(0)!;
+        const size = codePoint <= 0x7f ? 1
+            : codePoint <= 0x7ff ? 2
+            : codePoint <= 0xffff ? 3
+            : 4;
         if (bytes + size > 75) {
-            result += "\r\n ";
+            result += line.slice(start, offset) + "\r\n ";
+            start = offset;
             bytes = 1;
         }
-        result += char;
         bytes += size;
+        offset += char.length;
     }
-    return result;
+    return start === 0 ? line : result + line.slice(start);
 }
 
 function instant(value: string) {
@@ -87,7 +97,7 @@ export function renderCalendar(snapshot: Snapshot) {
         );
     }
     const text = [...lines, "END:VCALENDAR", ""].map(fold).join("\r\n");
-    if (new TextEncoder().encode(text).length > 2_000_000) {
+    if (utf8.encode(text).length > 2_000_000) {
         throw new Error("feed_too_large");
     }
     return text;
@@ -113,7 +123,7 @@ export function createCalendarFeedHandler(deps: Dependencies) {
             ) return unavailable();
             const bytes = await crypto.subtle.digest(
                 "SHA-256",
-                new TextEncoder().encode(tokens[0]),
+                utf8.encode(tokens[0]),
             );
             const hash = [...new Uint8Array(bytes)].map((byte) =>
                 byte.toString(16).padStart(2, "0")

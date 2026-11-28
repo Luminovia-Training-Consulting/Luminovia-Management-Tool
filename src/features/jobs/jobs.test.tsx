@@ -168,7 +168,9 @@ it("opens description and coordinated course dates from the course action row", 
       data:
         name === "job_related_navigation"
           ? { course_id: courseId, rooms: [] }
-          : null,
+          : name === "comment_context"
+            ? { can_post: true, can_moderate: true }
+            : [],
       error: null,
     }),
   }));

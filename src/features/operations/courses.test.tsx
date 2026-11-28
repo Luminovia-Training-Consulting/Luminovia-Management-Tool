@@ -600,8 +600,15 @@ it.each([
     const sharedRpc = state.rpc.getMockImplementation()!;
     state.rpc.mockImplementation(
       (name: string, args: Record<string, unknown>) => {
+        if (name === "comment_context")
+          return {
+            abortSignal: async () => ({
+              data: { can_post: true, can_moderate: true },
+              error: null,
+            }),
+          };
         if (name === "resource_comments")
-          return Promise.resolve({ data: [], error: null });
+          return { abortSignal: async () => ({ data: [], error: null }) };
         if (name === "course_creator_drafts")
           return {
             abortSignal: async () => ({

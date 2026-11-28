@@ -1,6 +1,6 @@
 /** Lists current courses using only the signed-in actor's live access projection. */
 import { PublishedExamResults } from "./timed-exam";
-import { useContext, lazy, Suspense, useState } from "react";
+import { useContext, lazy, Suspense, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -28,6 +28,7 @@ import { courseHubQuery, type CourseOverview } from "./api";
 import {
   coursePhase,
   coursePhases,
+  type CoursePhase,
   type CoursePhaseSelection,
 } from "./course-phase";
 import { CoursePhaseFilter } from "./course-phase-filter";
@@ -156,12 +157,36 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
   const [selection, setSelection] = useState<CoursePhaseSelection>("all");
   const query = useQuery({
     ...courseHubQuery(actor),
-    enabled: !programmes && !portfolio,
+    // Only the dashboard and material selector consume the scoped course list.
+    enabled: dashboard || materials,
     staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: 10_000,
     retry: false,
   });
+
+  const { data: courses, dataUpdatedAt } = query;
+  const phaseGroups = useMemo(() => {
+    const groups: Record<CoursePhase, CourseOverview[]> = {
+      current: [],
+      upcoming: [],
+      completed: [],
+      unscheduled: [],
+    };
+    if (dashboard && courses) {
+      for (const course of courses) {
+        const phase = coursePhase(
+          course.starts_at,
+          course.ends_at,
+          dataUpdatedAt,
+        );
+        groups[phase].push(course);
+      }
+      // The server returns newest starts first. Upcoming courses are nearest first.
+      groups.upcoming.reverse();
+    }
+    return groups;
+  }, [courses, dashboard, dataUpdatedAt]);
 
   return (
     <div className="course-learning-hub">
@@ -261,28 +286,14 @@ function ConnectedLearningHub({ academy }: { academy?: "active" | "grace" }) {
               onChange={setSelection}
             />
           </section>
-          {selection !== "all" &&
-            !query.data.some(
-              (course) =>
-                coursePhase(
-                  course.starts_at,
-                  course.ends_at,
-                  query.dataUpdatedAt,
-                ) === selection,
-            ) && <div className="empty-state">{t("noCoursesInPhase")}</div>}
+          {selection !== "all" && phaseGroups[selection].length === 0 && (
+            <div className="empty-state">{t("noCoursesInPhase")}</div>
+          )}
           {coursePhases
             .filter((group) => selection === "all" || group === selection)
             .map((group) => {
-              const courses = query.data.filter(
-                (course) =>
-                  coursePhase(
-                    course.starts_at,
-                    course.ends_at,
-                    query.dataUpdatedAt,
-                  ) === group,
-              );
+              const courses = phaseGroups[group];
               if (courses.length === 0) return null;
-              if (group === "upcoming") courses.reverse();
               return (
                 <section
                   className="course-hub-group"
