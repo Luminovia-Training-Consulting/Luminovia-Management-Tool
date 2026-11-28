@@ -352,7 +352,7 @@ Deno.serve(async (request: Request) => {
                 // Release the original buffer before materializing the immutable stored copy.
                 bytes = new Uint8Array();
                 // The stored bytes must match the format-validated input before malware verification.
-                const stored = await service.storage.from('portal-quarantine').download(reservation.object_path);
+                const stored = await service.storage.from('portal-quarantine').download(reservation.object_path).asStream();
                 if (stored.error || !stored.data) return json(503, {error: 'upload_failed'});
                 const storedBytes = await readMatchingFileBytes(stored.data, size, incomingDigest);
                 if (!storedBytes) return json(409, {error: 'idempotency_conflict'});
@@ -397,7 +397,7 @@ Deno.serve(async (request: Request) => {
                     if (clean.error) return json(503, {error: 'upload_failed'});
                     acknowledgeClean();
                 } else {
-                    const existingBytes = await service.storage.from('portal-clean').download(reservation.object_path);
+                    const existingBytes = await service.storage.from('portal-clean').download(reservation.object_path).asStream();
                     if (existingBytes.error || !existingBytes.data) return json(503, {error: 'upload_failed'});
                     if (!await readMatchingFileBytes(existingBytes.data, size, digest)) return json(409, {error: 'idempotency_conflict'});
                 }

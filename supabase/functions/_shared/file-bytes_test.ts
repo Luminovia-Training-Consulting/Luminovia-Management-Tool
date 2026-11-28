@@ -42,27 +42,42 @@ Deno.test("a shared buffer becomes an isolated snapshot of only the selected byt
 Deno.test("stored upload must match both the expected size and digest", async () => {
   const expected = new Blob(["original"]);
   const digest = await sha256FileHex(await expected.arrayBuffer());
-  if (!await readMatchingFileBytes(expected, expected.size, digest)) {
+  if (!await readMatchingFileBytes(expected.stream(), expected.size, digest)) {
     throw new Error("identical stored upload was rejected");
   }
   if (
-    await readMatchingFileBytes(new Blob(["modified"]), expected.size, digest)
-  ) {
-    throw new Error("different bytes at the expected size were accepted");
-  }
-
-  class UnexpectedSize extends Blob {
-    override arrayBuffer(): Promise<ArrayBuffer> {
-      throw new Error("oversized upload must be rejected before reading");
-    }
-  }
-  if (
     await readMatchingFileBytes(
-      new UnexpectedSize(["too long!"]),
+      new Blob(["modified"]).stream(),
+      expected.size,
+      digest,
+    ) ||
+    await readMatchingFileBytes(
+      new Blob(["short"]).stream(),
       expected.size,
       digest,
     )
   ) {
+    throw new Error("modified or incomplete stored upload was accepted");
+  }
+});
+
+Deno.test("stored upload cancels overlong content without waiting for the rest", async () => {
+  let cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([1, 2]));
+      controller.enqueue(new Uint8Array([3, 4]));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  if (await readMatchingFileBytes(stream, 3, "")) {
     throw new Error("oversized stored upload was accepted");
+  }
+  if (!cancelled || stream.locked) {
+    throw new Error(
+      "oversized stored upload did not release its underlying stream",
+    );
   }
 });

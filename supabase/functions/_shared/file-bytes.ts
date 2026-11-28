@@ -18,15 +18,30 @@ export async function sha256FileHex(
   ).join("");
 }
 
-/** Accept a stored object only when it matches the validated upload exactly. */
+/** Verify the stored upload with one bounded buffer for the scanner and promotion. */
 export async function readMatchingFileBytes(
-  object: Blob,
+  stream: ReadableStream<Uint8Array>,
   size: number,
   digest: string,
 ): Promise<Uint8Array<ArrayBuffer> | null> {
-  if (object.size !== size) return null;
-  const bytes = new Uint8Array(await object.arrayBuffer());
-  return bytes.byteLength === size && await sha256FileHex(bytes) === digest
+  const bytes = new Uint8Array(size);
+  const reader = stream.getReader();
+  let offset = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value.byteLength > size - offset) {
+        void reader.cancel().catch(() => undefined);
+        return null;
+      }
+      bytes.set(value, offset);
+      offset += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return offset === size && await sha256FileHex(bytes) === digest
     ? bytes
     : null;
 }
