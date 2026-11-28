@@ -45,6 +45,46 @@ test("bisects the export limit before checking off a complete time window", asyn
   ]);
 });
 
+test("resumes a dense export across the per-course budget without replaying acknowledged ranges", async () => {
+  const exported = [];
+  let saved = { version: 1, courses: {} };
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const state = JSON.parse(JSON.stringify(saved));
+    let probes = 0;
+    const [report] = await dispatchCourseArchives({
+      courses: [{ id: course, from: midnight }],
+      state,
+      now: fixtureTime,
+      exportWindow: (_id, from, until) => {
+        probes++;
+        return Date.parse(until) - Date.parse(from) > 240_000
+          ? { overflow: true }
+          : { from, until };
+      },
+      deliver: ({ from, until }) => {
+        exported.push([from, until]);
+        return accepted;
+      },
+      save: (next) => {
+        saved = JSON.parse(JSON.stringify(next));
+      },
+    });
+    assert.ok(probes <= 12);
+    if (report.failure === null) {
+      assert.equal(report.through, end);
+      break;
+    }
+    assert.equal(report.failure, "window_budget");
+    assert.equal(report.through, midnight);
+  }
+  assert.equal(exported.length, 16);
+  assert.equal(exported[0][0], midnight);
+  for (let index = 1; index < exported.length; index++)
+    assert.equal(exported[index][0], exported[index - 1][1]);
+  assert.equal(exported.at(-1)[1], end);
+  assert.deepEqual(saved, { version: 1, courses: { [course]: end } });
+});
+
 test("keeps an unpersisted checkpoint unchanged and still processes a second course", async () => {
   const state = { version: 1, courses: { [course]: halfHour } };
   const reports = await dispatchCourseArchives({
@@ -66,7 +106,7 @@ test("keeps an unpersisted checkpoint unchanged and still processes a second cou
   assert.equal(state.courses[other], end);
 });
 
-test("restarts a partial delivery from the saved range with unchanged statement IDs", async (context) => {
+test("restarts partial and subdivided deliveries from the actual checkpoint file", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "lms-xapi-dispatch-"));
   context.after(() => rm(directory, { recursive: true }));
   const config = join(directory, "courses.json");
@@ -90,6 +130,7 @@ test("restarts a partial delivery from the saved range with unchanged statement 
   const received = [];
   const attempts = [];
   let rejectSecondStatement = true;
+  let exportLimit = Infinity;
   const server = createServer(async (request, response) => {
     const parts = [];
     for await (const buffer of request) parts.push(buffer);
@@ -113,11 +154,22 @@ test("restarts a partial delivery from the saved range with unchanged statement 
       assert.equal(body.p_run_id, course);
       attempts.push(body);
       response.setHeader("Content-Type", "application/json");
+      if (Date.parse(body.p_until) - Date.parse(body.p_from) > exportLimit) {
+        response
+          .writeHead(400)
+          .end(
+            JSON.stringify({ code: "54000", message: "Fixture export limit" }),
+          );
+        return;
+      }
       response.end(
         JSON.stringify({
           profile: "luminovia-lms-1",
           xapi_version: "1.0.3",
-          statements,
+          statements: statements.filter(
+            ({ timestamp }) =>
+              timestamp >= body.p_from && timestamp < body.p_until,
+          ),
         }),
       );
     } else {
@@ -159,5 +211,24 @@ test("restarts a partial delivery from the saved range with unchanged statement 
   assert.deepEqual(saved, {
     version: 1,
     courses: { [course]: complete.through },
+  });
+
+  exportLimit = 60_000;
+  const denseCheckpoint = join(directory, "dense-checkpoint.json");
+  const now = Date.parse(from) + 20 * 60_000;
+  const expectedThrough = new Date(now - 5 * 60_000).toISOString();
+  const [first] = await runXapiDispatchCli(config, denseCheckpoint, env, now);
+  assert.equal(first.failure, "window_budget");
+  const pause = JSON.parse(await readFile(denseCheckpoint, "utf8"));
+  assert.deepEqual(pause.courses, {});
+  assert.ok(pause.pending[course].ranges[0][0] > Date.parse(from));
+  const [second] = await runXapiDispatchCli(config, denseCheckpoint, env, now);
+  assert.equal(second.failure, "window_budget");
+  const [last] = await runXapiDispatchCli(config, denseCheckpoint, env, now);
+  assert.equal(last.failure, null);
+  assert.equal(last.through, expectedThrough);
+  assert.deepEqual(JSON.parse(await readFile(denseCheckpoint, "utf8")), {
+    version: 1,
+    courses: { [course]: expectedThrough },
   });
 });

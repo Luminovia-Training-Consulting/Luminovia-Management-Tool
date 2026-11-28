@@ -10,6 +10,8 @@ import { deliverXapiArchive, xapiServiceUrl } from "./xapi-lrs-delivery.mjs";
 const hour = 3_600_000;
 const day = 24 * hour;
 const timestamp = z.iso.datetime({ offset: true });
+// A daily window and its one-hour overlap can only split this many times at millisecond precision.
+const maxPendingRanges = Math.ceil(Math.log2(day + hour)) + 1;
 const courseList = z
   .strictObject({
     courses: z
@@ -24,6 +26,36 @@ const courseList = z
 const checkpoint = z.strictObject({
   version: z.literal(1),
   courses: z.record(z.uuid(), timestamp),
+  pending: z
+    .record(
+      z.uuid(),
+      z
+        .strictObject({
+          configured_start: timestamp,
+          anchor: timestamp,
+          ranges: z
+            .array(z.tuple([z.number().int(), z.number().int()]))
+            .min(1)
+            .max(maxPendingRanges),
+        })
+        .refine(({ configured_start, anchor, ranges }) => {
+          const start = Date.parse(configured_start);
+          const next = Date.parse(anchor);
+          const until = ranges.at(-1)?.[1];
+          return (
+            start <= next &&
+            ranges[0]?.[0] >= Math.max(start, next - hour) &&
+            until > next &&
+            until <= next + day &&
+            ranges.every(
+              ([lower, upper], index) =>
+                lower < upper &&
+                (index === 0 || lower === ranges[index - 1][1]),
+            )
+          );
+        }),
+    )
+    .optional(),
 });
 const iso = (instant) => new Date(instant).toISOString();
 
@@ -51,22 +83,29 @@ export async function dispatchCourseArchives({
       failure: null,
     };
     while (next < latest && remaining > 0) {
-      const until = Math.min(next + day, latest);
+      const previousWork = state.pending?.[id];
+      const anchor = iso(next);
+      const configured_start = iso(configuredStart);
+      const resume =
+        previousWork?.anchor === anchor &&
+        previousWork.configured_start === configured_start
+          ? previousWork.ranges
+          : null;
+      const until = resume?.at(-1)[1] ?? Math.min(next + day, latest);
+      if (until > latest) break;
       // A short overlap picks up late commits. The LRS receives the same
       // statement ID and payload for facts it has already acknowledged.
       const start = Math.max(configuredStart, next - hour);
       try {
-        let pending = [[start, until]];
-        while (pending.length) {
-          if (remaining <= 0) throw new Error("window_budget");
+        let pending = resume ?? [[start, until]];
+        while (pending.length && remaining > 0) {
           remaining -= 1;
           const [[lower, upper], ...later] = pending;
           pending = later;
           const archive = await exportWindow(id, iso(lower), iso(upper));
           if (archive?.overflow) {
             const midpoint = lower + Math.floor((upper - lower) / 2);
-            if (midpoint === lower || pending.length >= 10)
-              throw new Error("window_too_dense");
+            if (midpoint === lower) throw new Error("window_too_dense");
             pending = [[lower, midpoint], [midpoint, upper], ...pending];
             continue;
           }
@@ -79,20 +118,38 @@ export async function dispatchCourseArchives({
           }
         }
         if (report.failure !== null) break;
+        if (pending.length) {
+          // Retain only outstanding ranges so the next run can make progress
+          // without advancing the public checkpoint across an unconfirmed gap.
+          const progress = {
+            ...state.pending,
+            [id]: { configured_start, anchor, ranges: pending },
+          };
+          await save({ ...state, pending: progress });
+          state.pending = progress;
+          report.failure = "window_budget";
+          break;
+        }
         const completed = iso(until);
-        await save({
-          ...state,
+        const { pending: previousPending, ...confirmed } = state;
+        const progress = { ...previousPending };
+        delete progress[id];
+        const updated = {
+          ...confirmed,
           courses: { ...state.courses, [id]: completed },
-        });
+          ...(Object.keys(progress).length ? { pending: progress } : {}),
+        };
+        await save(updated);
         state.courses[id] = completed;
+        if (updated.pending) state.pending = updated.pending;
+        else delete state.pending;
         report.through = completed;
         next = until;
       } catch (error) {
-        report.failure = ["window_budget", "window_too_dense"].includes(
-          error?.message,
-        )
-          ? error.message
-          : "export_or_checkpoint";
+        report.failure =
+          error?.message === "window_too_dense"
+            ? error.message
+            : "export_or_checkpoint";
         break;
       }
     }
