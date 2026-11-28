@@ -2,6 +2,7 @@
  * Regressions for node/link allowlists, structure/size limits and rejection of executable
  * destinations. Pure normalization checks do not replace server validation.
  */
+import type { JSONContent } from "@tiptap/react";
 import { describe, expect, it } from "vitest";
 import {
   contentIsValid,
@@ -58,6 +59,30 @@ describe("knowledge content boundary", () => {
     expect(JSON.stringify(doc)).not.toContain("onclick");
     expect(JSON.stringify(doc)).not.toContain("data:text/html");
     expect(doc.content?.[1].content?.[0].marks).toEqual([{ type: "bold" }]);
+  });
+  it("renders a validated structure even when nested stored values are malformed", () => {
+    const malformed = {
+      type: "doc",
+      content: [
+        null,
+        { type: "paragraph", content: "not a child list" },
+        {
+          type: "text",
+          text: { unexpected: "not visible text" },
+          marks: [null, { type: "bold" }],
+        },
+        { type: "text", text: "plain", marks: "not a mark list" },
+      ],
+    };
+    expect(normalizedDocument(malformed as unknown as JSONContent)).toEqual({
+      type: "doc",
+      content: [
+        { type: "paragraph" },
+        { type: "paragraph" },
+        { type: "text", text: "", marks: [{ type: "bold" }] },
+        { type: "text", text: "plain" },
+      ],
+    });
   });
   it("permits explicit safe protocols and internal paths but rejects protocol-relative and control/backslash URLs", () => {
     for (const link of [

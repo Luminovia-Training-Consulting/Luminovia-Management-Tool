@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { JSONContent } from "@tiptap/react";
-import { normalizedDocument } from "./content";
+import { maxHighlightLength, normalizedDocument } from "./content";
 import type { highlightCode } from "./knowledge-syntax";
 
 const CodeText = memo(function CodeText({
@@ -19,7 +19,9 @@ const CodeText = memo(function CodeText({
 }) {
   const [highlight, setHighlight] = useState<typeof highlightCode>();
   const shouldHighlight =
-    code.length > 0 && code.length <= 8_000 && language !== "plaintext";
+    code.length > 0 &&
+    code.length <= maxHighlightLength &&
+    language !== "plaintext";
   useEffect(() => {
     if (!shouldHighlight) return;
     let active = true;

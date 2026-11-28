@@ -9,6 +9,9 @@ export const emptyDocument: JSONContent = {
   type: "doc",
   content: [{ type: "paragraph" }],
 };
+/** Limit optional highlighting work independently of the larger content limit. */
+export const maxHighlightLength = 8_000;
+
 /** Explicit node allowlist for stored knowledge JSON. */
 const nodes = new Set([
   "doc",
@@ -50,7 +53,8 @@ export function normalizedDocument(value: JSONContent, depth = 0): JSONContent {
   // Rebuild through an allowlist: unknown attributes are never copied through
   // object spread or original HTML into the normalized output.
   const result: JSONContent = { type: value.type };
-  if (value.type === "text") result.text = value.text ?? "";
+  if (value.type === "text")
+    result.text = typeof value.text === "string" ? value.text : "";
   if (value.type === "heading")
     result.attrs = {
       level: [1, 2, 3].includes(Number(value.attrs?.level))
@@ -65,26 +69,26 @@ export function normalizedDocument(value: JSONContent, depth = 0): JSONContent {
     result.attrs = { language: value.attrs.language };
   // Validate links separately and assign fixed new-tab attributes.
   // Discard unknown formatting marks instead of retaining them as HTML.
-  if (value.marks?.length)
-    result.marks = value.marks.flatMap((mark) =>
-      marks.has(mark.type)
-        ? [{ type: mark.type }]
-        : mark.type === "link" &&
-            typeof mark.attrs?.href === "string" &&
-            safeLink(mark.attrs.href)
-          ? [
-              {
-                type: "link",
-                attrs: {
-                  href: mark.attrs.href,
-                  target: "_blank",
-                  rel: "noopener noreferrer",
-                },
+  if (Array.isArray(value.marks) && value.marks.length)
+    result.marks = value.marks.flatMap((mark) => {
+      if (!mark) return [];
+      if (marks.has(mark.type)) return [{ type: mark.type }];
+      return mark.type === "link" &&
+        typeof mark.attrs?.href === "string" &&
+        safeLink(mark.attrs.href)
+        ? [
+            {
+              type: "link",
+              attrs: {
+                href: mark.attrs.href,
+                target: "_blank",
+                rel: "noopener noreferrer",
               },
-            ]
-          : [],
-    );
-  if (value.content)
+            },
+          ]
+        : [];
+    });
+  if (Array.isArray(value.content))
     result.content = value.content.map((child) =>
       normalizedDocument(child, depth + 1),
     );

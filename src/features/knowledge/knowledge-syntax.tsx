@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { common, createLowlight } from "lowlight";
+import { maxHighlightLength } from "./content";
 
 export const lowlight = createLowlight(common);
 
@@ -20,7 +21,8 @@ function renderToken(token: Token): ReactNode {
 
 /** Process only explicit supported languages and limit optional work on long blocks. */
 export function highlightCode(language: string, code: string): ReactNode {
-  if (code.length > 8_000 || !lowlight.registered(language)) return code;
+  if (code.length > maxHighlightLength || !lowlight.registered(language))
+    return code;
   try {
     return lowlight
       .highlight(language, code)
