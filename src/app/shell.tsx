@@ -270,7 +270,7 @@ export function Shell() {
             : []),
           { to: "/chats", icon: MessagesSquare, label: "chats" },
           { to: "/files", icon: FolderOpen, label: "files" },
-          ...(portalInternalEdition && financeAccess.personal.overview
+          ...(portalInternalEdition && financeAccess.personal.sidebar
             ? [financeNavItem]
             : []),
           ...(portalInternalEdition && financeAccess.company.accounting

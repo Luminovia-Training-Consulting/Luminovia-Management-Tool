@@ -849,6 +849,33 @@ it("uses one finance link for company invoices and analytics", () => {
   ).toBeNull();
 });
 
+it.each(["owner", "admin", "management"])(
+  "keeps finance under administration in both menus for a teaching %s",
+  async (role) => {
+    access.roles = ["lecturer", role];
+    access.permissions = ["finance.manage"];
+    const { user } = setup("/", false);
+    const sidebar = within(screen.getByRole("complementary", { name: "Menü" }));
+    expect(
+      sidebar.queryByRole("link", { name: "Meine Finanzen" }),
+    ).not.toBeInTheDocument();
+
+    const summary = screen.getByLabelText("Mehr");
+    await user.click(summary);
+    const mobile = within(summary.closest("details")!);
+    expect(
+      mobile.queryByRole("link", { name: "Meine Finanzen" }),
+    ).not.toBeInTheDocument();
+    await user.click(mobile.getByRole("link", { name: "Verwaltung" }));
+    expect(
+      within(screen.getByRole("navigation", { name: "Verwaltung" })).getByRole(
+        "link",
+        { name: /^Plattformfinanzen(?: |$)/ },
+      ),
+    ).toHaveAttribute("href", "/admin/finance");
+  },
+);
+
 it("combines enterprise, participant and teaching navigation on one account", () => {
   access.roles = ["client", "participant", "lecturer"];
   setup("/finance", false);
@@ -865,5 +892,8 @@ it("combines enterprise, participant and teaching navigation on one account", ()
   expect(
     within(sidebar).getByRole("link", { name: "Kursbewertungen" }),
   ).toHaveAttribute("href", "/my-reviews");
+  expect(
+    within(sidebar).getByRole("link", { name: "Meine Finanzen" }),
+  ).toHaveAttribute("href", "/finance");
   expect(screen.getByText("Live finance route")).toBeVisible();
 });
