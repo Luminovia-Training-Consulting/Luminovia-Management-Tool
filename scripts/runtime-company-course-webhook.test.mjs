@@ -373,6 +373,48 @@ test("the opt-in worker polls sequentially and recovers after failures", async (
   ]);
 });
 
+test("a full webhook batch drains ready backlog without hitting the normal poll pause", async () => {
+  const controller = new AbortController();
+  const order = [];
+  const ready = [10, 10, 4, 0];
+
+  await watchCompanyWebhooks(webhookConfiguration(env), {
+    signal: controller.signal,
+    seconds: 60,
+    dispatch: async () => ready.shift(),
+    report: ({ processed }) => order.push(processed),
+    wait: async (milliseconds) => {
+      assert.equal(milliseconds, 60000);
+      order.push("wait");
+      if (order.filter((entry) => entry === "wait").length === 2)
+        controller.abort();
+    },
+  });
+
+  assert.deepEqual(order, [10, 10, 4, "wait", "wait"]);
+});
+
+test("webhook catch-up yields after three full batches even if more events are ready", async () => {
+  const controller = new AbortController();
+  let attempts = 0;
+
+  await watchCompanyWebhooks(webhookConfiguration(env), {
+    signal: controller.signal,
+    seconds: 60,
+    dispatch: async () => {
+      attempts++;
+      return 10;
+    },
+    report() {},
+    wait: async (milliseconds) => {
+      assert.equal(milliseconds, 60000);
+      controller.abort();
+    },
+  });
+
+  assert.equal(attempts, 3);
+});
+
 test("shutdown finishes an existing lease and never starts another", async () => {
   const controller = new AbortController();
   const { call, stages } = fixture({

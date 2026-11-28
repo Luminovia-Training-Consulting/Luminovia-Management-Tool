@@ -267,33 +267,42 @@ export function FileUpload({
   );
 }
 
-/** Bind metadata and bytes to the same version and abort previews after close. */
-function Preview({ file }: { file: PortalDocument }) {
+/** Hide the preview during exact access checks and keep any verified bytes tied to its captured version. */
+function Preview({
+  file,
+  authorised,
+}: {
+  file: PortalDocument;
+  authorised: boolean;
+}) {
   const { t } = useTranslation("files");
+  const objectUrl = useRef("");
   const [url, setUrl] = useState("");
   const [failed, setFailed] = useState(false);
+  useEffect(
+    () => () => {
+      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+      objectUrl.current = "";
+    },
+    [],
+  );
   useEffect(() => {
-    let alive = true;
-    let object = "";
+    if (!authorised || objectUrl.current) return;
     const controller = new AbortController();
-    // A row's name/MIME and bytes must describe the same reviewed version,
-    // even if another client replaces the document during this download.
+    // The captured name/MIME and bytes belong to the same version.
     void downloadDocument(file.id, file.current_version_id, controller.signal)
       .then((blob) => {
-        if (!alive) return;
-        object = URL.createObjectURL(blob);
+        if (controller.signal.aborted) return;
+        objectUrl.current = URL.createObjectURL(blob);
         setFailed(false);
-        setUrl(object);
+        setUrl(objectUrl.current);
       })
       .catch(() => {
-        if (alive) setFailed(true);
+        if (!controller.signal.aborted) setFailed(true);
       });
-    return () => {
-      alive = false;
-      controller.abort();
-      if (object) URL.revokeObjectURL(object);
-    };
-  }, [file.id, file.current_version_id]);
+    return () => controller.abort();
+  }, [file.id, file.current_version_id, authorised]);
+  if (!authorised) return null;
   if (failed) return <Notice kind="error">{t("error")}</Notice>;
   if (!url) return <Loading />;
   return file.mime_type.startsWith("image/") ? (
@@ -311,19 +320,20 @@ function Preview({ file }: { file: PortalDocument }) {
 }
 
 /** Load authorized history and offer downloads only for clean versions. */
-function Versions({ file }: { file: PortalDocument }) {
+function Versions({ file, actor }: { file: PortalDocument; actor: string }) {
   const { t, i18n } = useTranslation("files");
   const online = useOnline();
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const versions = useQuery({
-    queryKey: ["document-versions", file.id],
-    queryFn: async () => {
+    queryKey: ["document-versions", file.id, actor],
+    queryFn: async ({ signal }) => {
       const { data, error } = await db()
         .from("document_versions")
         .select("id,version,status,created_at,original_name,sha256")
         .eq("document_id", file.id)
-        .order("version", { ascending: false });
+        .order("version", { ascending: false })
+        .abortSignal(signal);
       if (error) throw error;
       return data as {
         id: string;
@@ -336,7 +346,8 @@ function Versions({ file }: { file: PortalDocument }) {
     },
   });
   if (versions.isPending) return <Loading />;
-  if (versions.isError) return <ErrorState />;
+  if (versions.isError)
+    return <ErrorState retry={() => void versions.refetch()} />;
   return (
     <>
       <ul className="document-versions">
@@ -398,6 +409,7 @@ function CapturedDocumentGuard({
     exact: PortalDocument | null,
   ) => ReactNode;
 }) {
+  const { t } = useTranslation();
   const online = useOnline();
   const [focusEpoch, setFocusEpoch] = useState(0);
   useEffect(
@@ -438,7 +450,9 @@ function CapturedDocumentGuard({
   const authorised = online && exact.isSuccess && !exact.isFetching && valid;
   return children(
     authorised,
-    exact.isError ? (
+    !online ? (
+      <Notice>{t("offline")}</Notice>
+    ) : exact.isError ? (
       <ErrorState retry={() => void exact.refetch()} />
     ) : !authorised ? (
       <Loading />
@@ -925,9 +939,12 @@ const DocumentList = memo(function DocumentList({
                     <Preview
                       key={`${selected.id}:${selected.current_version_id}`}
                       file={selected}
+                      authorised={authorised}
                     />
                   ) : mode === "versions" ? (
-                    <Versions file={selected} />
+                    authorised && (
+                      <Versions file={selected} actor={session!.user.id} />
+                    )
                   ) : mode === "replace" ? (
                     <FileUpload
                       context={{

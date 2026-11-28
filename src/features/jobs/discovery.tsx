@@ -5,7 +5,7 @@ import { canRetryNextPage } from "../../lib/paged-read";
 import { currencyCodes } from "../../lib/currencies.ts";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { MyJobWaitlist } from "./lifecycle-extra";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
@@ -55,9 +55,11 @@ import "./discovery.css";
 
 function FilterForm({
   initial,
+  revision,
   apply,
 }: {
   initial: JobFilters;
+  revision: number;
   apply: (values: JobFilters) => void;
 }) {
   const { t, i18n } = useTranslation("jobDiscovery"),
@@ -74,6 +76,9 @@ function FilterForm({
     defaultValues: initial,
   });
   const selected = useWatch({ control, name: "topic_ids" });
+  // Replace the draft on navigation or saved-view selection without replacing
+  // the focused control in the DOM.
+  useEffect(() => reset(initial), [initial, reset, revision]);
   return (
     <form
       className="panel discovery-filters"
@@ -527,26 +532,39 @@ export function JobDiscovery() {
   const search = params.toString();
   const [editorRevision, resetViewEditor] = useState(0);
   const [draftRevision, resetDraft] = useState(0);
+  const [openedFilters, setOpenedFilters] = useState(false);
+  const client = useQueryClient();
   const sickDayReleased = useLocation().state?.sickDayReleased === true;
   const parsed = useMemo(() => filtersFromParams(params), [params]),
     filters = parsed.success ? parsed.data : null;
+  const initial = useMemo(
+    () => filters ?? filterDraftFromParams(params),
+    [filters, params],
+  );
+  const searchOptions = jobDiscoveryQuery(
+    actor,
+    filters ?? defaultJobFilters,
+    [...(roles.data ?? [])].sort().join(","),
+  );
   const query = useInfiniteQuery({
-    ...jobDiscoveryQuery(
-      actor,
-      filters ?? defaultJobFilters,
-      [...(roles.data ?? [])].sort().join(","),
-    ),
+    ...searchOptions,
     enabled: staff && Boolean(filters),
   });
   const applyFilters = (next: JobFilters) => {
     resetViewEditor((revision) => revision + 1);
     const nextParams = filterParams(next);
-    // Confirm again against the current calendar even if the URL stays the same.
-    if (nextParams.toString() === search) void query.refetch();
-    else setParams(nextParams, { replace: true, preventScrollReset: true });
+    if (nextParams.toString() === search) {
+      // Refresh from the first cursor without replaying previously loaded pages.
+      void client.resetQueries({
+        queryKey: searchOptions.queryKey,
+        exact: true,
+      });
+    } else {
+      setParams(nextParams, { replace: true, preventScrollReset: true });
+    }
   };
   const selectView = (nextParams: URLSearchParams) => {
-    // The form key changes with the URL. Reload it explicitly for the same URL.
+    // Reload the draft even if the selected view matches the current URL.
     if (nextParams.toString() === search)
       resetDraft((revision) => revision + 1);
     else setParams(nextParams, { preventScrollReset: true });
@@ -575,24 +593,33 @@ export function JobDiscovery() {
       <PageHeading title={t("title")} description={t("help")} />
       {sickDayReleased && <Notice>{common("sickDay:released")}</Notice>}
       {teaching && <MyJobWaitlist />}
-      <details className="panel discovery-filter-disclosure" open={!filters}>
+      <details
+        className="panel discovery-filter-disclosure"
+        open={!filters}
+        onToggle={(event) => {
+          if (event.target === event.currentTarget && event.currentTarget.open)
+            setOpenedFilters(true);
+        }}
+      >
         <summary>{t("filterOptions")}</summary>
-        <div className="discovery-filter-content">
-          <FilterForm
-            key={`${search}:${draftRevision}`}
-            initial={filters ?? filterDraftFromParams(params)}
-            apply={applyFilters}
-          />
-          <SavedViews
-            key={actor}
-            actor={actor}
-            filters={filters}
-            editorRevision={editorRevision}
-            search={search}
-            select={selectView}
-          />
-          <p className="muted">{t("feeHelp")}</p>
-        </div>
+        {(openedFilters || !filters) && (
+          <div className="discovery-filter-content">
+            <FilterForm
+              initial={initial}
+              revision={draftRevision}
+              apply={applyFilters}
+            />
+            <SavedViews
+              key={actor}
+              actor={actor}
+              filters={filters}
+              editorRevision={editorRevision}
+              search={search}
+              select={selectView}
+            />
+            <p className="muted">{t("feeHelp")}</p>
+          </div>
+        )}
       </details>
       {!filters ? (
         <Notice kind="error">

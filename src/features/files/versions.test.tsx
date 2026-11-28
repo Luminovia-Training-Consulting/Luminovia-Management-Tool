@@ -2,8 +2,9 @@
  * Regressions for version-bound metadata/bytes and disposal of late preview Blob URLs.
  * Controlled UI transport does not establish server file authorization.
  */
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -12,6 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
+  focusManager,
   QueryClient,
   QueryClientProvider,
   useQuery,
@@ -20,6 +22,8 @@ import { FileUpload, SubjectDocuments } from "./files";
 import type { PortalDocument } from "./api";
 
 const state = vi.hoisted(() => ({
+  exact: vi.fn(),
+  readVersions: vi.fn(),
   uploadDocument: vi.fn(),
   downloadDocument: vi.fn(),
   saveDownload: vi.fn().mockResolvedValue(undefined),
@@ -29,13 +33,38 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("./api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api")>()),
+  documentQuery: (actor: string, id: string) => ({
+    queryKey: ["document", actor, id],
+    queryFn: state.exact,
+    retry: false,
+  }),
   uploadDocument: state.uploadDocument,
   downloadDocument: state.downloadDocument,
   saveDownload: state.saveDownload,
 }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: async () => ({ data: null, error: null }),
+    from: (table: string) => {
+      if (table !== "document_versions") throw new Error("Unexpected table");
+      const chain = {
+        select: () => chain,
+        eq: () => chain,
+        order: () => chain,
+        abortSignal: state.readVersions,
+      };
+      return chain;
+    },
+  }),
+}));
 const clients: QueryClient[] = [];
+beforeEach(() => {
+  state.exact.mockReset().mockResolvedValue(file);
+  state.readVersions.mockReset();
+});
 afterEach(() => {
   cleanup();
+  focusManager.setFocused(undefined);
   clients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
   vi.unstubAllGlobals();
@@ -78,7 +107,7 @@ it("invalidates existing version history after a confirmed replacement instead o
     <FileUpload context={{ scope: "personal", replaceId: "file" }} />,
   );
   client.setQueryData(
-    ["document-versions", "file"],
+    ["document-versions", "file", "actor"],
     [{ id: "reviewed-version", version: 1 }],
   );
   await user.upload(
@@ -90,7 +119,7 @@ it("invalidates existing version history after a confirmed replacement instead o
   );
   await screen.findByText("Datei gespeichert und geprüft.");
   expect(
-    client.getQueryState(["document-versions", "file"])?.isInvalidated,
+    client.getQueryState(["document-versions", "file", "actor"])?.isInvalidated,
   ).toBe(true);
 });
 it("clears the previous selection when a newly selected file is rejected", async () => {
@@ -258,4 +287,97 @@ it("aborts a preview when closed and ignores a late response without creating a 
   expect(signal?.aborted).toBe(true);
   complete(new Blob(["late bytes"]));
   await waitFor(() => expect(create).not.toHaveBeenCalled());
+});
+
+it("waits for the fresh file check before requesting preview bytes and hides them during revalidation", async () => {
+  const user = userEvent.setup();
+  let grant!: (value: PortalDocument | null) => void;
+  let recheck!: (value: PortalDocument | null) => void;
+  let deny!: (value: PortalDocument | null) => void;
+  state.exact
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        grant = resolve;
+      }),
+    )
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        recheck = resolve;
+      }),
+    )
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        deny = resolve;
+      }),
+    );
+  state.downloadDocument.mockResolvedValue(new Blob(["fictional image"]));
+
+  class PreviewURL extends URL {
+    static createObjectURL = vi.fn(() => "blob:checked-preview");
+    static revokeObjectURL = vi.fn();
+  }
+
+  vi.stubGlobal("URL", PreviewURL);
+  setup(<SubjectDocuments ownerId="actor" />);
+  await user.click(
+    screen.getByRole("button", { name: "Vorschau: Fictional image.png" }),
+  );
+  await waitFor(() => expect(state.exact).toHaveBeenCalledTimes(1));
+  expect(state.downloadDocument).not.toHaveBeenCalled();
+
+  await act(async () => grant(file));
+  await screen.findByRole("img", { name: file.original_name });
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await waitFor(() => expect(state.exact).toHaveBeenCalledTimes(2));
+  expect(
+    screen.queryByRole("img", { name: file.original_name }),
+  ).not.toBeInTheDocument();
+  await act(async () => recheck(file));
+  await screen.findByRole("img", { name: file.original_name });
+  expect(state.downloadDocument).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await waitFor(() => expect(state.exact).toHaveBeenCalledTimes(3));
+  expect(
+    screen.queryByRole("img", { name: file.original_name }),
+  ).not.toBeInTheDocument();
+
+  await act(async () => deny(null));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(PreviewURL.revokeObjectURL).toHaveBeenCalledWith(
+    "blob:checked-preview",
+  );
+  expect(state.downloadDocument).toHaveBeenCalledTimes(1);
+});
+
+it("does not request or render version history if the current file check is denied", async () => {
+  let check!: (value: PortalDocument | null) => void;
+  state.exact.mockReturnValue(
+    new Promise((resolve) => {
+      check = resolve;
+    }),
+  );
+  state.readVersions.mockResolvedValue({ data: [], error: null });
+  setup(<SubjectDocuments ownerId="actor" />);
+
+  await userEvent
+    .setup()
+    .click(
+      screen.getByRole("button", { name: "Versionen: Fictional image.png" }),
+    );
+  await waitFor(() => expect(state.exact).toHaveBeenCalledTimes(1));
+  expect(state.readVersions).not.toHaveBeenCalled();
+  await act(async () => check(null));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(state.readVersions).not.toHaveBeenCalled();
 });

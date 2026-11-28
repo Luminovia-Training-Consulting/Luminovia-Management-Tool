@@ -8,6 +8,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { publicAddress } from "./notification-push-worker.mjs";
 
+const deliveriesPerBatch = 10;
+const batchesPerPoll = 3;
 const destinationName =
   /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\/[a-z][a-z0-9-]{0,39}$/;
 
@@ -225,7 +227,7 @@ export async function dispatchCompanyWebhooks(
   if (!names.length) return 0;
   let processed = 0;
   // After shutdown, finish the already leased item and leave the rest queued.
-  for (; processed < 10 && !signal?.aborted; processed++) {
+  for (; processed < deliveriesPerBatch && !signal?.aborted; processed++) {
     const lease = await call(config, "lease_company_course_webhook", {
       p_destinations: names,
     });
@@ -260,7 +262,7 @@ export async function dispatchCompanyWebhooks(
   return processed;
 }
 
-/** Poll after each finished batch; a transient outage must not overlap new work. */
+/** Drain a bounded backlog sequentially, then wait on idle or failure. */
 export async function watchCompanyWebhooks(
   config,
   {
@@ -277,8 +279,11 @@ export async function watchCompanyWebhooks(
     throw new Error("webhook_destinations_required");
   while (!signal.aborted) {
     try {
-      const processed = await dispatch(config, { signal });
-      if (processed > 0) report({ status: "processed", processed });
+      for (let batch = 0; batch < batchesPerPoll && !signal.aborted; batch++) {
+        const processed = await dispatch(config, { signal });
+        if (processed > 0) report({ status: "processed", processed });
+        if (processed < deliveriesPerBatch) break;
+      }
     } catch {
       // Each invocation checks the same database lease and retry bound.
       // Provider messages can contain credentials or payload, so report status only.

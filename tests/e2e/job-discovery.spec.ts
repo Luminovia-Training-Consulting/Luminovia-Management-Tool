@@ -51,10 +51,13 @@ test("bounded server discovery, saved-view persistence and private actor boundar
     try {
         await login(page, teacher.email);
         await page.goto("/jobs");
-        await expect(
-            page.locator(".discovery-filter-disclosure"),
-        ).not.toHaveAttribute("open");
-        await page.getByText(/^(Filter & Ansichten|Filters & views)$/).click();
+        const filters = page.locator(".discovery-filter-disclosure");
+        await expect(filters).not.toHaveAttribute("open");
+        await expect(filters.locator("select")).toHaveCount(0);
+        const filterToggle = filters.locator("summary");
+        if (testInfo.project.name === "mobile-chromium")
+            expect((await filterToggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        await filterToggle.click();
         await expect(page.locator(".jobs-grid")).toBeVisible();
         const search = page.getByRole("searchbox", {name: "Suchtext", exact: true});
         const calendar = page.getByLabel("Ohne Überschneidung in meinem Kalender");
@@ -93,10 +96,9 @@ test("bounded server discovery, saved-view persistence and private actor boundar
                 r.request().method() === "POST" &&
                 r.status() === 200,
         );
-        await page
-            .getByRole("button", {name: "Filter anwenden", exact: true})
-            .click();
+        await search.press("Enter");
         await response;
+        await expect(search).toBeFocused();
         await expect(
             page.getByText("50 Aufträge geladen", {exact: true}),
         ).toBeVisible();

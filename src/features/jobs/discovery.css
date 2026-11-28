@@ -133,3 +133,14 @@
   margin-bottom: 0;
   font-size: 12px;
 }
+
+@media (max-width: 560px) {
+  .discovery-filter-disclosure {
+    padding-block: 8px;
+  }
+
+  .discovery-filter-disclosure > summary {
+    min-block-size: 44px;
+    align-content: center;
+  }
+}

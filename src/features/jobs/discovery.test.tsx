@@ -205,6 +205,37 @@ it("rechecks availability when the same filter is applied again", async () => {
   });
 });
 
+it("starts at the first page when the same filters are submitted again", async () => {
+  setup({ initialEntry: "/?available=1" });
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Weitere Aufträge laden" }),
+  );
+  await screen.findByRole("link", { name: "Fictional discovery 2" });
+  await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("link", { name: "Fictional discovery 2" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    state.rpc.mock.calls
+      .filter(([name]) => name === "job_discovery")
+      .map(([, args]) => args.p_cursor),
+  ).toEqual([null, expect.objectContaining({ id: job().id }), null]);
+});
+
+it("keeps the filter search focused when Enter changes the URL", async () => {
+  setup();
+  const user = userEvent.setup();
+  const search = await screen.findByRole("searchbox", { name: "Suchtext" });
+  await user.type(search, "Remote{Enter}");
+  await waitFor(() =>
+    expect(screen.getByLabelText("route")).toHaveTextContent("q=Remote"),
+  );
+  expect(search).toHaveFocus();
+});
+
 it("loads a saved view over unapplied edits even when its filters are already active", async () => {
   setup({
     views: [
@@ -316,7 +347,9 @@ it("matches any selected subject, combines other filters, and keeps history opt-
   ];
   setup({ topics });
   const user = userEvent.setup();
-  const topicA = screen.getByRole("checkbox", { name: "Fictional topic A" }),
+  const topicA = await screen.findByRole("checkbox", {
+      name: "Fictional topic A",
+    }),
     topicB = screen.getByRole("checkbox", { name: "Fictional topic B" });
   await user.click(topicA);
   await user.click(topicB);
@@ -906,7 +939,16 @@ it("starts with optional filters and saved views collapsed while offers remain v
   expect(await screen.findByText("Fictional discovery 1")).toBeVisible();
   const disclosure = document.querySelector(".discovery-filter-disclosure")!;
   expect(disclosure).not.toHaveAttribute("open");
-  expect(screen.getByLabelText("Ansicht auswählen")).not.toBeVisible();
+  expect(screen.queryByLabelText("Ansicht auswählen")).not.toBeInTheDocument();
+  expect(
+    state.rpc.mock.calls.some(([name]) => name === "saved_job_views"),
+  ).toBe(false);
   await userEvent.click(screen.getByText("Filter & Ansichten"));
-  expect(screen.getByLabelText("Ansicht auswählen")).toBeVisible();
+  expect(await screen.findByLabelText("Ansicht auswählen")).toBeVisible();
+  const search = screen.getByRole("searchbox", { name: "Suchtext" });
+  await userEvent.type(search, "Unapplied filter");
+  await userEvent.click(screen.getByText("Filter & Ansichten"));
+  await userEvent.click(screen.getByText("Filter & Ansichten"));
+  expect(search).toBeVisible();
+  expect(search).toHaveValue("Unapplied filter");
 });
