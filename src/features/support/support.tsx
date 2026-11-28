@@ -579,11 +579,15 @@ function TicketActionForm({
 
 /** Use the existing quarantine/scan gateway before dedicating a clean version to this ticket; attachment ACLs remain server-side. */
 function SupportUpload({
+  actor,
   ticket,
-  onDone,
+  refreshing,
+  refresh,
 }: {
+  actor: string;
   ticket: SupportTicket;
-  onDone: () => Promise<void>;
+  refreshing: boolean;
+  refresh: () => Promise<void>;
 }) {
   const { t } = useTranslation("support");
   const online = useOnline();
@@ -592,57 +596,60 @@ function SupportUpload({
   const [internal, setInternal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
-  const retry = useRef<{
-    signature: string;
-    uploadKey: string;
-    attachKey: string;
-    documentId?: string;
-  } | null>(null);
+  const transferId = useRef<string | null>(null);
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const attachRequest = useRequestKey();
+  function resetSelection(next: File | null) {
+    transferId.current = null;
+    attachRequest.clear();
+    setDocumentId(null);
+    setFile(next);
+    setProgress(0);
+  }
   const upload = useMutation({
     mutationFn: async (file: File) => {
       requireOnline();
-      const signature = JSON.stringify([
-        file.name,
-        file.size,
-        file.lastModified,
-        internal,
-        ticket.id,
-        ticket.version,
-      ]);
-      if (retry.current?.signature !== signature)
-        retry.current = {
-          signature,
-          uploadKey: crypto.randomUUID(),
-          attachKey: crypto.randomUUID(),
-        };
-      const request = retry.current!;
-      if (!request.documentId)
-        request.documentId = (
+      // The scan is independent of the ticket revision and attachment audience.
+      // Reuse the same upload on retry, but bind linking to the reviewed version.
+      transferId.current ??= crypto.randomUUID();
+      const cleanDocument =
+        documentId ??
+        (
           await uploadDocument(
             file,
             {
               scope: "personal",
               kind: "material",
-              clientId: request.uploadKey,
+              clientId: transferId.current,
+              expectedActor: actor,
             },
             setProgress,
           )
         ).id;
+      setDocumentId(cleanDocument);
+      // A previous request may have committed after the connection was lost.
+      if (
+        ticket.attachments.some(
+          (attachment) => attachment.document_id === cleanDocument,
+        )
+      )
+        return;
       await updateTicket(
         ticket.id,
         "attach",
-        { document_id: request.documentId, internal },
+        { document_id: cleanDocument, internal },
         ticket.version,
-        request.attachKey,
+        attachRequest.forInput(
+          JSON.stringify([cleanDocument, internal, ticket.version]),
+        ),
       );
     },
     onSuccess: async () => {
-      retry.current = null;
-      setFile(null);
-      setProgress(0);
-      await onDone();
+      resetSelection(null);
+      await refresh();
     },
   });
+  const error = supportError(upload.error);
   return (
     <div className="support-upload">
       <p className="muted">{t("attachmentHint")}</p>
@@ -668,10 +675,8 @@ function SupportUpload({
           const file = event.target.files?.[0];
           event.target.value = "";
           if (file) {
-            retry.current = null;
             upload.reset();
-            setProgress(0);
-            setFile(file);
+            resetSelection(file);
           }
         }}
       />
@@ -693,19 +698,17 @@ function SupportUpload({
           <p>{t(internal ? "internalAttachment" : "sharedAttachment")}</p>
           <div className="support-actions">
             <Button
-              disabled={!online || upload.isPending}
+              disabled={!online || upload.isPending || refreshing}
               onClick={() => upload.mutate(file)}
             >
-              {t("attachment")}
+              {t(documentId ? "linkAttachment" : "attachment")}
             </Button>
             <Button
               variant="ghost"
               disabled={upload.isPending}
               onClick={() => {
-                setFile(null);
-                retry.current = null;
                 upload.reset();
-                setProgress(0);
+                resetSelection(null);
                 chooseFile.current?.focus();
               }}
             >
@@ -720,13 +723,21 @@ function SupportUpload({
         </p>
       )}
       {upload.isError && (
-        <Notice kind="error">
-          {t(
-            supportError(upload.error) === "error"
-              ? "fileFailed"
-              : supportError(upload.error),
+        <>
+          <Notice kind="error">
+            {t(error === "error" ? "fileFailed" : error)}
+          </Notice>
+          {error === "conflict" && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || refreshing}
+              onClick={() => void refresh()}
+            >
+              {t("refresh")}
+            </Button>
           )}
-        </Notice>
+        </>
       )}
     </div>
   );
@@ -942,9 +953,11 @@ function TicketDetail({
         {downloadFailed && <Notice kind="error">{t("fileFailed")}</Notice>}
         {!["resolved", "closed"].includes(row.status) && (
           <SupportUpload
-            key={`${actor}:${id}:${row.version}`}
+            key={`${actor}:${id}:${row.can_manage}`}
+            actor={actor}
             ticket={row}
-            onDone={refresh}
+            refreshing={ticket.isFetching}
+            refresh={refresh}
           />
         )}
       </section>

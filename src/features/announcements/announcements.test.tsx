@@ -374,6 +374,33 @@ describe("announcement management", () => {
     expect(body).toHaveValue("Neuer unveröffentlichter Entwurf");
     expect(saved.every((call) => call[1].p_action !== "publish")).toBe(true);
   });
+  it("waits for the fresh draft version when reopening after publication", async () => {
+    const user = userEvent.setup();
+    const { client } = view(<AdminAnnouncementsPage />);
+    const trigger = await screen.findByRole("button", {
+      name: "Entwurf bearbeiten",
+    });
+    const old = fake.record!;
+    client.setQueryData(
+      ["announcements", fake.actor, "admin-detail", old.id],
+      old,
+    );
+    fake.record = {
+      ...old,
+      version: 4,
+      draft: { ...old.draft, title_de: "Aktueller Entwurf" },
+    };
+    await user.click(trigger);
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByDisplayValue("Aktueller Entwurf"),
+    ).toBeVisible();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Entwurf speichern" }),
+    );
+    expect(calls("manage_announcement")[0][1].p_expected_version).toBe(4);
+  });
+
   it("retains the editor base version across a background detail refresh and shows exact conflict guidance", async () => {
     fake.manageError = { code: "40001", message: "stale" };
     const { user, dialog, client } = await edit();
@@ -443,6 +470,55 @@ describe("announcement management", () => {
       "aktuelle Berechtigung",
     );
   });
+  it("reviews the draft and its audience before publishing and cancels without a write", async () => {
+    const user = userEvent.setup();
+    view(<AdminAnnouncementsPage />);
+    const publish = await screen.findByRole("button", {
+      name: "Jetzt veröffentlichen",
+    });
+    await user.click(publish);
+    expect(calls("manage_announcement")).toHaveLength(0);
+    const review = await screen.findByRole("dialog", {
+      name: "Veröffentlichung prüfen",
+    });
+    expect(await within(review).findByText("Fiktiver Hinweis 1")).toBeVisible();
+    expect(
+      within(review).getByText("Dozierende", { exact: true }),
+    ).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(review).not.toBeInTheDocument();
+    expect(publish).toHaveFocus();
+    expect(calls("manage_announcement")).toHaveLength(0);
+  });
+
+  it("requires a new review when the draft version changes", async () => {
+    const user = userEvent.setup();
+    const { client } = view(<AdminAnnouncementsPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Jetzt veröffentlichen" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Veröffentlichung prüfen",
+    });
+    const confirm = await within(dialog).findByRole("button", {
+      name: "Veröffentlichung bestätigen",
+    });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fake.record = { ...fake.record!, version: 4 };
+    await act(() =>
+      client.invalidateQueries({
+        queryKey: ["announcements", fake.actor, "admin-detail"],
+      }),
+    );
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Der Entwurf hat sich geändert",
+    );
+    expect(confirm).toBeDisabled();
+    expect(calls("manage_announcement")).toHaveLength(0);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(calls("admin_announcements")).toHaveLength(2));
+  });
+
   it("manages publication/recovery through explicit versioned actions and requests bounded filtered pages", async () => {
     fake.more = true;
     const user = userEvent.setup();
@@ -458,6 +534,14 @@ describe("announcement management", () => {
     ).toBeEnabled();
     await user.click(
       screen.getByRole("button", { name: "Jetzt veröffentlichen" }),
+    );
+    const review = await screen.findByRole("dialog", {
+      name: "Veröffentlichung prüfen",
+    });
+    await user.click(
+      await within(review).findByRole("button", {
+        name: "Veröffentlichung bestätigen",
+      }),
     );
     await screen.findByText("Die Änderung wurde serverseitig bestätigt.");
     expect(calls("manage_announcement")[0][1]).toMatchObject({

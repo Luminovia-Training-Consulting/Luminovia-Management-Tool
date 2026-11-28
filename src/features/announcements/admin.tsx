@@ -1,3 +1,4 @@
+import { dateTimeRange } from "../../lib/dates";
 import { isDatabasePermissionDenied } from "../../lib/database-errors";
 import { useRequestKey } from "../../lib/request-key";
 import { useEffect, useState } from "react";
@@ -127,7 +128,9 @@ function Editor({
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((values) => save.mutate(values))}
+      onSubmit={form.handleSubmit((values) => {
+        if (online && !save.isPending) save.mutate(values);
+      })}
     >
       <Notice>{t("draftPrivacy")}</Notice>
       <div className="announcement-editor-grid">
@@ -241,12 +244,18 @@ function EditExisting({
   onDone: () => void;
   onRevoked: () => void;
 }) {
-  const query = useQuery(adminAnnouncementQuery(actor, id));
+  const online = useOnline();
+  const query = useQuery({
+    ...adminAnnouncementQuery(actor, id),
+    enabled: online,
+  });
   useEffect(() => {
     if (query.isError && isDatabasePermissionDenied(query.error)) onRevoked();
   }, [query.isError, query.error, onRevoked]);
-  if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState retry={() => void query.refetch()} />;
+  // After a publish or archive, the detail cache can still contain the previous
+  // version. Freeze the form's base only after this opening's authorised read.
+  if (query.isPending || !query.isFetchedAfterMount) return <Loading />;
   return <Editor record={query.data} onDone={onDone} onRevoked={onRevoked} />;
 }
 
@@ -259,6 +268,10 @@ function Administration({ actor }: { actor: string }) {
     [editing, setEditing] = useState<string | null | undefined>(undefined),
     [saved, setSaved] = useState(false),
     [revoked, setRevoked] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    row: AnnouncementSummary;
+    action: "publish" | "archive";
+  } | null>(null);
   const pagination = useAnnouncementPagination();
   const query = useQuery({
     ...adminAnnouncementsQuery(
@@ -269,10 +282,15 @@ function Administration({ actor }: { actor: string }) {
     ),
     enabled: online && !revoked,
   });
+  const review = useQuery({
+    ...adminAnnouncementQuery(actor, confirmation?.row.id ?? ""),
+    enabled: online && !revoked && confirmation?.action === "publish",
+  });
   const retry = useRequestKey();
   const revoke = () => {
     setRevoked(true);
     setEditing(undefined);
+    setConfirmation(null);
     void client.invalidateQueries({
       queryKey: permissionsQuery(actor).queryKey,
     });
@@ -304,13 +322,49 @@ function Administration({ actor }: { actor: string }) {
     },
     onSuccess: async () => {
       retry.clear();
+      setConfirmation(null);
       await refresh();
     },
     onError: (error) => {
       if (isDatabasePermissionDenied(error)) revoke();
     },
   });
-  if (revoked) return <Notice kind="error">{t("forbidden")}</Notice>;
+  const reviewingPublication = confirmation?.action === "publish";
+  const reviewDenied =
+    reviewingPublication && isDatabasePermissionDenied(review.error);
+  const currentDraft =
+    reviewingPublication &&
+    review.isSuccess &&
+    review.data.version === confirmation.row.version &&
+    !review.data.archived_at
+      ? review.data.draft
+      : undefined;
+  const canConfirm =
+    online &&
+    !operation.isPending &&
+    (reviewingPublication
+      ? Boolean(currentDraft && !review.isFetching)
+      : Boolean(confirmation));
+  const actionError = operation.isError && (
+    <Notice kind="error">
+      {t(
+        isConflict(operation.error)
+          ? "conflict"
+          : operation.error.message?.includes("no scheduler")
+            ? "manual"
+            : "operationError",
+      )}
+    </Notice>
+  );
+  const closeConfirmation = () => {
+    const changed = reviewingPublication && review.isSuccess && !currentDraft;
+    if (changed || isConflict(operation.error)) void query.refetch();
+    setConfirmation(null);
+    operation.reset();
+  };
+  if (reviewDenied && !revoked) setRevoked(true);
+  if (revoked || reviewDenied)
+    return <Notice kind="error">{t("forbidden")}</Notice>;
   return (
     <>
       <div className="announcement-actions">
@@ -327,7 +381,7 @@ function Administration({ actor }: { actor: string }) {
       <Notice>{t("manual")}</Notice>
       <p>{t("importantHint")}</p>
       <form
-        className="panel announcement-filters"
+        className="panel announcement-filters announcement-admin-filters"
         onSubmit={(event) => {
           event.preventDefault();
           pagination.reset();
@@ -364,17 +418,7 @@ function Administration({ actor }: { actor: string }) {
         <Button disabled={!online}>{t("apply")}</Button>
       </form>
       {saved && <Notice>{t("saved")}</Notice>}
-      {operation.isError && (
-        <Notice kind="error">
-          {t(
-            isConflict(operation.error)
-              ? "conflict"
-              : operation.error.message.includes("no scheduler")
-                ? "manual"
-                : "operationError",
-          )}
-        </Notice>
-      )}
+      {!confirmation && actionError}
       {!online ? (
         <Notice kind="error">{t("offline", { ns: "translation" })}</Notice>
       ) : query.isPending ? (
@@ -412,9 +456,11 @@ function Administration({ actor }: { actor: string }) {
                       disabled={
                         !online || operation.isPending || !row.has_draft
                       }
-                      onClick={() =>
-                        operation.mutate({ row, action: "publish" })
-                      }
+                      onClick={() => {
+                        setSaved(false);
+                        operation.reset();
+                        setConfirmation({ row, action: "publish" });
+                      }}
                     >
                       {t("publish")}
                     </Button>
@@ -422,13 +468,13 @@ function Administration({ actor }: { actor: string }) {
                   <Button
                     variant="ghost"
                     disabled={!online || operation.isPending}
-                    onClick={() =>
-                      operation.mutate({
-                        row,
-                        action:
-                          row.state === "archived" ? "recover" : "archive",
-                      })
-                    }
+                    onClick={() => {
+                      setSaved(false);
+                      operation.reset();
+                      if (row.state === "archived")
+                        operation.mutate({ row, action: "recover" });
+                      else setConfirmation({ row, action: "archive" });
+                    }}
                   >
                     {t(row.state === "archived" ? "recover" : "archive")}
                   </Button>
@@ -445,7 +491,90 @@ function Administration({ actor }: { actor: string }) {
         </>
       )}
       <Dialog
-        open={editing !== undefined && online && !query.isError}
+        open={confirmation !== null && !query.isError}
+        closeDisabled={operation.isPending}
+        onOpenChange={(open) => {
+          if (!open) closeConfirmation();
+        }}
+        title={t(reviewingPublication ? "reviewPublication" : "reviewArchive")}
+        description={t(
+          reviewingPublication ? "reviewPublicationHelp" : "reviewArchiveHelp",
+        )}
+      >
+        {confirmation && (
+          <h3>
+            {i18n.language.startsWith("de")
+              ? confirmation.row.title_de
+              : confirmation.row.title_en}
+          </h3>
+        )}
+        {reviewingPublication &&
+          (!online ? (
+            <Notice>{t("offline", { ns: "translation" })}</Notice>
+          ) : review.isPending || review.isFetching ? (
+            <Loading />
+          ) : review.isError ? (
+            <ErrorState retry={() => void review.refetch()} />
+          ) : currentDraft ? (
+            <>
+              <dl className="announcement-preview-meta">
+                <div>
+                  <dt>{t("audience")}</dt>
+                  <dd>
+                    {currentDraft.audience_roles.length
+                      ? currentDraft.audience_roles
+                          .map((role) => t(role))
+                          .join(", ")
+                      : t("entireAudience")}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("displayWindow")}</dt>
+                  <dd>
+                    {dateTimeRange(
+                      currentDraft.starts_at,
+                      currentDraft.ends_at,
+                      i18n.language,
+                      currentDraft.time_zone,
+                    )}{" "}
+                    · {currentDraft.time_zone}
+                  </dd>
+                </div>
+              </dl>
+              {currentDraft.important && <Notice>{t("importantHint")}</Notice>}
+              <p className="announcement-body">
+                {i18n.language.startsWith("de")
+                  ? currentDraft.body_de
+                  : currentDraft.body_en}
+              </p>
+            </>
+          ) : (
+            <Notice kind="error">{t("reviewChanged")}</Notice>
+          ))}
+        {actionError}
+        <div className="announcement-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={operation.isPending}
+            onClick={closeConfirmation}
+          >
+            {t("cancel", { ns: "translation" })}
+          </Button>
+          <Button
+            type="button"
+            variant={reviewingPublication ? "default" : "danger"}
+            disabled={!canConfirm}
+            onClick={() => {
+              if (confirmation && canConfirm) operation.mutate(confirmation);
+            }}
+          >
+            {t(reviewingPublication ? "confirmPublication" : "confirmArchive")}
+          </Button>
+        </div>
+      </Dialog>
+      <Dialog
+        open={editing !== undefined && !query.isError}
         onOpenChange={(open) => {
           if (!open) setEditing(undefined);
         }}

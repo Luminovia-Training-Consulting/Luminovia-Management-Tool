@@ -8,13 +8,14 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import { ChangeRequestsPage } from "./changes";
+import { AssignmentAmendments, ChangeRequestsPage } from "./changes";
 import type {
   AssignmentChange,
   AssignmentSnapshot,
@@ -106,16 +107,22 @@ function mount(path = `/changes/${id}`) {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  return render(
+  const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
+          <Route
+            path="/jobs/fixture"
+            element={<AssignmentAmendments actor={teacher} claimId={claim} />}
+          />
           <Route path="/changes" element={<ChangeRequestsPage />} />
           <Route path="/changes/:id" element={<ChangeRequestsPage />} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  return { ...view, update: () => view.rerender(tree()) };
 }
 beforeEach(async () => {
   data = [request()];
@@ -164,10 +171,81 @@ it("opens a course schedule proposal for the exact allowed claim and can dismiss
   );
 });
 
+it("opens the draft directly from the job's amendment action", async () => {
+  mount("/jobs/fixture");
+  await userEvent.click(
+    await screen.findByRole("link", { name: "Änderungsantrag erstellen" }),
+  );
+  const dialog = await screen.findByRole("dialog", {
+    name: "Änderungsantrag erstellen",
+  });
+  expect(
+    within(dialog).getByRole("combobox", { name: "Bestätigter Auftrag" }),
+  ).toHaveValue(claim);
+  expect(state.rpc).not.toHaveBeenCalledWith(
+    "save_assignment_change",
+    expect.anything(),
+  );
+});
+
+it("keeps an in-flight draft open and allows dismissal after a rejected write", async () => {
+  let fail!: (value: { data: null; error: { code: string } }) => void;
+  const pending = new Promise<{ data: null; error: { code: string } }>(
+    (resolve) => {
+      fail = resolve;
+    },
+  );
+  const original = state.rpc.getMockImplementation()!;
+  state.rpc.mockImplementation((name, payload) =>
+    name === "save_assignment_change" ? pending : original(name, payload),
+  );
+  mount(`/changes?claim=${claim}&new=1`);
+  const user = userEvent.setup();
+  const dialog = await screen.findByRole("dialog");
+  const reason = within(dialog).getByRole("textbox", { name: "Begründung" });
+  await user.type(reason, "Fictional pending draft");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Entwurf online speichern" }),
+  );
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.anything(),
+    ),
+  );
+  await user.keyboard("{Escape}");
+  expect(dialog).toBeVisible();
+  expect(
+    within(dialog).getByRole("button", { name: "Abbrechen" }),
+  ).toBeDisabled();
+  await act(async () => fail({ data: null, error: { code: "40001" } }));
+  expect(await within(dialog).findByRole("alert")).toBeVisible();
+  expect(reason).toHaveValue("Fictional pending draft");
+  await user.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+  expect(dialog).not.toBeInTheDocument();
+});
+
+it("keeps a deep-linked draft and its text when the connection drops", async () => {
+  const { update } = mount(`/changes?claim=${claim}&new=1`);
+  const dialog = await screen.findByRole("dialog");
+  const reason = within(dialog).getByRole("textbox", { name: "Begründung" });
+  await userEvent.type(reason, "Fictional offline draft");
+  state.online = false;
+  update();
+  expect(dialog).toBeVisible();
+  expect(reason).toHaveValue("Fictional offline draft");
+  expect(
+    within(dialog).getByRole("button", { name: "Entwurf online speichern" }),
+  ).toBeDisabled();
+});
+
 it("does not open a course schedule proposal for an unavailable claim", async () => {
   mount("/changes?claim=ed000000-0000-4000-8000-000000000099&new=1");
   await screen.findByRole("button", { name: "Änderungsantrag erstellen" });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    /ursprünglich ausgewählte Auftrag/,
+  );
 });
 
 it("compares original/proposed persisted versions without executing authored markup", async () => {

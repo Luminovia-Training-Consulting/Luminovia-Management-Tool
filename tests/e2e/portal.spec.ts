@@ -446,6 +446,16 @@ test("combined filters find a real job, claim confirms all five sessions and imm
     });
     expect(storedJobError).toBeNull();
     expect((storedJob as {status?: string} | null)?.status).toBe("filled");
+
+    // From the confirmed job the action opens this exact assignment's draft.
+    await page.locator(".changes-linked").getByRole("link", {
+        name: "Änderungsantrag erstellen", exact: true,
+    }).click();
+    const amendment = page.getByRole("dialog", {name: "Änderungsantrag erstellen"});
+    await expect(amendment.getByLabel("Bestätigter Auftrag", {exact: true})).toHaveValue(claim.id);
+    await page.keyboard.press("Escape");
+    await expect(amendment).not.toBeVisible();
+
     await page.goto("/calendar");
     await expect(
         page.getByRole("heading", {name: /Kalender/}).first(),

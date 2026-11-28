@@ -118,6 +118,7 @@ export function JobLifecyclePanel({
   }>({ value: "", instant: null });
   const [copyTitle, setCopyTitle] = useState(job.title);
   const [editing, setEditing] = useState(false);
+  const [savingScheduleDraft, setSavingScheduleDraft] = useState(false);
   const [editReturnTarget, setEditReturnTarget] = useState<HTMLElement | null>(
     null,
   );
@@ -272,10 +273,11 @@ export function JobLifecyclePanel({
         save={(input) => change.mutate(input)}
       />
     ));
+  const editorPending = change.isPending || savingScheduleDraft;
   const editButton = (label: string) => (
     <Button
       variant={editButtonTarget ? "danger" : "secondary"}
-      disabled={!online || change.isPending}
+      disabled={!online || editorPending}
       onClick={() => {
         change.reset();
         setEditReturnTarget(null);
@@ -286,7 +288,7 @@ export function JobLifecyclePanel({
     </Button>
   );
   const openRelatedSection = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (change.isPending) {
+    if (editorPending) {
       event.preventDefault();
       return;
     }
@@ -320,14 +322,14 @@ export function JobLifecyclePanel({
         <Dialog
           open={Boolean(editing && canEdit)}
           onOpenChange={(open) => {
-            if (!change.isPending) setEditing(open);
+            if (!editorPending) setEditing(open);
           }}
           title={t("editAssignment")}
           description={t("editAssignmentHelp")}
           returnFocusTo={
             editReturnTarget ?? editButtonTarget.querySelector("button")
           }
-          closeDisabled={change.isPending}
+          closeDisabled={editorPending}
         >
           <div className="page-actions job-editor-actions">
             <Button asChild variant="secondary">
@@ -365,10 +367,10 @@ export function JobLifecyclePanel({
                   <AssignmentScheduleForm
                     candidates={scheduleCandidates}
                     rangeEditor
+                    onSavingChange={setSavingScheduleDraft}
                     onDone={(id) => {
-                      if (!id) return;
                       setEditing(false);
-                      void navigate(`/changes/${id}`);
+                      if (id) void navigate(`/changes/${id}`);
                     }}
                   />
                 </Suspense>

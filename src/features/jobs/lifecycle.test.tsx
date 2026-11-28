@@ -130,6 +130,7 @@ function setup(
   meta = empty,
   write?: Parameters<typeof mock>[1],
   subject = job,
+  editButtonTarget?: HTMLElement,
 ) {
   mock(meta, write);
   const client = new QueryClient({
@@ -142,13 +143,78 @@ function setup(
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/jobs/job"]}>
-        <JobLifecyclePanel job={subject} />
+        <JobLifecyclePanel job={subject} editButtonTarget={editButtonTarget} />
         <CurrentLocation />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return client;
 }
+
+it("closes the confirmed job's inline schedule editor when the user cancels", async () => {
+  await i18n.changeLanguage("de");
+  const target = document.createElement("div");
+  document.body.append(target);
+  const claimId = "d1000000-0000-4000-8000-000000000001";
+  const jobId = "d1000000-0000-4000-8000-000000000002";
+  const lecturerId = "d1000000-0000-4000-8000-000000000003";
+  try {
+    setup(
+      {
+        ...assigned,
+        can_edit_metadata: true,
+        claims: [
+          { ...assigned.claims[0], id: claimId, lecturer_id: lecturerId },
+        ],
+      },
+      (name) =>
+        name === "changeable_assignments"
+          ? {
+              data: [
+                {
+                  claim_id: claimId,
+                  title: job.title,
+                  lecturer_name: "Fictional lecturer",
+                  time_zone: job.time_zone,
+                  can_price: false,
+                  commissioned: false,
+                  schedule_editable: true,
+                  current: {
+                    ...job,
+                    claim_id: claimId,
+                    job_id: jobId,
+                    course_run_id: null,
+                    lecturer_id: lecturerId,
+                    scope: "",
+                    cancel: false,
+                    sessions: job.job_sessions,
+                  },
+                },
+              ],
+            }
+          : { data: "job" },
+      { ...job, id: jobId },
+      target,
+    );
+    const opener = await within(target).findByRole("button");
+    const user = userEvent.setup();
+    await user.click(opener);
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", {
+        name: "Abbrechen",
+      }),
+    );
+    expect(dialog).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "save_assignment_change",
+      expect.anything(),
+    );
+  } finally {
+    target.remove();
+  }
+});
 
 it("shows the server maximum across lecturer tiers instead of multiplying the viewer's own quote", async () => {
   setup({ ...empty, capacity: 3, max_net_budget: 219.03 });

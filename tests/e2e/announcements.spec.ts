@@ -1,4 +1,4 @@
-import {expect, type Page, test} from "@playwright/test";
+import {expect, type Locator, type Page, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
 import {actor, adminLogin, api, checked, login,} from "./helpers/accounts-support";
@@ -53,6 +53,20 @@ async function fillDraft(page: Page, title: string, english: string) {
     return dialog;
 }
 
+async function confirmPublication(row: Locator, page: Page) {
+    await row.getByRole("button", {name: "Jetzt veröffentlichen", exact: true}).click();
+    const review = page.getByRole("dialog", {name: "Veröffentlichung prüfen"});
+    await review.getByRole("button", {name: "Veröffentlichung bestätigen", exact: true}).click();
+}
+
+async function confirmArchive(row: Locator, page: Page) {
+    await row.getByRole("button", {name: "Archivieren", exact: true}).click();
+    await page
+        .getByRole("dialog", {name: "Archivierung prüfen"})
+        .getByRole("button", {name: "Archivierung bestätigen", exact: true})
+        .click();
+}
+
 test("password-only authentication administration publishes bilingual revisions; saved drafts stay private and revision ACKs reveal a later publication", async ({
                                                                                                                                                                      page,
                                                                                                                                                                      browser,
@@ -80,9 +94,12 @@ test("password-only authentication administration publishes bilingual revisions;
         await dialog
             .getByRole("checkbox", {name: "Dozierende", exact: true})
             .check();
-        await dialog
-            .getByRole("button", {name: "Entwurf speichern", exact: true})
-            .click();
+        const save = dialog.getByRole("button", {name: "Entwurf speichern", exact: true});
+        await page.context().setOffline(true);
+        await expect(save).toBeDisabled();
+        await expect(dialog.getByLabel("Titel auf Deutsch", {exact: true})).toHaveValue(title);
+        await page.context().setOffline(false);
+        await save.click();
         await expect(dialog).toBeHidden();
         expect(
             (await checked(teacherApi.rpc("announcements", {p_search: token})))
@@ -91,9 +108,16 @@ test("password-only authentication administration publishes bilingual revisions;
         let row = page
             .getByRole("article")
             .filter({has: page.getByRole("heading", {name: title, exact: true})});
-        await row
-            .getByRole("button", {name: "Jetzt veröffentlichen", exact: true})
-            .click();
+        const publish = row.getByRole("button", {name: "Jetzt veröffentlichen", exact: true});
+        await publish.press("Enter");
+        const review = page.getByRole("dialog", {name: "Veröffentlichung prüfen"});
+        await expect(review.getByText("Dozierende", {exact: true})).toBeVisible();
+        await expect(review.getByText(`Fiktiver Hinweis ${title} <script> als Text.`, {exact: true})).toBeVisible();
+        expect((await checked(teacherApi.rpc("announcements", {p_search: token}))).items).toEqual([]);
+        await page.keyboard.press("Escape");
+        await expect(review).toBeHidden();
+        await expect(publish).toBeFocused();
+        await confirmPublication(row, page);
         await expect(
             row.getByText("Veröffentlicht", {exact: true}),
         ).toBeVisible();
@@ -153,9 +177,7 @@ test("password-only authentication administration publishes bilingual revisions;
         row = page
             .getByRole("article")
             .filter({has: page.getByRole("heading", {name: v2, exact: true})});
-        await row
-            .getByRole("button", {name: "Jetzt veröffentlichen", exact: true})
-            .click();
+        await confirmPublication(row, page);
         await expect
             .poll(async () =>
                 (
@@ -181,7 +203,7 @@ test("password-only authentication administration publishes bilingual revisions;
             path: `.local/screenshots/${testInfo.project.name}-announcements.png`,
             fullPage: true,
         });
-        await row.getByRole("button", {name: "Archivieren", exact: true}).click();
+        await confirmArchive(row, page);
         await expect(row.getByText("Archiviert", {exact: true})).toBeVisible();
     } finally {
         await context.close();
@@ -217,16 +239,16 @@ test("future publication remains manual; archive/recover and an informational pu
     const row = page
         .getByRole("article")
         .filter({has: page.getByRole("heading", {name: title, exact: true})});
-    await row
-        .getByRole("button", {name: "Jetzt veröffentlichen", exact: true})
-        .click();
-    await expect(page.getByRole("alert")).toContainText(
+    await confirmPublication(row, page);
+    const review = page.getByRole("dialog", {name: "Veröffentlichung prüfen"});
+    await expect(review.getByRole("alert")).toContainText(
         "manuelle Veröffentlichung",
     );
+    await review.getByRole("button", {name: "Abbrechen", exact: true}).click();
     expect(
         (await checked(teacherApi.rpc("announcements", {p_search: token}))).items,
     ).toEqual([]);
-    await row.getByRole("button", {name: "Archivieren", exact: true}).click();
+    await confirmArchive(row, page);
     await expect(row.getByText("Archiviert", {exact: true})).toBeVisible();
     await row
         .getByRole("button", {name: "Wiederherstellen", exact: true})
@@ -243,9 +265,7 @@ test("future publication remains manual; archive/recover and an informational pu
         .getByRole("button", {name: "Entwurf speichern", exact: true})
         .click();
     await expect(edit).toBeHidden();
-    await row
-        .getByRole("button", {name: "Jetzt veröffentlichen", exact: true})
-        .click();
+    await confirmPublication(row, page);
     await expect(row.getByText("Veröffentlicht", {exact: true})).toBeVisible();
     const info = (
         await checked(teacherApi.rpc("announcements", {p_search: token}))
@@ -260,6 +280,6 @@ test("future publication remains manual; archive/recover and an informational pu
                 .eq("resource_id", info.id),
         ),
     ).toEqual([]);
-    await row.getByRole("button", {name: "Archivieren", exact: true}).click();
+    await confirmArchive(row, page);
     await expect(row.getByText("Archiviert", {exact: true})).toBeVisible();
 });

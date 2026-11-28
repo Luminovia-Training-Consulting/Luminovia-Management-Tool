@@ -41,8 +41,31 @@
   gap: 16px;
 }
 
-.announcement-filters .button {
-  align-self: end;
+.announcement-filters {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.announcement-admin-filters {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+}
+
+.announcement-filters > .field {
+  margin: 0;
+}
+
+.announcement-preview-meta {
+  display: grid;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+
+.announcement-preview-meta dt {
+  font-weight: 650;
+}
+
+.announcement-preview-meta dd {
+  margin: 0;
 }
 
 .announcement-roles {

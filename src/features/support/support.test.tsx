@@ -1,5 +1,12 @@
 /** Mocked component/adapter regressions for support. Real authentication, PostgreSQL, scanner and browser acceptance are exercised by the separate isolated integration suites. */
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -378,6 +385,92 @@ describe("connected private support desk", () => {
     await screen.findByText(/Der Anhang wurde nicht bestätigt/);
     expect(upload).toHaveBeenCalledTimes(1);
     expect(screen.getByText(file.name)).toBeVisible();
+  });
+
+  it("keeps a selected attachment across ticket updates and links a confirmed upload without uploading it again", async () => {
+    const documentId = "44444444-4444-4444-8444-444444444444";
+    const upload = vi.mocked(uploadDocument);
+    upload.mockReset();
+    upload.mockResolvedValue({
+      id: documentId,
+    } as Awaited<ReturnType<typeof uploadDocument>>);
+    const { client } = mount();
+    await screen.findByRole("heading", { name: ticket.title });
+    const user = userEvent.setup();
+    const file = new File(["Fictional trace"], "retained-trace.txt", {
+      type: "text/plain",
+    });
+    await user.upload(
+      screen.getByLabelText("Datei auswählen", { selector: "input" }),
+      file,
+    );
+    await act(() => {
+      activeTicket = {
+        ...activeTicket,
+        version: 2,
+        title: "Fictional updated ticket",
+      };
+      return client.invalidateQueries({
+        queryKey: ["support-ticket", state.actor, id],
+      });
+    });
+    await screen.findByRole("heading", { name: activeTicket.title });
+    expect(screen.getByText(file.name)).toBeVisible();
+    expect(upload).not.toHaveBeenCalled();
+
+    const links = vi
+      .fn()
+      .mockImplementationOnce(() => response(null, { code: "40001" }))
+      .mockImplementationOnce(() => response(id));
+    state.rpc.mockImplementation((name, args) => {
+      if (name === "update_support_ticket") return links(args);
+      if (name === "support_ticket") return response(activeTicket);
+      return response(activeContext);
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Geprüften Anhang hochladen" }),
+    );
+    await screen.findByText(/Dieses Ticket wurde geändert/);
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(links).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        p_action: "attach",
+        p_expected_version: 2,
+        p_payload: { document_id: documentId, internal: false },
+      }),
+    );
+
+    activeTicket = {
+      ...activeTicket,
+      version: 3,
+      title: "Fictional reviewed ticket",
+    };
+    const actions = within(screen.getByRole("alert").parentElement!);
+    await user.click(
+      actions.getByRole("button", { name: "Bestätigten Stand neu laden" }),
+    );
+    await screen.findByRole("heading", { name: activeTicket.title });
+    expect(screen.getByText(file.name)).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Geprüften Anhang verknüpfen" }),
+    );
+    await waitFor(() => expect(links).toHaveBeenCalledTimes(2));
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(links).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        p_action: "attach",
+        p_expected_version: 3,
+        p_payload: { document_id: documentId, internal: false },
+      }),
+    );
+    expect(links.mock.calls[1][0].p_request_id).not.toBe(
+      links.mock.calls[0][0].p_request_id,
+    );
+    await waitFor(() =>
+      expect(screen.queryByText(file.name)).not.toBeInTheDocument(),
+    );
   });
 
   it("validates payload types and reports conflicts without treating denials as successes", () => {

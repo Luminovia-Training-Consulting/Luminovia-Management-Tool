@@ -100,12 +100,14 @@ export function ChangeForm({
   original,
   initialClaim,
   rangeEditor = false,
+  onSavingChange,
   onDone,
 }: {
   candidates: ChangeCandidate[];
   original?: AssignmentChange;
   initialClaim?: string;
   rangeEditor?: boolean;
+  onSavingChange: (saving: boolean) => void;
   onDone: (id?: string) => void;
 }) {
   const { t } = useTranslation("changes");
@@ -210,6 +212,8 @@ export function ChangeForm({
     name: "sessions",
   });
   const save = useMutation({
+    onMutate: () => onSavingChange(true),
+    onSettled: () => onSavingChange(false),
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       setInvalidTime(false);
       setInvalidMoney(false);
@@ -294,7 +298,13 @@ export function ChangeForm({
     },
   });
   return (
-    <form noValidate onSubmit={handleSubmit((values) => save.mutate(values))}>
+    <form
+      noValidate
+      onSubmit={handleSubmit((values) => {
+        if (online && !save.isPending && source && (candidate || original))
+          save.mutate(values);
+      })}
+    >
       <p className="muted">{t("scopeHint")}</p>
       <Field
         id="change-assignment"
@@ -346,7 +356,12 @@ export function ChangeForm({
         label={t("reason")}
         error={Boolean(errors.reason)}
       >
-        <textarea id="change-reason" rows={3} {...register("reason")} />
+        <textarea
+          id="change-reason"
+          rows={3}
+          disabled={save.isPending}
+          {...register("reason")}
+        />
       </Field>
       {sharedSchedule ? (
         <p className="muted">
@@ -364,7 +379,11 @@ export function ChangeForm({
               label={t("location")}
               error={Boolean(errors.location) || invalidLocation}
             >
-              <input id="change-location" {...register("location")} />
+              <input
+                id="change-location"
+                disabled={save.isPending}
+                {...register("location")}
+              />
             </Field>
           )}
           <Field
@@ -372,7 +391,12 @@ export function ChangeForm({
             label={t("scope")}
             error={Boolean(errors.scope)}
           >
-            <textarea id="change-scope" rows={4} {...register("scope")} />
+            <textarea
+              id="change-scope"
+              rows={4}
+              disabled={save.isPending}
+              {...register("scope")}
+            />
           </Field>
         </>
       )}
@@ -383,7 +407,12 @@ export function ChangeForm({
           label={t("terms")}
           error={Boolean(errors.terms)}
         >
-          <textarea id="change-terms" rows={4} {...register("terms")} />
+          <textarea
+            id="change-terms"
+            rows={4}
+            disabled={save.isPending}
+            {...register("terms")}
+          />
         </Field>
       )}
       {customerView && !sharedSchedule && (
@@ -391,7 +420,7 @@ export function ChangeForm({
       )}
       {commissioned && canPrice && <p className="muted">{t("commissioned")}</p>}
       {canPrice && (
-        <fieldset className="changes-money">
+        <fieldset className="changes-money" disabled={save.isPending}>
           <legend>
             {t("currency")}: {source?.currency}
           </legend>
@@ -446,7 +475,7 @@ export function ChangeForm({
           {t(sharedSchedule ? "sharedUnavailable" : "linkedSessions")}
         </p>
       ) : (
-        <fieldset className="changes-sessions">
+        <fieldset className="changes-sessions" disabled={save.isPending}>
           <legend>{t("sessions")}</legend>
           <p className="muted">{t("dateHint", { zone })}</p>
           {linkedCourse && (
@@ -542,7 +571,11 @@ export function ChangeForm({
       )}
       {!customerView && !sharedSchedule && (
         <label className="checkbox-label">
-          <input type="checkbox" {...register("cancel")} />
+          <input
+            type="checkbox"
+            disabled={save.isPending}
+            {...register("cancel")}
+          />
           {t("cancelCourse")}
         </label>
       )}
@@ -555,9 +588,14 @@ export function ChangeForm({
             !online || save.isPending || !source || (!candidate && !original)
           }
         >
-          {t("save")}
+          {t(save.isPending ? "savingDraft" : "save")}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => onDone()}>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={save.isPending}
+          onClick={() => onDone()}
+        >
           {t("cancel")}
         </Button>
       </div>
@@ -747,6 +785,7 @@ export function ChangeRequestsPage() {
   const changes = useQuery(changesQuery(session!.user.id, id)),
     candidates = useQuery(changeCandidatesQuery(session!.user.id));
   const [edit, setEdit] = useState<AssignmentChange | null | undefined>();
+  const [savingDraft, setSavingDraft] = useState(false);
   if (changes.isError || candidates.isError)
     return (
       <ErrorState
@@ -767,12 +806,12 @@ export function ChangeRequestsPage() {
   );
   const selectedLecturer = selected && lecturerNames.get(selected.claim_id);
   const initialClaim = params.get("claim") ?? undefined;
-  const openRequestedDraft =
-    !id &&
-    online &&
-    params.get("new") === "1" &&
-    candidates.data.some((candidate) => candidate.claim_id === initialClaim);
-  const draftOpen = edit !== undefined || openRequestedDraft;
+  const requestedDraft =
+    !id && params.get("new") === "1" && Boolean(initialClaim);
+  const matchingCandidate = candidates.data.some(
+    (candidate) => candidate.claim_id === initialClaim,
+  );
+  const draftOpen = edit !== undefined || (requestedDraft && matchingCandidate);
   function closeDraft() {
     setEdit(undefined);
     if (params.has("new")) {
@@ -826,6 +865,9 @@ export function ChangeRequestsPage() {
         </Button>
       </div>
       {!online && <Notice kind="error">{t("offline")}</Notice>}
+      {requestedDraft && !matchingCandidate && !draftOpen && (
+        <Notice kind="error">{t("assignmentUnavailable")}</Notice>
+      )}
       {selected ? (
         <div className="section-stack">
           <section className="panel changes-summary">
@@ -998,6 +1040,7 @@ export function ChangeRequestsPage() {
       )}
       <Dialog
         open={draftOpen}
+        closeDisabled={savingDraft}
         onOpenChange={(open) => {
           if (!open) closeDraft();
         }}
@@ -1009,6 +1052,7 @@ export function ChangeRequestsPage() {
             candidates={candidates.data}
             original={edit ?? undefined}
             initialClaim={initialClaim}
+            onSavingChange={setSavingDraft}
             onDone={(change) => {
               if (change) {
                 setEdit(undefined);
@@ -1051,7 +1095,7 @@ export function AssignmentAmendments({
           </Link>
         </p>
       ))}
-      <TextLink to={`/changes?claim=${claimId}`}>{t("new")}</TextLink>
+      <TextLink to={`/changes?claim=${claimId}&new=1`}>{t("new")}</TextLink>
     </section>
   );
 }

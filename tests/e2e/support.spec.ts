@@ -77,9 +77,6 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
             });
             await expect(page.getByText("fictional-trace.txt", {exact: true})).toBeVisible();
             await expect(page.getByText("Sichtbar für die anfragende Person und berechtigtes Supportpersonal", {exact: true})).toBeVisible();
-            await page.getByRole("button", {name: "Dateiauswahl entfernen", exact: true}).click();
-            await expect(page.getByText("fictional-trace.txt", {exact: true})).toHaveCount(0);
-
             await page
                 .getByRole("button", {name: "Antwort senden", exact: true})
                 .click();
@@ -99,6 +96,10 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
                     .locator(".support-thread")
                     .getByText("Fictional reproduction supplied.", {exact: true}),
             ).toBeVisible();
+            // The confirmed reply advances the ticket version without submitting the selected file.
+            await expect(page.getByText("fictional-trace.txt", {exact: true})).toBeVisible();
+            await page.getByRole("button", {name: "Dateiauswahl entfernen", exact: true}).click();
+            await expect(page.getByText("fictional-trace.txt", {exact: true})).toHaveCount(0);
             staffContext = await browser.newContext();
             const staff = await staffContext.newPage();
             await adminLogin(staff, manager);

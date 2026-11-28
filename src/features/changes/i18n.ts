@@ -81,6 +81,7 @@ const de = {
   dateHint:
     "Alle Eingaben gelten in {{zone}}. Mehrdeutige Sommerzeitangaben werden abgelehnt.",
   save: "Entwurf online speichern",
+  savingDraft: "Entwurf wird gespeichert …",
   cancel: "Abbrechen",
   draft: "Entwurf",
   submitted: "Eingereicht",
@@ -213,6 +214,7 @@ const en = {
   dateHint:
     "All entries use {{zone}}. Ambiguous daylight-saving times are rejected.",
   save: "Save draft online",
+  savingDraft: "Saving draft…",
   cancel: "Cancel",
   draft: "Draft",
   submitted: "Submitted",
