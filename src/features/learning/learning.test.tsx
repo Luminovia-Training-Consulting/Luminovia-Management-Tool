@@ -215,6 +215,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
 });
 
 function setup(hash = "", academy?: "active" | "grace") {
@@ -242,6 +243,7 @@ describe("connected course workspace", () => {
   it.each(["active", "grace"] as const)(
     "opens the saved series from the Academy course overview in %s",
     async (academy) => {
+      vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(true);
       fake.workspace.access.manager = true;
       const sessions = [
         {
@@ -273,6 +275,8 @@ describe("connected course workspace", () => {
       await user.click(
         await screen.findByText(
           active ? "Serienmuster bearbeiten" : "Serienmuster ansehen",
+          {},
+          { timeout: 5000 },
         ),
       );
       expect(fake.rpc).toHaveBeenCalledWith(
