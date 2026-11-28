@@ -65,3 +65,46 @@ test("ICS preview and save include only appointments starting on the selected lo
         await checked(service.auth.admin.deleteUser(owner.id));
     }
 });
+test("ICS import stores the first occurrence of a repeated local time", async ({page}) => {
+    const owner = await actor("Fictional calendar overlap lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const calendar = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VEVENT",
+        "UID:fictional-berlin-overlap",
+        "DTSTART;TZID=Europe/Berlin:20271031T023000",
+        "DTEND;TZID=Europe/Berlin:20271031T024500",
+        "SUMMARY:Fictional daylight saving overlap",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ].join("\r\n");
+    try {
+        await login(page, owner.email);
+        await page.goto("/calendar");
+        await page.getByText("Kalenderfunktionen", {exact: true}).click();
+        await page.getByText("ICS-Datei importieren", {exact: true}).click();
+        await page.getByLabel("Termine ab", {exact: true}).fill("2027-10-31");
+        await page.getByLabel("Termine bis (einschließlich)", {exact: true}).fill("2027-10-31");
+        await page.getByLabel("Kalenderdatei (.ics, bis 2 MB)", {exact: true}).setInputFiles({
+            name: "overlap.ics",
+            mimeType: "text/calendar",
+            buffer: Buffer.from(calendar),
+        });
+        const preview = page.getByRole("region", {name: "Importvorschau", exact: true});
+        await expect(preview.getByRole("listitem").locator("strong")).toHaveText([
+            "Fictional daylight saving overlap",
+        ]);
+        await preview.getByRole("button", {name: "Termine importieren", exact: true}).click();
+        await expect(page.getByText("1 Termine importiert, 0 bereits vorhanden.", {exact: true})).toBeVisible();
+        const saved = await checked(
+            service.from("personal_events").select("starts_at,ends_at").eq("user_id", owner.id).single(),
+            {requireData: true},
+        );
+        expect(new Date(saved.starts_at).toISOString()).toBe("2027-10-31T00:30:00.000Z");
+        expect(new Date(saved.ends_at).toISOString()).toBe("2027-10-31T00:45:00.000Z");
+    } finally {
+        await checked(service.from("personal_events").delete().eq("user_id", owner.id));
+        await checked(service.auth.admin.deleteUser(owner.id));
+    }
+});
