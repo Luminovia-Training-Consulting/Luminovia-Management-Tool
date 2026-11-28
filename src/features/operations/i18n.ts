@@ -643,6 +643,14 @@ const pairs: Record<string, [string, string]> = {
     "Noch keine aktiven Teilnehmenden verknüpft.",
     "No active participants linked yet.",
   ],
+  participantSearch: [
+    "Teilnehmende nach Name, User-ID, Referenz oder Klasse suchen",
+    "Find participants by name, User ID, reference or class",
+  ],
+  participantSearchClear: [
+    "Teilnehmendensuche zurücksetzen",
+    "Clear participant search",
+  ],
   removeParticipant: ["Aus Unternehmen entfernen", "Remove from company"],
   removeParticipantConfirm: [
     "Diese Verknüpfung entfernen? Das globale Konto und andere Unternehmen bleiben erhalten.",

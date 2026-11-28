@@ -1,5 +1,5 @@
 /** Per-company participant invites, opaque User-ID link requests and membership removal. */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { accountRequest } from "../accounts/api";
@@ -31,6 +31,8 @@ export function CompanyParticipantsPanel({
   const { t } = useTranslation("operations");
   const online = useOnline();
   const cache = useQueryClient();
+  const [participantSearch, setParticipantSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -154,6 +156,17 @@ export function CompanyParticipantsPanel({
   const selected = participants.data.find(
     (row) => row.user_id === detailsTarget?.userId,
   );
+  const term = participantSearch.trim().toLowerCase();
+  const visibleParticipants = term
+    ? participants.data.filter((row) =>
+        [
+          row.display_name,
+          row.luminovia_user_id,
+          row.company_reference,
+          row.class_name,
+        ].some((value) => value?.toLowerCase().includes(term)),
+      )
+    : participants.data;
 
   return (
     <section
@@ -183,8 +196,35 @@ export function CompanyParticipantsPanel({
         </Notice>
       )}
       <div className="company-participant-list">
-        {participants.data.length ? (
-          participants.data.map((participant) => (
+        {!!participants.data.length && (
+          <div className="company-participant-search">
+            <Field
+              id={`participant-search-${organisationId}`}
+              label={t("participantSearch")}
+            >
+              <input
+                ref={searchInput}
+                type="search"
+                value={participantSearch}
+                onChange={(event) => setParticipantSearch(event.target.value)}
+              />
+            </Field>
+            {participantSearch && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setParticipantSearch("");
+                  searchInput.current?.focus();
+                }}
+              >
+                {t("participantSearchClear")}
+              </Button>
+            )}
+          </div>
+        )}
+        {visibleParticipants.length ? (
+          visibleParticipants.map((participant) => (
             <article
               className="company-participant-row"
               aria-label={participant.display_name}
@@ -230,7 +270,13 @@ export function CompanyParticipantsPanel({
             </article>
           ))
         ) : (
-          <p className="muted">{t("participantListEmpty")}</p>
+          <p className="muted" role="status">
+            {t(
+              participants.data.length
+                ? "placementNoResults"
+                : "participantListEmpty",
+            )}
+          </p>
         )}
       </div>
       <div className="company-participant-invitations">

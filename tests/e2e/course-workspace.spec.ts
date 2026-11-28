@@ -773,6 +773,18 @@ test("Premium company multi-course enrolment is confirmed atomically across real
     // Search while retaining previous selections, with no foreign or draft option.
     await login(page, f.client.email);
     await page.goto("/client");
+    const participantSearch = roster.getByRole("searchbox", {
+        name: "Teilnehmende nach Name, User-ID, Referenz oder Klasse suchen",
+        exact: true,
+    });
+    await participantSearch.fill(`missing-${f.token}`);
+    await expect(roster.getByRole("status")).toHaveText("Keine passenden Einträge.");
+    await expect(details).toHaveCount(0);
+    await participantSearch.fill(profile.luminovia_user_id.toLowerCase());
+    await expect(details).toBeVisible();
+    await roster.getByRole("button", {name: "Teilnehmendensuche zurücksetzen", exact: true}).click();
+    await expect(participantSearch).toBeFocused();
+    await expect(participantSearch).toHaveValue("");
     await openCourses();
     await expect(choice(first)).toBeVisible();
     await expect(choice(foreign)).toHaveCount(0);
