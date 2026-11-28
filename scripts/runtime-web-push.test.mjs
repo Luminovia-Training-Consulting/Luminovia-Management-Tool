@@ -138,10 +138,11 @@ function provider(status, retryAfter = "90") {
     };
 }
 
-test("mock provider receives encrypted bytes through pinned verified TLS and classifies 201/410/429", async () => {
+test("mock provider receives encrypted bytes through pinned verified TLS and classifies HTTP receipts", async () => {
     for (const [status, outcome] of [
         [201, "accepted"],
         [410, "gone"],
+        [408, "retry"],
         [429, "retry"],
         [500, "retry"],
         [302, "failed"],

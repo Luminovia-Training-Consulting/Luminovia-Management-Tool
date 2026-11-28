@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
 import { Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
 import { configureLearningProgramCurriculum } from "./learning-program-api";
@@ -57,6 +58,7 @@ export function ProgrammeCurriculumEditor({
     onSuccess: onSaved,
   });
   const stale = version !== program.version;
+  const cannotSave = !online || stale || pending.isPending;
   const electives = Object.values(curriculum.steps).filter(
     ({ required }) => !required,
   ).length;
@@ -70,15 +72,22 @@ export function ProgrammeCurriculumEditor({
         ...current.steps,
         [id]: { ...current.steps[id], ...change },
       };
+      const remainingElectives = Object.values(steps).filter(
+        ({ required }) => !required,
+      ).length;
       return {
         ...current,
         steps,
-        elective_count: Math.min(
-          current.elective_count,
-          Object.values(steps).filter(({ required }) => !required).length,
-        ),
+        elective_count: remainingElectives
+          ? Math.min(current.elective_count, remainingElectives)
+          : 0,
       };
     });
+  }
+
+  function changeResetting(open: boolean) {
+    pending.reset();
+    setResetting(open);
   }
 
   return (
@@ -86,16 +95,13 @@ export function ProgrammeCurriculumEditor({
       className="programme-steps"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!online || stale || pending.isPending) return;
+        if (cannotSave || resetting) return;
         const parsed = programmeCurriculum.safeParse(curriculum);
         setIssue(!parsed.success);
         if (parsed.success) pending.mutate(parsed.data);
       }}
     >
-      <fieldset
-        className="programme-steps"
-        disabled={!online || stale || pending.isPending}
-      >
+      <fieldset className="programme-steps" disabled={cannotSave}>
         <legend>{t("curriculumEdit")}</legend>
         <label>
           {t("curriculumOverview")}
@@ -175,49 +181,61 @@ export function ProgrammeCurriculumEditor({
             />
           </label>
         )}
-        <div className="form-actions">
-          <Button type="submit">{t("curriculumPublish")}</Button>
-          {program.curriculum && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setResetting(true)}
-            >
-              {t("curriculumReset")}
-            </Button>
-          )}
-        </div>
-        {resetting && (
-          <div>
-            <p>{t("curriculumResetHint")}</p>
-            <div className="form-actions">
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => pending.mutate(null)}
-              >
-                {t("curriculumResetConfirm")}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setResetting(false)}
-              >
-                {t("curriculumCancel")}
-              </Button>
-            </div>
-          </div>
-        )}
       </fieldset>
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={pending.isPending}
-        onClick={onCancel}
+      <div className="form-actions">
+        <Button type="submit" disabled={cannotSave}>
+          {t("curriculumPublish")}
+        </Button>
+        {program.curriculum && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={cannotSave}
+            onClick={() => changeResetting(true)}
+          >
+            {t("curriculumReset")}
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={pending.isPending}
+          onClick={onCancel}
+        >
+          {t("curriculumCancel")}
+        </Button>
+      </div>
+      <Dialog
+        open={resetting}
+        onOpenChange={changeResetting}
+        title={t("curriculumReset")}
+        description={t("curriculumResetHint")}
+        closeDisabled={pending.isPending}
       >
-        {t("curriculumCancel")}
-      </Button>
-      {(pending.isError || issue || stale) && (
+        {(pending.isError || stale) && (
+          <Notice kind="error">{t("curriculumError")}</Notice>
+        )}
+        {!online && <Notice>{t("curriculumOffline")}</Notice>}
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={pending.isPending}
+            onClick={() => changeResetting(false)}
+          >
+            {t("curriculumCancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={cannotSave}
+            onClick={() => pending.mutate(null)}
+          >
+            {t("curriculumResetConfirm")}
+          </Button>
+        </div>
+      </Dialog>
+      {((pending.isError && !resetting) || issue || stale) && (
         <Notice kind="error">{t("curriculumError")}</Notice>
       )}
       {!online && <Notice>{t("curriculumOffline")}</Notice>}

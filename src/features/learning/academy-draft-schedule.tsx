@@ -274,17 +274,12 @@ function DraftScheduleForm({
             entries={sessions.map((row) => ({ id: row.key, row }))}
             zone={zone}
             disabled={save.isPending}
-            onApply={(changes) => {
-              const edits = new Map(changes.map(({ id, row }) => [id, row]));
-              const rows = sessions.map((row) => ({
-                ...row,
-                ...edits.get(row.key),
-              }));
-              if (!validScheduleIntervals(rows.map(resolveSession)))
-                return false;
+            canApply={(rows) =>
+              validScheduleIntervals(rows.map(resolveSession))
+            }
+            onApply={(_changes, rows) => {
               setSessions(rows);
               setInvalid(false);
-              return true;
             }}
           />
         )}

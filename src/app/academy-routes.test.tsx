@@ -1233,8 +1233,10 @@ it("reviews generated dates before saving an Academy draft revision", async () =
   await user.click(
     bulk.getByRole("button", { name: "Review session changes" }),
   );
-  await user.click(bulk.getByRole("button", { name: "Apply session changes" }));
   expect(bulk.getByRole("alert")).toBeVisible();
+  expect(
+    bulk.queryByRole("button", { name: "Apply session changes" }),
+  ).not.toBeInTheDocument();
   expect(second.getByLabelText("Start")).toHaveValue("2039-01-05T09:00");
   fireEvent.change(bulk.getByLabelText("Shift by calendar days"), {
     target: { value: "1" },

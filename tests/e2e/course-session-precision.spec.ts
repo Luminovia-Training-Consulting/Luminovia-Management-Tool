@@ -207,6 +207,10 @@ test("retained course editing preserves exact timestamps and reviewed schedule c
         await expect(reopened.getByLabel("Start 2", {exact: true})).toHaveValue("2030-11-05T09:00");
         await reopened.getByText("Edit multiple sessions", {exact: true}).click();
         await reopened.getByRole("group", {name: "Select sessions"}).getByRole("checkbox").nth(1).check();
+        await reopened.getByLabel("Shift by calendar days").fill("-1");
+        await reopened.getByRole("button", {name: "Review session changes"}).click();
+        await expect(reopened.getByText("Check the selected sessions and times. Their times must be unambiguous and non-overlapping.")).toBeVisible();
+        await expect(reopened.getByRole("button", {name: "Apply session changes"})).toHaveCount(0);
         await reopened.getByLabel("Shift by calendar days").fill("2");
         await reopened.getByRole("button", {name: "Review session changes"}).click();
         await expect(reopened.getByLabel("Start 2", {exact: true})).toHaveValue("2030-11-05T09:00");

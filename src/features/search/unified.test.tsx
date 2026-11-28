@@ -144,6 +144,23 @@ it("discards unobserved private results rather than replaying loaded cursors on 
   await waitFor(() => expect(client.getQueryState(key)).toBeUndefined());
 });
 
+it("keeps the same focused field when a new search is submitted via Enter", async () => {
+  view();
+  const user = userEvent.setup();
+  const field = screen.getByRole("searchbox", { name: "Suchbegriff" });
+  await user.clear(field);
+  await user.type(field, "  Different search  {Enter}");
+  expect(screen.getByRole("searchbox", { name: "Suchbegriff" })).toBe(field);
+  expect(field).toHaveFocus();
+  expect(field).toHaveValue("Different search");
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "unified_search",
+      expect.objectContaining({ p_query: "Different search", p_kind: "wiki" }),
+    ),
+  );
+});
+
 it("preserves an unsaved search across language changes", async () => {
   view();
   const field = await screen.findByRole("searchbox", { name: "Suchbegriff" });

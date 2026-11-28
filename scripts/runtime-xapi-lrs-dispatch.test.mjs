@@ -85,6 +85,56 @@ test("resumes a dense export across the per-course budget without replaying ackn
   assert.deepEqual(saved, { version: 1, courses: { [course]: end } });
 });
 
+test("resumes at the first unconfirmed split range after an export or delivery failure", async () => {
+  for (const failedStage of ["export", "delivery"]) {
+    const ranges = [];
+    let saved = { version: 1, courses: {} };
+    const perform = (fail) =>
+      dispatchCourseArchives({
+        courses: [{ id: course, from: midnight }],
+        state: structuredClone(saved),
+        now: fixtureTime,
+        exportWindow: (_id, from, until) => {
+          ranges.push([from, until]);
+          if (from === midnight && until === end) return { overflow: true };
+          if (fail && failedStage === "export" && from === halfHour)
+            throw new Error("Fixture export failure");
+          return { from };
+        },
+        deliver: ({ from }) =>
+          fail && failedStage === "delivery" && from === halfHour
+            ? { submitted: 0, retries: 0, pending: 1, failure: 503 }
+            : accepted,
+        save: (next) => {
+          saved = structuredClone(next);
+        },
+      });
+
+    const [interrupted] = await perform(true);
+    assert.equal(
+      interrupted.failure,
+      failedStage === "export" ? "export_or_checkpoint" : 503,
+    );
+    assert.equal(interrupted.through, midnight);
+    assert.deepEqual(saved.courses, {});
+    assert.deepEqual(saved.pending[course].ranges, [
+      [Date.parse(halfHour), Date.parse(end)],
+    ]);
+
+    const [resumed] = await perform(false);
+    assert.equal(resumed.failure, null);
+    assert.equal(resumed.through, end);
+    assert.equal(resumed.submitted, 1);
+    assert.deepEqual(ranges, [
+      [midnight, end],
+      [midnight, halfHour],
+      [halfHour, end],
+      [halfHour, end],
+    ]);
+    assert.deepEqual(saved, { version: 1, courses: { [course]: end } });
+  }
+});
+
 test("keeps an unpersisted checkpoint unchanged and still processes a second course", async () => {
   const state = { version: 1, courses: { [course]: halfHour } };
   const reports = await dispatchCourseArchives({

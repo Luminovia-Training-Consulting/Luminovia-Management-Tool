@@ -17,7 +17,7 @@ const entries = [
   },
 ];
 
-async function setup(disabled = false) {
+async function setup(disabled = false, canApply = vi.fn(() => true)) {
   await i18n.changeLanguage("de");
   const onApply = vi.fn(() => true);
   const user = userEvent.setup();
@@ -26,10 +26,13 @@ async function setup(disabled = false) {
       entries={entries}
       zone="Europe/Berlin"
       disabled={disabled}
+      canApply={canApply}
       onApply={onApply}
     />,
   );
+  expect(screen.queryAllByRole("checkbox", { hidden: true })).toHaveLength(0);
   await user.click(screen.getByText("Mehrere Termine bearbeiten"));
+  await screen.findAllByRole("checkbox");
   return { onApply, user };
 }
 
@@ -54,7 +57,8 @@ test("announces selected sessions and disables actions that cannot change the se
 
 test("locks filters, selection and time inputs while the parent action is pending", async () => {
   const { user, onApply } = await setup(true);
-  await user.click(screen.getByText("Nach Wochentag oder Datum auswählen"));
+  const filters = screen.getByText("Nach Wochentag oder Datum auswählen");
+  await user.click(filters);
   expect(screen.getByLabelText("Wochentag")).toBeDisabled();
   expect(screen.getByLabelText("Termine ab")).toBeDisabled();
   expect(screen.getByRole("button", { name: "Alle auswählen" })).toBeDisabled();
@@ -65,5 +69,27 @@ test("locks filters, selection and time inputs while the parent action is pendin
   ).toBe(true);
   expect(screen.getByLabelText("Um Kalendertage verschieben")).toBeDisabled();
   expect(screen.getByLabelText("Neuer Beginn (optional)")).toBeDisabled();
+  await user.click(filters);
+  expect(screen.getAllByRole("checkbox")).toHaveLength(entries.length);
+  expect(onApply).not.toHaveBeenCalled();
+});
+
+test("rejects changes that conflict with the full course schedule before offering confirmation", async () => {
+  const canApply = vi.fn(() => false);
+  const { user, onApply } = await setup(false, canApply);
+  await user.click(screen.getAllByRole("checkbox")[1]);
+  const offset = screen.getByLabelText("Um Kalendertage verschieben");
+  await user.clear(offset);
+  await user.type(offset, "-2");
+  await user.click(
+    screen.getByRole("button", { name: "Terminänderungen prüfen" }),
+  );
+  expect(canApply).toHaveBeenCalledWith([entries[0].row, entries[0].row]);
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Die Termine müssen eindeutig und überschneidungsfrei sein.",
+  );
+  expect(
+    screen.queryByRole("button", { name: "Terminänderungen übernehmen" }),
+  ).not.toBeInTheDocument();
   expect(onApply).not.toHaveBeenCalled();
 });

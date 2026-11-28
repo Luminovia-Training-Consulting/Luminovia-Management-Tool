@@ -67,6 +67,7 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
         await field.fill(needle);
         await page.getByRole("combobox", {name: "Bereich", exact: true}).selectOption("wiki");
         await field.press("Enter");
+        await expect(field).toBeFocused();
         const result = page.getByRole("link", {
             name: new RegExp(`${needle} own draft`),
         });
@@ -89,6 +90,7 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
         await englishField.fill(needle);
         await page.getByRole("combobox", {name: "Area", exact: true}).selectOption("wiki");
         await englishField.press("Enter");
+        await expect(englishField).toBeFocused();
         await expect(result).toBeVisible();
         expect(
             (
@@ -106,6 +108,17 @@ test("universal search finds own wiki drafts, keeps foreign drafts private and o
             path: testInfo.outputPath("universal-search.png"),
             fullPage: true,
         });
+        if (testInfo.project.use.hasTouch) {
+            await page.setViewportSize({width: 320, height: 600});
+            const actions = page.locator(".topbar-actions");
+            const language = await actions.getByLabel("Language", {exact: true}).boundingBox();
+            const theme = await actions.getByLabel("Theme", {exact: true}).boundingBox();
+            expect(language!.width).toBeGreaterThanOrEqual(44);
+            expect(language!.height).toBeGreaterThanOrEqual(44);
+            expect(theme!.height).toBeGreaterThanOrEqual(44);
+            expect(theme!.x - (language!.x + language!.width)).toBeGreaterThanOrEqual(6);
+            expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+        }
         await result.click();
         await expect(page).toHaveURL(new RegExp(`/chats/forum\\?view=articles&page=${pages[0]}`));
         await expect(page.getByRole("heading", {

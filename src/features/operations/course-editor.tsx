@@ -1138,19 +1138,21 @@ export function RunForm({
                 )}
                 zone={zone}
                 disabled={!online || save.isPending}
+                canApply={(rows) =>
+                  Boolean(
+                    resolveCourseSessions(
+                      rows.filter(
+                        ({ starts_at, ends_at }) => starts_at || ends_at,
+                      ),
+                      zone,
+                      sessionOrigins.current,
+                    ),
+                  )
+                }
                 onApply={(changes) => {
                   const byId = new Map(
                     changes.map((entry) => [entry.id, entry.row]),
                   );
-                  const rows = fields.flatMap(({ id }, index) => {
-                    const row = editedSessions[index];
-                    if (!row || (!row.starts_at && !row.ends_at)) return [];
-                    return [{ ...row, ...byId.get(id) }];
-                  });
-                  if (
-                    !resolveCourseSessions(rows, zone, sessionOrigins.current)
-                  )
-                    return false;
                   fields.forEach(({ id }, index) => {
                     const adjusted = byId.get(id);
                     if (!adjusted) return;
@@ -1164,7 +1166,6 @@ export function RunForm({
                       shouldValidate: true,
                     });
                   });
-                  return true;
                 }}
               />
             )}

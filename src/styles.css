@@ -3750,6 +3750,16 @@ tr + tr td {
     position: static;
   }
 
+  .topbar-actions > .preferences {
+    gap: 6px;
+  }
+
+  .topbar-actions > .preferences select {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding-inline: 4px;
+  }
+
   /* These popovers stay anchored to the wrapped toolbar and its search row. */
   .topbar-actions > .notification-menu > .notification-popover,
   .topbar .account-menu-panel {

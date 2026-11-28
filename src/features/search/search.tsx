@@ -32,25 +32,25 @@ export type SearchSession = [
   (criteria: SearchCriteria) => void,
 ];
 
-/** A new submitted search remounts the draft; a language change preserves unsaved text. */
+/** Adopt newly submitted criteria while keeping the form controls and their focus. */
 function SearchForm({
-  query,
-  kind,
+  criteria,
   onSearch,
 }: {
-  query: string;
-  kind: string;
+  criteria: SearchCriteria;
   onSearch: (query: string, kind: string) => void;
 }) {
   const { t } = useTranslation("unifiedSearch");
-  const [input, setInput] = useState(query);
-  const [type, setType] = useState(kind);
+  const [draft, setDraft] = useState({ source: criteria, ...criteria });
+  if (draft.source !== criteria) {
+    setDraft({ source: criteria, ...criteria });
+  }
   return (
     <form
       className="panel search-page-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSearch(input.trim(), type);
+        onSearch(draft.q.trim(), draft.kind);
       }}
     >
       <Field id="portal-query" label={t("query")}>
@@ -58,16 +58,16 @@ function SearchForm({
           id="portal-query"
           type="search"
           autoComplete="off"
-          value={input}
+          value={draft.q}
           maxLength={100}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => setDraft({ ...draft, q: event.target.value })}
         />
       </Field>
       <Field id="portal-search-kind" label={t("kind")}>
         <select
           id="portal-search-kind"
-          value={type}
-          onChange={(event) => setType(event.target.value)}
+          value={draft.kind}
+          onChange={(event) => setDraft({ ...draft, kind: event.target.value })}
         >
           <option value="">{t("all")}</option>
           {searchKinds.map((value) => (
@@ -94,7 +94,8 @@ function SearchResults() {
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
-  const [{ q, kind }, setCriteria] = useOutletContext<SearchSession>();
+  const [criteria, setCriteria] = useOutletContext<SearchSession>();
+  const { q, kind } = criteria;
   const searchOptions = unifiedSearchQuery(session!.user.id, q, kind);
   const query = useInfiniteQuery({
     ...searchOptions,
@@ -110,9 +111,7 @@ function SearchResults() {
     <>
       <PageHeading title={t("title")} description={t("hint")} />
       <SearchForm
-        key={`${q}\0${kind}`}
-        query={q}
-        kind={kind}
+        criteria={criteria}
         onSearch={(text, value) => {
           if (text === q && value === kind) {
             // Fresh results start at the first cursor; don't replay every loaded page.

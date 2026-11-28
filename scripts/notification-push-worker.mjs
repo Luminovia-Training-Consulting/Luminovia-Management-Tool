@@ -261,7 +261,7 @@ export async function transmit(
                     done({outcome: "accepted", code: null});
                 else if (status === 404 || status === 410)
                     done({outcome: "gone", code: "subscription_gone"});
-                else if (status === 429 || status >= 500) {
+                else if (status === 408 || status === 429 || status >= 500) {
                     done({
                         outcome: "retry",
                         code:

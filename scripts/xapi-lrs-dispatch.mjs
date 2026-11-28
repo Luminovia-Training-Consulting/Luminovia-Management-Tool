@@ -96,17 +96,17 @@ export async function dispatchCourseArchives({
       // A short overlap picks up late commits. The LRS receives the same
       // statement ID and payload for facts it has already acknowledged.
       const start = Math.max(configuredStart, next - hour);
+      let pending = resume ?? [[start, until]];
+      const firstUnconfirmedStart = pending[0][0];
       try {
-        let pending = resume ?? [[start, until]];
         while (pending.length && remaining > 0) {
           remaining -= 1;
           const [[lower, upper], ...later] = pending;
-          pending = later;
           const archive = await exportWindow(id, iso(lower), iso(upper));
           if (archive?.overflow) {
             const midpoint = lower + Math.floor((upper - lower) / 2);
             if (midpoint === lower) throw new Error("window_too_dense");
-            pending = [[lower, midpoint], [midpoint, upper], ...pending];
+            pending = [[lower, midpoint], [midpoint, upper], ...later];
             continue;
           }
           const receipt = await deliver(archive);
@@ -116,18 +116,30 @@ export async function dispatchCourseArchives({
             report.failure = receipt.failure;
             break;
           }
+          pending = later;
         }
-        if (report.failure !== null) break;
+      } catch (error) {
+        report.failure =
+          error?.message === "window_too_dense"
+            ? error.message
+            : "export_or_checkpoint";
+      }
+      try {
         if (pending.length) {
-          // Retain only outstanding ranges so the next run can make progress
-          // without advancing the public checkpoint across an unconfirmed gap.
-          const progress = {
-            ...state.pending,
-            [id]: { configured_start, anchor, ranges: pending },
-          };
-          await save({ ...state, pending: progress });
-          state.pending = progress;
-          report.failure = "window_budget";
+          // Keep completed split ranges out of the retry even after a failure.
+          // The public checkpoint stays at the start of the incomplete window.
+          if (
+            report.failure === null ||
+            pending[0][0] > firstUnconfirmedStart
+          ) {
+            const progress = {
+              ...state.pending,
+              [id]: { configured_start, anchor, ranges: pending },
+            };
+            await save({ ...state, pending: progress });
+            state.pending = progress;
+          }
+          report.failure ??= "window_budget";
           break;
         }
         const completed = iso(until);
@@ -145,11 +157,8 @@ export async function dispatchCourseArchives({
         else delete state.pending;
         report.through = completed;
         next = until;
-      } catch (error) {
-        report.failure =
-          error?.message === "window_too_dense"
-            ? error.message
-            : "export_or_checkpoint";
+      } catch {
+        report.failure = "export_or_checkpoint";
         break;
       }
     }

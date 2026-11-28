@@ -8,21 +8,24 @@ import { teachingWeekdays, type LocalTeachingSession } from "./schedule";
 import "./course-plan-i18n";
 import "./course-plan.css";
 
-type Edit = { id: string; row: LocalTeachingSession };
+type Edit<Row = LocalTeachingSession> = { id: string; row: Row };
 
-export function CourseSessionBulkEdit({
+export function CourseSessionBulkEdit<Row extends LocalTeachingSession>({
   entries,
   zone,
   disabled,
+  canApply,
   onApply,
 }: {
-  entries: Edit[];
+  entries: Edit<Row>[];
   zone: string;
   disabled: boolean;
-  onApply: (changes: Edit[]) => boolean;
+  canApply: (rows: Row[]) => boolean;
+  onApply: (changes: Edit[], rows: Row[]) => void;
 }) {
   const { t, i18n } = useTranslation("coursePlan");
   const id = useId();
+  const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [weekdayFilter, setWeekdayFilter] = useState("");
   const [firstDate, setFirstDate] = useState("");
@@ -33,10 +36,12 @@ export function CourseSessionBulkEdit({
   const [preview, setPreview] = useState<{ source: string; changes: Edit[] }>();
   const [error, setError] = useState(false);
   const eligible = entries.filter(({ row }) => row.starts_at && row.ends_at);
-  const selectedCount = eligible.filter(({ id }) =>
-    selected.includes(id),
+  const visibleSessions = open ? eligible : [];
+  const selectedIds = new Set(selected);
+  const selectedCount = visibleSessions.filter(({ id }) =>
+    selectedIds.has(id),
   ).length;
-  const matching = eligible.filter(({ row }) => {
+  const matching = visibleSessions.filter(({ row }) => {
     const day = row.starts_at.slice(0, 10);
     return (
       (!firstDate || day >= firstDate) &&
@@ -46,8 +51,17 @@ export function CourseSessionBulkEdit({
           Number(weekdayFilter))
     );
   });
-  const source = JSON.stringify([zone, eligible, selected, offset, start, end]);
-  const changes = preview?.source === source ? preview.changes : null;
+  const previewSource = () =>
+    JSON.stringify([zone, entries, selected, offset, start, end]);
+  const changes =
+    open && preview && preview.source === previewSource()
+      ? preview.changes
+      : null;
+
+  function withChanges(changes: Edit[]) {
+    const edits = new Map(changes.map(({ id, row }) => [id, row]));
+    return entries.map(({ id, row }) => ({ ...row, ...edits.get(id) }));
+  }
 
   function propose() {
     const days = Number(offset);
@@ -57,7 +71,7 @@ export function CourseSessionBulkEdit({
       return;
     }
     const edits = eligible.flatMap((entry) => {
-      if (!selected.includes(entry.id)) return [];
+      if (!selectedIds.has(entry.id)) return [];
       const endpoints = (["starts_at", "ends_at"] as const).map(
         (key, index) => {
           const value = entry.row[key];
@@ -73,8 +87,9 @@ export function CourseSessionBulkEdit({
         ? []
         : [{ id: entry.id, row: { starts_at, ends_at } }];
     });
-    setError(edits.length === 0);
-    setPreview(edits.length ? { source, changes: edits } : undefined);
+    const valid = edits.length > 0 && canApply(withChanges(edits));
+    setError(!valid);
+    setPreview(valid ? { source: previewSource(), changes: edits } : undefined);
   }
 
   function display(value: string) {
@@ -86,7 +101,13 @@ export function CourseSessionBulkEdit({
   if (eligible.length === 0) return null;
 
   return (
-    <details className="operations-schedule-planner">
+    <details
+      className="operations-schedule-planner"
+      onToggle={(event) => {
+        if (event.target === event.currentTarget)
+          setOpen(event.currentTarget.open);
+      }}
+    >
       <summary>{t("bulkSchedule")}</summary>
       <div className="course-planner-fields" onChange={() => setError(false)}>
         <details className="course-planner-advanced">
@@ -100,14 +121,15 @@ export function CourseSessionBulkEdit({
                 onChange={(e) => setWeekdayFilter(e.target.value)}
               >
                 <option value="">{t("bulkScheduleAnyDay")}</option>
-                {teachingWeekdays.map((day) => (
-                  <option key={day} value={day}>
-                    {DateTime.utc(2025, 1, 6)
-                      .plus({ days: day - 1 })
-                      .setLocale(i18n.language)
-                      .toFormat("cccc")}
-                  </option>
-                ))}
+                {open &&
+                  teachingWeekdays.map((day) => (
+                    <option key={day} value={day}>
+                      {DateTime.utc(2025, 1, 6)
+                        .plus({ days: day - 1 })
+                        .setLocale(i18n.language)
+                        .toFormat("cccc")}
+                    </option>
+                  ))}
               </select>
             </Field>
             <Field id={`${id}-from`} label={t("bulkScheduleFrom")}>
@@ -174,11 +196,11 @@ export function CourseSessionBulkEdit({
           disabled={disabled}
         >
           <legend>{t("bulkScheduleSelect")}</legend>
-          {eligible.map(({ id: key, row }) => (
+          {visibleSessions.map(({ id: key, row }) => (
             <label key={key} className="checkbox-label">
               <input
                 type="checkbox"
-                checked={selected.includes(key)}
+                checked={selectedIds.has(key)}
                 onChange={(event) => {
                   const checked = event.target.checked;
                   setSelected((current) =>
@@ -258,7 +280,10 @@ export function CourseSessionBulkEdit({
                 type="button"
                 disabled={disabled}
                 onClick={() => {
-                  setError(!onApply(changes));
+                  const rows = withChanges(changes);
+                  const valid = canApply(rows);
+                  setError(!valid);
+                  if (valid) onApply(changes, rows);
                   setPreview(undefined);
                 }}
               >

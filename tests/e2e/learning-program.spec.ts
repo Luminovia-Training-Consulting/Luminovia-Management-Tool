@@ -133,6 +133,14 @@ test("a complete learning programme unlocks its next course and produces whole-p
   await page.getByLabel("Lernziele des Programms").fill(overview);
   await page.getByRole("button", { name: "Lehrplan veröffentlichen" }).click();
   await expect(page.getByText(overview, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Lehrplan bearbeiten" }).click();
+  const reset = page.getByRole("button", { name: "Lehrplan zurücksetzen" });
+  await reset.press("Enter");
+  const resetDialog = page.getByRole("dialog", { name: "Lehrplan zurücksetzen" });
+  await expect(resetDialog).toBeVisible();
+  await resetDialog.getByRole("button", { name: "Abbrechen", exact: true }).press("Escape");
+  await expect(resetDialog).toBeHidden();
+  await expect(reset).toBeFocused();
   await page.reload();
   await page.getByLabel("Teilnehmende Person").selectOption(learner.id);
   await page.getByRole("button", { name: "Für Programm einschreiben" }).click();
