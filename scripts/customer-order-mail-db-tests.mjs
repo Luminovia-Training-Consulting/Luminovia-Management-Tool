@@ -27,6 +27,13 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
     sql(`select count(*) from private.notification_email_outbox delivery
     join public.notifications notice on notice.id = delivery.notification_id
     where notice.resource_id = ${q(resource)} and notice.kind like 'customer_order_%';`);
+  const receiptLeases = async (...resources) => {
+    const ids = JSON.parse(await sql(`select coalesce(jsonb_agg(delivery.id), '[]'::jsonb)
+      from private.notification_email_outbox delivery
+      join public.notifications notice on notice.id = delivery.notification_id
+      where notice.resource_id in (${resources.map(q).join(",")}) and notice.kind like 'customer_order_%';`));
+    return (await service("lease_notification_emails", "20")).filter(({ id }) => ids.includes(id));
+  };
   const inbox = async (user) =>
     (await rpc(user, "public.notification_inbox()")).items.filter(({ kind }) =>
       kind.startsWith("customer_order_"),
@@ -120,7 +127,7 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
   const [quietStart, quietEnd] = quietTime.split("|");
   await sql(`update private.delivery_preferences set time_zone = 'UTC', quiet_start = ${q(quietStart)},
     quiet_end = ${q(quietEnd)} where user_id = ${q(requester)}`);
-  const deferred = await service("lease_notification_emails", "10");
+  const deferred = await receiptLeases(request, claimId);
   assert.equal(deferred.length, 2);
   const prepare = (lease) =>
     service(
@@ -136,7 +143,7 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
   );
   await sql(`update private.delivery_preferences set quiet_start = null, quiet_end = null where user_id = ${q(requester)};
     update private.notification_email_outbox set available_at = now() where error_code = 'quiet_hours';`);
-  const leases = await service("lease_notification_emails", "10");
+  const leases = await receiptLeases(request, claimId);
   const prepared = await Promise.all(leases.map(prepare));
   const deliveryKinds = prepared.map(({ kind }) => kind).sort();
   assert.deepEqual(deliveryKinds, [
@@ -182,7 +189,8 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
     "aal2",
   );
   assert.equal(await pending(staffRequest), "1");
-  const [contactLease] = await service("lease_notification_emails", "10");
+  const [contactLease] = await receiptLeases(staffRequest);
+  assert.ok(contactLease);
   await sql(
     `update public.client_organisation_memberships set removed_at = now() where user_id = ${q(contact)}`,
   );
@@ -228,4 +236,23 @@ await withTestDatabase("customer_order_mail", async ({ sql, actor }) => {
   console.log(
     "PASS company order and confirmed lecturer receipts, deduplication, scoped delivery, quiet hours, acceptance and deletion scope.",
   );
+
+  const queuedRequest = await submit(requester, randomUUID());
+  assert.equal(await pending(queuedRequest), "1");
+  const [queuedLease] = await receiptLeases(queuedRequest);
+  assert.ok(queuedLease);
+  const channels = (await rpc(requester, "public.notification_channel_preferences()")).channels;
+  channels.email.company_orders = false;
+  await rpc(requester, `public.save_notification_channel_preferences(${input(channels)},0)`);
+  assert.equal(await prepare(queuedLease), null);
+  assert.equal(
+    await sql(`select state from private.notification_email_outbox where id = ${q(queuedLease.id)}`),
+    "suppressed",
+  );
+
+  const optedOutRequest = await submit(requester, randomUUID());
+  assert.equal(await pending(optedOutRequest), "0");
+  assert.equal((await inbox(requester)).filter(({ kind }) => kind === "customer_order_submitted").length, 3);
+  assert.deepEqual(await inbox(outsider), []);
+  console.log("PASS company receipt email opt-out suppresses queued and new delivery while retaining scoped inbox entries.");
 });

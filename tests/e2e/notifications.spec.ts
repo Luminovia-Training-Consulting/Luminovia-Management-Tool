@@ -363,3 +363,51 @@ test("email channel and IANA quiet hours persist across language, reload and off
         await checked(service.auth.admin.deleteUser(owner.id));
     }
 });
+
+test("settings save email and push choices independently for each notification category", async ({page}) => {
+    const owner = await actor("Fictional channel preference lecturer", "lecturer");
+    const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const reader = api(process.env.SUPABASE_ANON_KEY!);
+    try {
+        await checked(
+            reader.auth.signInWithPassword({
+                email: owner.email,
+                password: process.env.E2E_PASSWORD!,
+            }),
+        );
+        await login(page, owner.email);
+        await page.goto("/settings");
+        const matrix = page.getByRole("table", {name: "Benachrichtigungen per E-Mail und Push"});
+        const chatEmail = matrix.getByRole("checkbox", {name: "E-Mail für Chatnachrichten", exact: true});
+        const chatPush = matrix.getByRole("checkbox", {name: "Push für Chatnachrichten", exact: true});
+        const invoiceEmail = matrix.getByRole("checkbox", {name: "E-Mail für Rechnungen und Zahlungen", exact: true});
+        const invoicePush = matrix.getByRole("checkbox", {name: "Push für Rechnungen und Zahlungen", exact: true});
+        await expect(chatEmail).toBeChecked();
+        await expect(invoicePush).toBeChecked();
+        await expect(matrix.getByRole("checkbox", {name: "E-Mail für Bestätigungen zu Unternehmensaufträgen", exact: true})).toBeVisible();
+        await expect(matrix.getByRole("checkbox", {name: "Push für Bestätigungen zu Unternehmensaufträgen", exact: true})).toHaveCount(0);
+        await chatEmail.press("Space");
+        await invoicePush.uncheck();
+        await expect(chatPush).toBeChecked();
+        await expect(invoiceEmail).toBeChecked();
+        await page.getByRole("button", {name: "Versandarten speichern", exact: true}).click();
+        await expect(page.getByText("Versandarten gespeichert.", {exact: true})).toBeVisible();
+
+        expect(await checked(reader.rpc("notification_channel_preferences"))).toMatchObject({
+            version: 1,
+            channels: {
+                email: {chat: false, invoices: true, company_orders: true},
+                push: {chat: true, invoices: false},
+            },
+        });
+        await page.reload();
+        await expect(chatEmail).not.toBeChecked();
+        await expect(chatPush).toBeChecked();
+        await expect(invoiceEmail).toBeChecked();
+        await expect(invoicePush).not.toBeChecked();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally {
+        await reader.auth.signOut();
+        await checked(service.auth.admin.deleteUser(owner.id));
+    }
+});

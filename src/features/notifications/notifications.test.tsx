@@ -25,6 +25,26 @@ import {
   notificationPreviewQuery,
 } from "./api";
 
+import {
+  deliveryCategories,
+  notificationChannelPreferencesPayloadSchema,
+  type NotificationChannelPreferences,
+} from "./channel-preferences-schema";
+
+/** Represent the unchanged defaults of a current actor with no saved delivery overrides. */
+function defaultChannels() {
+  return notificationChannelPreferencesPayloadSchema.parse({
+    email: Object.fromEntries(
+      deliveryCategories.map((category) => [category, true]),
+    ),
+    push: Object.fromEntries(
+      deliveryCategories
+        .filter((category) => category !== "company_orders")
+        .map((category) => [category, true]),
+    ),
+  });
+}
+
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   actor: "actor-a",
@@ -32,6 +52,7 @@ const state = vi.hoisted(() => ({
   roles: ["lecturer"] as string[],
   rejectMark: false,
   staleSave: false,
+  channels: undefined as NotificationChannelPreferences | undefined,
   attention: {
     enabled: false,
     start_time: "22:00",
@@ -91,6 +112,7 @@ beforeEach(async () => {
   state.online = true;
   state.rejectMark = false;
   state.staleSave = false;
+  state.channels = { channels: defaultChannels(), version: 0 };
   state.attention = {
     enabled: false,
     start_time: "22:00",
@@ -113,7 +135,22 @@ beforeEach(async () => {
         };
       else if (name === "notification_preferences")
         result.data = { ...initialPreferences };
-      else if (name === "attention_preferences")
+      else if (name === "notification_channel_preferences")
+        result.data = state.channels;
+      else if (name === "save_notification_channel_preferences") {
+        const current = state.channels;
+        if (!current || payload?.p_expected_version !== current.version)
+          result = { data: null, error: { code: "PT409" } };
+        else {
+          state.channels = {
+            channels: notificationChannelPreferencesPayloadSchema.parse(
+              payload?.p_payload,
+            ),
+            version: current.version + 1,
+          };
+          result.data = state.channels;
+        }
+      } else if (name === "attention_preferences")
         result.data = { ...state.attention };
       else if (name === "save_attention_preferences") {
         if (payload?.p_expected_version !== state.attention.version)
@@ -388,6 +425,117 @@ describe("connected notification inbox", () => {
     ).toHaveLength(0);
   });
 });
+describe("notification delivery by category", () => {
+  it("saves email and push changes independently and retains them across language changes", async () => {
+    view(<SettingsPage />);
+    const table = await screen.findByRole("table", {
+      name: "Benachrichtigungen per E-Mail und Push",
+    });
+    const mailChat = within(table).getByRole("checkbox", {
+      name: "E-Mail für Chatnachrichten",
+    });
+    const pushChat = within(table).getByRole("checkbox", {
+      name: "Push für Chatnachrichten",
+    });
+    const pushInvoice = within(table).getByRole("checkbox", {
+      name: "Push für Rechnungen und Zahlungen",
+    });
+    expect(mailChat).toBeChecked();
+    expect(pushChat).toBeChecked();
+    expect(within(table).getByText("Nicht verfügbar")).toBeInTheDocument();
+    expect(
+      within(table).queryByRole("checkbox", {
+        name: "Push für Bestätigungen zu Unternehmensaufträgen",
+      }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(mailChat);
+    await userEvent.click(pushInvoice);
+    expect(pushChat).toBeChecked();
+    await act(() => i18n.changeLanguage("en"));
+    expect(
+      within(table).getByRole("checkbox", { name: "Email for Chat messages" }),
+    ).toBe(mailChat);
+    expect(mailChat).not.toBeChecked();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save delivery choices" }),
+    );
+    expect(await screen.findByText("Delivery choices saved.")).toBeVisible();
+    const defaults = defaultChannels();
+    expect(state.rpc).toHaveBeenCalledWith(
+      "save_notification_channel_preferences",
+      {
+        p_payload: {
+          email: { ...defaults.email, chat: false },
+          push: { ...defaults.push, invoices: false },
+        },
+        p_expected_version: 0,
+      },
+    );
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "save_notification_preferences",
+      expect.anything(),
+    );
+    expect(state.rpc).not.toHaveBeenCalledWith(
+      "save_delivery_preferences",
+      expect.anything(),
+    );
+  });
+
+  it("keeps the draft on a version conflict and reloads only after confirmation", async () => {
+    view(<SettingsPage />);
+    const email = await screen.findByRole("checkbox", {
+      name: "E-Mail für Chatnachrichten",
+    });
+    await userEvent.click(email);
+    const latest = defaultChannels();
+    latest.push.chat = false;
+    state.channels = { channels: latest, version: 2 };
+    await userEvent.click(
+      screen.getByRole("button", { name: "Versandarten speichern" }),
+    );
+    expect(
+      await screen.findByText(/Die Versandarten wurden parallel geändert/),
+    ).toBeVisible();
+    expect(email).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Push für Chatnachrichten" }),
+    ).toBeChecked();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Aktuelle Versandarten laden" }),
+    );
+    await waitFor(() => expect(email).toBeChecked());
+    expect(
+      screen.getByRole("checkbox", { name: "Push für Chatnachrichten" }),
+    ).not.toBeChecked();
+  });
+
+  it("leaves the existing preferences available on an older installation", async () => {
+    const previous = state.rpc.getMockImplementation()!;
+    state.rpc.mockImplementation((name, payload) =>
+      name === "notification_channel_preferences"
+        ? {
+            abortSignal: async () => ({
+              data: null,
+              error: { code: "PGRST202" },
+              status: 404,
+            }),
+          }
+        : previous(name, payload),
+    );
+    view(<SettingsPage />);
+    expect(
+      await screen.findByRole("checkbox", { name: "Neue Chatnachrichten" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("table", {
+        name: "Benachrichtigungen per E-Mail und Push",
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
 describe("versioned notification preferences", () => {
   it("keeps the same draft and focus on a temporary reload error, then hides it on access denial", async () => {
     view(<SettingsPage />);
@@ -887,6 +1035,7 @@ it("guest settings load only appearance and own-profile links without notificati
     state.rpc.mock.calls.some(([name]) =>
       [
         "notification_preferences",
+        "notification_channel_preferences",
         "attention_preferences",
         "notification_delivery_preferences",
       ].includes(name),

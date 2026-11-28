@@ -71,7 +71,7 @@ const de = {
   invoices: "Rechnungen und Rechnungsprüfung",
   reminders: "Erinnerungen an Termine, Verträge, Qualifikationen und Aufgaben",
   preferenceHelp:
-    "Die Auswahl steuert neue Hinweise im Portal und die Zustellung für passende Ereignisse. E-Mail und Push kannst du unten separat einstellen. Verbindliche Bestätigungen und bereits eingegangene Meldungen bleiben im Posteingang. Du erhältst nur Hinweise zu Vorgängen, für die du berechtigt bist.",
+    "Diese Auswahl steuert zusätzliche Hinweise im Portal. In der Versandtabelle schaltest du E-Mail und Push für diese Hinweise getrennt ein oder aus. Verbindliche Bestätigungen und eingegangene Meldungen bleiben im Posteingang.",
   deliverySettings: "E-Mail, Push & Ruhezeiten",
   refresh: "Fällige Erinnerungen prüfen",
   reminderScope: "Was wird bei Erinnerungen geprüft?",
@@ -216,7 +216,7 @@ const en: Record<keyof typeof de, string> = {
   invoices: "Invoices and invoice review",
   reminders: "Reminders for sessions, contracts, qualifications and tasks",
   preferenceHelp:
-    "These choices control new portal alerts and delivery for eligible events. Adjust email and push separately below. Official confirmations and existing notifications stay in the inbox. You only receive alerts for activity you have access to.",
+    "These choices control optional portal alerts. Use the delivery table to switch email and push for these alerts on or off separately. Official confirmations and existing notifications stay in the inbox.",
   deliverySettings: "Email, push & quiet hours",
   refresh: "Check due reminders",
   reminderScope: "What does the reminder check include?",

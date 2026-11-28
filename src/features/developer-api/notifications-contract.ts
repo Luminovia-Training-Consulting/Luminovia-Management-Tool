@@ -17,6 +17,10 @@ import {
   savedAttentionSchema,
   zeroVersion,
 } from "../notifications/schema.ts";
+import {
+  notificationChannelPreferencesPayloadSchema,
+  notificationChannelPreferencesSchema,
+} from "../notifications/channel-preferences-schema.ts";
 import type { nativeDownloadPaths } from "./native-contract.ts";
 
 const id = z.uuid();
@@ -165,6 +169,22 @@ export const notificationPaths = {
     "Submit the category switches and the version from the last read. Older clients may omit events and invoices to retain their saved values. The response contains the committed values and new version.",
     versioned(notificationPreferencesPayloadSchema),
     notificationPreferencesSchema,
+    { versioned: true },
+  ),
+  "/rest/v1/rpc/notification_channel_preferences": operation(
+    "readNotificationChannelPreferences",
+    "Read own email and push category switches",
+    "Returns the current internal portal account's external delivery switches and version. Version zero represents an unsaved matrix. Existing category, device and access requirements still apply.",
+    noBody,
+    notificationChannelPreferencesSchema,
+    { optionalBody: true },
+  ),
+  "/rest/v1/rpc/save_notification_channel_preferences": operation(
+    "saveNotificationChannelPreferences",
+    "Save own email and push category switches",
+    "Save the email and push choices together using the expected version. Company order receipts currently use email only. Changing these switches cannot grant access or replay earlier events.",
+    versioned(notificationChannelPreferencesPayloadSchema, true),
+    notificationChannelPreferencesSchema,
     { versioned: true },
   ),
   "/rest/v1/rpc/attention_preferences": operation(

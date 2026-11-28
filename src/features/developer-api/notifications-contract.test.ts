@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { deliveryCategories } from "../notifications/channel-preferences-schema";
 import { inboxWireSchema } from "../notifications/schema";
 import { portalOpenApi } from "./contract";
 import { isDocumentedRequest } from "./test/internal-explorer";
@@ -144,8 +145,36 @@ describe("notification and device API", () => {
     }
   });
 
-  it("describes separate version rules and current conflict responses for all three preferences", () => {
-    for (const name of ["notification", "delivery", "attention"]) {
+  it("requires separate complete channel maps and rejects email-only receipts in Push", () => {
+    const email = Object.fromEntries(
+      deliveryCategories.map((category) => [category, category !== "chat"]),
+    );
+    const push = Object.fromEntries(
+      deliveryCategories
+        .filter((category) => category !== "company_orders")
+        .map((category) => [category, true]),
+    );
+    const name = "save_notification_channel_preferences";
+    const valid = { p_expected_version: 0, p_payload: { email, push } };
+    expect(accepts(name, valid)).toBe(true);
+    expect(
+      accepts(name, {
+        ...valid,
+        p_payload: { email, push: { ...push, company_orders: false } },
+      }),
+    ).toBe(false);
+    expect(
+      accepts(name, { ...valid, p_payload: { email, push: { chat: true } } }),
+    ).toBe(false);
+  });
+
+  it("describes separate version rules and current conflict responses for personal preferences", () => {
+    for (const name of [
+      "notification",
+      "delivery",
+      "attention",
+      "notification_channel",
+    ]) {
       expect(
         portalOpenApi(backend).paths[prefix + "save_" + name + "_preferences"]
           .post,
@@ -161,7 +190,11 @@ describe("notification and device API", () => {
       expect(request("save_" + name + "_preferences")).toMatchObject({
         required: ["p_payload", "p_expected_version"],
         properties: {
-          p_expected_version: { minimum: name === "attention" ? 0 : 1 },
+          p_expected_version: {
+            minimum: ["attention", "notification_channel"].includes(name)
+              ? 0
+              : 1,
+          },
         },
       });
     }

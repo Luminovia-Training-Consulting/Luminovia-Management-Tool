@@ -325,4 +325,33 @@ await withTestDatabase("course_offer_mail_test", async ({ sql, actor }) => {
   console.log(
     "PASS quiet hours, changed preferences and archived offer suppress or defer delivery",
   );
+
+  const getChannels = async (id) =>
+    JSON.parse(await actor(id, "select public.notification_channel_preferences()")).channels;
+  const saveChannels = (id, channels, version) =>
+    actor(id, `select public.save_notification_channel_preferences(${q(JSON.stringify(channels))}::jsonb,${version})`);
+  const broadChannels = await getChannels(broad);
+  broadChannels.email.job_updates = false;
+  await saveChannels(broad, broadChannels, 0);
+  const deviceOnly = await create({ status: "published" });
+  assert.deepEqual(await richUsers(deviceOnly), []);
+  assert.equal(
+    (await pushQueue(deviceOnly)).find(
+      ({ user, kind }) => user === broad && kind === "course_offer_published",
+    )?.state,
+    "pending",
+  );
+  const broadInbox = JSON.parse(await actor(broad, "select public.notification_inbox()"));
+  assert.ok(broadInbox.items.some(
+    ({ kind, href }) => kind === "course_offer_published" && href === `/jobs/${deviceOnly}`,
+  ));
+
+  broadChannels.email.job_updates = true;
+  broadChannels.push.job_updates = false;
+  await saveChannels(broad, broadChannels, 1);
+  const emailOnly = await create({ status: "published" });
+  assert.deepEqual(await richUsers(emailOnly), [broad]);
+  assert.equal((await pushQueue(emailOnly)).some(({ user }) => user === broad), false);
+  assert.deepEqual(await richUsers(deviceOnly), []);
+  console.log("PASS first publication honors independent channel choices without replay or inbox loss");
 });

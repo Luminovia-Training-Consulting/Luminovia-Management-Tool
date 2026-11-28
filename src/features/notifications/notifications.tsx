@@ -50,6 +50,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./notifications.css";
+import { ChannelPreferencesSettings } from "./channel-preferences-settings";
 import { DeliverySettings } from "./delivery-settings";
 import { QuietHoursSettings } from "./attention-settings";
 import "./attention-i18n";
@@ -391,6 +392,7 @@ export function SettingsPage() {
       )}
       <details className="panel settings-section" open>
         <summary>{de ? "Benachrichtigungen" : "Notifications"}</summary>
+        <ChannelPreferencesSettings key={actor} actor={actor} />
         {preferences.isPending ? (
           <Loading />
         ) : !preferenceData ? (

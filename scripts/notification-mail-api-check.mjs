@@ -90,14 +90,40 @@ await withApiFixture(async ({actor, service, checked, sql, defer, url}) => {
             "Remove own email notification fixtures",
         );
     });
-    // Service-wide leases must start with an empty unrelated queue. All SMTP
-    // submissions from the isolated fixture go to the loopback capture.
+    // The disposable seed can enqueue job notices for its sample lecturers.
+    // Park pre-existing pending deliveries so the real service-wide worker
+    // leases only this fixture's notices, and restore their exact schedule.
+    const parked = await sql(`
+        with prior as (
+            select o.id, o.available_at
+            from private.notification_email_outbox o
+            join public.notifications n on n.id = o.notification_id
+            join auth.users u on u.id = n.user_id
+            where o.state = 'pending' and n.kind = 'job_matching'
+              and u.email ~ '^lecturer[0-9]{2}@example[.]invalid$'
+            for update of o
+        ), moved as (
+            update private.notification_email_outbox o
+            set available_at = 'infinity'::timestamptz
+            from prior where prior.id = o.id
+            returning prior.id, prior.available_at
+        )
+        select coalesce(jsonb_agg(to_jsonb(moved)), '[]'::jsonb) from moved
+    `);
+    defer(() => sql(`
+        update private.notification_email_outbox o
+        set available_at = prior.available_at
+        from jsonb_to_recordset(${q(parked)}::jsonb) as prior(id uuid, available_at timestamptz)
+        where o.id = prior.id and o.state = 'pending' and o.available_at = 'infinity'::timestamptz
+    `));
+    // Other unrelated deliveries must never be leased by this fixture.
     assert.equal(
         await sql(
             `select count(*)
              from private.notification_email_outbox o
              left join public.notifications n on n.id = o.notification_id
-             where o.state in ('pending', 'leased', 'sending')
+             where (o.state in ('leased', 'sending')
+                    or (o.state = 'pending' and o.available_at <= now()))
                and (n.user_id is null or n.user_id not in (${q(owner.id)}, ${q(peer.id)}))`,
         ),
         "0",

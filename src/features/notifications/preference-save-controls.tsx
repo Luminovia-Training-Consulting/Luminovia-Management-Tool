@@ -13,7 +13,7 @@ export function PreferenceSaveControls<T>({
   reload,
   reset,
 }: {
-  namespace: "attention" | "delivery" | "inbox";
+  namespace: "attention" | "channelDelivery" | "delivery" | "inbox";
   online: boolean;
   dirty: boolean;
   invalid?: boolean;

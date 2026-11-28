@@ -17,6 +17,37 @@ await withApiFixture(
                 "Remove only fictional delivery notifications and their private outbox",
             );
         });
+        const channelPreferences = (client) =>
+            checked(
+                client.rpc("notification_channel_preferences"),
+                "Read own notification delivery matrix",
+            );
+        const initialChannels = await channelPreferences(owner.client);
+        assert.equal(initialChannels.version, 0);
+        assert.equal(initialChannels.channels.email.chat, true);
+        assert.equal(initialChannels.channels.push.chat, true);
+        const changedChannels = {
+            ...initialChannels.channels,
+            email: {...initialChannels.channels.email, chat: false},
+        };
+        const savedChannels = await checked(
+            owner.client.rpc("save_notification_channel_preferences", {
+                p_payload: changedChannels,
+                p_expected_version: 0,
+            }),
+            "Save only the email choice for chat",
+        );
+        assert.deepEqual(savedChannels, {channels: changedChannels, version: 1});
+        assert.equal((await channelPreferences(peer.client)).channels.email.chat, true);
+        assert.equal((await channelPreferences(owner.client)).channels.push.chat, true);
+        assert.equal(
+            (await owner.client.rpc("save_notification_channel_preferences", {
+                p_payload: initialChannels.channels,
+                p_expected_version: 0,
+            })).error?.code,
+            "PT409",
+            "Stale settings must not re-enable a channel",
+        );
         const prefs = (client) =>
             checked(
                 client.rpc("delivery_preferences"),
@@ -126,6 +157,10 @@ await withApiFixture(
         const anonymous = createClient(url, process.env.SUPABASE_ANON_KEY, {
             auth: {persistSession: false, autoRefreshToken: false},
         });
+        assert.equal(
+            (await anonymous.rpc("notification_channel_preferences")).error?.code,
+            "42501",
+        );
         assert.equal(
             (await anonymous.rpc("delivery_preferences")).error?.code,
             "42501",
@@ -297,7 +332,7 @@ await withApiFixture(
             "42501",
         );
         console.log(
-            "PASS actual Auth/REST email channel defaults/identity, CAS, quiet-hour validation, untrusted-metadata/admin/anonymous worker denial, committed outbox/current-recipient fencing, minimal payload, idempotent synthetic outcome and opt-out/suspension. No SMTP mail sent.",
+            "PASS actual Auth/REST independent account delivery switches, email channel defaults/identity, CAS, quiet-hour validation, untrusted-metadata/admin/anonymous worker denial, committed outbox/current-recipient fencing, minimal payload, idempotent synthetic outcome and opt-out/suspension. No SMTP mail sent.",
         );
     },
 );
