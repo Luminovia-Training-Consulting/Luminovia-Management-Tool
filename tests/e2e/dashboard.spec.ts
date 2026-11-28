@@ -71,11 +71,12 @@ test("dashboard previews show actual own activity, scanned files and private app
     page.on("requestfinished", (request) => {
         const path = new URL(request.url()).pathname;
         const operation = path.split("/").at(-1);
-        if (operation && path.includes("/rpc/") && financeRpcNames.has(operation))
+        if (request.method() === "POST" && operation && path.includes("/rpc/") && financeRpcNames.has(operation))
             financialRequests.push(operation);
     });
     const financialResponse = page.waitForResponse(
-        (response) => new URL(response.url()).pathname.endsWith("/rpc/dashboard_financial_summary"),
+        (response) => response.request().method() === "POST" &&
+            new URL(response.url()).pathname.endsWith("/rpc/dashboard_financial_summary"),
     );
     await login(page, teacher.email);
     const totals = await financialResponse;
@@ -110,7 +111,7 @@ test("dashboard previews show actual own activity, scanned files and private app
         }),
     ).toHaveCount(0);
 
-    expect(financialRequests).toEqual(["dashboard_financial_summary"]);
+    await expect.poll(() => financialRequests).toEqual(["dashboard_financial_summary"]);
 
     await page.goto("/files");
     const filename = `Dashboard-${token}.txt`;
